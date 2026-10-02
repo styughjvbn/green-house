@@ -3,13 +3,11 @@ package com.greenhouse.backend.work.application.operation;
 import com.greenhouse.backend.work.domain.operation.WorkCommandReceipt;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.dto.operation.WorkOperationOriginType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationRelationSummaryResponse;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptMembershipRepository;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptRepository;
-import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import java.util.Collection;
@@ -34,8 +32,6 @@ class WorkOperationRelationSummaryAssembler {
 	private final WorkOperationRepository operationRepository;
 
 	private final WorkOperationTargetRepository targetRepository;
-
-	private final WorkOperationCorrectionRepository correctionRepository;
 
 	Map<Long, WorkOperationRelationSummaryResponse> assemble(Collection<WorkOperation> operations) {
 		if (operations.isEmpty())
@@ -92,46 +88,16 @@ class WorkOperationRelationSummaryAssembler {
 				.add(operation.getId()));
 		structuralGroups.values().forEach(group -> group.forEach(id -> groupsByOperationId.put(id, group)));
 
-		Set<Long> relationIds = structuralGroups.values()
-			.stream()
-			.flatMap(Collection::stream)
-			.collect(Collectors.toCollection(LinkedHashSet::new));
-		Set<Long> expandedRelationIds = new LinkedHashSet<>();
-		while (true) {
-			List<Long> frontier = relationIds.stream().filter(id -> !expandedRelationIds.contains(id)).toList();
-			if (frontier.isEmpty()) {
-				break;
-			}
-			expandedRelationIds.addAll(frontier);
-			correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(frontier, frontier)
-				.forEach(relation -> {
-					Long originalId = relation.getOriginalWorkOperation().getId();
-					Long correctionId = relation.getCorrectionWorkOperation().getId();
-					mergeGroups(groupsByOperationId, originalId, correctionId);
-					relationIds.add(originalId);
-					relationIds.add(correctionId);
-				});
-		}
-
 		Map<Long, Integer> result = new LinkedHashMap<>();
 		operations.forEach(operation -> result.put(operation.getId(), Math.max(0,
 				groupsByOperationId.getOrDefault(operation.getId(), Set.of(operation.getId())).size() - 1)));
 		return result;
 	}
 
-	private void mergeGroups(Map<Long, Set<Long>> groupsByOperationId, Long leftId, Long rightId) {
-		Set<Long> merged = new LinkedHashSet<>(groupsByOperationId.getOrDefault(leftId, Set.of(leftId)));
-		merged.addAll(groupsByOperationId.getOrDefault(rightId, Set.of(rightId)));
-		merged.add(leftId);
-		merged.add(rightId);
-		merged.forEach(id -> groupsByOperationId.put(id, merged));
-	}
-
 	private WorkOperationOriginType origin(WorkOperation operation, List<Long> inboundIds) {
 		if (!inboundIds.isEmpty())
 			return WorkOperationOriginType.INBOUND;
-		if (operation.getRelationType() == WorkOperationRelationType.MOVEMENT_DISCARD
-				|| WorkTypeDefinition.CORRECTION.name().equals(operation.getWorkType().getCode())) {
+		if (operation.getRelationType() == WorkOperationRelationType.MOVEMENT_DISCARD) {
 			return WorkOperationOriginType.SYSTEM;
 		}
 		return WorkOperationOriginType.WORK_MANAGEMENT;

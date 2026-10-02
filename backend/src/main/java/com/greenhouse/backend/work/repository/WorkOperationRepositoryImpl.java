@@ -28,10 +28,18 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 	@Override
 	public List<WorkOperation> searchAll(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
 			WorkOperationSearchView view, LocalDateTime todayStartedAt) {
+
+		return searchAll(fromDate, toDate, status, view, todayStartedAt, null);
+	}
+
+	@Override
+	public List<WorkOperation> searchAll(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
+			WorkOperationSearchView view, LocalDateTime todayStartedAt, Boolean hasCorrections) {
 		return queryFactory.selectFrom(workOperation)
 			.join(workOperation.workType, workType)
 			.fetchJoin()
-			.where(searchConditions(fromDate, toDate, status, view, todayStartedAt, null, null, null))
+			.where(searchConditions(fromDate, toDate, status, view, todayStartedAt, null, null, null)
+				.and(correctionCondition(hasCorrections)))
 			.orderBy(workOperation.plannedStartDate.asc(), workOperation.id.asc())
 			.fetch();
 	}
@@ -70,8 +78,18 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 	public Page<WorkOperation> search(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
 			WorkOperationSearchView view, LocalDateTime todayStartedAt, WorkSourceScopeType sourceScopeType,
 			Long sourceScopeId, String keyword, Pageable pageable) {
+
+		return search(fromDate, toDate, status, view, todayStartedAt, sourceScopeType, sourceScopeId, keyword, null,
+				pageable);
+	}
+
+	@Override
+	public Page<WorkOperation> search(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
+			WorkOperationSearchView view, LocalDateTime todayStartedAt, WorkSourceScopeType sourceScopeType,
+			Long sourceScopeId, String keyword, Boolean hasCorrections, Pageable pageable) {
 		BooleanBuilder conditions = searchConditions(fromDate, toDate, status, view, todayStartedAt, sourceScopeType,
 				sourceScopeId, keyword);
+		conditions.and(correctionCondition(hasCorrections));
 		var content = queryFactory.selectFrom(workOperation)
 			.join(workOperation.workType, workType)
 			.fetchJoin()
@@ -100,6 +118,17 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 			.and(periodStartsOnOrBefore(toDate));
 	}
 
+	private BooleanExpression correctionCondition(Boolean hasCorrections) {
+		if (hasCorrections == null)
+			return null;
+		var correction = com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection.workOperationCorrection;
+		var exists = com.querydsl.jpa.JPAExpressions.selectOne()
+			.from(correction)
+			.where(correction.originalWorkOperation.eq(workOperation))
+			.exists();
+		return hasCorrections ? exists : exists.not();
+	}
+
 	private BooleanExpression viewCondition(WorkOperationSearchView view, LocalDateTime todayStartedAt) {
 		if (view == null) {
 			return null;
@@ -109,7 +138,14 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 			case ALL -> null;
 			case MANAGEMENT -> workOperation.status
 				.in(WorkOperationStatus.PLANNED, WorkOperationStatus.IN_PROGRESS, WorkOperationStatus.PAUSED)
-				.or(workOperation.updatedAt.goe(todayStartedAt));
+				.or(workOperation.updatedAt.goe(todayStartedAt))
+				.or(com.querydsl.jpa.JPAExpressions.selectOne()
+					.from(com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection.workOperationCorrection)
+					.where(com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection.workOperationCorrection.originalWorkOperation
+						.eq(workOperation),
+							com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection.workOperationCorrection.createdAt
+								.goe(todayStartedAt))
+					.exists());
 		};
 	}
 

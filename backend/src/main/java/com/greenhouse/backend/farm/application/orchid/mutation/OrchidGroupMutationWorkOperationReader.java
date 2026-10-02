@@ -30,12 +30,10 @@ class OrchidGroupMutationWorkOperationReader {
 				workOperationIds.add(workOperationId);
 			}
 		}
-		if (workOperationIds.isEmpty()) {
-			return Map.of();
-		}
 
 		Map<Long, OrchidGroupMutationWorkOperationResponse> workOperationsById = new LinkedHashMap<>();
-		workOperationMetadataReader.findByIds(workOperationIds)
+		(workOperationIds.isEmpty() ? java.util.List.<WorkOperationMetadataReader.WorkOperationMetadata>of()
+				: workOperationMetadataReader.findByIds(workOperationIds))
 			.forEach(workOperation -> workOperationsById.put(workOperation.id(),
 					new OrchidGroupMutationWorkOperationResponse(workOperation.id(), workOperation.workTypeCode(),
 							workOperation.workType(), workOperation.title())));
@@ -47,6 +45,14 @@ class OrchidGroupMutationWorkOperationReader {
 				result.put(mutationId, workOperation);
 			}
 		});
+		var correctionMutationIds = mutations.stream()
+			.filter(mutation -> mutation.getSourceDomain() == OrchidGroupMutationSourceDomain.WORK
+					&& "WORK_CORRECTION".equals(mutation.getSourceType()))
+			.map(OrchidGroupMutation::getId)
+			.toList();
+		workOperationMetadataReader.findOriginalsByCorrectionMutationIds(correctionMutationIds)
+			.forEach((mutationId, operation) -> result.put(mutationId, new OrchidGroupMutationWorkOperationResponse(
+					operation.id(), operation.workTypeCode(), operation.workType(), operation.title())));
 		return result;
 	}
 

@@ -13,6 +13,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface WorkOperationRepository extends JpaRepository<WorkOperation, Long>, WorkOperationRepositoryCustom {
 
+	@org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+	@Query("select o from WorkOperation o where o.id = :id")
+	java.util.Optional<WorkOperation> findForUpdateById(@Param("id") Long id);
+
 	@EntityGraph(attributePaths = "workType")
 	List<WorkOperation> findByIdIn(Collection<Long> ids);
 

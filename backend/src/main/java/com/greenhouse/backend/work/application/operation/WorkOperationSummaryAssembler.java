@@ -20,6 +20,8 @@ class WorkOperationSummaryAssembler {
 
 	private final WorkOperationActionResolver actionResolver;
 
+	private final com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository correctionRepository;
+
 	private final WorkOperationRelationSummaryAssembler relationSummaryAssembler;
 
 	List<WorkOperationSummaryResponse> assembleAll(List<WorkOperation> operations) {
@@ -31,11 +33,16 @@ class WorkOperationSummaryAssembler {
 			.stream()
 			.collect(Collectors.toMap(WorkOperationProgressProjection::workOperationId, Function.identity()));
 		var relationSummaries = relationSummaryAssembler.assemble(operations);
+		var correctionCounts = correctionRepository
+			.countByOriginalIds(operations.stream().map(WorkOperation::getId).toList())
+			.stream()
+			.collect(Collectors.toMap(row -> row.getOperationId(), row -> row.getTotal()));
 		return operations.stream().map(operation -> {
 			WorkOperationProgress progress = progress(progressByOperationId.get(operation.getId()))
 				.forStatus(operation.getStatus());
 			return WorkOperationSummaryResponse.from(operation, relationSummaries.get(operation.getId()), progress,
-					actionResolver.resolveOperation(operation, progress));
+					actionResolver.resolveOperation(operation, progress),
+					correctionCounts.getOrDefault(operation.getId(), 0L));
 		}).toList();
 	}
 

@@ -784,7 +784,6 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - CORRECTION
           - RECONCILIATION
         workTypeWorkflow:
           type: string
@@ -805,7 +804,6 @@ components:
           - COMPLETED
           - STOPPED
           - CANCELED
-          - CORRECTED
           - VOIDED
         plannedStartDate:
           type: string
@@ -880,6 +878,10 @@ components:
             - COMPLETE
             - END_REMAINING
             - CANCEL
+            - CORRECT
+        correctionCount:
+          type: integer
+          format: int64
     WorkOperationTargetResponse:
       type: object
       properties:

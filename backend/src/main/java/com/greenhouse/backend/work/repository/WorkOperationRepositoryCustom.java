@@ -24,6 +24,13 @@ public interface WorkOperationRepositoryCustom {
 			WorkOperationSearchView view, LocalDateTime todayStartedAt, WorkSourceScopeType sourceScopeType,
 			Long sourceScopeId, String keyword, Pageable pageable);
 
+	Page<WorkOperation> search(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
+			WorkOperationSearchView view, LocalDateTime todayStartedAt, WorkSourceScopeType sourceScopeType,
+			Long sourceScopeId, String keyword, Boolean hasCorrections, Pageable pageable);
+
+	List<WorkOperation> searchAll(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
+			WorkOperationSearchView view, LocalDateTime todayStartedAt, Boolean hasCorrections);
+
 	List<WorkOperation> searchAll(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
 			WorkOperationSearchView view, LocalDateTime todayStartedAt);
 

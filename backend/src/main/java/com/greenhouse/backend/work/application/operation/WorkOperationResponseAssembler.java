@@ -41,6 +41,8 @@ class WorkOperationResponseAssembler {
 
 	private final WorkOperationActionResolver actionResolver;
 
+	private final com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository correctionRepository;
+
 	WorkOperationView assemble(WorkOperation operation) {
 		return assembleAll(List.of(operation)).getFirst();
 	}
@@ -62,6 +64,10 @@ class WorkOperationResponseAssembler {
 			.collect(Collectors.groupingBy(target -> target.getWorkOperation().getId(), LinkedHashMap::new,
 					Collectors.toList()));
 
+		var correctionCounts = correctionRepository
+			.countByOriginalIds(operations.stream().map(WorkOperation::getId).toList())
+			.stream()
+			.collect(Collectors.toMap(row -> row.getOperationId(), row -> row.getTotal()));
 		return operations.stream().map(operation -> {
 			List<WorkOperationTargetView> targetResponses = targetsByOperationId
 				.getOrDefault(operation.getId(), List.of())
@@ -80,7 +86,8 @@ class WorkOperationResponseAssembler {
 			WorkOperationProgress progress = WorkOperationProgress.from(targetResponses)
 				.forStatus(operation.getStatus());
 			return WorkOperationView.from(operation, progress, targetResponses,
-					actionResolver.resolveOperation(operation, progress));
+					actionResolver.resolveOperation(operation, progress),
+					correctionCounts.getOrDefault(operation.getId(), 0L));
 		}).toList();
 	}
 

@@ -19,11 +19,11 @@ public record WorkOperationSummaryResponse(Long id, Long workTypeId, String work
 		WorkSourceScopeType sourceScopeType, Long sourceScopeId, Map<String, Object> sourceConditionSnapshot,
 		LocalDateTime targetSnapshotAt, Map<String, Object> details, String worker, String memo, LocalDateTime voidedAt,
 		String voidReason, Long voidMutationId, WorkOperationRelationSummaryResponse relationSummary,
-		WorkOperationProgress progress, List<WorkOperationAction> availableActions) {
+		WorkOperationProgress progress, List<WorkOperationAction> availableActions, long correctionCount) {
 
 	public static WorkOperationSummaryResponse from(WorkOperation operation,
 			WorkOperationRelationSummaryResponse relationSummary, WorkOperationProgress progress,
-			List<WorkOperationAction> availableActions) {
+			List<WorkOperationAction> availableActions, long correctionCount) {
 		return new WorkOperationSummaryResponse(operation.getId(), operation.getWorkType().getId(),
 				operation.getWorkType().getCode(), operation.getWorkType().getName(),
 				operation.getWorkType().getTemplate(), operation.getWorkType().workflow(), operation.getTitle(),
@@ -32,6 +32,6 @@ public record WorkOperationSummaryResponse(Long id, Long workTypeId, String work
 				operation.getSourceScopeType(), operation.getSourceScopeId(), operation.getSourceConditionSnapshot(),
 				TimeConfig.toFarmTime(operation.getTargetSnapshotAt()), operation.getDetails(), operation.getWorker(),
 				operation.getMemo(), TimeConfig.toFarmTime(operation.getVoidedAt()), operation.getVoidReason(),
-				operation.getVoidMutationId(), relationSummary, progress, availableActions);
+				operation.getVoidMutationId(), relationSummary, progress, availableActions, correctionCount);
 	}
 }

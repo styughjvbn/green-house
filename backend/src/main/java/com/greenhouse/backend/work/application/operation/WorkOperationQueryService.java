@@ -75,6 +75,13 @@ public class WorkOperationQueryService {
 	public PageResponse<WorkOperationSummaryResponse> search(LocalDate fromDate, LocalDate toDate,
 			WorkOperationStatus status, WorkOperationSearchView view, WorkSourceScopeType sourceScopeType,
 			Long sourceScopeId, String keyword, int page, int size) {
+
+		return search(fromDate, toDate, status, view, sourceScopeType, sourceScopeId, keyword, null, page, size);
+	}
+
+	public PageResponse<WorkOperationSummaryResponse> search(LocalDate fromDate, LocalDate toDate,
+			WorkOperationStatus status, WorkOperationSearchView view, WorkSourceScopeType sourceScopeType,
+			Long sourceScopeId, String keyword, Boolean hasCorrections, int page, int size) {
 		validateDates(fromDate, toDate);
 		PageRequests.validate(page, size);
 		if (sourceScopeId != null && sourceScopeType == null) {
@@ -82,7 +89,7 @@ public class WorkOperationQueryService {
 		}
 		LocalDate farmToday = TimeConfig.farmToday(clock);
 		var operationPage = operationRepository.search(fromDate, toDate, status, view,
-				TimeConfig.farmDayStartUtc(farmToday), sourceScopeType, sourceScopeId, keyword,
+				TimeConfig.farmDayStartUtc(farmToday), sourceScopeType, sourceScopeId, keyword, hasCorrections,
 				PageRequest.of(page, size));
 		return new PageResponse<>(summaryAssembler.assembleAll(operationPage.getContent()), operationPage.getNumber(),
 				operationPage.getSize(), operationPage.getTotalElements(), operationPage.getTotalPages());
@@ -90,10 +97,15 @@ public class WorkOperationQueryService {
 
 	public List<WorkOperationSummaryResponse> getCalendar(LocalDate fromDate, LocalDate toDate,
 			WorkOperationStatus status, WorkOperationSearchView view) {
+		return getCalendar(fromDate, toDate, status, view, null);
+	}
+
+	public List<WorkOperationSummaryResponse> getCalendar(LocalDate fromDate, LocalDate toDate,
+			WorkOperationStatus status, WorkOperationSearchView view, Boolean hasCorrections) {
 		validateDates(fromDate, toDate);
 		LocalDate farmToday = TimeConfig.farmToday(clock);
-		return summaryAssembler.assembleAll(
-				operationRepository.searchAll(fromDate, toDate, status, view, TimeConfig.farmDayStartUtc(farmToday)));
+		return summaryAssembler.assembleAll(operationRepository.searchAll(fromDate, toDate, status, view,
+				TimeConfig.farmDayStartUtc(farmToday), hasCorrections));
 	}
 
 	public List<OrchidGroupWorkHistoryResponse> getOrchidGroupHistory(Long orchidGroupId) {

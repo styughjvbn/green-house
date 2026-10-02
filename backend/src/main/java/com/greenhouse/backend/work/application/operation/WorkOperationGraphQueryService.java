@@ -122,6 +122,12 @@ public class WorkOperationGraphQueryService {
 			operations.putIfAbsent(operation.getId(), operation);
 			operationIdsByMutation.computeIfAbsent(mutationId, ignored -> new LinkedHashSet<>()).add(operation.getId());
 		});
+		correctionRepository.findByMutationIdIn(mutationIds).forEach(correction -> {
+			var operation = correction.getOriginalWorkOperation();
+			operations.putIfAbsent(operation.getId(), operation);
+			operationIdsByMutation.computeIfAbsent(correction.getMutationId(), ignored -> new LinkedHashSet<>())
+				.add(operation.getId());
+		});
 	}
 
 	private Map<Long, Set<Long>> operationIdsByMutation(Map<Long, List<Long>> mutationIdsByOperation) {
@@ -227,13 +233,6 @@ public class WorkOperationGraphQueryService {
 			.findByParentOperationIdAndRelationTypeOrderByIdAsc(root.getId(),
 					WorkOperationRelationType.MOVEMENT_DISCARD)
 			.forEach(operation -> result.putIfAbsent(operation.getId(), operation));
-		correctionRepository
-			.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(List.of(root.getId()), List.of(root.getId()))
-			.forEach(relation -> {
-				result.putIfAbsent(relation.getOriginalWorkOperation().getId(), relation.getOriginalWorkOperation());
-				result.putIfAbsent(relation.getCorrectionWorkOperation().getId(),
-						relation.getCorrectionWorkOperation());
-			});
 		return result;
 	}
 
@@ -302,6 +301,10 @@ public class WorkOperationGraphQueryService {
 			if (effect.getMutationId() != null) {
 				result.get(effect.getWorkOperation().getId()).add(effect.getMutationId());
 			}
+		});
+		correctionRepository.findByOriginalWorkOperationIdIn(result.keySet()).forEach(correction -> {
+			if (correction.getMutationId() != null)
+				result.get(correction.getOriginalWorkOperation().getId()).add(correction.getMutationId());
 		});
 		return result.entrySet()
 			.stream()

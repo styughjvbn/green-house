@@ -98,17 +98,9 @@ export type WorkOperationCorrectionAdjustment = {
   afterStatus: string;
 };
 
-export type WorkOperationCorrectionItem = {
-  id: number;
-  reason: string;
-  createdAt: string;
-  correctionOperation: WorkOperation;
-  effectDetails: {
-    beforeWorkDate?: string;
-    afterWorkDate?: string;
-    adjustments?: WorkOperationCorrectionAdjustment[];
-  };
-};
+export type WorkOperationCorrectionItem = NonNullable<
+  import("@/shared/api/generated/openapi").components["schemas"]["WorkOperationCorrectionsResponse"]["corrections"]
+>[number];
 
 export type WorkOperationCorrections = {
   originalOperation: WorkOperation;

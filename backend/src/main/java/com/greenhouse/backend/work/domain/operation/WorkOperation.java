@@ -209,8 +209,8 @@ public class WorkOperation extends BaseEntity {
 		if (status == WorkOperationStatus.STOPPED) {
 			return;
 		}
-		if (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.CORRECTED
-				|| status == WorkOperationStatus.CANCELED || status == WorkOperationStatus.VOIDED) {
+		if (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.CANCELED
+				|| status == WorkOperationStatus.VOIDED) {
 			throw new IllegalArgumentException("완료·취소·보정·무효화된 작업은 남은 작업을 종료할 수 없습니다.");
 		}
 		actualEndAt = stoppedAt;
@@ -222,7 +222,7 @@ public class WorkOperation extends BaseEntity {
 			return;
 		}
 		if (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.STOPPED
-				|| status == WorkOperationStatus.CORRECTED || status == WorkOperationStatus.VOIDED) {
+				|| status == WorkOperationStatus.VOIDED) {
 			throw new IllegalArgumentException("완료·종료·보정·취소된 작업은 일반 취소할 수 없습니다.");
 		}
 		actualEndAt = canceledAt;
@@ -261,19 +261,8 @@ public class WorkOperation extends BaseEntity {
 		status = WorkOperationStatus.CANCELED;
 	}
 
-	public void markCorrected() {
-		if (status == WorkOperationStatus.CORRECTED) {
-			return;
-		}
-		if (!isStructureResultCorrectable()) {
-			throw new IllegalArgumentException("완료된 구조 변경 작업만 보정할 수 있습니다.");
-		}
-		status = WorkOperationStatus.CORRECTED;
-	}
-
 	public boolean isStructureResultCorrectable() {
-		return (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.CORRECTED)
-				&& workType.supportsStructureResultManagement();
+		return (status == WorkOperationStatus.COMPLETED) && workType.supportsStructureResultManagement();
 	}
 
 	public void voidCompletedMutationWork(LocalDateTime voidedAt, String reason, String requestKey,
@@ -282,7 +271,7 @@ public class WorkOperation extends BaseEntity {
 			return;
 		}
 		if ((status != WorkOperationStatus.IN_PROGRESS && status != WorkOperationStatus.PAUSED
-				&& status != WorkOperationStatus.COMPLETED && status != WorkOperationStatus.CORRECTED)
+				&& status != WorkOperationStatus.COMPLETED)
 				|| (!workType.supportsMutationVoid() && relationType != WorkOperationRelationType.MOVEMENT_DISCARD)) {
 			throw new IllegalArgumentException("실행 중이거나 완료된 구조 변경·폐기·포트 작업만 취소할 수 있습니다.");
 		}

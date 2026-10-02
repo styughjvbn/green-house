@@ -367,6 +367,7 @@ export type WorkOperation = {
   voidedAt: string | null;
   voidReason: string | null;
   voidMutationId: number | null;
+  correctionCount: number;
   relationSummary?: WorkOperationRelationSummary;
   progress: {
     total: number;

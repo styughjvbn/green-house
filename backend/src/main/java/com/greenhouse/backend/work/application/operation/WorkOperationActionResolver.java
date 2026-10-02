@@ -29,11 +29,18 @@ class WorkOperationActionResolver {
 			case IN_PROGRESS ->
 				allTargetsClosed(progress) ? List.of(WorkOperationAction.COMPLETE, WorkOperationAction.CANCEL)
 						: activeActions(operation, progress, WorkOperationAction.PAUSE);
-			case COMPLETED, CORRECTED ->
-				operation.getRelationType() == null && operation.getWorkType().supportsUserCancellation()
-						? List.of(WorkOperationAction.CANCEL) : List.of();
+			case COMPLETED -> completedActions(operation);
 			case STOPPED, CANCELED, VOIDED -> List.of();
 		};
+	}
+
+	private List<WorkOperationAction> completedActions(WorkOperation operation) {
+		var actions = new ArrayList<WorkOperationAction>();
+		if (operation.getRelationType() == null && operation.getWorkType().supportsUserCancellation())
+			actions.add(WorkOperationAction.CANCEL);
+		if (operation.isStructureResultCorrectable())
+			actions.add(WorkOperationAction.CORRECT);
+		return List.copyOf(actions);
 	}
 
 	private List<WorkOperationAction> activeActions(WorkOperation operation, WorkOperationProgress progress,

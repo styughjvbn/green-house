@@ -152,7 +152,7 @@ public class WorkOperationVoidService {
 	}
 
 	public WorkOperationView cancelOperation(Long operationId, WorkOperationCancellationRequest request) {
-		var operation = operationRepository.findWithWorkTypeById(operationId)
+		var operation = operationRepository.findForUpdateById(operationId)
 			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
 		String requestKey = support.normalizeRequired(request.idempotencyKey());
 		if (operation.getStatus() == WorkOperationStatus.CANCELED
@@ -207,8 +207,7 @@ public class WorkOperationVoidService {
 
 	private boolean cancelableStatus(WorkOperationStatus status) {
 		return status == WorkOperationStatus.PLANNED || status == WorkOperationStatus.IN_PROGRESS
-				|| status == WorkOperationStatus.PAUSED || status == WorkOperationStatus.COMPLETED
-				|| status == WorkOperationStatus.CORRECTED;
+				|| status == WorkOperationStatus.PAUSED || status == WorkOperationStatus.COMPLETED;
 	}
 
 	private void cancelOpenExecutions(List<WorkTargetExecution> executions, java.time.LocalDateTime canceledAt) {

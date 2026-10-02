@@ -79,8 +79,7 @@ public class InboundWorkOperationLifecycleService {
 			.stream()
 			.map(execution -> execution.getTarget().getWorkOperation())
 			.filter(operation -> definition.name().equals(operation.getWorkType().getCode()))
-			.filter(operation -> operation.getStatus() == WorkOperationStatus.COMPLETED
-					|| operation.getStatus() == WorkOperationStatus.CORRECTED)
+			.filter(operation -> operation.getStatus() == WorkOperationStatus.COMPLETED)
 			.distinct()
 			.toList();
 		if (operations.isEmpty()) {

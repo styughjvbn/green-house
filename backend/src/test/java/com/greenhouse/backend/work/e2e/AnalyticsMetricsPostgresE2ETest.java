@@ -54,7 +54,7 @@ class AnalyticsMetricsPostgresE2ETest extends WorkE2ETestBase {
 		var repot = type("METRICS_REPOT", "Repot", WorkTypeTemplate.REPOT);
 		work(movement, FROM, WorkOperationStatus.COMPLETED);
 		work(status, TO, WorkOperationStatus.COMPLETED);
-		var corrected = work(repot, TO, WorkOperationStatus.CORRECTED);
+		var corrected = work(repot, TO, WorkOperationStatus.COMPLETED);
 		work(movement, FROM.minusDays(1), WorkOperationStatus.COMPLETED);
 		work(movement, TO.plusDays(1), WorkOperationStatus.COMPLETED);
 		for (var excluded : new WorkOperationStatus[] { WorkOperationStatus.PLANNED, WorkOperationStatus.IN_PROGRESS,
@@ -73,7 +73,7 @@ class AnalyticsMetricsPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(summary.typeCounts()).containsExactly(new TypeCount("Shared", 2), new TypeCount("Repot", 1));
 		assertThat(summary.recentRecords()).hasSize(3);
 		assertThat(summary.recentRecords().getFirst()).isEqualTo(new RecentRecord(corrected.getId(), TO, "Repot",
-				WorkTypeTemplate.REPOT, "통계 작업", WorkSourceScopeType.FARM, "작업자", "메모", WorkOperationStatus.CORRECTED));
+				WorkTypeTemplate.REPOT, "통계 작업", WorkSourceScopeType.FARM, "작업자", "메모", WorkOperationStatus.COMPLETED));
 		assertThat(summary.recentRecords().get(1).workType()).isEqualTo("Shared");
 	}
 
@@ -169,10 +169,6 @@ class AnalyticsMetricsPostgresE2ETest extends WorkE2ETestBase {
 				"작업자", "메모", actualTime);
 		switch (status) {
 			case COMPLETED -> work.complete(actualTime);
-			case CORRECTED -> {
-				work.complete(actualTime);
-				work.markCorrected();
-			}
 			case IN_PROGRESS -> work.start(actualTime);
 			case PAUSED -> {
 				work.start(actualTime);

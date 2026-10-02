@@ -6,7 +6,6 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationRelationKind;
 import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptMembershipRepository;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptRepository;
-import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,8 +30,6 @@ public class WorkOperationRelationQueryService {
 	private final WorkCommandReceiptMembershipRepository membershipRepository;
 
 	private final WorkCommandReceiptRepository receiptRepository;
-
-	private final WorkOperationCorrectionRepository correctionRepository;
 
 	private final WorkOperationSummaryAssembler summaryAssembler;
 
@@ -64,7 +61,6 @@ public class WorkOperationRelationQueryService {
 		Map<Long, WorkOperation> related = new LinkedHashMap<>();
 		related.put(root.getId(), root);
 		Set<Long> expanded = new LinkedHashSet<>();
-		var corrections = new ArrayList<com.greenhouse.backend.work.domain.correction.WorkOperationCorrection>();
 		while (true) {
 			List<Long> frontier = related.keySet().stream().filter(id -> !expanded.contains(id)).toList();
 			if (frontier.isEmpty()) {
@@ -84,14 +80,6 @@ public class WorkOperationRelationQueryService {
 			}
 			operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(frontier)
 				.forEach(operation -> related.putIfAbsent(operation.getId(), operation));
-			var foundCorrections = correctionRepository
-				.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(frontier, frontier);
-			corrections.addAll(foundCorrections);
-			foundCorrections.forEach(relation -> {
-				related.putIfAbsent(relation.getOriginalWorkOperation().getId(), relation.getOriginalWorkOperation());
-				related.putIfAbsent(relation.getCorrectionWorkOperation().getId(),
-						relation.getCorrectionWorkOperation());
-			});
 		}
 
 		Map<Long, Long> parentByChild = new LinkedHashMap<>();
@@ -100,8 +88,6 @@ public class WorkOperationRelationQueryService {
 				parentByChild.put(operation.getId(), operation.getParentOperation().getId());
 			}
 		});
-		corrections.forEach(relation -> parentByChild.put(relation.getCorrectionWorkOperation().getId(),
-				relation.getOriginalWorkOperation().getId()));
 
 		List<WorkOperation> ordered = new ArrayList<>();
 		Set<Long> visited = new LinkedHashSet<>();

@@ -1,7 +1,6 @@
 package com.greenhouse.backend.work.domain.operation;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,7 +15,7 @@ class WorkOperationStructureChangeCapabilityTest {
 	void movementCanBeCorrectedAndVoidedAsAStructureChange() {
 		WorkOperation operation = completedOperation(WorkTypeDefinition.MOVEMENT, WorkTypeTemplate.MOVEMENT);
 
-		operation.markCorrected();
+		assertThat(operation.isStructureResultCorrectable()).isTrue();
 		operation.voidCompletedMutationWork(NOW.plusMinutes(1), "잘못 등록한 이동", "void-movement", 101L);
 
 		assertThat(operation.getStatus()).isEqualTo(WorkOperationStatus.VOIDED);
@@ -27,8 +26,7 @@ class WorkOperationStructureChangeCapabilityTest {
 	void discardCannotBeCorrectedButCanBeVoided() {
 		WorkOperation operation = completedOperation(WorkTypeDefinition.DISCARD, WorkTypeTemplate.DISCARD);
 
-		assertThatThrownBy(operation::markCorrected).isInstanceOf(IllegalArgumentException.class)
-			.hasMessage("완료된 구조 변경 작업만 보정할 수 있습니다.");
+		assertThat(operation.isStructureResultCorrectable()).isFalse();
 
 		operation.voidCompletedMutationWork(NOW.plusMinutes(1), "잘못 등록한 폐기", "void-discard", 102L);
 

@@ -64,9 +64,6 @@ class WorkOperationGraphQueryServiceTest {
 				correctionRepository, relationSummaryAssembler, mutationGraphPort);
 		when(targetRepository.findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(anyCollection()))
 			.thenReturn(List.of());
-		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(anyCollection(),
-				anyCollection()))
-			.thenReturn(List.of());
 	}
 
 	@Test
@@ -115,37 +112,27 @@ class WorkOperationGraphQueryServiceTest {
 	}
 
 	@Test
-	void loadsMutationEffectsForBothOriginalAndCorrectionOperations() {
+	void loadsCorrectionMutationUnderTheOriginalOperation() {
 		WorkOperation original = operation(80L, null, null);
-		WorkOperation correction = operation(81L, null, null);
-		WorkOperationCorrection relation = mock(WorkOperationCorrection.class);
-		WorkAppliedEffect originalEffect = effect(original, 111L);
-		WorkAppliedEffect correctionEffect = effect(correction, 112L);
+		WorkOperationCorrection correction = mock(WorkOperationCorrection.class);
 		when(operationRepository.findWithWorkTypeById(80L)).thenReturn(Optional.of(original));
-		when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(80L,
-				WorkOperationRelationType.MOVEMENT_DISCARD))
-			.thenReturn(List.of());
-		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(anyCollection(),
-				anyCollection()))
-			.thenReturn(List.of(relation));
-		when(relation.getOriginalWorkOperation()).thenReturn(original);
-		when(relation.getCorrectionWorkOperation()).thenReturn(correction);
-		when(relationSummaryAssembler.assemble(anyCollection())).thenReturn(Map.of(80L,
-				summary(WorkOperationOriginType.WORK_MANAGEMENT, 1), 81L, summary(WorkOperationOriginType.SYSTEM, 1)));
+		when(relationSummaryAssembler.assemble(anyCollection()))
+			.thenReturn(Map.of(80L, summary(WorkOperationOriginType.WORK_MANAGEMENT, 1)));
+		var originalEffect = effect(original, 111L);
 		when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
-			.thenReturn(List.of(originalEffect, correctionEffect));
+			.thenReturn(List.of(originalEffect));
+		when(correctionRepository.findByOriginalWorkOperationIdIn(anyCollection())).thenReturn(List.of(correction));
+		when(correction.getOriginalWorkOperation()).thenReturn(original);
+		when(correction.getMutationId()).thenReturn(112L);
 		when(mutationGraphPort.load(eq(List.of(111L, 112L)), eq(false), eq(1), anyInt()))
 			.thenReturn(fragment(111L, 112L));
-
 		var graph = service.get(80L, WorkOperationGraphDetail.MUTATION, 1, 120);
-
 		assertThat(graph.nodes()).filteredOn(node -> node.nodeType() == WorkOperationGraphNodeType.WORK_OPERATION)
-			.hasSize(2);
+			.hasSize(1);
 		assertThat(graph.edges()).filteredOn(edge -> edge.edgeType() == WorkOperationGraphEdgeType.EFFECT)
 			.extracting(edge -> Map.entry(edge.sourceNodeId(), edge.targetNodeId()))
 			.containsExactlyInAnyOrder(Map.entry("work-operation-80", "mutation-111"),
-					Map.entry("work-operation-81", "mutation-112"));
-		verify(mutationGraphPort).load(eq(List.of(111L, 112L)), eq(false), eq(1), anyInt());
+					Map.entry("work-operation-80", "mutation-112"));
 	}
 
 	@Test

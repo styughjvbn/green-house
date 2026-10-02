@@ -1,9 +1,6 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.dto.operation.WorkCorrectionDetailResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationDetailFieldResponse;
 import java.util.List;
 import java.util.Map;
@@ -72,13 +69,6 @@ final class WorkOperationDetailAssembler {
 			return list.stream().map(String::valueOf).collect(Collectors.joining(", "));
 		}
 		return String.valueOf(value);
-	}
-
-	static WorkCorrectionDetailResponse correction(WorkOperationCorrection correction, Map<String, Object> result) {
-		WorkOperation operation = correction.getCorrectionWorkOperation();
-		return new WorkCorrectionDetailResponse(correction.getId(), operation.getId(), operation.getTitle(),
-				operation.getPlannedStartDate(), TimeConfig.toFarmTime(correction.getCreatedAt()),
-				operation.getWorker(), correction.getReason(), WorkEffectDetailCodec.adjustments(result));
 	}
 
 }

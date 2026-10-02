@@ -190,8 +190,7 @@ function includesDate(operation: WorkOperationSummary, date: string) {
 }
 
 function statusClass(status: WorkOperationStatus) {
-  if (status === "COMPLETED" || status === "CORRECTED")
-    return "bg-[#e7f6eb] text-[#10783a]";
+  if (status === "COMPLETED") return "bg-[#e7f6eb] text-[#10783a]";
   if (status === "IN_PROGRESS") return "bg-[#e6f0ff] text-[#246df2]";
   if (status === "PAUSED") return "bg-[#fff3d8] text-[#8a5a12]";
   if (status === "STOPPED" || status === "CANCELED")

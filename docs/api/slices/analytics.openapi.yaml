@@ -286,7 +286,6 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - CORRECTION
           - RECONCILIATION
         title:
           type: string
@@ -316,7 +315,6 @@ components:
           - COMPLETED
           - STOPPED
           - CANCELED
-          - CORRECTED
           - VOIDED
     WorkAnalyticsResponse:
       type: object

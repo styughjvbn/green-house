@@ -17,7 +17,6 @@ class WorkTypeCapabilitiesTest {
 			Map.entry(WorkTypeTemplate.CLEANUP, "RECORD_ONLY"), Map.entry(WorkTypeTemplate.STATUS, "RECORD_ONLY"),
 			Map.entry(WorkTypeTemplate.MEMO, "RECORD_ONLY"), Map.entry(WorkTypeTemplate.REPOT, "REPOT"),
 			Map.entry(WorkTypeTemplate.MOVEMENT, "MOVE"), Map.entry(WorkTypeTemplate.DISCARD, "DISCARD"),
-			Map.entry(WorkTypeTemplate.CORRECTION, "CORRECTION"),
 			Map.entry(WorkTypeTemplate.RECONCILIATION, "RECONCILIATION"));
 
 	private static final Map<WorkTypeTemplate, WorkEffectKind> TEMPLATE_KINDS = Map.ofEntries(
@@ -26,7 +25,6 @@ class WorkTypeCapabilitiesTest {
 			Map.entry(WorkTypeTemplate.CLEANUP, WorkEffectKind.RECORD_ONLY),
 			Map.entry(WorkTypeTemplate.STATUS, WorkEffectKind.RECORD_ONLY),
 			Map.entry(WorkTypeTemplate.MEMO, WorkEffectKind.RECORD_ONLY),
-			Map.entry(WorkTypeTemplate.CORRECTION, WorkEffectKind.RECORD_ONLY),
 			Map.entry(WorkTypeTemplate.REPOT, WorkEffectKind.STRUCTURE_CHANGE),
 			Map.entry(WorkTypeTemplate.DISCARD, WorkEffectKind.ATTRIBUTE_CHANGE),
 			Map.entry(WorkTypeTemplate.MOVEMENT, WorkEffectKind.ATTRIBUTE_CHANGE),
@@ -40,7 +38,6 @@ class WorkTypeCapabilitiesTest {
 			"DIVIDE,STRUCTURE_CHANGE,ORCHID_GROUP,false,true,true,true,DIVIDE",
 			"MERGE,STRUCTURE_CHANGE,ORCHID_GROUP,false,true,true,true,MERGE",
 			"DISCARD,DISCARD,ORCHID_GROUP,false,true,true,false,DISCARD",
-			"CORRECTION,GENERIC,ORCHID_GROUP,false,false,false,false,",
 			"RECONCILIATION,GENERIC,ORCHID_GROUP,true,false,false,false,",
 			"CUSTOM_CARE,GENERIC,ORCHID_GROUP,false,false,false,false," })
 	void preservesExistingCodeTemplateAndFlagCombinations(String code, WorkTypeWorkflow workflow,

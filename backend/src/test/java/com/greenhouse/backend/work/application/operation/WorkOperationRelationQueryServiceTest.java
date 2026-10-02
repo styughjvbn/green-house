@@ -7,13 +7,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
 import com.greenhouse.backend.work.domain.operation.WorkCommandReceipt;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.dto.operation.WorkOperationRelationKind;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptMembershipRepository;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptRepository;
-import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.util.List;
 import java.util.Optional;
@@ -37,9 +35,6 @@ class WorkOperationRelationQueryServiceTest {
 	WorkCommandReceiptRepository receiptRepository;
 
 	@Mock
-	WorkOperationCorrectionRepository correctionRepository;
-
-	@Mock
 	WorkOperationSummaryAssembler summaryAssembler;
 
 	WorkOperationRelationQueryService service;
@@ -47,7 +42,7 @@ class WorkOperationRelationQueryServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new WorkOperationRelationQueryService(operationRepository, membershipRepository, receiptRepository,
-				correctionRepository, summaryAssembler);
+				summaryAssembler);
 		when(summaryAssembler.assembleAll(anyList())).thenReturn(List.of());
 	}
 
@@ -74,9 +69,6 @@ class WorkOperationRelationQueryServiceTest {
 		when(operationRepository.findWithWorkTypeById(10L)).thenReturn(Optional.of(movement));
 		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(10L)))
 			.thenReturn(List.of(discard));
-		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(List.of(10L),
-				List.of(10L)))
-			.thenReturn(List.of());
 
 		service.get(10L, WorkOperationRelationKind.LINKED);
 
@@ -96,9 +88,6 @@ class WorkOperationRelationQueryServiceTest {
 			.thenReturn(List.of(firstDiscard, secondDiscard));
 		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(12L)))
 			.thenReturn(List.of());
-		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(anyCollection(),
-				anyCollection()))
-			.thenReturn(List.of());
 
 		service.get(11L, WorkOperationRelationKind.LINKED);
 
@@ -106,22 +95,11 @@ class WorkOperationRelationQueryServiceTest {
 	}
 
 	@Test
-	void returnsCorrectionOriginalBeforeTheCorrectionOperation() {
+	void returnsOnlyTheOriginalWhenNoOtherWorkIsLinked() {
 		WorkOperation original = operation(20L, null);
-		WorkOperation correction = operation(21L, null);
-		WorkOperationCorrection relation = mock(WorkOperationCorrection.class);
-		when(relation.getOriginalWorkOperation()).thenReturn(original);
-		when(relation.getCorrectionWorkOperation()).thenReturn(correction);
-		when(operationRepository.findWithWorkTypeById(21L)).thenReturn(Optional.of(correction));
-		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(21L)))
-			.thenReturn(List.of());
-		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(List.of(21L),
-				List.of(21L)))
-			.thenReturn(List.of(relation));
-
-		service.get(21L, WorkOperationRelationKind.LINKED);
-
-		assertThat(assembledOperations()).containsExactly(original, correction);
+		when(operationRepository.findWithWorkTypeById(20L)).thenReturn(Optional.of(original));
+		service.get(20L, WorkOperationRelationKind.LINKED);
+		assertThat(assembledOperations()).containsExactly(original);
 	}
 
 	@SuppressWarnings("unchecked")

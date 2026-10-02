@@ -32,6 +32,11 @@ public final class OrchidGroupMutationSources {
 				"WORK_OPERATION:" + workOperationId);
 	}
 
+	public static OrchidGroupMutationSource workCorrection(Long correctionId) {
+		return stable(OrchidGroupMutationSourceDomain.WORK, "WORK_CORRECTION", correctionId.toString(), "CORRECTION",
+				"WORK_CORRECTION:" + correctionId);
+	}
+
 	public static OrchidGroupMutationSource sales(Long salesSlipId, String operationKey) {
 		return stable(OrchidGroupMutationSourceDomain.SALES, "SALES_SLIP", salesSlipId.toString(), operationKey,
 				"SALES_SLIP:" + salesSlipId);

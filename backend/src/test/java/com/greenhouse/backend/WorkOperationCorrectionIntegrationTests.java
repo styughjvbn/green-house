@@ -84,8 +84,6 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 
 		repotType = workTypeRepository
 			.save(new WorkType(WorkTypeDefinition.REPOT.name(), "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
-		workTypeRepository.save(new WorkType(WorkTypeDefinition.CORRECTION.name(), "구조 변경 보정",
-				WorkTypeTemplate.CORRECTION, true, true, true, 2));
 		pesticideType = workTypeRepository
 			.save(new WorkType("PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 3));
 		House house = new House(1, "1동");
@@ -107,12 +105,11 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
 				.content(correctionRequest("correction-1")))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.originalOperation.status").value("CORRECTED"))
+			.andExpect(jsonPath("$.data.originalOperation.status").value("COMPLETED"))
 			.andExpect(jsonPath("$.data.corrections", hasSize(1)))
 			.andExpect(jsonPath("$.data.corrections[0].reason").value("결과 수량 확인 필요"))
-			.andExpect(jsonPath("$.data.corrections[0].correctionOperation.status").value("COMPLETED"))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].beforeQuantity").value(30))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].afterQuantity").value(25));
+			.andExpect(jsonPath("$.data.corrections[0].adjustments[0].beforeQuantity").value(30))
+			.andExpect(jsonPath("$.data.corrections[0].adjustments[0].afterQuantity").value(25));
 		mockMvc
 			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
 				.content(correctionRequest("correction-1")))
@@ -124,42 +121,34 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 			.andExpect(jsonPath("$.data.corrections", hasSize(1)));
 
 		assertThat(correctionRepository.count()).isEqualTo(1);
-		assertThat(operationRepository.count()).isEqualTo(2);
-		assertThat(appliedEffectRepository.count()).isEqualTo(2);
+		assertThat(operationRepository.count()).isEqualTo(1);
+		assertThat(appliedEffectRepository.count()).isEqualTo(1);
 		assertThat(operationRepository.findWithWorkTypeById(originalId).orElseThrow().getStatus())
-			.isEqualTo(WorkOperationStatus.CORRECTED);
+			.isEqualTo(WorkOperationStatus.COMPLETED);
 		var correctedGroup = orchidGroupRepository.findById(createdGroupId).orElseThrow();
 		assertThat(correctedGroup.getQuantity()).isEqualTo(25);
 		assertThat(correctedGroup.getStatus()).isEqualTo("수량 보정");
-		var correctionEffect = appliedEffectRepository.findAll()
-			.stream()
-			.filter(effect -> WorkTypeDefinition.CORRECTION.name().equals(effect.getHandlerCode()))
-			.findFirst()
-			.orElseThrow();
+		var correctionEffect = correctionRepository.findAll().getFirst();
 		assertThat(correctionEffect.getResultDetails()).containsKey("adjustments");
-		Long correctionOperationId = correctionRepository.findAll().getFirst().getCorrectionWorkOperation().getId();
 		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", createdGroupId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data[?(@.workOperationId == %d)].correctable".formatted(originalId))
-				.value(org.hamcrest.Matchers.hasItem(true)))
-			.andExpect(jsonPath("$.data[?(@.workOperationId == %d)].correctable".formatted(correctionOperationId))
-				.value(org.hamcrest.Matchers.hasItem(false)));
+				.value(org.hamcrest.Matchers.hasItem(true)));
 	}
 
 	@Test
-	void rejectsCorrectionOfARecordOnlyCorrectionOperation() throws Exception {
+	void rejectsReusingAKeyWithDifferentContents() throws Exception {
 		Long originalId = createRepotOperation();
 		mockMvc
 			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
-				.content(correctionRequest("correction-original")))
+				.content(correctionRequest("same-key")))
 			.andExpect(status().isCreated());
-		Long correctionOperationId = correctionRepository.findAll().getFirst().getCorrectionWorkOperation().getId();
-
 		mockMvc
-			.perform(post("/api/work-operations/{id}/corrections", correctionOperationId)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(correctionRequest("correction-invalid")))
-			.andExpect(status().isBadRequest());
+			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
+				.content(correctionRequest("same-key").replace("25", "24")))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"));
+		assertThat(correctionRepository.count()).isEqualTo(1);
 	}
 
 	@Test
@@ -171,19 +160,15 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
 				.content(resultCancellationRequest()))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.originalOperation.status").value("CORRECTED"))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].beforeQuantity").value(30))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].afterQuantity").value(0))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].afterStatus").value("생성 취소"));
+			.andExpect(jsonPath("$.data.originalOperation.status").value("COMPLETED"))
+			.andExpect(jsonPath("$.data.corrections[0].adjustments[0].beforeQuantity").value(30))
+			.andExpect(jsonPath("$.data.corrections[0].adjustments[0].afterQuantity").value(0))
+			.andExpect(jsonPath("$.data.corrections[0].adjustments[0].afterStatus").value("생성 취소"));
 
 		OrchidGroup canceled = orchidGroupRepository.findById(createdGroupId).orElseThrow();
 		assertThat(canceled.getQuantity()).isZero();
 		assertThat(canceled.getStatus()).isEqualTo("생성 취소");
-		var correctionEffect = appliedEffectRepository.findAll()
-			.stream()
-			.filter(effect -> WorkTypeDefinition.CORRECTION.name().equals(effect.getHandlerCode()))
-			.findFirst()
-			.orElseThrow();
+		var correctionEffect = correctionRepository.findAll().getFirst();
 		var cancellationMutation = mutationRepository.findById(correctionEffect.getMutationId()).orElseThrow();
 		assertThat(cancellationMutation.getMutationType()).isEqualTo(OrchidGroupMutationType.CANCEL_CREATION);
 		assertThat(mutationRelationRepository.findByMutationIdOrderByIdAsc(cancellationMutation.getId()))
@@ -204,9 +189,9 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.originalOperation.plannedStartDate").value("2026-07-14"))
 			.andExpect(jsonPath("$.data.originalOperation.plannedEndDate").value("2026-07-14"))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.beforeWorkDate").value("2026-07-15"))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.afterWorkDate").value("2026-07-14"))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments", hasSize(0)));
+			.andExpect(jsonPath("$.data.corrections[0].beforeWorkDate").value("2026-07-15"))
+			.andExpect(jsonPath("$.data.corrections[0].afterWorkDate").value("2026-07-14"))
+			.andExpect(jsonPath("$.data.corrections[0].adjustments", hasSize(0)));
 
 		var original = operationRepository.findWithWorkTypeById(originalId).orElseThrow();
 		assertThat(original.getPlannedStartDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 14));
@@ -248,8 +233,8 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				.content("""
 						{
 						  "operation": {
+						          "title": "보정할 분갈이",
 						    "workTypeId": %d,
-						    "title": "보정할 분갈이",
 						    "plannedStartDate": "2026-07-15",
 						    "plannedEndDate": "2026-07-15",
 						    "sourceScopeType": "MANUAL_SELECTION",
@@ -281,7 +266,6 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 		return """
 				{
 				  "idempotencyKey": "%s",
-				  "title": "분갈이 결과 보정 확인",
 				  "workDate": "2026-07-15",
 				  "worker": "관리자",
 				  "reason": "결과 수량 확인 필요",
@@ -298,7 +282,6 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 		return """
 				{
 				  "idempotencyKey": "correction-date-only",
-				  "title": "분갈이 작업일 보정",
 				  "workDate": "2026-07-14",
 				  "worker": "관리자",
 				  "reason": "작업일 입력 오류",

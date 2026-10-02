@@ -75,7 +75,7 @@ class WorkOperationCancellationServiceTest {
 				WorkSourceScopeType.ORCHID_GROUP, 1L, Map.of(), Map.of(), null, null, NOW.minusMinutes(1));
 		operation.complete(NOW.minusSeconds(1));
 
-		when(operationRepository.findWithWorkTypeById(1L)).thenReturn(Optional.of(operation));
+		when(operationRepository.findForUpdateById(1L)).thenReturn(Optional.of(operation));
 		when(effectRepository.findByWorkOperationIdOrderByIdAsc(1L)).thenReturn(List.of(effect));
 		when(effect.getMutationId()).thenReturn(null);
 		when(executionRepository.findByTargetWorkOperationIdOrderByIdAsc(1L)).thenReturn(List.of());

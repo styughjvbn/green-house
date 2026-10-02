@@ -183,16 +183,18 @@ public class WorkOperationController {
 			@RequestParam(defaultValue = "ALL") WorkOperationSearchView view,
 			@RequestParam(required = false) WorkSourceScopeType sourceScopeType,
 			@RequestParam(required = false) Long sourceScopeId, @RequestParam(required = false) String keyword,
-			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-		return ApiResponse
-			.ok(queryService.search(from, to, status, view, sourceScopeType, sourceScopeId, keyword, page, size));
+			@RequestParam(required = false) Boolean hasCorrections, @RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "20") int size) {
+		return ApiResponse.ok(queryService.search(from, to, status, view, sourceScopeType, sourceScopeId, keyword,
+				hasCorrections, page, size));
 	}
 
 	@GetMapping("/work-operations/calendar")
 	public ApiResponse<List<WorkOperationSummaryResponse>> getCalendar(@RequestParam LocalDate from,
 			@RequestParam LocalDate to, @RequestParam(required = false) WorkOperationStatus status,
-			@RequestParam(defaultValue = "ALL") WorkOperationSearchView view) {
-		return ApiResponse.ok(queryService.getCalendar(from, to, status, view));
+			@RequestParam(defaultValue = "ALL") WorkOperationSearchView view,
+			@RequestParam(required = false) Boolean hasCorrections) {
+		return ApiResponse.ok(queryService.getCalendar(from, to, status, view, hasCorrections));
 	}
 
 	@GetMapping("/work-operations/{workOperationId}")

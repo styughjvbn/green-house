@@ -1,6 +1,17 @@
+import {
+  groupResultCorrections,
+  type ResultCorrection,
+} from "../../lib/workResultCorrections";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { WorkOperation } from "@/entities/farm/types";
+import type { OrchidGroup, WorkOperation } from "@/entities/farm/types";
+import { WorkOperationCorrectionForm } from "@/features/orchid-management";
+import { fetchApi } from "@/shared/api/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/shared/ui/primitives/dialog";
 import {
   getWorkRecordFieldLabel,
   isVisibleWorkRecordField,
@@ -157,6 +168,7 @@ export function WorkOperationDetails({
         ) : null}
         {activeTab === "execution" ? (
           <ExecutionTab
+            actionLoading={actionLoading}
             detail={detail}
             error={detailError}
             loading={detailQuery.isPending}
@@ -269,17 +281,26 @@ function OverviewTab({
 }
 
 function ExecutionTab({
+  actionLoading,
   operation,
   detail,
   loading,
   error,
 }: {
+  actionLoading: boolean;
   operation: WorkOperation;
   detail: WorkOperationDetail | null;
   loading: boolean;
   error: string | null;
 }) {
   const executions = detail?.executions.filter(hasDisplayResult) ?? [];
+  const resultCorrections = groupResultCorrections(detail?.corrections ?? []);
+  const dateCorrections = (detail?.corrections ?? []).filter(
+    (event) =>
+      event.beforeWorkDate &&
+      event.afterWorkDate &&
+      event.beforeWorkDate !== event.afterWorkDate,
+  );
 
   if (loading) return <LoadingMessage />;
   if (error) return <ErrorMessage>{error}</ErrorMessage>;
@@ -290,6 +311,15 @@ function ExecutionTab({
         <SectionTitle>
           {executions.length > 0 ? "실행 회차" : "완료 기록"}
         </SectionTitle>
+        {dateCorrections.map((event) => (
+          <p key={event.id} className="mt-2 text-xs text-[#85550e]">
+            작업일 {event.beforeWorkDate} → {event.afterWorkDate} ·{" "}
+            {event.reason}
+            {event.worker ? ` · ${event.worker}` : ""} ·{" "}
+            {formatDateTime(event.createdAt ?? "")}
+            {event.memo ? ` · ${event.memo}` : ""}
+          </p>
+        ))}
         {executions.length > 0 ? (
           <ol className="mt-3 space-y-2">
             {executions.map((execution, index) => (
@@ -306,7 +336,12 @@ function ExecutionTab({
                     {execution.worker ? ` · ${execution.worker}` : ""}
                   </p>
                 </div>
-                <ExecutionContent execution={execution} />
+                <ExecutionContent
+                  operation={operation}
+                  actionLoading={actionLoading}
+                  execution={execution}
+                  resultCorrections={resultCorrections}
+                />
               </li>
             ))}
           </ol>
@@ -314,48 +349,6 @@ function ExecutionTab({
           <TargetCompletionHistory operation={operation} />
         )}
       </div>
-
-      {operation.status === "CORRECTED" ? (
-        <div className="border-t border-[#e1e6df] pt-4">
-          <SectionTitle>보정 내역</SectionTitle>
-          {detail && detail.corrections.length > 0 ? (
-            <ol className="mt-3 space-y-2">
-              {detail.corrections.map((correction) => (
-                <li
-                  className="rounded-md border border-[#e1e6cf] bg-white p-3"
-                  key={correction.id}
-                >
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <p className="text-sm font-bold text-[#26352b]">
-                      {correction.title}
-                    </p>
-                    <p className="text-xs text-[#6a766e]">
-                      {correction.workDate}
-                      {correction.worker ? ` · ${correction.worker}` : ""}
-                    </p>
-                  </div>
-                  <p className="mt-1 text-xs text-[#526057]">
-                    사유: {correction.reason}
-                  </p>
-                  {correction.adjustments.map((adjustment) => (
-                    <p
-                      className="mt-1 text-xs text-[#344138]"
-                      key={adjustment.orchidGroupId}
-                    >
-                      난 묶음 #{adjustment.orchidGroupId} · 수량{" "}
-                      {adjustment.beforeQuantity} → {adjustment.afterQuantity}분
-                      · 상태 {adjustment.beforeStatus} →{" "}
-                      {adjustment.afterStatus}
-                    </p>
-                  ))}
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <EmptyText>등록된 보정 내역이 없습니다.</EmptyText>
-          )}
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -648,7 +641,17 @@ function isHiddenDetailKey(key: string) {
   );
 }
 
-function ExecutionContent({ execution }: { execution: WorkExecutionDetail }) {
+function ExecutionContent({
+  operation,
+  actionLoading,
+  execution,
+  resultCorrections,
+}: {
+  operation: WorkOperation;
+  actionLoading: boolean;
+  execution: WorkExecutionDetail;
+  resultCorrections: Map<number, ResultCorrection[]>;
+}) {
   return (
     <div className="mt-2 space-y-1 text-xs text-[#526057]">
       {execution.inboundRecordId != null ? (
@@ -661,9 +664,16 @@ function ExecutionContent({ execution }: { execution: WorkExecutionDetail }) {
         <div className="mt-3 space-y-2">
           {execution.results.map((result, index) => (
             <ExecutionResultCard
+              operation={operation}
+              actionLoading={actionLoading}
               index={index}
               key={`${result.orchidGroupId ?? "result"}-${index}`}
               result={result}
+              corrections={
+                result.orchidGroupId == null
+                  ? []
+                  : (resultCorrections.get(result.orchidGroupId) ?? [])
+              }
             />
           ))}
         </div>
@@ -712,14 +722,40 @@ function sourceLine(source: WorkExecutionSource) {
 }
 
 function ExecutionResultCard({
+  operation,
+  actionLoading,
   result,
   index,
+  corrections,
 }: {
+  operation: WorkOperation;
+  actionLoading: boolean;
   result: WorkExecutionResult;
   index: number;
+  corrections: ResultCorrection[];
 }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [returnFocus, setReturnFocus] = useState<HTMLButtonElement | null>(
+    null,
+  );
+  const groupId = result.orchidGroupId;
+  const group = useQuery({
+    queryKey: ["orchid-groups", groupId],
+    queryFn: ({ signal }) =>
+      fetchApi<OrchidGroup>(`/orchid-groups/${groupId}`, { signal }),
+    enabled: editing && groupId != null,
+  });
+  function closeEditor() {
+    setEditing(false);
+  }
   const attributes: string[] = [];
-  if (result.quantity != null) attributes.push(`${result.quantity}분`);
+  if (result.quantity != null)
+    attributes.push(
+      corrections.length
+        ? `실행 당시 ${result.quantity}분`
+        : `${result.quantity}분`,
+    );
   if (result.purpose) attributes.push(purposeLabel(result.purpose));
   if (result.potSize) attributes.push(result.potSize);
   if (result.ageYear != null) attributes.push(`${result.ageYear}년생`);
@@ -745,9 +781,26 @@ function ExecutionResultCard({
           {result.varietyName ? ` · ${result.varietyName}` : ""}
         </p>
         {result.orchidGroupId != null ? (
-          <p className="text-[11px] text-[#7a857d]">
-            난 묶음 #{result.orchidGroupId}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-[11px] text-[#7a857d]">
+              난 묶음 #{result.orchidGroupId}
+            </p>
+            {operation.availableActions.includes("CORRECT") ? (
+              <button
+                aria-label={`난 묶음 #${result.orchidGroupId} 보정`}
+                aria-haspopup="dialog"
+                className="rounded border border-[#ead7b4] bg-[#fff0d4] px-2 py-1 text-xs font-semibold text-[#85550e] hover:bg-[#ffe4b4] disabled:opacity-50"
+                disabled={actionLoading || saving}
+                type="button"
+                onClick={(event) => {
+                  setReturnFocus(event.currentTarget);
+                  setEditing(!editing);
+                }}
+              >
+                보정
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
       {attributes.length > 0 ? (
@@ -760,6 +813,81 @@ function ExecutionResultCard({
       ) : null}
       {result.memo ? (
         <p className="mt-1 text-[#526057]">메모: {result.memo}</p>
+      ) : null}
+      {editing ? (
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open && !saving) closeEditor();
+          }}
+        >
+          <DialogContent
+            className="max-h-[calc(100dvh-2rem)] max-w-xl overflow-y-auto rounded-md"
+            showCloseButton={false}
+            aria-describedby={undefined}
+            onCloseAutoFocus={(event) => {
+              if (returnFocus?.isConnected) {
+                event.preventDefault();
+                returnFocus.focus();
+              }
+            }}
+            onEscapeKeyDown={(event) => {
+              if (saving) event.preventDefault();
+            }}
+            onPointerDownOutside={(event) => {
+              if (saving) event.preventDefault();
+            }}
+          >
+            <DialogTitle className="sr-only">
+              난 묶음 #{result.orchidGroupId} 보정
+            </DialogTitle>
+            {group.isError ? (
+              <div role="alert">
+                <p>{group.error.message}</p>
+                <button type="button" onClick={() => void group.refetch()}>
+                  다시 시도
+                </button>
+              </div>
+            ) : group.isPending ? (
+              <p role="status">현재 난 묶음 확인 중</p>
+            ) : (
+              <WorkOperationCorrectionForm
+                key={group.data.id}
+                originalWorkOperationId={operation.id}
+                orchidGroup={group.data}
+                showHistory={false}
+                onClose={closeEditor}
+                onSaved={closeEditor}
+                onPendingChange={setSaving}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      ) : null}
+      {corrections.length > 0 ? (
+        <ol className="mt-3 space-y-2 border-t border-[#ead7b4] pt-3">
+          {corrections.map(({ event, adjustment }) => (
+            <li key={event.id} className="text-[#85550e]">
+              {adjustment.beforeQuantity !== adjustment.afterQuantity ? (
+                <p className="font-semibold">
+                  수량 {adjustment.beforeQuantity} → {adjustment.afterQuantity}
+                  분
+                </p>
+              ) : null}
+              {adjustment.beforeStatus !== adjustment.afterStatus ? (
+                <p className="font-semibold">
+                  상태 {adjustment.beforeStatus} → {adjustment.afterStatus}
+                </p>
+              ) : null}
+              <p className="mt-1">사유: {event.reason}</p>
+              <p className="mt-1 text-[#6a766e]">
+                {formatDateTime(event.createdAt ?? "")}
+                {event.worker ? ` · ${event.worker}` : ""}
+              </p>
+              {event.memo ? <p className="mt-1">메모: {event.memo}</p> : null}
+            </li>
+          ))}
+        </ol>
       ) : null}
     </div>
   );
@@ -788,7 +916,6 @@ function resultTypeLabel(resultType: string) {
       REPOT: "분갈이 결과",
       DIVIDE: "분주 결과",
       MERGE: "합식 결과",
-      CORRECTION: "보정 결과",
     }[resultType] ?? "작업 결과"
   );
 }

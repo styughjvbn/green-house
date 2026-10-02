@@ -140,7 +140,6 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - CORRECTION
           - RECONCILIATION
       required:
       - name
@@ -161,7 +160,6 @@ components:
             - STATUS
             - MEMO
             - MOVEMENT
-            - CORRECTION
             - RECONCILIATION
     WorkTypeReorderRequest:
       type: object
@@ -195,7 +193,6 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - CORRECTION
           - RECONCILIATION
         defaultType:
           type: boolean
@@ -246,7 +243,6 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - CORRECTION
           - RECONCILIATION
         active:
           type: boolean

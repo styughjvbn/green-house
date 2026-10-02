@@ -475,7 +475,7 @@ Correction과 Compensation은 서로 다른 업무 의미를 가진다.
 - Correction: 과거 기록 또는 결과가 잘못되어 현재 상태를 보정한다.
 - Compensation: 과거 행위는 유효했으나 이후 업무 취소로 반대 효과를 적용한다.
 
-하나의 보정 작업이 여러 실행 회차의 결과를 변경할 수 있으므로 Mutation 본체의
+하나의 보정 이벤트가 여러 실행 회차의 결과를 변경할 수 있으므로 Mutation 본체의
 단일 `correction_of` 또는 `compensation_of` 컬럼을 사용하지 않는다. 별도 관계를
 사용한다.
 
@@ -485,6 +485,10 @@ orchid_group_mutation_relations
 - related_mutation_id
 - relation_type: CORRECTS | COMPENSATES | SUPERSEDES
 ```
+
+작업 기록 보정은 독립 WorkOperation이 아닌 원본 작업의 감사 이벤트다. 수량·상태 보정과 생성 취소
+Mutation의 출처는 `WORK / WORK_CORRECTION / 감사 이벤트 ID`이며, 조회는 해당 이벤트의 원본 작업으로
+연결한다. 날짜만 변경하는 이벤트에는 Mutation을 만들지 않는다.
 
 자동 역연산이나 자동 연쇄 rollback은 제공하지 않는다. 각 상위 도메인이 후속
 사용 여부와 보정·보상 가능성을 판단한 후 명시적인 typed command를 요청한다.

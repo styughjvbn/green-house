@@ -27,7 +27,7 @@ class WorkOperationViewTest {
 		when(operation.getStatus()).thenReturn(WorkOperationStatus.VOIDED);
 		var canceledProgress = new WorkOperationProgress(1, 0, 0, 0, 1, 0, 0, 0, 0);
 
-		var response = WorkOperationView.from(operation, canceledProgress, List.of(), List.of());
+		var response = WorkOperationView.from(operation, canceledProgress, List.of(), List.of(), 0);
 
 		assertThat(response.progress().progressPercent()).isZero();
 	}

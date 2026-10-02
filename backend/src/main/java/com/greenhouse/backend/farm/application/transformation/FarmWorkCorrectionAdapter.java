@@ -14,14 +14,11 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput;
 import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionPort;
 import com.greenhouse.backend.work.application.correction.WorkOperationDateCorrectionService;
-import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
-import com.greenhouse.backend.work.application.effect.WorkEffectContext;
-import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +30,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class CorrectionWorkHandler implements WorkEffectHandler {
+public class FarmWorkCorrectionAdapter implements WorkCorrectionPort {
 
 	private final StructureChangeReferenceReader structureChangeReferenceReader;
 
@@ -46,22 +43,8 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupMutationEngine mutationEngine;
 
 	@Override
-	public String supports() {
-		return "CORRECTION";
-	}
-
-	@Override
-	public WorkEffectKind effectKind() {
-		return WorkEffectKind.ATTRIBUTE_CHANGE;
-	}
-
-	@Override
-	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
-		var target = context.target();
-		if (target != null)
-			throw new IllegalArgumentException("보정 작업은 작업 단위로 실행해야 합니다.");
-		WorkCorrectionCommand request = command.payloadAs(WorkCorrectionCommand.class);
-		Long originalOperationId = originalOperationId(command.resultDetails());
+	public WorkExecutionResult correct(Long originalOperationId, java.util.function.Supplier<Long> correctionId,
+			WorkCorrectionCommand request) {
 		List<Long> correctableIds = structureChangeReferenceReader
 			.getCorrectableResultOrchidGroupIds(originalOperationId);
 		Set<Long> adjustmentIds = request.orchidGroupAdjustments()
@@ -69,7 +52,7 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 			.map(OrchidGroupCorrectionInput::orchidGroupId)
 			.collect(Collectors.toCollection(LinkedHashSet::new));
 		if (adjustmentIds.size() != request.orchidGroupAdjustments().size()) {
-			throw new IllegalArgumentException("같은 난 묶음을 한 보정 작업에서 중복 지정할 수 없습니다.");
+			throw new IllegalArgumentException("같은 난 묶음을 한 보정에서 중복 지정할 수 없습니다.");
 		}
 		if (request.cancelResultCreation() && adjustmentIds.size() != 1) {
 			throw new IllegalArgumentException("결과 생성 취소는 한 번에 하나의 난 묶음만 처리할 수 있습니다.");
@@ -112,13 +95,14 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 						adjustment.quantity(), adjustment.status().trim());
 			})
 			.toList();
+		Long eventId = correctionId.get();
 		WorkMutationLink mutationLink = null;
 		if (!changedAdjustmentIds.isEmpty()) {
 			var references = structureChangeReferenceReader.getMutationReferences(originalOperationId,
 					changedAdjustmentIds);
 			RelatedOrchidGroupMutations related = references.legacySource() ? RelatedOrchidGroupMutations.legacy()
 					: RelatedOrchidGroupMutations.current(references.mutationIds());
-			var source = OrchidGroupMutationSources.work(context.operationId(), command.effectKey());
+			var source = OrchidGroupMutationSources.workCorrection(eventId);
 			var mutation = request.cancelResultCreation()
 					? mutationEngine.cancelCreation(new CancelOrchidGroupCreationMutationCommand(source,
 							changedAdjustmentIds.iterator().next(), related, request.workDate(), request.reason()))
@@ -157,14 +141,6 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 			return !group.getQuantity().equals(adjustment.quantity())
 					|| !group.getStatus().equals(adjustment.status().trim());
 		}).map(OrchidGroupCorrectionInput::orchidGroupId).collect(Collectors.toCollection(LinkedHashSet::new));
-	}
-
-	private Long originalOperationId(Map<String, Object> details) {
-		Object value = details == null ? null : details.get("originalWorkOperationId");
-		if (!(value instanceof Number number)) {
-			throw new IllegalArgumentException("보정 원본 작업 정보가 없습니다.");
-		}
-		return number.longValue();
 	}
 
 }

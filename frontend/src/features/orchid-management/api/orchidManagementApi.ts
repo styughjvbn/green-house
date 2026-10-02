@@ -64,20 +64,7 @@ export function getWorkOperationCorrections(workOperationId: number) {
 
 export async function createWorkOperationCorrection(
   workOperationId: number,
-  payload: {
-    idempotencyKey: string;
-    title: string;
-    workDate: string;
-    worker: string | null;
-    memo: string | null;
-    reason: string;
-    cancelResultCreation: boolean;
-    orchidGroupAdjustments: Array<{
-      orchidGroupId: number;
-      quantity: number;
-      status: string;
-    }>;
-  },
+  payload: import("@/shared/api/generated/openapi").components["schemas"]["WorkOperationCorrectionCreateRequest"],
 ): Promise<WorkOperationCorrections> {
   return requestApi<WorkOperationCorrections>(
     `/work-operations/${workOperationId}/corrections`,

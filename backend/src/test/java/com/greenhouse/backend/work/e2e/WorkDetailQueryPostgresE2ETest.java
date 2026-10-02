@@ -38,17 +38,9 @@ class WorkDetailQueryPostgresE2ETest extends WorkE2ETestBase {
 		for (int index = 1; index <= count; index++) {
 			jdbc.update("""
 					INSERT INTO work_operation_corrections
-					(original_work_operation_id, correction_work_operation_id, reason, created_at)
-					VALUES (?, ?, ?, TIMESTAMP '2026-08-20 00:00:00')
-					""", operations.getFirst(), operations.get(index), "보정 " + index);
-			if (index == count)
-				continue; // A historical correction may have no effect.
-			jdbc.update("""
-					INSERT INTO work_applied_effects (work_operation_id, effect_key, effect_kind, handler_code,
-					 applied_at, worker, command_details, result_details, created_at, updated_at)
-					VALUES (?, 'OPERATION', 'ATTRIBUTE_CHANGE', 'CORRECTION', CURRENT_TIMESTAMP, '담당자', '{}',
-					 CAST(? AS jsonb), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-					""", operations.get(index), index == count - 1 ? null : """
+					(original_work_operation_id, reason, worker, result_details, created_at)
+					VALUES (?, ?, '담당자', CAST(? AS jsonb), TIMESTAMP '2026-08-20 00:00:00')
+					""", operations.getFirst(), "보정 " + index, index >= count - 1 ? "{}" : """
 					{"adjustments":[{"orchidGroupId":99,"beforeQuantity":12,"afterQuantity":10,
 					 "beforeStatus":"관리","afterStatus":"정상"}]}
 					""");
@@ -57,7 +49,7 @@ class WorkDetailQueryPostgresE2ETest extends WorkE2ETestBase {
 		stats.clear();
 		var result = get("/api/work-operations/" + operations.getFirst() + "/details");
 		assertThat(result.status()).as(result.body().toString()).isEqualTo(200);
-		assertThat(stats.getPrepareStatementCount()).isEqualTo(count == 0 ? 4 : 5);
+		assertThat(stats.getPrepareStatementCount()).isEqualTo(4);
 		var corrections = result.data().path("corrections");
 		assertThat(corrections).hasSize(count);
 		for (int index = 0; index < count; index++) {

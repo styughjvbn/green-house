@@ -1,23 +1,16 @@
 package com.greenhouse.backend.work.application.correction;
 
-import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
-import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
+import com.greenhouse.backend.work.application.operation.WorkCommandReceipts;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
 import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
+import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
 import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
-import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionItemResponse;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionsResponse;
-import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
+import com.greenhouse.backend.work.dto.operation.WorkCorrectionDetailResponse;
+import com.greenhouse.backend.work.repository.WorkCorrectionReceiptRepository;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,91 +20,63 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class WorkOperationCorrectionService {
 
-	private final WorkOperationRepository workOperationRepository;
+	private final WorkOperationRepository operationRepository;
 
 	private final WorkOperationCorrectionRepository correctionRepository;
 
-	private final ImmediateWorkExecutionService immediateWorkExecutionService;
+	private final WorkCorrectionReceiptRepository receiptRepository;
+
+	private final WorkRequestFingerprint fingerprints;
+
+	private final WorkCorrectionPort correctionPort;
 
 	private final WorkOperationQueryService queryService;
 
-	private final WorkAppliedEffectRepository workAppliedEffectRepository;
-
-	private final RequestActorProvider requestActorProvider;
-
 	private final WorkOperationSupport support;
 
-	public WorkOperationCorrectionsResponse create(Long originalWorkOperationId, WorkCorrectionCommand request) {
-		WorkOperation original = findCorrectableOriginal(originalWorkOperationId);
-		String reason = normalizeRequired(request.reason());
-		Map<String, Object> details = new LinkedHashMap<>();
-		details.put("originalWorkOperationId", originalWorkOperationId);
-		details.put("reason", reason);
-		var correctionOperation = immediateWorkExecutionService.execute(normalizeRequired(request.idempotencyKey()),
-				WorkTypeDefinition.CORRECTION.name(), support.followUpHistoryTitle(original.getTitle(), "보정"),
-				request.workDate(), requestActorProvider.resolve(request.worker()), normalize(request.memo()), details,
-				request);
-		WorkOperation correction = workOperationRepository.findWithWorkTypeById(correctionOperation.id())
-			.orElseThrow(() -> new NotFoundException("보정 작업을 찾을 수 없습니다."));
-		correctionRepository.findByCorrectionWorkOperationId(correction.getId())
-			.orElseGet(() -> correctionRepository.save(new WorkOperationCorrection(original, correction, reason)));
-		original.markCorrected();
-		return response(originalWorkOperationId);
+	public WorkOperationCorrectionsResponse create(Long originalId, WorkCorrectionCommand request) {
+		String key = WorkCommandReceipts.normalizeKey(request.idempotencyKey());
+		String fingerprint = fingerprints.calculate(new Request(originalId, request));
+		int inserted = receiptRepository.claim(key, fingerprint, support.now());
+		var receipt = receiptRepository.findForUpdate(key);
+		receipt.validate(fingerprint);
+		if (receipt.getCorrectionId() != null)
+			return response(originalId);
+		if (inserted != 1)
+			throw new IllegalStateException("완료되지 않은 보정 요청 기록입니다.");
+		var original = operationRepository.findForUpdateById(originalId)
+			.orElseThrow(() -> new NotFoundException("원본 작업을 찾을 수 없습니다."));
+		if (request.workDate().isAfter(support.today()))
+			throw new IllegalArgumentException("보정 작업일은 오늘 이후로 입력할 수 없습니다.");
+		var correction = new WorkOperationCorrection(original, request.reason(), support.actor(request.worker()),
+				normalize(request.memo()), support.now());
+		var result = correctionPort.correct(originalId, () -> correctionRepository.save(correction).getId(), request);
+		var link = result.mutationLink();
+		correction.complete(result.resultDetails(), link == null ? null : link.mutationId(),
+				link == null ? null : link.correlationId());
+		receipt.complete(correction.getId());
+		return response(originalId);
 	}
 
 	@Transactional(readOnly = true)
-	public WorkOperationCorrectionsResponse get(Long originalWorkOperationId) {
-		findCorrectableOriginal(originalWorkOperationId);
-		return response(originalWorkOperationId);
+	public WorkOperationCorrectionsResponse get(Long originalId) {
+		return response(originalId);
 	}
 
-	private WorkOperationCorrectionsResponse response(Long originalWorkOperationId) {
-		var original = queryService.get(originalWorkOperationId);
-		var correctionEntities = correctionRepository
-			.findByOriginalWorkOperationIdOrderByCreatedAtAscIdAsc(originalWorkOperationId);
-		if (correctionEntities.isEmpty()) {
-			return new WorkOperationCorrectionsResponse(original, java.util.List.of());
-		}
-		var correctionOperationIds = correctionEntities.stream()
-			.map(correction -> correction.getCorrectionWorkOperation().getId())
-			.toList();
-		var operationsById = queryService.getAll(correctionOperationIds)
-			.stream()
-			.collect(Collectors.toMap(response -> response.id(), Function.identity()));
-		var effectsByOperationId = workAppliedEffectRepository
-			.findByWorkOperationIdInAndEffectKey(correctionOperationIds, "OPERATION")
-			.stream()
-			.collect(Collectors.toMap(effect -> effect.getWorkOperation().getId(), Function.identity()));
-		var corrections = correctionEntities.stream().map(correction -> {
-			Long correctionOperationId = correction.getCorrectionWorkOperation().getId();
-			var effect = effectsByOperationId.get(correctionOperationId);
-			return WorkOperationCorrectionItemResponse.from(correction, operationsById.get(correctionOperationId),
-					effect == null ? Map.of() : effect.getResultDetails());
-		}).toList();
-		return new WorkOperationCorrectionsResponse(original, corrections);
+	private WorkOperationCorrectionsResponse response(Long originalId) {
+		var original = queryService.get(originalId);
+		return new WorkOperationCorrectionsResponse(original,
+				correctionRepository.findByOriginalWorkOperationIdOrderByCreatedAtAscIdAsc(originalId)
+					.stream()
+					.map(WorkCorrectionDetailResponse::from)
+					.toList());
 	}
 
-	private WorkOperation findCorrectableOriginal(Long operationId) {
-		WorkOperation operation = workOperationRepository.findWithWorkTypeById(operationId)
-			.orElseThrow(() -> new NotFoundException("원본 작업을 찾을 수 없습니다."));
-		if (!operation.isStructureResultCorrectable()) {
-			throw new IllegalArgumentException("완료된 구조 변경 작업만 보정할 수 있습니다.");
-		}
-		return operation;
+	private record Request(Long originalId, WorkCorrectionCommand command) {
 	}
 
 	private String normalize(String value) {
-		if (value == null)
-			return null;
-		String normalized = value.trim();
-		return normalized.isEmpty() ? null : normalized;
-	}
-
-	private String normalizeRequired(String value) {
-		String normalized = normalize(value);
-		if (normalized == null)
-			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
-		return normalized;
+		return value == null || value.isBlank() ? null : value.trim();
 	}
 
 }

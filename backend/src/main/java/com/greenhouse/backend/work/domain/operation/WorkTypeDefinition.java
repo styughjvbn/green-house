@@ -24,7 +24,6 @@ public enum WorkTypeDefinition {
 	DIVIDE("DIVIDE", WorkTypeWorkflow.STRUCTURE_CHANGE, WorkTargetReferenceType.ORCHID_GROUP, true),
 	MERGE("MERGE", WorkTypeWorkflow.STRUCTURE_CHANGE, WorkTargetReferenceType.ORCHID_GROUP, true),
 	DISCARD("DISCARD", WorkTypeWorkflow.DISCARD, WorkTargetReferenceType.ORCHID_GROUP, true),
-	CORRECTION(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, true),
 	RECONCILIATION(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, false);
 
 	private static final Map<String, WorkTypeDefinition> BY_CODE = Arrays.stream(values())
@@ -90,7 +89,6 @@ public enum WorkTypeDefinition {
 			case DIVIDE -> "분주";
 			case MERGE -> "합식";
 			case DISCARD -> "폐기";
-			case CORRECTION -> "보정";
 			case RECONCILIATION -> "현장 상태 조정";
 			case GENERIC -> null;
 		};

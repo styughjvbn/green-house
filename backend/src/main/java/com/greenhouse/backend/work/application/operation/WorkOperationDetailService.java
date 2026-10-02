@@ -77,19 +77,9 @@ public class WorkOperationDetailService {
 	}
 
 	private List<WorkCorrectionDetailResponse> corrections(Long operationId) {
-		var corrections = correctionRepository.findByOriginalWorkOperationIdOrderByCreatedAtAscIdAsc(operationId);
-		if (corrections.isEmpty())
-			return List.of();
-		var operationIds = corrections.stream().map(row -> row.getCorrectionWorkOperation().getId()).toList();
-		var effectsByOperationId = effectRepository.findByWorkOperationIdInAndEffectKey(operationIds, "OPERATION")
+		return correctionRepository.findByOriginalWorkOperationIdOrderByCreatedAtAscIdAsc(operationId)
 			.stream()
-			.collect(Collectors.toMap(effect -> effect.getWorkOperation().getId(),
-					effect -> WorkEffectDetailCodec.map(effect.getResultDetails()), (left, right) -> {
-						throw new org.springframework.dao.IncorrectResultSizeDataAccessException(1);
-					}));
-		return corrections.stream()
-			.map(correction -> WorkOperationDetailAssembler.correction(correction,
-					effectsByOperationId.getOrDefault(correction.getCorrectionWorkOperation().getId(), Map.of())))
+			.map(WorkCorrectionDetailResponse::from)
 			.toList();
 	}
 

@@ -2238,7 +2238,7 @@ export interface components {
         WorkTypeCreateRequest: {
             name: string;
             /** @enum {string} */
-            template: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "CORRECTION" | "RECONCILIATION";
+            template: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
         };
         ApiResponseWorkTypeResponse: {
             data?: components["schemas"]["WorkTypeResponse"];
@@ -2250,7 +2250,7 @@ export interface components {
             code?: string;
             name?: string;
             /** @enum {string} */
-            template?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "CORRECTION" | "RECONCILIATION";
+            template?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
             defaultType?: boolean;
             systemType?: boolean;
             active?: boolean;
@@ -2316,12 +2316,12 @@ export interface components {
             workTypeCode?: string;
             workType?: string;
             /** @enum {string} */
-            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "CORRECTION" | "RECONCILIATION";
+            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
             /** @enum {string} */
             workTypeWorkflow?: "GENERIC" | "MOVEMENT" | "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
             title?: string;
             /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
             /** Format: date */
             plannedStartDate?: string;
             /** Format: date */
@@ -2355,7 +2355,9 @@ export interface components {
             voidMutationId?: number;
             progress?: components["schemas"]["WorkOperationProgressResponse"];
             targets?: components["schemas"]["WorkOperationTargetResponse"][];
-            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "END_REMAINING" | "CANCEL")[];
+            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "END_REMAINING" | "CANCEL" | "CORRECT")[];
+            /** Format: int64 */
+            correctionCount?: number;
         };
         WorkOperationTargetResponse: {
             /** Format: int64 */
@@ -2455,7 +2457,6 @@ export interface components {
         };
         WorkOperationCorrectionCreateRequest: {
             idempotencyKey: string;
-            title: string;
             /** Format: date */
             workDate: string;
             worker?: string;
@@ -2468,20 +2469,33 @@ export interface components {
             data?: components["schemas"]["WorkOperationCorrectionsResponse"];
             message?: string;
         };
-        WorkOperationCorrectionItemResponse: {
+        WorkCorrectionAdjustmentResponse: {
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** Format: int32 */
+            beforeQuantity?: number;
+            /** Format: int32 */
+            afterQuantity?: number;
+            beforeStatus?: string;
+            afterStatus?: string;
+        };
+        WorkCorrectionDetailResponse: {
             /** Format: int64 */
             id?: number;
-            reason?: string;
             /** Format: date-time */
             createdAt?: string;
-            correctionOperation?: components["schemas"]["WorkOperationResponse"];
-            effectDetails?: {
-                [key: string]: unknown;
-            };
+            worker?: string;
+            memo?: string;
+            reason?: string;
+            /** Format: date */
+            beforeWorkDate?: string;
+            /** Format: date */
+            afterWorkDate?: string;
+            adjustments?: components["schemas"]["WorkCorrectionAdjustmentResponse"][];
         };
         WorkOperationCorrectionsResponse: {
             originalOperation?: components["schemas"]["WorkOperationResponse"];
-            corrections?: components["schemas"]["WorkOperationCorrectionItemResponse"][];
+            corrections?: components["schemas"]["WorkCorrectionDetailResponse"][];
         };
         WorkOperationCompleteRequest: {
             /** Format: date */
@@ -3141,7 +3155,7 @@ export interface components {
         WorkTypeUpdateRequest: {
             name: string;
             /** @enum {string} */
-            template: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "CORRECTION" | "RECONCILIATION";
+            template: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
             active?: boolean;
         };
         WorkTypeReorderRequest: {
@@ -3242,7 +3256,7 @@ export interface components {
             message?: string;
         };
         WorkTypeMetadataResponse: {
-            customTypeTemplates?: ("PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "CORRECTION" | "RECONCILIATION")[];
+            customTypeTemplates?: ("PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION")[];
         };
         ApiResponsePageResponseWorkOperationSummaryResponse: {
             data?: components["schemas"]["PageResponseWorkOperationSummaryResponse"];
@@ -3277,12 +3291,12 @@ export interface components {
             workTypeCode?: string;
             workType?: string;
             /** @enum {string} */
-            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "CORRECTION" | "RECONCILIATION";
+            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
             /** @enum {string} */
             workTypeWorkflow?: "GENERIC" | "MOVEMENT" | "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
             title?: string;
             /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
             /** Format: date */
             plannedStartDate?: string;
             /** Format: date */
@@ -3312,7 +3326,9 @@ export interface components {
             voidMutationId?: number;
             relationSummary?: components["schemas"]["WorkOperationRelationSummaryResponse"];
             progress?: components["schemas"]["WorkOperationProgressResponse"];
-            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "END_REMAINING" | "CANCEL")[];
+            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "END_REMAINING" | "CANCEL" | "CORRECT")[];
+            /** Format: int64 */
+            correctionCount?: number;
         };
         AffectedOperation: {
             /** Format: int64 */
@@ -3440,30 +3456,6 @@ export interface components {
             data?: components["schemas"]["WorkOperationDetailResponse"];
             message?: string;
         };
-        WorkCorrectionAdjustmentResponse: {
-            /** Format: int64 */
-            orchidGroupId?: number;
-            /** Format: int32 */
-            beforeQuantity?: number;
-            /** Format: int32 */
-            afterQuantity?: number;
-            beforeStatus?: string;
-            afterStatus?: string;
-        };
-        WorkCorrectionDetailResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            workOperationId?: number;
-            title?: string;
-            /** Format: date */
-            workDate?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            worker?: string;
-            reason?: string;
-            adjustments?: components["schemas"]["WorkCorrectionAdjustmentResponse"][];
-        };
         WorkExecutionDetailResponse: {
             /** Format: int64 */
             id?: number;
@@ -3555,7 +3547,7 @@ export interface components {
             workType?: string;
             title?: string;
             /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
             /** Format: date */
             plannedStartDate?: string;
             /** Format: date */
@@ -4533,14 +4525,14 @@ export interface components {
             workDate?: string;
             workType?: string;
             /** @enum {string} */
-            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "CORRECTION" | "RECONCILIATION";
+            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
             title?: string;
             /** @enum {string} */
             sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
             worker?: string;
             memo?: string;
             /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
         };
         WorkAnalyticsResponse: {
             /** Format: int64 */
@@ -4870,11 +4862,12 @@ export interface operations {
             query?: {
                 from?: string;
                 to?: string;
-                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
+                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
                 view?: "ALL" | "MANAGEMENT";
                 sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
                 sourceScopeId?: number;
                 keyword?: string;
+                hasCorrections?: boolean;
                 page?: number;
                 size?: number;
             };
@@ -6957,8 +6950,9 @@ export interface operations {
             query: {
                 from: string;
                 to: string;
-                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
+                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
                 view?: "ALL" | "MANAGEMENT";
+                hasCorrections?: boolean;
             };
             header?: never;
             path?: never;

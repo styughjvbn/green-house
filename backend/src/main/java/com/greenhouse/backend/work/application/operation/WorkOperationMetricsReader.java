@@ -95,7 +95,7 @@ public class WorkOperationMetricsReader {
 	}
 
 	private BooleanExpression completedWorkOperations() {
-		return workOperation.status.in(WorkOperationStatus.COMPLETED, WorkOperationStatus.CORRECTED);
+		return workOperation.status.in(WorkOperationStatus.COMPLETED);
 	}
 
 	public record Summary(long totalCount, long movementCount, long statusCount, LocalDate latestWorkDate,
