@@ -110,6 +110,45 @@ JOIN orchid_group_mutation_entries movement_entry
   ON movement_entry.id = migration.movement_entry_id
 WHERE discard_entry.id = migration.discard_entry_id;
 
+-- Preserve the full snapshot connection to a later mutation without changing
+-- that mutation's result, revision, or the group's later current state.
+UPDATE orchid_group_mutation_entries following_entry
+SET before_state = discard_entry.after_state
+FROM v35_movement_discard_entries migration
+JOIN orchid_group_mutation_entries discard_entry
+  ON discard_entry.id = migration.discard_entry_id
+WHERE following_entry.orchid_group_id = migration.orchid_group_id
+  AND following_entry.state_revision_before = migration.final_revision
+  AND following_entry.before_state = migration.final_state
+  AND following_entry.before_state IS DISTINCT FROM discard_entry.after_state;
+
+-- This rewrites historical facts, not a new business mutation. Keep revision,
+-- quantity, placement, version and timestamps intact. Synchronize the current
+-- status only when this rewritten chain is still the group's terminal state.
+-- ACTIVE ledgers normally require a new revision on UPDATE, so suspend only
+-- the two ledger triggers within Flyway's transaction (as in V36).
+ALTER TABLE orchid_groups DISABLE TRIGGER trg_orchid_group_write_fence;
+ALTER TABLE orchid_groups DISABLE TRIGGER trg_orchid_group_ledger_entry;
+
+UPDATE orchid_groups orchid_group
+SET status = discard_entry.after_state ->> 'status'
+FROM v35_movement_discard_entries migration
+JOIN orchid_group_mutation_entries discard_entry
+  ON discard_entry.id = migration.discard_entry_id
+WHERE orchid_group.id = migration.orchid_group_id
+  AND orchid_group.state_revision = migration.final_revision
+  AND orchid_group.quantity = (migration.final_state ->> 'quantity')::INTEGER
+  AND orchid_group.status = migration.final_state ->> 'status'
+  AND orchid_group.status IS DISTINCT FROM discard_entry.after_state ->> 'status'
+  AND NOT EXISTS (
+      SELECT 1 FROM orchid_group_mutation_entries later_entry
+      WHERE later_entry.orchid_group_id = orchid_group.id
+        AND later_entry.state_revision_after > migration.final_revision
+  );
+
+ALTER TABLE orchid_groups ENABLE TRIGGER trg_orchid_group_write_fence;
+ALTER TABLE orchid_groups ENABLE TRIGGER trg_orchid_group_ledger_entry;
+
 UPDATE work_applied_effects effect
 SET command_details = jsonb_set(effect.command_details, '{reason}',
         '"자리 이동 후 잔여 난 선별 폐기"'::jsonb, TRUE),

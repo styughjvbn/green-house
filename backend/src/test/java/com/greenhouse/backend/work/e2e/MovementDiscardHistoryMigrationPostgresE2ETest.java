@@ -25,6 +25,8 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 			Flyway.configure().dataSource(dataSource).target("33").load().migrate();
 			var jdbc = new JdbcTemplate(dataSource);
 			seedPreDiscardHistory(jdbc);
+			activateLedger(jdbc);
+			var original = jdbc.queryForMap("SELECT * FROM orchid_groups WHERE id = 1");
 
 			var upgrade = Flyway.configure().dataSource(dataSource).target("35").load();
 			assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
@@ -56,6 +58,17 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 					SELECT quantity_snapshot FROM work_operation_targets
 					WHERE work_operation_id = 101
 					""", Integer.class)).isEqualTo(4);
+			assertThat(jdbc.queryForMap("SELECT * FROM orchid_groups WHERE id = 1")).containsEntry("status", "폐기")
+				.containsAllEntriesOf(withoutStatus(original));
+			assertThat(jdbc.queryForObject("""
+					SELECT g.status = e.after_state ->> 'status'
+					  AND g.quantity = (e.after_state ->> 'quantity')::INTEGER
+					  AND g.state_revision = e.state_revision_after
+					FROM orchid_groups g JOIN orchid_group_mutation_entries e
+					  ON e.orchid_group_id = g.id AND e.state_revision_after = g.state_revision
+					WHERE g.id = 1
+					""", Boolean.class)).isTrue();
+			assertLedgerTriggersEnabled(jdbc);
 			assertThat(upgrade.migrate().migrationsExecuted).isZero();
 
 			assertThat(jdbc.queryForObject("""
@@ -73,6 +86,99 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 		finally {
 			admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
 		}
+	}
+
+	@Test
+	void preservesPartialRemainingGroupAndLaterCurrentState() {
+		for (boolean later : new boolean[] { false, true }) {
+			String database = "movement_status_" + UUID.randomUUID().toString().replace("-", "");
+			var admin = new JdbcTemplate(
+					new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
+			admin.execute("CREATE DATABASE " + database);
+			var dataSource = new DriverManagerDataSource(
+					POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database),
+					POSTGRES.getUsername(), POSTGRES.getPassword());
+			try {
+				Flyway.configure().dataSource(dataSource).target("33").load().migrate();
+				var jdbc = new JdbcTemplate(dataSource);
+				seedPreDiscardHistory(jdbc);
+				if (later) {
+					jdbc.execute(
+							"""
+									UPDATE orchid_groups SET status = '생성 취소', state_revision = 3 WHERE id = 1;
+									INSERT INTO orchid_group_mutations (
+									    id, mutation_type, source_domain, source_type, source_reference_id, source_operation_key,
+									    correlation_id, command_fingerprint, occurred_at, recorded_at, effective_business_date, schema_version
+									) VALUES (102, 'CANCEL_CREATION', 'FARM', 'TEST', '1', 'later',
+									    '00000000-0000-0000-0000-000000000102', repeat('2', 64), CURRENT_TIMESTAMP,
+									    CURRENT_TIMESTAMP, DATE '2026-08-02', 1);
+									INSERT INTO orchid_group_mutation_entries (
+									    id, mutation_id, orchid_group_id, entry_kind, role, state_revision_before,
+									    state_revision_after, before_state, after_state
+									) VALUES (102, 102, 1, 'CHANGE', 'AFFECTED', 2, 3,
+									    '{"quantity":0,"status":"종료"}', '{"quantity":0,"status":"생성 취소"}');
+									""");
+				}
+				else {
+					jdbc.execute("""
+							UPDATE orchid_groups SET quantity = 2, status = '주의' WHERE id = 1;
+							UPDATE orchid_group_mutation_entries
+							SET after_state = '{"quantity":2,"status":"주의"}' WHERE id = 101;
+							""");
+				}
+				activateLedger(jdbc);
+				var original = jdbc.queryForMap("SELECT * FROM orchid_groups WHERE id = 1");
+				Flyway.configure().dataSource(dataSource).target("35").load().migrate();
+				assertThat(jdbc.queryForMap("SELECT * FROM orchid_groups WHERE id = 1")).isEqualTo(original);
+				assertThat(jdbc.queryForObject("""
+						SELECT count(*) FROM orchid_group_mutation_entries previous
+						JOIN orchid_group_mutation_entries following
+						  ON following.orchid_group_id = previous.orchid_group_id
+						 AND following.state_revision_before = previous.state_revision_after
+						WHERE previous.orchid_group_id = 1
+						  AND previous.after_state IS DISTINCT FROM following.before_state
+						""", Long.class)).isZero();
+				if (later) {
+					assertThat(jdbc.queryForMap("""
+							SELECT state_revision_before, state_revision_after,
+							       before_state ->> 'status' AS before_status,
+							       after_state::text AS after_state
+							FROM orchid_group_mutation_entries WHERE id = 102
+							"""))
+						.containsExactlyInAnyOrderEntriesOf(Map.of("state_revision_before", 2L, "state_revision_after",
+								3L, "before_status", "폐기", "after_state", "{\"status\": \"생성 취소\", \"quantity\": 0}"));
+					assertThat(jdbc.queryForObject("SELECT count(*) FROM orchid_group_mutation_entries", Long.class))
+						.isEqualTo(3);
+				}
+				assertLedgerTriggersEnabled(jdbc);
+			}
+			finally {
+				admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
+			}
+		}
+	}
+
+	private Map<String, Object> withoutStatus(Map<String, Object> original) {
+		var preserved = new java.util.HashMap<>(original);
+		preserved.remove("status");
+		return preserved;
+	}
+
+	private void activateLedger(JdbcTemplate jdbc) {
+		jdbc.execute("""
+				INSERT INTO orchid_group_ledger_coverages (
+				    cutover_key, status, engine_schema_version, snapshot_schema_version,
+				    effective_business_date, minimum_writer_version
+				) VALUES ('00000000-0000-0000-0000-000000000001', 'ACTIVE', 1, 1, DATE '2026-08-01', '1.0.0');
+				""");
+	}
+
+	private void assertLedgerTriggersEnabled(JdbcTemplate jdbc) {
+		assertThat(jdbc.queryForList("""
+				SELECT tgenabled::text FROM pg_trigger
+				WHERE tgrelid = 'orchid_groups'::regclass
+				  AND tgname IN ('trg_orchid_group_write_fence', 'trg_orchid_group_ledger_entry')
+				""", String.class)).containsExactlyInAnyOrder("O", "O");
 	}
 
 	private void seedPreDiscardHistory(JdbcTemplate jdbc) {
