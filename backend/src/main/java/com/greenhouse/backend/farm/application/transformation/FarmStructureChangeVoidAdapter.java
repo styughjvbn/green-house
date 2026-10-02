@@ -57,7 +57,7 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 				|| entries.stream().map(entry -> entry.getMutation().getId()).distinct().count() != mutationIds.size()
 				|| entries.stream().anyMatch(entry -> !isVoidableType(entry.getMutation().getMutationType()))) {
 			blockers
-				.add(new Blocker("MUTATION_NOT_REVERSIBLE", "연속 상태 원장이 있는 구조 변경·자리 이동과 연관 선별 폐기만 자동 무효화할 수 있습니다.", 1));
+				.add(new Blocker("MUTATION_NOT_REVERSIBLE", "연속 상태 원장이 있는 구조 변경·자리 이동과 연관 선별 폐기만 자동 취소할 수 있습니다.", 1));
 		}
 		if (!mutationIds.isEmpty() && relationRepository.existsByRelatedMutationIdInAndRelationType(mutationIds,
 				OrchidGroupMutationRelationType.COMPENSATES)) {

@@ -246,9 +246,9 @@ public class WorkOperationController {
 		return ApiResponse.ok(progressService.resume(workOperationId));
 	}
 
-	@PostMapping("/work-operations/{workOperationId}/cancel")
-	public ApiResponse<WorkOperationView> cancel(@PathVariable Long workOperationId) {
-		return ApiResponse.ok(progressService.cancel(workOperationId));
+	@PostMapping("/work-operations/{workOperationId}/end-remaining")
+	public ApiResponse<WorkOperationView> endRemaining(@PathVariable Long workOperationId) {
+		return ApiResponse.ok(progressService.endRemaining(workOperationId));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/start")

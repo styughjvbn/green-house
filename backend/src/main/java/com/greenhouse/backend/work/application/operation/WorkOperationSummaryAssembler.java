@@ -32,7 +32,8 @@ class WorkOperationSummaryAssembler {
 			.collect(Collectors.toMap(WorkOperationProgressProjection::workOperationId, Function.identity()));
 		var relationSummaries = relationSummaryAssembler.assemble(operations);
 		return operations.stream().map(operation -> {
-			WorkOperationProgress progress = progress(progressByOperationId.get(operation.getId()));
+			WorkOperationProgress progress = progress(progressByOperationId.get(operation.getId()))
+				.forStatus(operation.getStatus());
 			return WorkOperationSummaryResponse.from(operation, relationSummaries.get(operation.getId()), progress,
 					actionResolver.resolveOperation(operation, progress));
 		}).toList();

@@ -198,7 +198,7 @@ export function StructureChangeExecutionDialog({
                 상태가 좋은 {form.totalResult}분을 먼저 이동하고, 원래 자리에
                 남은 {quantityDifferenceValue}분을 원본별 선별 수량에 비례해
                 자동 배분하여 폐기합니다. 두 작업은 하나의 처리 단위로 저장되며
-                이동 작업을 무효화할 때 함께 되돌립니다.
+                이동 작업을 취소할 때 함께 되돌립니다.
               </p>
               <ul className="mt-2 divide-y divide-[#ead9b6] border-t border-[#ead9b6] text-xs">
                 {movementBreakdown.map((item) => (

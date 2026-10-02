@@ -11,8 +11,8 @@ import {
   DialogTitle,
 } from "@/shared/ui/primitives/dialog";
 import {
-  getWorkOperationVoidEligibility,
-  voidWorkOperation,
+  cancelWorkOperation,
+  getWorkOperationCancellationEligibility,
 } from "../../api/workRecordApi";
 
 export function WorkOperationVoidDialog({
@@ -26,15 +26,15 @@ export function WorkOperationVoidDialog({
 }) {
   const [reason, setReason] = useState("");
   const [idempotencyKey] = useState(() =>
-    `work-void-${operation.id}-${createUuid()}`.slice(0, 100),
+    `work-cancel-${operation.id}-${createUuid()}`.slice(0, 100),
   );
   const eligibility = useQuery({
-    queryKey: ["work-operations", operation.id, "void-eligibility"],
-    queryFn: () => getWorkOperationVoidEligibility(operation.id),
+    queryKey: ["work-operations", operation.id, "cancel-eligibility"],
+    queryFn: () => getWorkOperationCancellationEligibility(operation.id),
   });
   const voidMutation = useMutation({
     mutationFn: () =>
-      voidWorkOperation(operation.id, {
+      cancelWorkOperation(operation.id, {
         idempotencyKey,
         reason: reason.trim(),
       }),
@@ -44,13 +44,6 @@ export function WorkOperationVoidDialog({
     },
   });
   const data = eligibility.data;
-  const effectDescription = data?.relatedWorkOperationIds.length
-    ? "자리 이동과 연관된 잔여 난 폐기를"
-    : operation.workTypeWorkflow === "DISCARD"
-      ? "폐기 효과를"
-      : operation.workTypeWorkflow === "POTTING"
-        ? "생성된 난 묶음과 입고 상태를"
-        : "구조 변경을";
   const error =
     eligibility.error instanceof Error
       ? eligibility.error.message
@@ -63,11 +56,10 @@ export function WorkOperationVoidDialog({
       <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-xl flex-col overflow-hidden rounded-lg">
         <header className="shrink-0 border-b border-[#e4e9e3] p-5 pr-14">
           <DialogTitle className="text-lg font-bold text-[#17251b]">
-            작업 무효화
+            작업 취소
           </DialogTitle>
           <DialogDescription className="mt-1 text-sm text-[#657168]">
-            {operation.title}의 {effectDescription} 반대 방향 Mutation으로
-            되돌립니다.
+            {operation.title}의 기록과 적용 효과를 되돌립니다.
           </DialogDescription>
         </header>
 
@@ -97,19 +89,19 @@ export function WorkOperationVoidDialog({
                 {data.relatedWorkOperationIds.length > 0 ? (
                   <p className="mt-3 text-xs text-[#526057]">
                     연관 작업 {data.relatedWorkOperationIds.length}건도 같은
-                    트랜잭션에서 함께 무효화됩니다.
+                    트랜잭션에서 함께 취소됩니다.
                   </p>
                 ) : null}
               </section>
 
-              {data.voidable ? (
+              {data.cancellable ? (
                 <p className="rounded-md border border-[#b8ddc1] bg-[#eff9f1] p-3 text-sm text-[#176b35]">
-                  후속 변경이 없어 이 작업을 무효화할 수 있습니다.
+                  후속 변경이 없어 이 작업을 취소할 수 있습니다.
                 </p>
               ) : (
                 <section className="rounded-md border border-[#efc4b9] bg-[#fff4ef] p-3">
                   <p className="text-sm font-bold text-[#9b341e]">
-                    지금은 무효화할 수 없습니다.
+                    지금은 취소할 수 없습니다.
                   </p>
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[#7c4132]">
                     {data.blockers.map((blocker) => (
@@ -123,19 +115,19 @@ export function WorkOperationVoidDialog({
               )}
 
               <label className="block text-sm font-semibold text-[#435047]">
-                무효화 사유
+                취소 사유
                 <textarea
                   className="mt-1 min-h-24 w-full resize-y rounded-md border border-[#cfd8cc] p-3 font-normal"
                   maxLength={1000}
-                  placeholder="잘못 입력한 작업 내용과 무효화 이유를 남겨주세요."
+                  placeholder="잘못 입력한 작업 내용과 취소 이유를 남겨주세요."
                   required
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
                 />
               </label>
               <p className="text-xs text-[#69756d]">
-                기존 기록은 삭제되지 않습니다. 무효화 Mutation과 사유가 새
-                이력으로 남고 revision은 계속 증가합니다.
+                실제로 수행한 작업이 아니라 잘못 등록한 작업을 바로잡을 때만
+                사용하세요. 기존 기록과 보상 이력은 삭제되지 않습니다.
               </p>
             </>
           ) : null}
@@ -158,12 +150,12 @@ export function WorkOperationVoidDialog({
           <button
             className="rounded-md bg-[#b43b24] px-4 py-2 text-sm font-bold text-white disabled:opacity-45"
             disabled={
-              !data?.voidable || !reason.trim() || voidMutation.isPending
+              !data?.cancellable || !reason.trim() || voidMutation.isPending
             }
             type="button"
             onClick={() => voidMutation.mutate()}
           >
-            {voidMutation.isPending ? "무효화 중…" : "작업 무효화"}
+            {voidMutation.isPending ? "취소 중…" : "작업 취소"}
           </button>
         </footer>
       </DialogContent>

@@ -78,12 +78,13 @@ membership은 목록 관계 카드의 역방향 조회용 복제이며, migratio
 
 ## 4. 상태와 전파
 
-- 전체 상태: `PLANNED`, `IN_PROGRESS`, `PAUSED`, `COMPLETED`, `CANCELED`, `CORRECTED`, `VOIDED`.
+- 전체 상태: `PLANNED`, `IN_PROGRESS`, `PAUSED`, `COMPLETED`, `STOPPED`, `CANCELED`, `CORRECTED`, `VOIDED`.
 - 대상 상태: `PENDING`, `IN_PROGRESS`, `COMPLETED`, `SKIPPED`, `CANCELED`, `FAILED`.
 - 전체 작업은 `PLANNED → IN_PROGRESS ↔ PAUSED → COMPLETED` 흐름을 제공한다.
 - 대상은 `PENDING → IN_PROGRESS → COMPLETED` 또는 `SKIPPED`로 처리한다.
 - 모든 대상이 완료 또는 건너뜀 상태가 되면 전체 작업은 마지막 실행 완료일 기준으로 자동 완료된다.
-- 일부 대상만 완료된 전체 작업 취소는 완료된 대상과 효과를 유지하고, 미완료 대상만 취소 상태로 닫는다.
+- `남은 작업 종료`는 완료된 대상과 효과를 유지하고 미완료 대상만 닫은 뒤 전체 작업을 `STOPPED`로 전환한다.
+- `작업 취소`는 실행 전 계획, 일반 기록형, 구조 변경형에 공통으로 제공한다. 기록 전용 효과는 취소 시각을 남기고, 구조 변경·폐기·포트 효과는 후속 참조가 없을 때 Mutation을 보상한다. 부분 실행 작업은 적용된 모든 효과를 되돌리고 미완료 대상을 같은 트랜잭션에서 닫는다.
 - 모든 대상이 닫힌 진행률 100% 작업은 일시중지, 추가 실행 등록, 취소 대상이 아니다.
 - 상위 작업을 난 묶음별 작업 행으로 복제하지 않는다. `WorkOperationTarget` 연결로 조회한다.
 - 조회 중복 기준은 `workOperationId + orchidGroupId`다.
@@ -149,8 +150,8 @@ membership은 목록 관계 카드의 역방향 조회용 복제이며, migratio
 - cutover 이전 상태 변경 Work 효과도 동일한 `(workOperationId, effectKey)` identity로 complete state-chain Mutation에 이관한다. `DISCARD`, `MOVE`, `DIVIDE`, `MOVEMENT`, `REPOT`, `POTTING`만 대상이며 난 묶음 관계는 연속 `CREATE/CHANGE/DELETE` Entry로 연결하고 원본 command/result는 Work 사실 데이터에 보존한다.
 - 전환용 importer는 Work application의 제한된 source 조회와 link API만 사용한다. 이관 후 상태 변경 효과와 대응 Lineage는 같은 Mutation ID로 연결하고, 재실행 시 기존 연결을 반환한다.
 - 기록 전용 효과와 작업일만 바뀐 보정은 난 묶음 상태 변경이 없으므로 Mutation 연결을 만들지 않는다.
-- 작업 무효화 API는 먼저 영향 범위와 차단 사유를 조회하고 실행 시 같은 조건을 잠금 아래 다시
-  검증한다. 동일 무효화 요청은 기존 결과를 반환하고 다른 요청으로 중복 무효화할 수 없다.
+- 작업 취소 API는 먼저 영향 범위와 차단 사유를 조회하고 실행 시 같은 조건을 잠금 아래 다시
+  검증한다. 동일 취소 요청은 기존 결과를 반환하고 다른 요청으로 중복 취소할 수 없다. 기존 `/void` 계약은 호환 경로로 유지한다.
 
 ## 7. 작업 모듈 내부 구조
 

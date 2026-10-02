@@ -22,15 +22,29 @@ class WorkOperationActionResolver {
 
 	List<WorkOperationAction> resolveOperation(WorkOperation operation, WorkOperationProgress progress) {
 		return switch (operation.getStatus()) {
-			case PLANNED -> List.of(WorkOperationAction.START, WorkOperationAction.CANCEL);
-			case PAUSED -> List.of(WorkOperationAction.RESUME, WorkOperationAction.CANCEL);
-			case IN_PROGRESS -> allTargetsClosed(progress) ? List.of(WorkOperationAction.COMPLETE)
-					: List.of(WorkOperationAction.PAUSE, WorkOperationAction.CANCEL);
+			case PLANNED -> operation.getWorkType().supportsUserCancellation()
+					? List.of(WorkOperationAction.START, WorkOperationAction.CANCEL)
+					: List.of(WorkOperationAction.START);
+			case PAUSED -> activeActions(operation, progress, WorkOperationAction.RESUME);
+			case IN_PROGRESS ->
+				allTargetsClosed(progress) ? List.of(WorkOperationAction.COMPLETE, WorkOperationAction.CANCEL)
+						: activeActions(operation, progress, WorkOperationAction.PAUSE);
 			case COMPLETED, CORRECTED ->
-				operation.getRelationType() == null && operation.getWorkType().supportsMutationVoid()
-						? List.of(WorkOperationAction.VOID) : List.of();
-			case CANCELED, VOIDED -> List.of();
+				operation.getRelationType() == null && operation.getWorkType().supportsUserCancellation()
+						? List.of(WorkOperationAction.CANCEL) : List.of();
+			case STOPPED, CANCELED, VOIDED -> List.of();
 		};
+	}
+
+	private List<WorkOperationAction> activeActions(WorkOperation operation, WorkOperationProgress progress,
+			WorkOperationAction lifecycleAction) {
+		if (!operation.getWorkType().supportsUserCancellation()) {
+			return List.of(lifecycleAction);
+		}
+		if (progress.completed() > 0 || progress.partial() > 0) {
+			return List.of(lifecycleAction, WorkOperationAction.END_REMAINING, WorkOperationAction.CANCEL);
+		}
+		return List.of(lifecycleAction, WorkOperationAction.CANCEL);
 	}
 
 	List<WorkTargetAction> resolveTarget(WorkOperation operation, WorkTargetExecution execution,

@@ -497,12 +497,12 @@ public class OrchidGroupMutationEngine {
 	public OrchidGroupMutationResult compensateTransforms(CompensateTransformMutationsCommand command) {
 		return compensate(command, command.mutationIds(), Set.of(OrchidGroupMutationType.TRANSFORM,
 				OrchidGroupMutationType.MOVE, OrchidGroupMutationType.DISCARD),
-				"구조 변경·자리 이동과 연관 선별 폐기 Mutation만 자동 무효화할 수 있습니다.");
+				"구조 변경·자리 이동과 연관 선별 폐기 Mutation만 자동 취소할 수 있습니다.");
 	}
 
 	public OrchidGroupMutationResult compensateCreations(CompensateCreateMutationsCommand command) {
 		return compensate(command, command.mutationIds(), Set.of(OrchidGroupMutationType.CREATE),
-				"포트 작업의 생성 Mutation만 자동 무효화할 수 있습니다.");
+				"포트 작업의 생성 Mutation만 자동 취소할 수 있습니다.");
 	}
 
 	private OrchidGroupMutationResult compensate(OrchidGroupMutationCommand command, List<Long> mutationIds,
@@ -516,13 +516,13 @@ public class OrchidGroupMutationEngine {
 		if (entries.isEmpty()
 				|| entries.stream().map(entry -> entry.getMutation().getId()).distinct().count() != mutationIds
 					.size()) {
-			throw new NotFoundException("무효화할 구조 변경 Mutation을 모두 찾을 수 없습니다.");
+			throw new NotFoundException("취소할 구조 변경 Mutation을 모두 찾을 수 없습니다.");
 		}
 		if (entries.stream().anyMatch(entry -> !allowedTypes.contains(entry.getMutation().getMutationType()))) {
 			throw new IllegalArgumentException(unsupportedMessage);
 		}
 		if (recorder.alreadyCompensated(mutationIds)) {
-			throw new IllegalArgumentException("이미 무효화된 구조 변경 작업입니다.");
+			throw new IllegalArgumentException("이미 취소된 구조 변경 작업입니다.");
 		}
 		Map<Long, List<OrchidGroupMutationEntry>> entriesByGroup = entries.stream()
 			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId, LinkedHashMap::new,
@@ -537,11 +537,11 @@ public class OrchidGroupMutationEngine {
 			return replay.get();
 		}
 		if (recorder.alreadyCompensated(mutationIds)) {
-			throw new IllegalArgumentException("이미 무효화된 구조 변경 작업입니다.");
+			throw new IllegalArgumentException("이미 취소된 구조 변경 작업입니다.");
 		}
 		List<OrchidGroupMutationEntry> latestEntries = entriesByGroup.values().stream().map(this::latestEntry).toList();
 		if (effectiveHeadPolicy.countGroupsNotAtEffectiveHead(latestEntries, groups) > 0) {
-			throw new IllegalArgumentException("상쇄되지 않은 후속 변경이 있는 난 묶음은 작업을 무효화할 수 없습니다.");
+			throw new IllegalArgumentException("상쇄되지 않은 후속 변경이 있는 난 묶음은 작업을 취소할 수 없습니다.");
 		}
 		Set<Long> excludedIds = entriesByGroup.keySet();
 		Map<Long, BedZone> restoreZones = findZonesForUpdate(entriesByGroup.values()

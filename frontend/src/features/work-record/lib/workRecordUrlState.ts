@@ -26,6 +26,7 @@ const WORK_STATUSES: WorkOperationStatus[] = [
   "PAUSED",
   "COMPLETED",
   "CORRECTED",
+  "STOPPED",
   "CANCELED",
 ];
 

@@ -115,6 +115,11 @@ public class WorkType extends BaseEntity {
 		return definition().supportsMutationVoid();
 	}
 
+	public boolean supportsUserCancellation() {
+		return supportsMutationVoid() || (!systemType && definition().allowsManualRegistration()
+				&& effectKind() == WorkEffectKind.RECORD_ONLY);
+	}
+
 	public String handlerCode() {
 		return definition().handlerCode(template);
 	}

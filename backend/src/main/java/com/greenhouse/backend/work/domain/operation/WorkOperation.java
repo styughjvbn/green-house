@@ -205,16 +205,49 @@ public class WorkOperation extends BaseEntity {
 		status = WorkOperationStatus.IN_PROGRESS;
 	}
 
+	public void stop(LocalDateTime stoppedAt) {
+		if (status == WorkOperationStatus.STOPPED) {
+			return;
+		}
+		if (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.CORRECTED
+				|| status == WorkOperationStatus.CANCELED || status == WorkOperationStatus.VOIDED) {
+			throw new IllegalArgumentException("완료·취소·보정·무효화된 작업은 남은 작업을 종료할 수 없습니다.");
+		}
+		actualEndAt = stoppedAt;
+		status = WorkOperationStatus.STOPPED;
+	}
+
 	public void cancel(LocalDateTime canceledAt) {
 		if (status == WorkOperationStatus.CANCELED) {
 			return;
 		}
-		if (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.CORRECTED
-				|| status == WorkOperationStatus.VOIDED) {
-			throw new IllegalArgumentException("완료·보정·무효화된 작업은 취소할 수 없습니다.");
+		if (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.STOPPED
+				|| status == WorkOperationStatus.CORRECTED || status == WorkOperationStatus.VOIDED) {
+			throw new IllegalArgumentException("완료·종료·보정·취소된 작업은 일반 취소할 수 없습니다.");
 		}
 		actualEndAt = canceledAt;
 		status = WorkOperationStatus.CANCELED;
+	}
+
+	public void cancelRecordedWork(LocalDateTime canceledAt, String reason, String requestKey) {
+		if (status == WorkOperationStatus.CANCELED) {
+			if (requestKey != null && requestKey.equals(voidRequestKey)) {
+				return;
+			}
+			throw new IllegalArgumentException("이미 다른 요청으로 취소된 작업입니다.");
+		}
+		if (status == WorkOperationStatus.STOPPED || status == WorkOperationStatus.VOIDED) {
+			throw new IllegalArgumentException("종료·취소된 작업은 다시 취소할 수 없습니다.");
+		}
+		if (reason == null || reason.isBlank() || requestKey == null || requestKey.isBlank()) {
+			throw new IllegalArgumentException("작업 취소 사유와 요청 식별자가 필요합니다.");
+		}
+		this.actualEndAt = canceledAt;
+		this.status = WorkOperationStatus.CANCELED;
+		this.voidedAt = canceledAt;
+		this.voidReason = reason.trim();
+		this.voidRequestKey = requestKey.trim();
+		this.voidMutationId = null;
 	}
 
 	public void cancelCompletedInbound(LocalDateTime canceledAt) {
@@ -248,15 +281,17 @@ public class WorkOperation extends BaseEntity {
 		if (status == WorkOperationStatus.VOIDED) {
 			return;
 		}
-		if ((status != WorkOperationStatus.COMPLETED && status != WorkOperationStatus.CORRECTED)
+		if ((status != WorkOperationStatus.IN_PROGRESS && status != WorkOperationStatus.PAUSED
+				&& status != WorkOperationStatus.COMPLETED && status != WorkOperationStatus.CORRECTED)
 				|| (!workType.supportsMutationVoid() && relationType != WorkOperationRelationType.MOVEMENT_DISCARD)) {
-			throw new IllegalArgumentException("완료된 구조 변경·폐기·포트 또는 자리 이동 연관 폐기 작업만 무효화할 수 있습니다.");
+			throw new IllegalArgumentException("실행 중이거나 완료된 구조 변경·폐기·포트 작업만 취소할 수 있습니다.");
 		}
 		if (reason == null || reason.isBlank() || requestKey == null || requestKey.isBlank()
 				|| compensationMutationId == null) {
-			throw new IllegalArgumentException("작업 무효화 사유와 요청 식별자가 필요합니다.");
+			throw new IllegalArgumentException("작업 취소 사유와 요청 식별자가 필요합니다.");
 		}
 		this.status = WorkOperationStatus.VOIDED;
+		this.actualEndAt = voidedAt;
 		this.voidedAt = voidedAt;
 		this.voidReason = reason.trim();
 		this.voidRequestKey = requestKey.trim();

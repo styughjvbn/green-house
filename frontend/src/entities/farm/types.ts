@@ -395,9 +395,9 @@ export type WorkOperationRelationSummary = {
   linkedOperationCount: number;
 };
 
-export type WorkOperationVoidEligibility = {
+export type WorkOperationCancellationEligibility = {
   workOperationId: number;
-  voidable: boolean;
+  cancellable: boolean;
   mutationIds: number[];
   sourceOrchidGroupIds: number[];
   resultOrchidGroupIds: number[];

@@ -314,6 +314,7 @@ components:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED

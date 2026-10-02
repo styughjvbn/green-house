@@ -3,6 +3,7 @@ import type { WorkOperation } from "@/entities/farm/types";
 import { getWorkExecutionKind } from "../../model/work-types/workTypeDefinition";
 import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
 import { WorkOperationDetails } from "./WorkOperationDetails";
+import { WorkOperationEndRemainingDialog } from "./WorkOperationEndRemainingDialog";
 import { WorkOperationVoidDialog } from "./WorkOperationVoidDialog";
 import { operationStatusLabel } from "../common/workOperationLabels";
 
@@ -26,7 +27,9 @@ export function OperationResult({
   operation: WorkOperation;
   loading: boolean;
   onComplete: (completedDate: string) => void;
-  onOperationAction: (action: "start" | "pause" | "resume" | "cancel") => void;
+  onOperationAction: (
+    action: "start" | "pause" | "resume" | "end-remaining",
+  ) => void;
   onTargetAction: (
     targetId: number,
     action: "start" | "complete" | "skip",
@@ -41,13 +44,15 @@ export function OperationResult({
     number | "operation" | null
   >(null);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [endRemainingDialogOpen, setEndRemainingDialogOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(operation.title);
   const completed = operation.status === "COMPLETED";
   const canceled = operation.status === "CANCELED";
+  const stopped = operation.status === "STOPPED";
   const corrected = operation.status === "CORRECTED";
   const voided = operation.status === "VOIDED";
-  const terminal = completed || canceled || corrected || voided;
+  const terminal = completed || stopped || canceled || corrected || voided;
   const executionKind = getWorkExecutionKind(operation.workTypeWorkflow);
   const structureChange =
     executionKind === "STRUCTURE_CHANGE" || executionKind === "MOVEMENT";
@@ -136,7 +141,7 @@ export function OperationResult({
               ? ` ~ ${operation.plannedEndDate}`
               : ""} · {operationStatusLabel(operation.status)}
             {operation.actualEndAt
-              ? ` · 완료 ${operation.actualEndAt.slice(0, 10)}`
+              ? ` · ${completed || corrected ? "완료" : "종료"} ${operation.actualEndAt.slice(0, 10)}`
               : ""}
           </p>
         </div>
@@ -149,18 +154,19 @@ export function OperationResult({
                   : "bg-[#f2eeee] text-[#765f5a]"
               }`}
             >
-              {voided
-                ? "무효화됨"
-                : corrected
-                  ? "보정됨"
-                  : completed
-                    ? "완료됨"
-                    : "취소됨"}
+              {stopped
+                ? "종료됨"
+                : voided
+                  ? "취소됨"
+                  : corrected
+                    ? "보정됨"
+                    : completed
+                      ? "완료됨"
+                      : "취소됨"}
             </span>
-            {(completed || corrected) &&
-            operation.availableActions.includes("VOID") ? (
+            {operation.availableActions.includes("CANCEL") ? (
               <StatusAction
-                label="작업 무효화"
+                label="작업 취소"
                 danger
                 disabled={loading}
                 onClick={() => setVoidDialogOpen(true)}
@@ -214,23 +220,30 @@ export function OperationResult({
                 onClick={() => setCompletionTargetId("operation")}
               />
             ) : null}
+            {operation.availableActions.includes("END_REMAINING") ? (
+              <StatusAction
+                label="남은 작업 종료"
+                disabled={loading}
+                onClick={() => setEndRemainingDialogOpen(true)}
+              />
+            ) : null}
             {operation.availableActions.includes("CANCEL") ? (
               <StatusAction
-                label="취소"
+                label="작업 취소"
                 danger
                 disabled={loading}
-                onClick={() => onOperationAction("cancel")}
+                onClick={() => setVoidDialogOpen(true)}
               />
             ) : null}
           </div>
         )}
       </div>
 
-      {voided ? (
+      {voided || (canceled && operation.voidReason) ? (
         <div className="mt-4 rounded-md border border-[#e1c9c2] bg-[#faf4f2] p-3 text-sm text-[#69483f]">
-          <p className="font-bold">이 작업의 효과는 무효화되었습니다.</p>
+          <p className="font-bold">이 작업의 기록과 효과는 취소되었습니다.</p>
           <p className="mt-1">
-            {operation.voidReason ?? "무효화 사유 없음"}
+            {operation.voidReason ?? "취소 사유 없음"}
             {operation.voidedAt ? ` · ${operation.voidedAt.slice(0, 10)}` : ""}
             {operation.voidMutationId
               ? ` · 보상 Mutation #${operation.voidMutationId}`
@@ -270,6 +283,17 @@ export function OperationResult({
           operation={operation}
           onClose={() => setVoidDialogOpen(false)}
           onSaved={onVoidSaved}
+        />
+      ) : null}
+      {endRemainingDialogOpen ? (
+        <WorkOperationEndRemainingDialog
+          loading={loading}
+          operation={operation}
+          onClose={() => setEndRemainingDialogOpen(false)}
+          onConfirm={() => {
+            onOperationAction("end-remaining");
+            setEndRemainingDialogOpen(false);
+          }}
         />
       ) : null}
     </div>

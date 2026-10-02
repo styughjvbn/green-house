@@ -3,8 +3,8 @@ package com.greenhouse.backend.work.controller;
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.operation.WorkOperationVoidService;
-import com.greenhouse.backend.work.dto.operation.WorkOperationVoidEligibilityResponse;
-import com.greenhouse.backend.work.dto.operation.WorkOperationVoidRequest;
+import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationEligibilityResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,14 +22,26 @@ public class WorkOperationVoidController {
 	private final WorkOperationVoidService service;
 
 	@GetMapping("/{workOperationId}/void-eligibility")
-	public ApiResponse<WorkOperationVoidEligibilityResponse> eligibility(@PathVariable Long workOperationId) {
+	public ApiResponse<WorkOperationCancellationEligibilityResponse> eligibility(@PathVariable Long workOperationId) {
+		return ApiResponse.ok(service.eligibility(workOperationId));
+	}
+
+	@GetMapping("/{workOperationId}/cancel-eligibility")
+	public ApiResponse<WorkOperationCancellationEligibilityResponse> cancelEligibility(
+			@PathVariable Long workOperationId) {
 		return ApiResponse.ok(service.eligibility(workOperationId));
 	}
 
 	@PostMapping("/{workOperationId}/void")
 	public ApiResponse<WorkOperationView> voidOperation(@PathVariable Long workOperationId,
-			@Valid @RequestBody WorkOperationVoidRequest request) {
+			@Valid @RequestBody WorkOperationCancellationRequest request) {
 		return ApiResponse.ok(service.voidOperation(workOperationId, request));
+	}
+
+	@PostMapping("/{workOperationId}/cancel")
+	public ApiResponse<WorkOperationView> cancelOperation(@PathVariable Long workOperationId,
+			@Valid @RequestBody WorkOperationCancellationRequest request) {
+		return ApiResponse.ok(service.cancelOperation(workOperationId, request));
 	}
 
 }
