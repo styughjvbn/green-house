@@ -29,6 +29,11 @@ public class OrchidGroupQueryController {
 		return ApiResponse.ok(farmQueryService.getOrchidGroups(houseId, keyword, physicalBedId, bedZoneId, status));
 	}
 
+	@GetMapping("/{orchidGroupId}")
+	public ApiResponse<OrchidGroupResponse> getOrchidGroup(@PathVariable Long orchidGroupId) {
+		return ApiResponse.ok(farmQueryService.getOrchidGroup(orchidGroupId));
+	}
+
 	@GetMapping("/{orchidGroupId}/lineage")
 	public ApiResponse<OrchidGroupLineageResponse> getLineage(@PathVariable Long orchidGroupId) {
 		return ApiResponse.ok(orchidGroupLineageService.getLineage(orchidGroupId));

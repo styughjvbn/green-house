@@ -934,7 +934,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getOrchidGroup"];
         put?: never;
         post?: never;
         delete: operations["delete_1"];
@@ -6414,6 +6414,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
+                };
+            };
+        };
+    };
+    getOrchidGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orchidGroupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseOrchidGroupResponse"];
                 };
             };
         };

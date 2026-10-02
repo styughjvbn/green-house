@@ -1736,6 +1736,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
   /api/orchid-groups/{orchidGroupId}:
+    get:
+      tags:
+      - orchid-group-query-controller
+      operationId: getOrchidGroup
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
     delete:
       tags:
       - orchid-group-command-controller

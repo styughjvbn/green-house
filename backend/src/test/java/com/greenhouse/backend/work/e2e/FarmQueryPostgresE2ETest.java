@@ -19,6 +19,7 @@ import jakarta.persistence.EntityManagerFactory;
 import java.math.BigDecimal;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,26 @@ class FarmQueryPostgresE2ETest extends WorkE2ETestBase {
 
 	@Autowired
 	JdbcTemplate jdbc;
+
+	@Autowired
+	WorkTestDataSeeder seeder;
+
+	@Test
+	void servesTheCorrectionDialogsSingleGroupRequestAndMissingResourceResponse() throws Exception {
+		seeder.reset();
+		var scenario = seeder.seedContractScenario();
+		var stats = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+		stats.clear();
+		var response = get("/api/orchid-groups/" + scenario.orchidGroupId());
+		assertThat(response.status()).as(response.body().toString()).isEqualTo(200);
+		assertThat(response.data().path("id").asLong()).isEqualTo(scenario.orchidGroupId());
+		assertThat(response.data().path("quantity").asInt()).isEqualTo(100);
+		assertThat(response.data().path("bedZoneId").asLong()).isEqualTo(scenario.bedZoneId());
+		assertThat(stats.getPrepareStatementCount()).isEqualTo(1);
+		var missing = get("/api/orchid-groups/" + Long.MAX_VALUE);
+		assertThat(missing.status()).isEqualTo(404);
+		assertThat(missing.body().path("error").path("code").asText()).isEqualTo("NOT_FOUND");
+	}
 
 	@ParameterizedTest
 	@ValueSource(ints = { 1, 10, 50 })

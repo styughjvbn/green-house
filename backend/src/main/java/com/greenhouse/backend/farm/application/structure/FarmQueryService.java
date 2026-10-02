@@ -109,6 +109,12 @@ public class FarmQueryService {
 					Collectors.toList()));
 	}
 
+	public OrchidGroupResponse getOrchidGroup(Long orchidGroupId) {
+		var group = orchidGroupRepository.findDetailById(orchidGroupId)
+			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+		return OrchidGroupResponse.from(group, TimeConfig.farmToday(clock));
+	}
+
 	public List<OrchidGroupResponse> getOrchidGroups(Long houseId, String keyword, Long physicalBedId, Long bedZoneId,
 			String status) {
 		var businessDate = TimeConfig.farmToday(clock);

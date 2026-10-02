@@ -85,6 +85,27 @@ class FarmStructureIntegrationTests extends FarmFixtureIntegrationTest {
 	}
 
 	@Test
+	void returnsSingleOrchidGroupForCorrectionWithoutFetchingTheWholeFarm() throws Exception {
+		var group = orchidGroupRepository.findAll().getFirst();
+		mockMvc.perform(get("/api/orchid-groups/{orchidGroupId}", group.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.id").value(group.getId()))
+			.andExpect(jsonPath("$.data.quantity").value(group.getQuantity()))
+			.andExpect(jsonPath("$.data.status").value(group.getStatus()))
+			.andExpect(jsonPath("$.data.bedZoneId").value(group.getBedZone().getId()))
+			.andExpect(jsonPath("$.data.houseNumber").exists())
+			.andExpect(jsonPath("$.data.varietyName").exists());
+	}
+
+	@Test
+	void returnsNotFoundForMissingSingleOrchidGroup() throws Exception {
+		mockMvc.perform(get("/api/orchid-groups/{orchidGroupId}", Long.MAX_VALUE))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"))
+			.andExpect(jsonPath("$.error.message").value("난 묶음을 찾을 수 없습니다."));
+	}
+
+	@Test
 	void returnsCommonErrorShapeForMissingResource() throws Exception {
 		mockMvc.perform(get("/api/houses/{houseId}", 999999))
 			.andExpect(status().isNotFound())
