@@ -318,8 +318,14 @@ public class OrchidGroupMutationEngine {
 		requireStateChange(beforeState, afterState);
 		group.advanceStateRevision();
 
-		return recordChanged(OrchidGroupMutationType.CANCEL_CREATION, command.source(), fingerprint,
-				command.effectiveBusinessDate(), command.reason(), group, revisionBefore, beforeState, afterState);
+		List<OrchidGroupMutation> correctedMutations = recorder.findRelated(command.correctedMutations(),
+				Set.of(group.getId()), Set.of(OrchidGroupMutationType.CREATE, OrchidGroupMutationType.TRANSFORM));
+		OrchidGroupMutation mutation = recorder.start(OrchidGroupMutationType.CANCEL_CREATION, command.source(),
+				fingerprint, command.effectiveBusinessDate(), command.reason());
+		OrchidGroupMutationResult result = recorder.changed(mutation, List
+			.of(new OrchidGroupMutationRecorder.Change(group.getId(), revisionBefore, beforeState, afterState)));
+		recorder.relate(mutation, correctedMutations, OrchidGroupMutationRelationType.CORRECTS);
+		return result;
 	}
 
 	public OrchidGroupMutationResult discard(DiscardOrchidGroupMutationCommand command) {

@@ -9,12 +9,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
+import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
+import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
@@ -47,6 +51,12 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 
 	@Autowired
 	private OrchidGroupCommandService orchidGroupCommandService;
+
+	@Autowired
+	private OrchidGroupMutationRepository mutationRepository;
+
+	@Autowired
+	private OrchidGroupMutationRelationRepository mutationRelationRepository;
 
 	private BedZone bedZone;
 
@@ -150,6 +160,38 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(correctionRequest("correction-invalid")))
 			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void cancelsAnIncorrectlyCreatedResultWithoutRecordingADiscard() throws Exception {
+		Long originalId = createRepotOperation();
+		Long originalMutationId = appliedEffectRepository.findAll().getFirst().getMutationId();
+
+		mockMvc
+			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
+				.content(resultCancellationRequest()))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.originalOperation.status").value("CORRECTED"))
+			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].beforeQuantity").value(30))
+			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].afterQuantity").value(0))
+			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].afterStatus").value("생성 취소"));
+
+		OrchidGroup canceled = orchidGroupRepository.findById(createdGroupId).orElseThrow();
+		assertThat(canceled.getQuantity()).isZero();
+		assertThat(canceled.getStatus()).isEqualTo("생성 취소");
+		var correctionEffect = appliedEffectRepository.findAll()
+			.stream()
+			.filter(effect -> WorkTypeDefinition.CORRECTION.name().equals(effect.getHandlerCode()))
+			.findFirst()
+			.orElseThrow();
+		var cancellationMutation = mutationRepository.findById(correctionEffect.getMutationId()).orElseThrow();
+		assertThat(cancellationMutation.getMutationType()).isEqualTo(OrchidGroupMutationType.CANCEL_CREATION);
+		assertThat(mutationRelationRepository.findByMutationIdOrderByIdAsc(cancellationMutation.getId()))
+			.singleElement()
+			.satisfies(relation -> {
+				assertThat(relation.getRelationType()).isEqualTo(OrchidGroupMutationRelationType.CORRECTS);
+				assertThat(relation.getRelatedMutation().getId()).isEqualTo(originalMutationId);
+			});
 	}
 
 	@Test
@@ -260,6 +302,24 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				  "workDate": "2026-07-14",
 				  "worker": "관리자",
 				  "reason": "작업일 입력 오류",
+				  "orchidGroupAdjustments": [{
+				    "orchidGroupId": %d,
+				    "quantity": 30,
+				    "status": "정상"
+				  }]
+				}
+				""".formatted(createdGroupId);
+	}
+
+	private String resultCancellationRequest() {
+		return """
+				{
+				  "idempotencyKey": "correction-cancel-result",
+				  "title": "잘못 생성된 분갈이 결과 취소",
+				  "workDate": "2026-07-15",
+				  "worker": "관리자",
+				  "reason": "실제로 만들지 않은 결과",
+				  "cancelResultCreation": true,
 				  "orchidGroupAdjustments": [{
 				    "orchidGroupId": %d,
 				    "quantity": 30,

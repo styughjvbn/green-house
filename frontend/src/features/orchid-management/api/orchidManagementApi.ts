@@ -71,6 +71,7 @@ export async function createWorkOperationCorrection(
     worker: string | null;
     memo: string | null;
     reason: string;
+    cancelResultCreation: boolean;
     orchidGroupAdjustments: Array<{
       orchidGroupId: number;
       quantity: number;

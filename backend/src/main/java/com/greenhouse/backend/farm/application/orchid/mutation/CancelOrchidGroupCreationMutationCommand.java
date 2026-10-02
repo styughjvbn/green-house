@@ -6,7 +6,13 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSou
 import java.time.LocalDate;
 
 public record CancelOrchidGroupCreationMutationCommand(OrchidGroupMutationSource source, Long orchidGroupId,
-		LocalDate effectiveBusinessDate, String reason) implements OrchidGroupMutationCommand {
+		RelatedOrchidGroupMutations correctedMutations, LocalDate effectiveBusinessDate,
+		String reason) implements OrchidGroupMutationCommand {
+
+	public CancelOrchidGroupCreationMutationCommand(OrchidGroupMutationSource source, Long orchidGroupId,
+			LocalDate effectiveBusinessDate, String reason) {
+		this(source, orchidGroupId, null, effectiveBusinessDate, reason);
+	}
 
 	public CancelOrchidGroupCreationMutationCommand {
 		if (source == null || orchidGroupId == null || effectiveBusinessDate == null) {

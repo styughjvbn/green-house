@@ -38,9 +38,12 @@ public class OrchidGroupMutationCommandFingerprint {
 			case MoveOrchidGroupsMutationCommand value -> fingerprint.calculate(
 					new BatchMovePayload(OrchidGroupMutationType.MOVE, value.items(), value.effectiveBusinessDate(),
 							value.reason(), new TreeSet<>(value.placementExclusionOrchidGroupIds())));
-			case CancelOrchidGroupCreationMutationCommand value ->
-				fingerprint.calculate(new CancelCreationPayload(OrchidGroupMutationType.CANCEL_CREATION,
-						value.orchidGroupId(), value.effectiveBusinessDate(), value.reason()));
+			case CancelOrchidGroupCreationMutationCommand value -> value.correctedMutations() == null
+					? fingerprint.calculate(new CancelCreationPayload(OrchidGroupMutationType.CANCEL_CREATION,
+							value.orchidGroupId(), value.effectiveBusinessDate(), value.reason()))
+					: fingerprint.calculate(new CorrectedCancelCreationPayload(OrchidGroupMutationType.CANCEL_CREATION,
+							value.orchidGroupId(), value.correctedMutations(), value.effectiveBusinessDate(),
+							value.reason()));
 			case DiscardOrchidGroupMutationCommand value ->
 				fingerprint.calculate(new DiscardPayload(OrchidGroupMutationType.DISCARD, value.orchidGroupId(),
 						value.quantity(), value.effectiveBusinessDate(), value.reason()));
@@ -104,6 +107,10 @@ public class OrchidGroupMutationCommandFingerprint {
 
 	private record CancelCreationPayload(OrchidGroupMutationType mutationType, Long orchidGroupId,
 			LocalDate effectiveBusinessDate, String reason) {
+	}
+
+	private record CorrectedCancelCreationPayload(OrchidGroupMutationType mutationType, Long orchidGroupId,
+			RelatedOrchidGroupMutations correctedMutations, LocalDate effectiveBusinessDate, String reason) {
 	}
 
 	private record DiscardPayload(OrchidGroupMutationType mutationType, Long orchidGroupId, Integer quantity,
