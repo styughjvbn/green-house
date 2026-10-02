@@ -241,13 +241,12 @@ export function OperationResult({
 
       {voided || (canceled && operation.voidReason) ? (
         <div className="mt-4 rounded-md border border-[#e1c9c2] bg-[#faf4f2] p-3 text-sm text-[#69483f]">
-          <p className="font-bold">이 작업의 기록과 효과는 취소되었습니다.</p>
+          <p className="font-bold">
+            이 작업은 취소되었으며 작업으로 인한 변경은 모두 복구되었습니다.
+          </p>
           <p className="mt-1">
-            {operation.voidReason ?? "취소 사유 없음"}
-            {operation.voidedAt ? ` · ${operation.voidedAt.slice(0, 10)}` : ""}
-            {operation.voidMutationId
-              ? ` · 보상 Mutation #${operation.voidMutationId}`
-              : ""}
+            {operation.voidedAt ? ` · ${operation.voidedAt.slice(0, 10)}` : ""}{" "}
+            사유 : {operation.voidReason ?? " 없음"}
           </p>
         </div>
       ) : null}
