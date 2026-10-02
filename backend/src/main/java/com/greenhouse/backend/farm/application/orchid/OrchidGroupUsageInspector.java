@@ -11,6 +11,11 @@ public interface OrchidGroupUsageInspector {
 
 	List<OrchidGroupUsage> inspect(Set<Long> orchidGroupIds, Long sourceWorkOperationId);
 
+	default List<OrchidGroupUsage> inspectExcludingWorkOperations(Set<Long> orchidGroupIds,
+			Set<Long> workOperationIds) {
+		return inspect(orchidGroupIds, null);
+	}
+
 	default List<OrchidGroupUsage> inspect(Set<Long> orchidGroupIds, Long sourceWorkOperationId,
 			Set<Long> allowedInboundRecordIds) {
 		return inspect(orchidGroupIds, sourceWorkOperationId);

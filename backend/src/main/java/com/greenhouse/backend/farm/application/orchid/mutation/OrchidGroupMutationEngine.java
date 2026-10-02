@@ -495,18 +495,24 @@ public class OrchidGroupMutationEngine {
 	}
 
 	public OrchidGroupMutationResult compensateTransforms(CompensateTransformMutationsCommand command) {
-		return compensate(command, command.mutationIds(), Set.of(OrchidGroupMutationType.TRANSFORM,
-				OrchidGroupMutationType.MOVE, OrchidGroupMutationType.DISCARD),
-				"구조 변경·자리 이동과 연관 선별 폐기 Mutation만 자동 취소할 수 있습니다.");
+		return compensate(command, command.mutationIds(),
+				Set.of(OrchidGroupMutationType.TRANSFORM, OrchidGroupMutationType.MOVE,
+						OrchidGroupMutationType.DISCARD),
+				"구조 변경·자리 이동과 연관 선별 폐기 Mutation만 자동 취소할 수 있습니다.", command.creationCancellationOrchidGroupIds());
+	}
+
+	public java.util.Optional<OrchidGroupMutationResult> findTransformCompensation(
+			CompensateTransformMutationsCommand command) {
+		return replayResolver.findExisting(command.source(), commandFingerprint.calculate(command));
 	}
 
 	public OrchidGroupMutationResult compensateCreations(CompensateCreateMutationsCommand command) {
 		return compensate(command, command.mutationIds(), Set.of(OrchidGroupMutationType.CREATE),
-				"포트 작업의 생성 Mutation만 자동 취소할 수 있습니다.");
+				"포트 작업의 생성 Mutation만 자동 취소할 수 있습니다.", Set.of());
 	}
 
 	private OrchidGroupMutationResult compensate(OrchidGroupMutationCommand command, List<Long> mutationIds,
-			Set<OrchidGroupMutationType> allowedTypes, String unsupportedMessage) {
+			Set<OrchidGroupMutationType> allowedTypes, String unsupportedMessage, Set<Long> creationCancellationIds) {
 		String fingerprint = commandFingerprint.calculate(command);
 		var replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
@@ -527,6 +533,9 @@ public class OrchidGroupMutationEngine {
 		Map<Long, List<OrchidGroupMutationEntry>> entriesByGroup = entries.stream()
 			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId, LinkedHashMap::new,
 					Collectors.toList()));
+		if (!entriesByGroup.keySet().containsAll(creationCancellationIds)) {
+			throw new IllegalArgumentException("생성 취소 대상은 상쇄할 Mutation에 포함된 난 묶음이어야 합니다.");
+		}
 		if (entriesByGroup.values().stream().anyMatch(this::hasBrokenCompensationChain)) {
 			throw new IllegalArgumentException("같은 난 묶음의 작업 Mutation이 하나의 연속 상태 체인을 이루지 않습니다.");
 		}
@@ -547,25 +556,33 @@ public class OrchidGroupMutationEngine {
 		Map<Long, BedZone> restoreZones = findZonesForUpdate(entriesByGroup.values()
 			.stream()
 			.map(this::earliestEntry)
+			.filter(entry -> !creationCancellationIds.contains(entry.getOrchidGroupId()))
 			.filter(entry -> entry.getBeforeState() != null)
 			.map(entry -> entry.getBeforeState().bedZoneId())
 			.collect(Collectors.toSet()));
+		List<OrchidPlacementPolicy.RestoredPlacement> restoredPlacements = new ArrayList<>();
 		for (List<OrchidGroupMutationEntry> groupEntries : entriesByGroup.values()) {
 			OrchidGroupMutationEntry entry = earliestEntry(groupEntries);
-			if (entry.getBeforeState() == null || entry.getBeforeState().quantity() == 0) {
+			if (creationCancellationIds.contains(entry.getOrchidGroupId()) || entry.getBeforeState() == null
+					|| entry.getBeforeState().quantity() == 0) {
 				continue;
 			}
 			BedZone restoreZone = restoreZones.get(entry.getBeforeState().bedZoneId());
-			orchidPlacementPolicy.validatePlacementExcluding(restoreZone, entry.getBeforeState().startPosition(),
-					entry.getBeforeState().endPosition(), excludedIds);
+			restoredPlacements
+				.add(new OrchidPlacementPolicy.RestoredPlacement(restoreZone, entry.getBeforeState().startPosition(),
+						entry.getBeforeState().endPosition(), entry.getBeforeState().sortOrder()));
 		}
+		orchidPlacementPolicy.validateRestoredPlacements(restoredPlacements, excludedIds);
 		List<OrchidGroupMutationRecorder.Change> changes = new ArrayList<>();
 		for (var groupEntry : entriesByGroup.entrySet()) {
 			OrchidGroupMutationEntry entry = earliestEntry(groupEntry.getValue());
 			OrchidGroup group = groups.get(groupEntry.getKey());
 			long revisionBefore = group.getStateRevision();
 			OrchidGroupStateSnapshot before = OrchidGroupStateSnapshot.from(group);
-			if (entry.getBeforeState() != null) {
+			if (creationCancellationIds.contains(group.getId())) {
+				group.cancelCreation();
+			}
+			else if (entry.getBeforeState() != null) {
 				OrchidGroupStateSnapshot restored = entry.getBeforeState();
 				group.reconcile(restored.quantity(), restored.status(), restoreZones.get(restored.bedZoneId()),
 						restored.sortOrder(), restored.startPosition(), restored.endPosition());

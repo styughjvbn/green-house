@@ -5,9 +5,16 @@ import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGrou
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 public record CompensateTransformMutationsCommand(OrchidGroupMutationSource source, List<Long> mutationIds,
-		LocalDate effectiveBusinessDate, String reason) implements OrchidGroupMutationCommand {
+		LocalDate effectiveBusinessDate, String reason,
+		Set<Long> creationCancellationOrchidGroupIds) implements OrchidGroupMutationCommand {
+
+	public CompensateTransformMutationsCommand(OrchidGroupMutationSource source, List<Long> mutationIds,
+			LocalDate effectiveBusinessDate, String reason) {
+		this(source, mutationIds, effectiveBusinessDate, reason, Set.of());
+	}
 
 	public CompensateTransformMutationsCommand {
 		if (source == null || effectiveBusinessDate == null || mutationIds == null || mutationIds.isEmpty()
@@ -15,6 +22,7 @@ public record CompensateTransformMutationsCommand(OrchidGroupMutationSource sour
 			throw new IllegalArgumentException("보상할 구조 변경 Mutation과 업무일이 필요합니다.");
 		}
 		mutationIds = mutationIds.stream().distinct().sorted().toList();
+		creationCancellationOrchidGroupIds = Set.copyOf(creationCancellationOrchidGroupIds);
 		reason = requireText(reason, "작업 취소 사유");
 	}
 }

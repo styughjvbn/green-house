@@ -45,6 +45,50 @@ public class OrchidPlacementPolicy {
 
 	public void validatePlacementExcluding(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition,
 			Set<Long> excludeOrchidGroupIds) {
+		validateRange(bedZone, startPosition, endPosition);
+		validateNoOverlap(bedZone, startPosition, endPosition, excludeOrchidGroupIds);
+	}
+
+	public void validateRestoredPlacements(List<RestoredPlacement> placements, Set<Long> excludedIds) {
+		if (placements.isEmpty()) {
+			return;
+		}
+		var zoneIds = placements.stream().map(placement -> placement.bedZone().getId()).distinct().toList();
+		var remaining = orchidGroupRepository.findByBedZoneIdInAndQuantityGreaterThan(zoneIds, 0)
+			.stream()
+			.filter(group -> !excludedIds.contains(group.getId()))
+			.toList();
+		for (int index = 0; index < placements.size(); index++) {
+			RestoredPlacement placement = placements.get(index);
+			validateRange(placement.bedZone(), placement.startPosition(), placement.endPosition());
+			for (OrchidGroup group : remaining) {
+				if (placement.bedZone().getId().equals(group.getBedZone().getId())) {
+					validateRestoredPair(placement, group.getStartPosition(), group.getEndPosition(),
+							group.getSortOrder());
+				}
+			}
+			for (int other = 0; other < index; other++) {
+				RestoredPlacement previous = placements.get(other);
+				if (placement.bedZone().getId().equals(previous.bedZone().getId())) {
+					validateRestoredPair(placement, previous.startPosition(), previous.endPosition(),
+							previous.sortOrder());
+				}
+			}
+		}
+	}
+
+	private void validateRestoredPair(RestoredPlacement placement, BigDecimal start, BigDecimal end,
+			Integer sortOrder) {
+		if (start != null && end != null
+				&& isOverlapping(placement.startPosition(), placement.endPosition(), start, end)) {
+			throw new IllegalArgumentException("복구할 난 묶음의 배치가 다른 난 묶음 배치와 겹칩니다.");
+		}
+		if (placement.sortOrder() != null && placement.sortOrder().equals(sortOrder)) {
+			throw new IllegalArgumentException("복구할 난 묶음의 구역 내 표시 순서가 다른 난 묶음과 중복됩니다.");
+		}
+	}
+
+	private void validateRange(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition) {
 		if (startPosition == null || endPosition == null) {
 			throw new IllegalArgumentException("시작 위치와 종료 위치를 모두 입력해야 합니다.");
 		}
@@ -58,7 +102,6 @@ public class OrchidPlacementPolicy {
 		if (maxPosition != null && endPosition.compareTo(maxPosition) > 0) {
 			throw new IllegalArgumentException("종료 위치는 배드 최대 칸 수를 넘을 수 없습니다.");
 		}
-		validateNoOverlap(bedZone, startPosition, endPosition, excludeOrchidGroupIds);
 	}
 
 	public PlacementRange findFirstAvailableSingleSlot(BedZone bedZone) {
@@ -116,6 +159,10 @@ public class OrchidPlacementPolicy {
 	}
 
 	public record PlacementRange(BigDecimal startPosition, BigDecimal endPosition) {
+	}
+
+	public record RestoredPlacement(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition,
+			Integer sortOrder) {
 	}
 
 }

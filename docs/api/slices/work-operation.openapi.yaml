@@ -616,6 +616,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
+  /api/work-operations/cancel-batch:
+    post:
+      tags:
+      - work-operation-void-controller
+      operationId: cancelBatch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationBatchCancellationRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationBatchCancellationResponse'
   /api/work-operations/batch:
     post:
       tags:
@@ -1014,6 +1032,13 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/PageResponseWorkOperationSummaryResponse'
+        message:
+          type: string
+    ApiResponseWorkOperationBatchCancellationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkOperationBatchCancellationResponse'
         message:
           type: string
     ApiResponseWorkOperationCancellationEligibilityResponse:
@@ -1656,6 +1681,53 @@ components:
           type: number
         releasedEndPosition:
           type: number
+    WorkOperationBatchCancellationRequest:
+      type: object
+      properties:
+        workOperationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          maxItems: 100
+          minItems: 0
+        creationCancellationOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          maxItems: 100
+          minItems: 0
+          uniqueItems: true
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - idempotencyKey
+      - reason
+      - workOperationIds
+    WorkOperationBatchCancellationResponse:
+      type: object
+      properties:
+        canceledWorkOperationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        compensationMutationId:
+          type: integer
+          format: int64
+        creationCanceledOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          uniqueItems: true
     WorkOperationBatchCreateRequest:
       type: object
       properties:

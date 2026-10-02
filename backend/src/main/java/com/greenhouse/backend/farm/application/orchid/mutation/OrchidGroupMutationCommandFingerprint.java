@@ -65,9 +65,13 @@ public class OrchidGroupMutationCommandFingerprint {
 						value.orchidGroupId(), value.actualQuantity(), value.actualStatus(), value.actualBedZoneId(),
 						value.actualStartPosition(), value.actualEndPosition(), value.effectiveBusinessDate(),
 						value.reason()));
-			case CompensateTransformMutationsCommand value ->
-				fingerprint.calculate(new CompensationPayload(OrchidGroupMutationType.COMPENSATION, value.mutationIds(),
-						value.effectiveBusinessDate(), value.reason()));
+			case CompensateTransformMutationsCommand value -> value.creationCancellationOrchidGroupIds().isEmpty()
+					? fingerprint.calculate(new CompensationPayload(OrchidGroupMutationType.COMPENSATION,
+							value.mutationIds(), value.effectiveBusinessDate(), value.reason()))
+					: fingerprint.calculate(new CompensationWithCreationCancellationPayload(
+							OrchidGroupMutationType.COMPENSATION, value.mutationIds(),
+							value.creationCancellationOrchidGroupIds().stream().sorted().toList(),
+							value.effectiveBusinessDate(), value.reason()));
 			case CompensateCreateMutationsCommand value ->
 				fingerprint.calculate(new CompensationPayload(OrchidGroupMutationType.COMPENSATION, value.mutationIds(),
 						value.effectiveBusinessDate(), value.reason()));
@@ -132,6 +136,11 @@ public class OrchidGroupMutationCommandFingerprint {
 
 	private record CompensationPayload(OrchidGroupMutationType mutationType, List<Long> mutationIds,
 			LocalDate effectiveBusinessDate, String reason) {
+	}
+
+	private record CompensationWithCreationCancellationPayload(OrchidGroupMutationType mutationType,
+			List<Long> mutationIds, List<Long> creationCancellationOrchidGroupIds, LocalDate effectiveBusinessDate,
+			String reason) {
 	}
 
 }

@@ -27,6 +27,15 @@ public interface WorkOperationTargetRepository extends JpaRepository<WorkOperati
 	long countActiveOtherOperations(Collection<Long> orchidGroupIds, Long workOperationId,
 			Collection<WorkOperationStatus> ignoredStatuses);
 
+	@Query("""
+			select count(distinct target.workOperation.id) from WorkOperationTarget target
+			where target.orchidGroupId in :orchidGroupIds and target.excludedAt is null
+			  and target.workOperation.id not in :workOperationIds
+			  and target.workOperation.status not in :ignoredStatuses
+			""")
+	long countOperationsOutside(Collection<Long> orchidGroupIds, Collection<Long> workOperationIds,
+			Collection<WorkOperationStatus> ignoredStatuses);
+
 	@EntityGraph(attributePaths = { "workOperation", "workOperation.workType" })
 	List<WorkOperationTarget> findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(Long workOperationId);
 

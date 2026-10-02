@@ -10,6 +10,8 @@ import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
+import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationRequest;
+import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationEligibilityResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
@@ -20,6 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -151,6 +154,66 @@ public class WorkOperationVoidService {
 		return cancelOperation(operationId, request);
 	}
 
+	public WorkOperationBatchCancellationResponse cancelBatch(WorkOperationBatchCancellationRequest request) {
+		List<Long> ids = request.workOperationIds().stream().distinct().sorted().toList();
+		if (ids.isEmpty() || ids.size() > 100)
+			throw new IllegalArgumentException("일괄 취소 작업은 1~100건이어야 합니다.");
+		String key = support.normalizeRequired(request.idempotencyKey());
+		String reason = support.normalizeRequired(request.reason());
+		List<WorkOperation> operations = operationRepository.findAllForUpdateByIdIn(ids);
+		if (operations.size() != ids.size()) {
+			throw new NotFoundException("일괄 취소할 작업을 찾을 수 없습니다.");
+		}
+		operationRepository.findByIdIn(ids);
+		boolean replayOnly = operations.stream()
+			.allMatch(operation -> operation.getStatus() == WorkOperationStatus.VOIDED
+					&& batchRequestKey(key, operation.getId()).equals(operation.getVoidRequestKey()));
+		if (!replayOnly
+				&& operations.stream().anyMatch(operation -> operation.getStatus() != WorkOperationStatus.COMPLETED)) {
+			throw new IllegalArgumentException("일괄 취소는 완료된 구조 변경·이동·폐기 작업만 지원합니다.");
+		}
+		Set<Long> operationIds = Set.copyOf(ids);
+		for (var operation : operations) {
+			var workflow = operation.getWorkType().workflow();
+			if (!operation.getWorkType().supportsMutationVoid() || workflow == WorkTypeWorkflow.POTTING) {
+				throw new IllegalArgumentException("일괄 취소는 구조 변경·이동·폐기 작업만 지원합니다.");
+			}
+			if (operation.getRelationType() == WorkOperationRelationType.MOVEMENT_DISCARD
+					&& (operation.getParentOperation() == null
+							|| !operationIds.contains(operation.getParentOperation().getId()))) {
+				throw new IllegalArgumentException("연관 폐기는 원본 자리 이동 작업과 함께 선택해야 합니다.");
+			}
+		}
+		if (operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(ids)
+			.stream()
+			.filter(item -> item.getRelationType() == WorkOperationRelationType.MOVEMENT_DISCARD)
+			.anyMatch(item -> !operationIds.contains(item.getId()))) {
+			throw new IllegalArgumentException("자리 이동의 연관 폐기 작업도 함께 선택해야 합니다.");
+		}
+		var effects = effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(ids);
+		if (effects.stream().anyMatch(effect -> effect.getMutationId() == null) || !effects.stream()
+			.map(effect -> effect.getWorkOperation().getId())
+			.collect(java.util.stream.Collectors.toSet())
+			.containsAll(operationIds)) {
+			throw new IllegalArgumentException("모든 선택 작업에 취소할 Mutation이 있어야 합니다.");
+		}
+		var mutationIds = effects.stream().map(effect -> effect.getMutationId()).distinct().sorted().toList();
+		Long compensationId = structureChangeVoidPort.compensateBatch(operationIds, key, mutationIds,
+				request.creationCancellationOrchidGroupIds(), operations.getFirst().getPlannedStartDate(), reason,
+				replayOnly);
+		if (!replayOnly) {
+			var now = support.now();
+			effects.forEach(effect -> effect.cancel(now));
+			cancelOpenExecutions(executionRepository.findByTargetWorkOperationIdInOrderByIdAsc(ids), now);
+			for (var operation : operations) {
+				operation.voidCompletedMutationWork(now, reason, batchRequestKey(key, operation.getId()),
+						compensationId);
+			}
+		}
+		return new WorkOperationBatchCancellationResponse(ids, compensationId,
+				request.creationCancellationOrchidGroupIds());
+	}
+
 	public WorkOperationView cancelOperation(Long operationId, WorkOperationCancellationRequest request) {
 		var operation = operationRepository.findForUpdateById(operationId)
 			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
@@ -263,6 +326,11 @@ public class WorkOperationVoidService {
 		var now = support.now();
 		effects.forEach(effect -> effect.cancel(now));
 		operation.voidCompletedInboundRegistration(now, reason, requestKey, mutationId);
+	}
+
+	private String batchRequestKey(String key, Long operationId) {
+		return "batch-" + java.util.UUID.nameUUIDFromBytes(
+				("BATCH_VOID:" + key + ":" + operationId).getBytes(java.nio.charset.StandardCharsets.UTF_8));
 	}
 
 	private String relatedRequestKey(String requestKey, Long operationId) {

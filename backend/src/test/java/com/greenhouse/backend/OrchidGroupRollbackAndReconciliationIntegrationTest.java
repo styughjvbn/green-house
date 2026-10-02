@@ -44,6 +44,36 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
 	EntityManager entityManager;
 
 	@Test
+	void directlyCancelsOriginalCreationWithoutRestoringAnOccupiedPosition() {
+		var fixture = fixture(934);
+		var date = LocalDate.of(2026, 9, 22);
+		var created = mutationEngine.create(new CreateOrchidGroupMutationCommand(source("net-create", "CREATE"),
+				fixture.sourceZone().getId(), details(fixture.variety().getId(), 20, "0", "4"), date, "생성"));
+		Long originalId = created.entries().getFirst().orchidGroupId();
+		var transformed = mutationEngine
+			.transform(new TransformOrchidGroupsMutationCommand(source("net-transform", "TRANSFORM"),
+					List.of(new TransformOrchidGroupMutationSource(originalId, 20, null, null)),
+					List.of(new TransformOrchidGroupMutationResult(fixture.resultZone().getId(),
+							details(fixture.variety().getId(), 20, "0", "4"))),
+					date, "변환", Set.of()));
+		var occupant = mutationEngine.create(new CreateOrchidGroupMutationCommand(source("net-occupant", "CREATE"),
+				fixture.sourceZone().getId(), details(fixture.variety().getId(), 9, "0", "4"), date, "현재 배치"));
+		var command = new CompensateTransformMutationsCommand(source("net-void", "VOID"),
+				List.of(transformed.mutationId()), date, "생성 취소까지 적용", Set.of(originalId));
+		var result = mutationEngine.compensateTransforms(command);
+		assertThat(orchidGroupRepository.findById(originalId).orElseThrow().getStatus()).isEqualTo("생성 취소");
+		assertThat(orchidGroupRepository.findById(originalId).orElseThrow().getQuantity()).isZero();
+		assertThat(orchidGroupRepository.findById(occupant.entries().getFirst().orchidGroupId())
+			.orElseThrow()
+			.getQuantity()).isEqualTo(9);
+		assertThat(mutationEngine.compensateTransforms(command).mutationId()).isEqualTo(result.mutationId());
+		assertThatThrownBy(
+				() -> mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(command.source(),
+						command.mutationIds(), date, command.reason())))
+			.isInstanceOf(com.greenhouse.backend.common.exception.ConflictException.class);
+	}
+
+	@Test
 	void compensatesAWholeTransformWithoutRewindingRevisions() {
 		Fixture fixture = fixture(930);
 		LocalDate date = LocalDate.of(2026, 9, 22);

@@ -34,4 +34,11 @@ public class WorkOrchidGroupUsageInspector {
 				Set.of(WorkOperationStatus.STOPPED, WorkOperationStatus.CANCELED, WorkOperationStatus.VOIDED));
 	}
 
+	public boolean hasReferencesOutside(Set<Long> orchidGroupIds, Set<Long> workOperationIds) {
+		var canceledStatuses = Set.of(WorkOperationStatus.CANCELED, WorkOperationStatus.VOIDED);
+		return targetRepository.countOperationsOutside(orchidGroupIds, workOperationIds, canceledStatuses) > 0
+				|| effectOrchidGroupRepository.countOperationsOutside(orchidGroupIds, workOperationIds,
+						canceledStatuses) > 0;
+	}
+
 }

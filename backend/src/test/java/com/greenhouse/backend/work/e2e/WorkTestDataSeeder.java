@@ -42,6 +42,16 @@ class WorkTestDataSeeder {
 	}
 
 	void reset() {
+		reset(true);
+	}
+
+	void resetKeepingSequences() {
+		// Hibernate's pooled allocation survives between test methods. Do not rewind
+		// PostgreSQL sequences while that allocator still holds an allocated block.
+		reset(false);
+	}
+
+	private void reset(boolean restartIdentity) {
 		jdbcTemplate.execute("""
 				TRUNCATE TABLE
 				  work_command_receipts,
@@ -61,8 +71,8 @@ class WorkTestDataSeeder {
 				  orchid_groups,
 				  inbound_records,
 				  varieties
-				RESTART IDENTITY CASCADE
-				""");
+				%s CASCADE
+				""".formatted(restartIdentity ? "RESTART IDENTITY" : "CONTINUE IDENTITY"));
 	}
 
 	ContractScenario seedContractScenario() {

@@ -473,6 +473,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-operations/cancel-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-operations/batch": {
         parameters: {
             query?: never;
@@ -2667,6 +2683,22 @@ export interface components {
             /** Format: int32 */
             discardQuantity: number;
             reason?: string;
+        };
+        WorkOperationBatchCancellationRequest: {
+            workOperationIds: number[];
+            creationCancellationOrchidGroupIds?: number[];
+            idempotencyKey: string;
+            reason: string;
+        };
+        ApiResponseWorkOperationBatchCancellationResponse: {
+            data?: components["schemas"]["WorkOperationBatchCancellationResponse"];
+            message?: string;
+        };
+        WorkOperationBatchCancellationResponse: {
+            canceledWorkOperationIds?: number[];
+            /** Format: int64 */
+            compensationMutationId?: number;
+            creationCanceledOrchidGroupIds?: number[];
         };
         WorkOperationBatchCreateRequest: {
             operation: components["schemas"]["WorkOperationCreateRequest"];
@@ -5495,6 +5527,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseListWorkOperationResponse"];
+                };
+            };
+        };
+    };
+    cancelBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOperationBatchCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationBatchCancellationResponse"];
                 };
             };
         };

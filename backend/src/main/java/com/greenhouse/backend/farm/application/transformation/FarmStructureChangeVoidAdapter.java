@@ -48,9 +48,16 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 
 	private final Clock clock;
 
+	private final com.greenhouse.backend.farm.application.orchid.OrchidGroupAuditSupport auditSupport;
+
 	@Override
 	@Transactional(readOnly = true)
 	public Inspection inspect(Long workOperationId, List<Long> mutationIds) {
+		return inspect(workOperationId, mutationIds, null, Set.of());
+	}
+
+	private Inspection inspect(Long workOperationId, List<Long> mutationIds, Set<Long> batchOperationIds,
+			Set<Long> finalCancellationIds) {
 		var blockers = new ArrayList<Blocker>();
 		List<OrchidGroupMutationEntry> entries = mutationIds.isEmpty() ? List.of()
 				: entryRepository.findByMutationIdInOrderByMutationIdAscIdAsc(mutationIds);
@@ -75,14 +82,25 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 			.filter(entry -> earliest(entry.getValue()).getBeforeState() == null)
 			.map(java.util.Map.Entry::getKey)
 			.collect(Collectors.toCollection(LinkedHashSet::new));
-		if (!resultIds.isEmpty()) {
-			usageInspectors.stream()
-				.flatMap(inspector -> inspector.inspect(resultIds, workOperationId).stream())
-				.forEach(usage -> blockers.add(new Blocker(usage.code(), usage.message(), usage.count())));
+		if (!grouped.keySet().containsAll(finalCancellationIds)) {
+			blockers.add(new Blocker("INVALID_CREATION_CANCELLATION", "생성 취소 대상은 선택한 작업에 포함된 난 묶음이어야 합니다.", 1));
 		}
-		var groups = orchidGroupRepository.findAllById(grouped.keySet())
+		resultIds.addAll(finalCancellationIds);
+		var groups = (batchOperationIds == null ? orchidGroupRepository.findAllById(grouped.keySet())
+				: orchidGroupRepository.findAllForUpdateByIdIn(grouped.keySet()))
 			.stream()
 			.collect(Collectors.toMap(group -> group.getId(), group -> group));
+		if (batchOperationIds != null && groups.values().stream().anyMatch(group -> group.getReservedQuantity() > 0)) {
+			blockers.add(new Blocker("RESERVED_QUANTITY", "예약 수량이 있는 난 묶음은 일괄 취소할 수 없습니다.", 1));
+		}
+		Set<Long> usageGroupIds = batchOperationIds == null ? resultIds : grouped.keySet();
+		if (!usageGroupIds.isEmpty()) {
+			usageInspectors.stream()
+				.flatMap(inspector -> (batchOperationIds == null ? inspector.inspect(usageGroupIds, workOperationId)
+						: inspector.inspectExcludingWorkOperations(usageGroupIds, batchOperationIds))
+					.stream())
+				.forEach(usage -> blockers.add(new Blocker(usage.code(), usage.message(), usage.count())));
+		}
 		List<OrchidGroupMutationEntry> latestEntries = grouped.values().stream().map(this::latest).toList();
 		long changed = effectiveHeadPolicy.countGroupsNotAtEffectiveHead(latestEntries, groups);
 		if (changed > 0) {
@@ -90,7 +108,8 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 		}
 		Set<Long> sourceIds = grouped.entrySet()
 			.stream()
-			.filter(entry -> earliest(entry.getValue()).getBeforeState() != null)
+			.filter(entry -> earliest(entry.getValue()).getBeforeState() != null
+					&& !finalCancellationIds.contains(entry.getKey()))
 			.map(java.util.Map.Entry::getKey)
 			.collect(Collectors.toSet());
 		return new Inspection(summaries(sourceIds, groups), summaries(resultIds, groups), blockers);
@@ -106,6 +125,44 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 		var compensation = mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(
 				OrchidGroupMutationSources.work(workOperationId, "VOID:" + requestKey), mutationIds, businessDate,
 				reason));
+		collectionMemberRepository
+			.findByOrchidGroupIdInAndRemovedAtIsNull(
+					inspection.resultOrchidGroups().stream().map(OrchidGroupSummary::orchidGroupId).toList())
+			.forEach(member -> member.remove(TimeConfig.utcNow(clock)));
+		return compensation.mutationId();
+	}
+
+	@Override
+	public Long compensateBatch(Set<Long> workOperationIds, String requestKey, List<Long> mutationIds,
+			Set<Long> finalCancellationIds, LocalDate businessDate, String reason, boolean replayOnly) {
+		Long anchorId = workOperationIds.stream().min(Long::compareTo).orElseThrow();
+		var command = new CompensateTransformMutationsCommand(
+				OrchidGroupMutationSources.work(anchorId, "BATCH_VOID:" + requestKey), mutationIds, businessDate,
+				reason, finalCancellationIds);
+		var existing = mutationEngine.findTransformCompensation(command);
+		if (existing.isPresent())
+			return existing.get().mutationId();
+		if (replayOnly)
+			throw new com.greenhouse.backend.common.exception.ConflictException("기존 일괄 취소 요청과 작업 범위가 다릅니다.");
+		var inspection = inspect(null, mutationIds, workOperationIds, finalCancellationIds);
+		if (!inspection.blockers().isEmpty())
+			throw new IllegalArgumentException(inspection.blockers().getFirst().message());
+		var groups = orchidGroupRepository.findAllById(java.util.stream.Stream
+			.concat(inspection.sourceOrchidGroups().stream(), inspection.resultOrchidGroups().stream())
+			.map(OrchidGroupSummary::orchidGroupId)
+			.distinct()
+			.toList());
+		var before = groups.stream().collect(Collectors.toMap(group -> group.getId(), auditSupport::snapshot));
+		var compensation = mutationEngine.compensateTransforms(command);
+		for (var group : groups) {
+			auditSupport.record(group.getId(),
+					auditSupport.actionForCorrection(before.get(group.getId()), auditSupport.snapshot(group)),
+					com.greenhouse.backend.audit.domain.AuditSource.ORCHID_GROUP_MANAGEMENT, before.get(group.getId()),
+					auditSupport.snapshot(group),
+					java.util.Map.of("batchWorkOperationIds", workOperationIds.stream().sorted().toList(),
+							"creationCancellationOrchidGroupIds", finalCancellationIds.stream().sorted().toList(),
+							"compensationMutationId", compensation.mutationId(), "reason", reason));
+		}
 		collectionMemberRepository
 			.findByOrchidGroupIdInAndRemovedAtIsNull(
 					inspection.resultOrchidGroups().stream().map(OrchidGroupSummary::orchidGroupId).toList())

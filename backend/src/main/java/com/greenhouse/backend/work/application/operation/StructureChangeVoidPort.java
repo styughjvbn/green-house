@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 public interface StructureChangeVoidPort {
 
@@ -9,6 +10,9 @@ public interface StructureChangeVoidPort {
 
 	Long compensate(Long workOperationId, String requestKey, List<Long> mutationIds, LocalDate businessDate,
 			String reason);
+
+	Long compensateBatch(Set<Long> workOperationIds, String requestKey, List<Long> mutationIds,
+			Set<Long> creationCancellationOrchidGroupIds, LocalDate businessDate, String reason, boolean replayOnly);
 
 	record Inspection(List<OrchidGroupSummary> sourceOrchidGroups, List<OrchidGroupSummary> resultOrchidGroups,
 			List<Blocker> blockers) {

@@ -17,6 +17,22 @@ import org.junit.jupiter.api.Test;
 class MutationFingerprintCompatibilityTest {
 
 	@Test
+	void creationCancellationSelectionIsNormalizedAndPartOfTheFingerprint() {
+		var source = new OrchidGroupMutationSource(OrchidGroupMutationSourceDomain.WORK, "TEST", "12", "VOID",
+				UUID.randomUUID());
+		var date = LocalDate.of(2026, 9, 8);
+		var calculator = new OrchidGroupMutationCommandFingerprint(new OrchidGroupMutationFingerprint());
+		var legacy = new CompensateTransformMutationsCommand(source, List.of(9L, 11L), date, "reason");
+		assertThat(calculator.calculate(legacy)).isEqualTo(calculator
+			.calculate(new CompensateTransformMutationsCommand(source, List.of(11L, 9L), date, "reason", Set.of())));
+		var first = new CompensateTransformMutationsCommand(source, List.of(9L, 11L), date, "reason", Set.of(3L, 1L));
+		var second = new CompensateTransformMutationsCommand(source, List.of(11L, 9L), date, "reason",
+				new java.util.LinkedHashSet<>(List.of(1L, 3L)));
+		assertThat(calculator.calculate(first)).isEqualTo(calculator.calculate(second))
+			.isNotEqualTo(calculator.calculate(legacy));
+	}
+
+	@Test
 	void keepsStableCommandFingerprints() throws Exception {
 		var source = new OrchidGroupMutationSource(OrchidGroupMutationSourceDomain.WORK, "TEST", "12", "EXECUTE:12",
 				UUID.fromString("00000000-0000-0000-0000-000000000001"));

@@ -3,6 +3,8 @@ package com.greenhouse.backend.work.controller;
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.operation.WorkOperationVoidService;
+import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationRequest;
+import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationEligibilityResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationRequest;
 import jakarta.validation.Valid;
@@ -20,6 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkOperationVoidController {
 
 	private final WorkOperationVoidService service;
+
+	@PostMapping("/cancel-batch")
+	public ApiResponse<WorkOperationBatchCancellationResponse> cancelBatch(
+			@Valid @RequestBody WorkOperationBatchCancellationRequest request) {
+		return ApiResponse.ok(service.cancelBatch(request));
+	}
 
 	@GetMapping("/{workOperationId}/void-eligibility")
 	public ApiResponse<WorkOperationCancellationEligibilityResponse> eligibility(@PathVariable Long workOperationId) {

@@ -45,4 +45,13 @@ public interface WorkEffectOrchidGroupRepository extends JpaRepository<WorkEffec
 	boolean existsByOrchidGroupIdAndWorkAppliedEffectWorkOperationStatusNotIn(Long orchidGroupId,
 			Collection<WorkOperationStatus> ignoredStatuses);
 
+	@Query("""
+			select count(distinct link.workAppliedEffect.workOperation.id) from WorkEffectOrchidGroup link
+			where link.orchidGroupId in :orchidGroupIds
+			  and link.workAppliedEffect.workOperation.id not in :workOperationIds
+			  and link.workAppliedEffect.workOperation.status not in :ignoredStatuses
+			""")
+	long countOperationsOutside(Collection<Long> orchidGroupIds, Collection<Long> workOperationIds,
+			Collection<WorkOperationStatus> ignoredStatuses);
+
 }

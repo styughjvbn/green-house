@@ -228,6 +228,8 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 	List<OrchidGroup> findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(Long bedZoneId, Integer quantity);
 
+	List<OrchidGroup> findByBedZoneIdInAndQuantityGreaterThan(java.util.Collection<Long> bedZoneIds, Integer quantity);
+
 	@Query("""
 			select g from OrchidGroup g
 			join fetch g.bedZone z
