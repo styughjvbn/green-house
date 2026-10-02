@@ -230,6 +230,16 @@ public class OrchidGroup extends BaseEntity {
 	}
 
 	public void correctQuantityAndStatus(Integer correctedQuantity, String correctedStatus) {
+		if (OrchidGroupStatusPolicy.CREATION_CANCELED.equals(status)) {
+			throw new IllegalArgumentException("생성 취소된 난 묶음은 다시 보정할 수 없습니다.");
+		}
+		if (correctedStatus != null && OrchidGroupStatusPolicy.CREATION_CANCELED.equals(correctedStatus.trim())) {
+			throw new IllegalArgumentException("생성 취소 상태는 일반 보정이 아닌 결과 생성 취소로 처리해야 합니다.");
+		}
+		applyQuantityAndStatus(correctedQuantity, correctedStatus);
+	}
+
+	private void applyQuantityAndStatus(Integer correctedQuantity, String correctedStatus) {
 		if (correctedQuantity == null || correctedQuantity < 0) {
 			throw new IllegalArgumentException("보정 수량은 0 이상이어야 합니다.");
 		}
@@ -245,7 +255,7 @@ public class OrchidGroup extends BaseEntity {
 
 	public void reconcile(Integer actualQuantity, String actualStatus, BedZone actualBedZone, Integer actualSortOrder,
 			BigDecimal actualStartPosition, BigDecimal actualEndPosition) {
-		correctQuantityAndStatus(actualQuantity, actualStatus);
+		applyQuantityAndStatus(actualQuantity, actualStatus);
 		if (actualBedZone == null || actualSortOrder == null) {
 			throw new IllegalArgumentException("현장 동기화 위치 정보가 필요합니다.");
 		}

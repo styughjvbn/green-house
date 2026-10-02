@@ -1,6 +1,7 @@
 package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
@@ -110,6 +111,54 @@ class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest extends Abs
 		});
 		assertThat(relationRepository.findByMutationIdOrderByIdAsc(corrected.mutationId())).isEmpty();
 		assertGroup(group.getId(), 17, 1L);
+	}
+
+	@Test
+	void validatesTheFinalActivePlacementOfABulkCorrection() {
+		Fixture fixture = createFixture();
+		LocalDate date = LocalDate.of(2026, 8, 20);
+		var first = mutationEngine.create(new CreateOrchidGroupMutationCommand(farmSource("first", "CREATE"),
+				fixture.zone().getId(), details(fixture.variety().getId(), 20, "0", "2"), date, "생성"));
+		Long firstId = first.entries().getFirst().orchidGroupId();
+		mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(workSource("zero-first"),
+				List.of(new CorrectOrchidGroupMutationItem(firstId, 0, "종료")),
+				RelatedOrchidGroupMutations.current(List.of(first.mutationId())), date, "보정"));
+		var second = mutationEngine.create(new CreateOrchidGroupMutationCommand(farmSource("second", "CREATE"),
+				fixture.zone().getId(), details(fixture.variety().getId(), 20, "0", "2"), date, "생성"));
+		Long secondId = second.entries().getFirst().orchidGroupId();
+		var result = mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(workSource("swap"),
+				List.of(new CorrectOrchidGroupMutationItem(firstId, 20, "정상"),
+						new CorrectOrchidGroupMutationItem(secondId, 0, "종료")),
+				RelatedOrchidGroupMutations.current(List.of(first.mutationId(), second.mutationId())), date, "동시 보정"));
+		assertThat(result.entries()).hasSize(2);
+		assertThat(orchidGroupRepository.findById(firstId).orElseThrow().getQuantity()).isEqualTo(20);
+		assertThat(orchidGroupRepository.findById(secondId).orElseThrow().getQuantity()).isZero();
+	}
+
+	@Test
+	void rejectsMutuallyOverlappingReactivationTargetsInTheSameCorrection() {
+		Fixture fixture = createFixture();
+		LocalDate date = LocalDate.of(2026, 8, 20);
+		var first = mutationEngine.create(new CreateOrchidGroupMutationCommand(farmSource("first", "CREATE"),
+				fixture.zone().getId(), details(fixture.variety().getId(), 20, "0", "2"), date, "생성"));
+		Long firstId = first.entries().getFirst().orchidGroupId();
+		mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(workSource("zero-first"),
+				List.of(new CorrectOrchidGroupMutationItem(firstId, 0, "종료")),
+				RelatedOrchidGroupMutations.current(List.of(first.mutationId())), date, "보정"));
+		var second = mutationEngine.create(new CreateOrchidGroupMutationCommand(farmSource("second", "CREATE"),
+				fixture.zone().getId(), details(fixture.variety().getId(), 20, "0", "2"), date, "생성"));
+		Long secondId = second.entries().getFirst().orchidGroupId();
+		mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(workSource("zero-second"),
+				List.of(new CorrectOrchidGroupMutationItem(secondId, 0, "종료")),
+				RelatedOrchidGroupMutations.current(List.of(second.mutationId())), date, "보정"));
+		assertThatThrownBy(() -> mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(workSource("both"),
+				List.of(new CorrectOrchidGroupMutationItem(firstId, 20, "정상"),
+						new CorrectOrchidGroupMutationItem(secondId, 20, "정상")),
+				RelatedOrchidGroupMutations.current(List.of(first.mutationId(), second.mutationId())), date, "동시 보정")))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("겹칩니다");
+		assertThat(orchidGroupRepository.findById(firstId).orElseThrow().getQuantity()).isZero();
+		assertThat(orchidGroupRepository.findById(secondId).orElseThrow().getQuantity()).isZero();
 	}
 
 	private Fixture createFixture() {

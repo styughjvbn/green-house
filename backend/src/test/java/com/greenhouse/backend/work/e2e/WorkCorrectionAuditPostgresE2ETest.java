@@ -32,15 +32,29 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 	@Autowired
 	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService reconciliation;
 
+	@Autowired
+	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService migration;
+
+	@Autowired
+	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService cutover;
+
+	@Autowired
+	com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository groups;
+
 	private long originalId;
 
 	private List<Long> resultIds;
 
 	@BeforeEach
 	void prepare() throws Exception {
-		seeder.reset();
+		seeder.resetKeepingSequences();
 		var scenario = seeder.seedContractScenario();
-		seeder.baselineGroups();
+		var key = java.util.UUID.randomUUID();
+		var date = java.time.LocalDate.of(2026, 8, 20);
+		com.greenhouse.backend.OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, date,
+				"1.0.0");
+		cutover.execute(new com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand(key,
+				date, "1.0.0", "1.1.0", true));
 		var plan = post("/api/work-operations", """
 				{"workTypeId":%d,"title":"보정 대상","plannedStartDate":"2026-07-15",
 				 "sourceScopeType":"MANUAL_SELECTION","sourceOrchidGroupIds":[%d]}
@@ -199,15 +213,118 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 			.anyMatch(issue -> issue.code().equals("INVALID_WORK_CORRECTION_MUTATION_LINK"));
 	}
 
+	@Test
+	void rejectsReactivationIntoOccupiedPlacementAndRollsBackTheWholeCorrection() throws Exception {
+		assertThat(post(path(), request("zero", 0, "2026-07-15")).status()).isEqualTo(201);
+		Long zone = jdbc.queryForObject("SELECT bed_zone_id FROM orchid_groups WHERE id=?", Long.class,
+				resultIds.getFirst());
+		Long variety = jdbc.queryForObject("SELECT variety_id FROM orchid_groups WHERE id=?", Long.class,
+				resultIds.getFirst());
+		var occupant = post("/api/orchid-groups", """
+				{"bedZoneId":%d,"varietyId":%d,"quantity":10,"potSize":"4치","ageYear":3,
+				 "status":"정상","startPosition":6,"endPosition":8}
+				""".formatted(zone, variety));
+		assertThat(occupant.status()).as(occupant.body().toString()).isEqualTo(201);
+		var before = jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id");
+		long mutations = count("orchid_group_mutations");
+		var failed = post(path(), """
+				{"idempotencyKey":"occupied","workDate":"2026-07-14","reason":"보정",
+				 "orchidGroupAdjustments":[{"orchidGroupId":%d,"quantity":55,"status":"정상"},
+				 {"orchidGroupId":%d,"quantity":35,"status":"정상"}]}
+				""".formatted(resultIds.getFirst(), resultIds.getLast()));
+		assertThat(failed.status()).isEqualTo(400);
+		assertThat(failed.body().path("error").path("details").toString()).contains("겹칩니다");
+		assertThat(jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id")).isEqualTo(before);
+		assertThat(count("orchid_group_mutations")).isEqualTo(mutations);
+		assertThat(count("work_operation_corrections")).isEqualTo(1);
+		assertThat(count("work_correction_receipts")).isEqualTo(1);
+		assertThat(jdbc.queryForObject("SELECT planned_start_date::text FROM work_operations WHERE id=?", String.class,
+				originalId))
+			.isEqualTo("2026-07-15");
+		assertThat(reconciliation.reconcile().ready()).isTrue();
+	}
+
+	@Test
+	void reactivatesAZeroQuantityResultWhenItsPlacementIsStillAvailable() throws Exception {
+		assertThat(post(path(), request("zero", 0, "2026-07-15")).status()).isEqualTo(201);
+		var response = post(path(), request("reactivate", 60, "2026-07-15"));
+		assertThat(response.status()).as(response.body().toString()).isEqualTo(201);
+		assertThat(count("work_operation_corrections")).isEqualTo(2);
+		assertThat(jdbc.queryForObject("SELECT quantity FROM orchid_groups WHERE id=?", Integer.class,
+				resultIds.getFirst()))
+			.isEqualTo(60);
+		assertThat(reconciliation.reconcile().ready()).isTrue();
+	}
+
+	@Test
+	void cannotForgeCreationCancellationThroughAnOrdinaryStatusCorrection() throws Exception {
+		var before = jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id");
+		long mutations = count("orchid_group_mutations");
+		for (int quantity : List.of(0, 60)) {
+			var failed = post(path(), """
+					{"idempotencyKey":"forged-%d","workDate":"2026-07-15","reason":"보정",
+					 "cancelResultCreation":false,
+					 "orchidGroupAdjustments":[{"orchidGroupId":%d,"quantity":%d,"status":" 생성 취소 "}]}
+					""".formatted(quantity, resultIds.getFirst(), quantity));
+			assertThat(failed.status()).isEqualTo(400);
+			assertThat(failed.body().path("error").path("details").toString()).contains("결과 생성 취소로 처리");
+		}
+		assertThat(jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id")).isEqualTo(before);
+		assertThat(count("orchid_group_mutations")).isEqualTo(mutations);
+		assertThat(count("work_operation_corrections")).isZero();
+		assertThat(count("work_correction_receipts")).isZero();
+		assertThat(post(path(), request("valid-after-failure", 55, "2026-07-15")).status()).isEqualTo(201);
+	}
+
+	@Test
+	void explicitCreationCancellationStillCreatesTheDedicatedMutation() throws Exception {
+		var response = post(path(), """
+				{"idempotencyKey":"explicit-cancel","workDate":"2026-07-15","reason":"오생성",
+				 "cancelResultCreation":true,
+				 "orchidGroupAdjustments":[{"orchidGroupId":%d,"quantity":60,"status":"정상"}]}
+				""".formatted(resultIds.getFirst()));
+		assertThat(response.status()).as(response.body().toString()).isEqualTo(201);
+		assertThat(jdbc.queryForMap("SELECT quantity,status FROM orchid_groups WHERE id=?", resultIds.getFirst()))
+			.containsEntry("quantity", 0)
+			.containsEntry("status", "생성 취소");
+		assertThat(jdbc.queryForObject("""
+				SELECT m.mutation_type FROM orchid_group_mutations m
+				JOIN work_operation_corrections c ON c.mutation_id=m.id WHERE c.original_work_operation_id=?
+				""", String.class, originalId)).isEqualTo("CANCEL_CREATION");
+		assertThat(reconciliation.reconcile().ready()).isTrue();
+	}
+
 	private List<ApiResult> parallel(String first, String second) throws Exception {
+		return parallel(path(), first, path(), second);
+	}
+
+	@Test
+	void concurrentReactivationAndCreationCannotBothOccupyTheSamePlacement() throws Exception {
+		assertThat(post(path(), request("zero", 0, "2026-07-15")).status()).isEqualTo(201);
+		Long zone = jdbc.queryForObject("SELECT bed_zone_id FROM orchid_groups WHERE id=?", Long.class,
+				resultIds.getFirst());
+		Long variety = jdbc.queryForObject("SELECT variety_id FROM orchid_groups WHERE id=?", Long.class,
+				resultIds.getFirst());
+		String create = """
+				{"bedZoneId":%d,"varietyId":%d,"quantity":10,"potSize":"4치","ageYear":3,
+				 "status":"정상","startPosition":6,"endPosition":8}
+				""".formatted(zone, variety);
+		var results = parallel(path(), request("reactivate", 60, "2026-07-15"), "/api/orchid-groups", create);
+		assertThat(results).extracting(ApiResult::status).containsExactlyInAnyOrder(201, 400);
+		assertThat(reconciliation.reconcile().ready()).isTrue();
+	}
+
+	private List<ApiResult> parallel(String firstPath, String first, String secondPath, String second)
+			throws Exception {
 		var ready = new CountDownLatch(2);
 		var start = new CountDownLatch(1);
 		try (var executor = Executors.newFixedThreadPool(2)) {
-			var futures = List.of(first, second).stream().map(request -> executor.submit(() -> {
+			var requests = List.of(new String[] { firstPath, first }, new String[] { secondPath, second });
+			var futures = requests.stream().map(request -> executor.submit(() -> {
 				ready.countDown();
 				if (!start.await(5, TimeUnit.SECONDS))
 					throw new AssertionError("start timeout");
-				return post(path(), request);
+				return post(request[0], request[1]);
 			})).toList();
 			assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
 			start.countDown();

@@ -440,6 +440,19 @@ public class OrchidGroupMutationEngine {
 		if (changedGroupIds.isEmpty()) {
 			throw new IllegalArgumentException("보정 Mutation에는 현재 상태와 다른 값이 필요합니다.");
 		}
+		var activeItems = command.items()
+			.stream()
+			.filter(item -> changedGroupIds.contains(item.orchidGroupId()) && item.correctedQuantity() > 0)
+			.toList();
+		var zones = findZonesForUpdate(activeItems.stream()
+			.map(item -> groupsById.get(item.orchidGroupId()).getBedZone().getId())
+			.collect(Collectors.toSet()));
+		var placements = activeItems.stream().map(item -> {
+			var group = groupsById.get(item.orchidGroupId());
+			return new OrchidPlacementPolicy.RestoredPlacement(zones.get(group.getBedZone().getId()),
+					group.getStartPosition(), group.getEndPosition(), group.getSortOrder());
+		}).toList();
+		orchidPlacementPolicy.validateRestoredPlacements(placements, changedGroupIds);
 		List<OrchidGroupMutation> relationTargets = recorder.findRelated(command.correctedMutations(), changedGroupIds,
 				Set.of(OrchidGroupMutationType.CREATE, OrchidGroupMutationType.TRANSFORM));
 		OrchidGroupMutation mutation = recorder.start(OrchidGroupMutationType.CORRECTION, command.source(), fingerprint,
