@@ -398,10 +398,19 @@ export type WorkOperationRelationSummary = {
 export type WorkOperationCancellationEligibility = {
   workOperationId: number;
   cancellable: boolean;
-  mutationIds: number[];
-  sourceOrchidGroupIds: number[];
-  resultOrchidGroupIds: number[];
-  relatedWorkOperationIds: number[];
+  affectedOperations: Array<{
+    workOperationId: number;
+    title: string;
+    workTypeName: string;
+    workDate: string;
+    primary: boolean;
+  }>;
+  affectedOrchidGroups: Array<{
+    orchidGroupId: number;
+    varietyName: string | null;
+    quantity: number | null;
+    impactType: "RECORD_CANCELED" | "RESTORED" | "CREATION_CANCELED";
+  }>;
   blockers: Array<{
     code: string;
     message: string;

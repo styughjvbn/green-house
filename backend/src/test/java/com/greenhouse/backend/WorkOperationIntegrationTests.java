@@ -317,7 +317,10 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data.availableActions", hasItem("CANCEL")));
 		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", operationId))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.cancellable").value(true));
+			.andExpect(jsonPath("$.data.cancellable").value(true))
+			.andExpect(jsonPath("$.data.affectedOperations[0].workOperationId").value(operationId))
+			.andExpect(jsonPath("$.data.affectedOrchidGroups[0].orchidGroupId").value(targetGroup.getId()))
+			.andExpect(jsonPath("$.data.affectedOrchidGroups[0].impactType").value("RESTORED"));
 		mockMvc
 			.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
 				.content("""

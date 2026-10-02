@@ -3314,6 +3314,24 @@ export interface components {
             progress?: components["schemas"]["WorkOperationProgressResponse"];
             availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "END_REMAINING" | "CANCEL")[];
         };
+        AffectedOperation: {
+            /** Format: int64 */
+            workOperationId?: number;
+            title?: string;
+            workTypeName?: string;
+            /** Format: date */
+            workDate?: string;
+            primary?: boolean;
+        };
+        AffectedOrchidGroup: {
+            /** Format: int64 */
+            orchidGroupId?: number;
+            varietyName?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** @enum {string} */
+            impactType?: "RECORD_CANCELED" | "RESTORED" | "CREATION_CANCELED";
+        };
         ApiResponseWorkOperationCancellationEligibilityResponse: {
             data?: components["schemas"]["WorkOperationCancellationEligibilityResponse"];
             message?: string;
@@ -3328,10 +3346,8 @@ export interface components {
             /** Format: int64 */
             workOperationId?: number;
             cancellable?: boolean;
-            mutationIds?: number[];
-            sourceOrchidGroupIds?: number[];
-            resultOrchidGroupIds?: number[];
-            relatedWorkOperationIds?: number[];
+            affectedOperations?: components["schemas"]["AffectedOperation"][];
+            affectedOrchidGroups?: components["schemas"]["AffectedOrchidGroup"][];
             blockers?: components["schemas"]["Blocker"][];
         };
         ApiResponseListWorkOperationSummaryResponse: {

@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type { WorkOperation } from "@/entities/farm/types";
+import type {
+  WorkOperation,
+  WorkOperationCancellationEligibility,
+} from "@/entities/farm/types";
 import { createUuid } from "@/shared/lib/id";
 import {
   Dialog,
@@ -44,6 +48,15 @@ export function WorkOperationVoidDialog({
     },
   });
   const data = eligibility.data;
+  const visibleOperations = data?.affectedOperations.slice(0, 5) ?? [];
+  const remainingOperationCount = Math.max(
+    0,
+    (data?.affectedOperations.length ?? 0) - visibleOperations.length,
+  );
+  const visibleOrchidGroups = data?.affectedOrchidGroups.slice(0, 5) ?? [];
+  const remainingOrchidGroupSummary = summarizeRemainingOrchidGroups(
+    data?.affectedOrchidGroups.slice(5) ?? [],
+  );
   const error =
     eligibility.error instanceof Error
       ? eligibility.error.message
@@ -59,7 +72,7 @@ export function WorkOperationVoidDialog({
             작업 취소
           </DialogTitle>
           <DialogDescription className="mt-1 text-sm text-[#657168]">
-            {operation.title}의 기록과 적용 효과를 되돌립니다.
+            아래 작업과 난 묶음에 적용된 내용을 되돌립니다.
           </DialogDescription>
         </header>
 
@@ -72,26 +85,77 @@ export function WorkOperationVoidDialog({
             <>
               <section className="rounded-md border border-[#dfe7df] bg-[#f8faf7] p-4">
                 <h3 className="text-sm font-bold text-[#263d2c]">영향 범위</h3>
-                <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-                  <ImpactCount
-                    label="Mutation"
-                    value={data.mutationIds.length}
-                  />
-                  <ImpactCount
-                    label="원본 묶음"
-                    value={data.sourceOrchidGroupIds.length}
-                  />
-                  <ImpactCount
-                    label="결과 묶음"
-                    value={data.resultOrchidGroupIds.length}
-                  />
-                </div>
-                {data.relatedWorkOperationIds.length > 0 ? (
-                  <p className="mt-3 text-xs text-[#526057]">
-                    연관 작업 {data.relatedWorkOperationIds.length}건도 같은
-                    트랜잭션에서 함께 취소됩니다.
-                  </p>
-                ) : null}
+                <ImpactList
+                  title={`함께 취소되는 작업 ${data.affectedOperations.length}건`}
+                >
+                  {visibleOperations.map((item) => (
+                    <li
+                      className="rounded-md border border-[#e0e7df] bg-white p-3"
+                      key={item.workOperationId}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <strong className="text-sm text-[#17251b]">
+                          {item.title}
+                        </strong>
+                        {item.primary ? (
+                          <span className="shrink-0 rounded-full bg-[#e8f2e9] px-2 py-0.5 text-[11px] font-semibold text-[#34633e]">
+                            선택한 작업
+                          </span>
+                        ) : (
+                          <span className="shrink-0 rounded-full bg-[#f0eee8] px-2 py-0.5 text-[11px] font-semibold text-[#665f4d]">
+                            연관 작업
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-[#68756c]">
+                        {item.workTypeName} · {item.workDate} · 작업 #
+                        {item.workOperationId}
+                      </p>
+                    </li>
+                  ))}
+                  {remainingOperationCount > 0 ? (
+                    <ImpactRemainder>
+                      그 외 연관된 작업 {remainingOperationCount}개
+                    </ImpactRemainder>
+                  ) : null}
+                </ImpactList>
+
+                <ImpactList
+                  title={`영향받는 난 묶음 ${data.affectedOrchidGroups.length}건`}
+                >
+                  {data.affectedOrchidGroups.length > 0 ? (
+                    visibleOrchidGroups.map((group) => (
+                      <li
+                        className="rounded-md border border-[#e0e7df] bg-white p-3"
+                        key={`${group.orchidGroupId}-${group.impactType}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <strong className="text-sm text-[#17251b]">
+                            {group.varietyName ?? "품종 정보 없음"} · 난 묶음 #
+                            {group.orchidGroupId}
+                          </strong>
+                          <span className="shrink-0 text-xs font-semibold text-[#8a4b2f]">
+                            {impactLabel[group.impactType]}
+                          </span>
+                        </div>
+                        {group.quantity !== null ? (
+                          <p className="mt-1 text-xs text-[#68756c]">
+                            현재 수량 {group.quantity}분
+                          </p>
+                        ) : null}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="rounded-md border border-dashed border-[#d7dfd5] bg-white p-3 text-xs text-[#68756c]">
+                      직접 변경되는 난 묶음은 없습니다.
+                    </li>
+                  )}
+                  {remainingOrchidGroupSummary ? (
+                    <ImpactRemainder>
+                      그 외 {remainingOrchidGroupSummary}
+                    </ImpactRemainder>
+                  ) : null}
+                </ImpactList>
               </section>
 
               {data.cancellable ? (
@@ -163,11 +227,51 @@ export function WorkOperationVoidDialog({
   );
 }
 
-function ImpactCount({ label, value }: { label: string; value: number }) {
+const impactLabel = {
+  RECORD_CANCELED: "작업 기록만 취소",
+  RESTORED: "작업 전 상태로 복구",
+  CREATION_CANCELED: "생성 취소",
+} as const;
+
+const summaryImpactOrder = [
+  "CREATION_CANCELED",
+  "RESTORED",
+  "RECORD_CANCELED",
+] as const;
+
+function summarizeRemainingOrchidGroups(
+  groups: WorkOperationCancellationEligibility["affectedOrchidGroups"],
+) {
+  return summaryImpactOrder
+    .map((impactType) => {
+      const count = groups.filter(
+        (group) => group.impactType === impactType,
+      ).length;
+      return count > 0 ? `${impactLabel[impactType]} ${count}개` : null;
+    })
+    .filter((item): item is string => item !== null)
+    .join(", ");
+}
+
+function ImpactList({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="rounded-md border border-[#e0e7df] bg-white p-2">
-      <strong className="block text-base text-[#17251b]">{value}</strong>
-      <span className="text-[#68756c]">{label}</span>
+    <div className="mt-4">
+      <h4 className="text-xs font-semibold text-[#526057]">{title}</h4>
+      <ul className="mt-2 space-y-2">{children}</ul>
     </div>
+  );
+}
+
+function ImpactRemainder({ children }: { children: ReactNode }) {
+  return (
+    <li className="rounded-md border border-dashed border-[#cfd9cd] bg-[#f3f6f2] px-3 py-2 text-xs font-semibold text-[#526057]">
+      {children}
+    </li>
   );
 }

@@ -15,6 +15,7 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.work.application.operation.StructureChangeVoidPort;
+import com.greenhouse.backend.work.application.operation.StructureChangeVoidPort.OrchidGroupSummary;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -61,13 +62,13 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 		}
 		if (!mutationIds.isEmpty() && relationRepository.existsByRelatedMutationIdInAndRelationType(mutationIds,
 				OrchidGroupMutationRelationType.COMPENSATES)) {
-			blockers.add(new Blocker("ALREADY_COMPENSATED", "이미 보상된 Mutation이 포함되어 있습니다.", 1));
+			blockers.add(new Blocker("ALREADY_COMPENSATED", "이미 취소된 작업 효과가 포함되어 있습니다.", 1));
 		}
 		var grouped = entries.stream()
 			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId, java.util.LinkedHashMap::new,
 					Collectors.toList()));
 		if (grouped.values().stream().anyMatch(this::hasBrokenStateChain)) {
-			blockers.add(new Blocker("REPEATED_GROUP_EFFECT", "같은 난 묶음의 작업 Mutation이 하나의 연속 상태 체인을 이루지 않습니다.", 1));
+			blockers.add(new Blocker("REPEATED_GROUP_EFFECT", "같은 난 묶음에 적용된 작업 효과의 순서를 확인할 수 없습니다.", 1));
 		}
 		Set<Long> resultIds = grouped.entrySet()
 			.stream()
@@ -87,13 +88,12 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 		if (changed > 0) {
 			blockers.add(new Blocker("DOWNSTREAM_MUTATION", "상쇄되지 않은 후속 변경이 있는 난 묶음이 있습니다.", changed));
 		}
-		List<Long> sourceIds = grouped.entrySet()
+		Set<Long> sourceIds = grouped.entrySet()
 			.stream()
 			.filter(entry -> earliest(entry.getValue()).getBeforeState() != null)
 			.map(java.util.Map.Entry::getKey)
-			.sorted()
-			.toList();
-		return new Inspection(sourceIds, resultIds.stream().toList(), blockers);
+			.collect(Collectors.toSet());
+		return new Inspection(summaries(sourceIds, groups), summaries(resultIds, groups), blockers);
 	}
 
 	@Override
@@ -106,7 +106,10 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 		var compensation = mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(
 				OrchidGroupMutationSources.work(workOperationId, "VOID:" + requestKey), mutationIds, businessDate,
 				reason));
-		collectionMemberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(inspection.resultOrchidGroupIds())
+		collectionMemberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(inspection.resultOrchidGroups()
+			.stream()
+			.map(OrchidGroupSummary::orchidGroupId)
+			.toList())
 			.forEach(member -> member.remove(TimeConfig.utcNow(clock)));
 		return compensation.mutationId();
 	}
@@ -142,6 +145,15 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 		return entries.stream()
 			.max(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
 			.orElseThrow();
+	}
+
+	private List<OrchidGroupSummary> summaries(Set<Long> ids,
+			java.util.Map<Long, com.greenhouse.backend.farm.domain.orchid.OrchidGroup> groups) {
+		return ids.stream().sorted().map(id -> {
+			var group = groups.get(id);
+			return group == null ? new OrchidGroupSummary(id, null, null)
+					: new OrchidGroupSummary(id, group.getVarietyName(), group.getQuantity());
+		}).toList();
 	}
 
 }

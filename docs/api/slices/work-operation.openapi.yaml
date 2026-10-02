@@ -926,6 +926,38 @@ paths:
       deprecated: true
 components:
   schemas:
+    AffectedOperation:
+      type: object
+      properties:
+        workOperationId:
+          type: integer
+          format: int64
+        title:
+          type: string
+        workTypeName:
+          type: string
+        workDate:
+          type: string
+          format: date
+        primary:
+          type: boolean
+    AffectedOrchidGroup:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        impactType:
+          type: string
+          enum:
+          - RECORD_CANCELED
+          - RESTORED
+          - CREATION_CANCELED
     ApiResponseListInboundPottingCandidateResponse:
       type: object
       properties:
@@ -1631,26 +1663,14 @@ components:
           format: int64
         cancellable:
           type: boolean
-        mutationIds:
+        affectedOperations:
           type: array
           items:
-            type: integer
-            format: int64
-        sourceOrchidGroupIds:
+            $ref: '#/components/schemas/AffectedOperation'
+        affectedOrchidGroups:
           type: array
           items:
-            type: integer
-            format: int64
-        resultOrchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-        relatedWorkOperationIds:
-          type: array
-          items:
-            type: integer
-            format: int64
+            $ref: '#/components/schemas/AffectedOrchidGroup'
         blockers:
           type: array
           items:

@@ -646,7 +646,8 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", operationId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.cancellable").value(true))
-			.andExpect(jsonPath("$.data.resultOrchidGroupIds", hasSize(2)));
+			.andExpect(jsonPath("$.data.affectedOrchidGroups", hasSize(2)))
+			.andExpect(jsonPath("$.data.affectedOrchidGroups[0].impactType").value("CREATION_CANCELED"));
 		mockMvc
 			.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
 				.content("""
