@@ -489,7 +489,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 						{"memo": "입고 취소"}
 						"""))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.status").value("STOPPED"));
+			.andExpect(jsonPath("$.data.status").value("CANCELED"));
 
 		var linkedOperations = operationRepository.findAll()
 			.stream()
@@ -575,7 +575,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 
 		mockMvc.perform(post("/api/work-operations/{id}/end-remaining", operationId))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.status").value("CANCELED"));
+			.andExpect(jsonPath("$.data.status").value("STOPPED"));
 		mockMvc.perform(get("/api/inbound-records/{id}", inboundRecord.getId()))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("POTTING_PENDING"));

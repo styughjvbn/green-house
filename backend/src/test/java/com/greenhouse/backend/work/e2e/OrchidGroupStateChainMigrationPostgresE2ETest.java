@@ -73,7 +73,8 @@ class OrchidGroupStateChainMigrationPostgresE2ETest extends WorkE2ETestBase {
 				"32:normalize inbound receipt model", "33:normalize work command receipt memberships",
 				"35:normalize movement discard history", "36:preserve identity for historical movements",
 				"37:recover legacy movement source attributes", "38:split multi variety discard operations",
-				"39:normalize work operation titles");
+				"39:normalize work operation titles", "40:separate stopped work operations",
+				"41:repair movement discard processed quantity");
 
 		assertThat(
 				jdbcTemplate.queryForObject("SELECT COUNT(*) FROM work_types WHERE code = 'MULTI_CREATE'", Long.class))

@@ -14,6 +14,7 @@ import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,6 +40,9 @@ class WorkOperationCancellationServiceTest {
 
 	@Mock
 	private WorkTargetExecutionRepository executionRepository;
+
+	@Mock
+	private WorkOperationTargetRepository targetRepository;
 
 	@Mock
 	private StructureChangeVoidPort structureChangeVoidPort;

@@ -14,8 +14,8 @@ import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMe
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
-import com.greenhouse.backend.work.application.operation.StructureChangeVoidPort;
 import com.greenhouse.backend.work.application.operation.StructureChangeVoidPort.OrchidGroupSummary;
+import com.greenhouse.backend.work.application.operation.StructureChangeVoidPort;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -106,10 +106,9 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 		var compensation = mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(
 				OrchidGroupMutationSources.work(workOperationId, "VOID:" + requestKey), mutationIds, businessDate,
 				reason));
-		collectionMemberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(inspection.resultOrchidGroups()
-			.stream()
-			.map(OrchidGroupSummary::orchidGroupId)
-			.toList())
+		collectionMemberRepository
+			.findByOrchidGroupIdInAndRemovedAtIsNull(
+					inspection.resultOrchidGroups().stream().map(OrchidGroupSummary::orchidGroupId).toList())
 			.forEach(member -> member.remove(TimeConfig.utcNow(clock)));
 		return compensation.mutationId();
 	}

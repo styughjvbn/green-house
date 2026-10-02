@@ -51,11 +51,10 @@ public class WorkOperationVoidService {
 	public WorkOperationCancellationEligibilityResponse eligibility(Long operationId) {
 		var operation = operationRepository.findWithWorkTypeById(operationId)
 			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
-		return inspectCancellation(operation).toResponse();
+		return inspectCancellation(operationId, operation).toResponse();
 	}
 
-	private CancellationInspection inspectCancellation(WorkOperation operation) {
-		Long operationId = operation.getId();
+	private CancellationInspection inspectCancellation(Long operationId, WorkOperation operation) {
 		var blockers = new ArrayList<WorkOperationCancellationEligibilityResponse.Blocker>();
 		if (operation.getStatus() == WorkOperationStatus.STOPPED
 				|| operation.getStatus() == WorkOperationStatus.CANCELED
@@ -97,7 +96,8 @@ public class WorkOperationVoidService {
 			.toList();
 		if (mutationIds.isEmpty()) {
 			var groups = new LinkedHashMap<Long, WorkOperationCancellationEligibilityResponse.AffectedOrchidGroup>();
-			targetRepository.findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(targetOperationIds)
+			targetRepository
+				.findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(targetOperationIds)
 				.stream()
 				.filter(target -> target.getTargetReferenceType() == WorkTargetReferenceType.ORCHID_GROUP)
 				.forEach(target -> groups.putIfAbsent(target.getOrchidGroupId(),
@@ -132,10 +132,10 @@ public class WorkOperationVoidService {
 			.forEach(blocker -> blockers.add(new WorkOperationCancellationEligibilityResponse.Blocker(blocker.code(),
 					blocker.message(), blocker.count())));
 		List<WorkOperationCancellationEligibilityResponse.AffectedOrchidGroup> affectedGroups = new ArrayList<>();
-		sourceGroups.forEach(group -> affectedGroups.add(toAffectedGroup(group,
-				WorkOperationCancellationEligibilityResponse.ImpactType.RESTORED)));
-		resultGroups.forEach(group -> affectedGroups.add(toAffectedGroup(group,
-				WorkOperationCancellationEligibilityResponse.ImpactType.CREATION_CANCELED)));
+		sourceGroups.forEach(group -> affectedGroups
+			.add(toAffectedGroup(group, WorkOperationCancellationEligibilityResponse.ImpactType.RESTORED)));
+		resultGroups.forEach(group -> affectedGroups
+			.add(toAffectedGroup(group, WorkOperationCancellationEligibilityResponse.ImpactType.CREATION_CANCELED)));
 		return new CancellationInspection(operation, relatedDiscards, mutationIds, List.copyOf(affectedGroups),
 				List.copyOf(blockers));
 	}
@@ -162,7 +162,7 @@ public class WorkOperationVoidService {
 			}
 			return queryService.get(operationId);
 		}
-		var inspection = inspectCancellation(operation);
+		var inspection = inspectCancellation(operationId, operation);
 		if (!inspection.cancellable()) {
 			throw new IllegalArgumentException(inspection.blockers().getFirst().message());
 		}
