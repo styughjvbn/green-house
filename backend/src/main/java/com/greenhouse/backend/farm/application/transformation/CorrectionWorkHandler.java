@@ -2,12 +2,14 @@ package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
+import com.greenhouse.backend.farm.application.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput;
 import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
@@ -69,6 +71,9 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 		if (adjustmentIds.size() != request.orchidGroupAdjustments().size()) {
 			throw new IllegalArgumentException("같은 난 묶음을 한 보정 작업에서 중복 지정할 수 없습니다.");
 		}
+		if (request.cancelResultCreation() && adjustmentIds.size() != 1) {
+			throw new IllegalArgumentException("결과 생성 취소는 한 번에 하나의 난 묶음만 처리할 수 있습니다.");
+		}
 		if (!new LinkedHashSet<>(correctableIds).containsAll(adjustmentIds)) {
 			throw new IllegalArgumentException("원본 구조 변경 작업이 만든 결과 난 묶음만 보정할 수 있습니다.");
 		}
@@ -78,13 +83,12 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 		if (groupsById.size() != adjustmentIds.size()) {
 			throw new NotFoundException("보정 대상 난 묶음 일부를 찾을 수 없습니다.");
 		}
-		Set<Long> changedAdjustmentIds = request.orchidGroupAdjustments().stream().filter(adjustment -> {
-			OrchidGroup group = groupsById.get(adjustment.orchidGroupId());
-			return !group.getQuantity().equals(adjustment.quantity())
-					|| !group.getStatus().equals(adjustment.status().trim());
-		}).map(OrchidGroupCorrectionInput::orchidGroupId).collect(Collectors.toCollection(LinkedHashSet::new));
+		Set<Long> changedAdjustmentIds = changedAdjustmentIds(request, adjustmentIds, groupsById);
 		boolean workDateChanged = !workOperationDateCorrectionService.getWorkDate(originalOperationId)
 			.equals(request.workDate());
+		if (request.cancelResultCreation() && workDateChanged) {
+			throw new IllegalArgumentException("결과 생성 취소와 작업일 보정은 별도로 처리해야 합니다.");
+		}
 		if (changedAdjustmentIds.isEmpty() && !workDateChanged) {
 			throw new IllegalArgumentException("수량, 상태 또는 작업일 중 현재 값과 다른 보정 값이 필요합니다.");
 		}
@@ -100,28 +104,32 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 			.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
 			.map(adjustment -> {
 				OrchidGroup group = groupsById.get(adjustment.orchidGroupId());
+				if (request.cancelResultCreation()) {
+					return new WorkEffectResults.Adjustment(group.getId(), group.getQuantity(), group.getStatus(), 0,
+							OrchidGroupStatusPolicy.CREATION_CANCELED);
+				}
 				return new WorkEffectResults.Adjustment(group.getId(), group.getQuantity(), group.getStatus(),
 						adjustment.quantity(), adjustment.status().trim());
 			})
 			.toList();
 		WorkMutationLink mutationLink = null;
 		if (!changedAdjustmentIds.isEmpty()) {
-			CorrectOrchidGroupsMutationCommand mutationCommand = null;
 			var references = structureChangeReferenceReader.getMutationReferences(originalOperationId,
 					changedAdjustmentIds);
 			RelatedOrchidGroupMutations related = references.legacySource() ? RelatedOrchidGroupMutations.legacy()
 					: RelatedOrchidGroupMutations.current(references.mutationIds());
-			mutationCommand = new CorrectOrchidGroupsMutationCommand(
-					OrchidGroupMutationSources.work(context.operationId(), command.effectKey()),
-					request.orchidGroupAdjustments()
-						.stream()
-						.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
-						.map(adjustment -> new CorrectOrchidGroupMutationItem(adjustment.orchidGroupId(),
-								adjustment.quantity(), adjustment.status()))
-						.toList(),
-					related, request.workDate(), context.memo());
-
-			var mutation = mutationEngine.correct(mutationCommand);
+			var source = OrchidGroupMutationSources.work(context.operationId(), command.effectKey());
+			var mutation = request.cancelResultCreation()
+					? mutationEngine.cancelCreation(new CancelOrchidGroupCreationMutationCommand(source,
+							changedAdjustmentIds.iterator().next(), related, request.workDate(), request.reason()))
+					: mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(source,
+							request.orchidGroupAdjustments()
+								.stream()
+								.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
+								.map(adjustment -> new CorrectOrchidGroupMutationItem(adjustment.orchidGroupId(),
+										adjustment.quantity(), adjustment.status()))
+								.toList(),
+							related, request.workDate(), request.reason()));
 			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 
 		}
@@ -130,6 +138,25 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 				dateCorrection.after(), auditRows)
 			.toMap();
 		return new WorkExecutionResult("CORRECTION", resultDetails, List.copyOf(changedAdjustmentIds), mutationLink);
+	}
+
+	private Set<Long> changedAdjustmentIds(WorkCorrectionCommand request, Set<Long> adjustmentIds,
+			Map<Long, OrchidGroup> groupsById) {
+		if (request.cancelResultCreation()) {
+			OrchidGroup group = groupsById.get(adjustmentIds.iterator().next());
+			if (OrchidGroupStatusPolicy.CREATION_CANCELED.equals(group.getStatus())) {
+				throw new IllegalArgumentException("이미 생성 취소된 결과 난 묶음입니다.");
+			}
+			return adjustmentIds;
+		}
+		return request.orchidGroupAdjustments().stream().filter(adjustment -> {
+			OrchidGroup group = groupsById.get(adjustment.orchidGroupId());
+			if (OrchidGroupStatusPolicy.CREATION_CANCELED.equals(group.getStatus())) {
+				throw new IllegalArgumentException("생성 취소된 결과 난 묶음은 다시 보정할 수 없습니다.");
+			}
+			return !group.getQuantity().equals(adjustment.quantity())
+					|| !group.getStatus().equals(adjustment.status().trim());
+		}).map(OrchidGroupCorrectionInput::orchidGroupId).collect(Collectors.toCollection(LinkedHashSet::new));
 	}
 
 	private Long originalOperationId(Map<String, Object> details) {

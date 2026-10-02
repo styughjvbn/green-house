@@ -31,6 +31,7 @@ export default function WorkOperationCorrectionForm({
   const [reason, setReason] = useState("");
   const [worker, setWorker] = useState("");
   const [memo, setMemo] = useState("");
+  const [cancelResultCreation, setCancelResultCreation] = useState(false);
   const [corrections, setCorrections] =
     useState<WorkOperationCorrections | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,11 +71,12 @@ export default function WorkOperationCorrectionForm({
       setError("수량은 0 이상의 정수로 입력해주세요.");
       return;
     }
-    if (!status.trim() || !reason.trim()) {
+    if ((!cancelResultCreation && !status.trim()) || !reason.trim()) {
       setError("상태와 보정 사유를 입력해주세요.");
       return;
     }
     if (
+      !cancelResultCreation &&
       nextQuantity === orchidGroup.quantity &&
       status.trim() === orchidGroup.status &&
       workDate === corrections?.originalOperation.plannedStartDate
@@ -90,11 +92,12 @@ export default function WorkOperationCorrectionForm({
         originalWorkOperationId,
         {
           idempotencyKey,
-          title: `${corrections?.originalOperation.title ?? orchidGroup.varietyName} 보정`,
+          title: `${corrections?.originalOperation.title ?? orchidGroup.varietyName} ${cancelResultCreation ? "오생성 보정" : "보정"}`,
           workDate,
           worker: worker.trim() || null,
           memo: memo.trim() || null,
           reason: reason.trim(),
+          cancelResultCreation,
           orchidGroupAdjustments: [
             {
               orchidGroupId: orchidGroup.id,
@@ -110,6 +113,7 @@ export default function WorkOperationCorrectionForm({
         queryKey: ["farm-status", "orchid-management-viewport"],
       });
       router.refresh();
+      if (cancelResultCreation) onClose();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "보정하지 못했습니다.");
     } finally {
@@ -147,12 +151,28 @@ export default function WorkOperationCorrectionForm({
       </div>
 
       <form className="mt-3 space-y-3" onSubmit={submit}>
+        <label className="flex items-start gap-2 rounded-md border border-[#d9b8ae] bg-[#fff6f2] p-3 text-xs text-[#713321]">
+          <input
+            checked={cancelResultCreation}
+            className="mt-0.5"
+            type="checkbox"
+            onChange={(event) => setCancelResultCreation(event.target.checked)}
+          />
+          <span>
+            <strong className="block">오생성 보정</strong>
+            <span className="mt-1 block">
+              잘못 생성된 난 묶음을 수량 0분·생성 취소 상태로 보정합니다. 폐기
+              이력으로 기록되지 않습니다.
+            </span>
+          </span>
+        </label>
         <div className="grid grid-cols-2 gap-2">
           <Field
             label="보정 후 작업일"
             type="date"
             value={workDate}
             onChange={setWorkDate}
+            disabled={cancelResultCreation}
           />
           <Field
             label="보정 수량"
@@ -160,8 +180,14 @@ export default function WorkOperationCorrectionForm({
             min="0"
             value={quantity}
             onChange={setQuantity}
+            disabled={cancelResultCreation}
           />
-          <Field label="보정 상태" value={status} onChange={setStatus} />
+          <Field
+            label="보정 상태"
+            value={status}
+            onChange={setStatus}
+            disabled={cancelResultCreation}
+          />
           <Field
             label="작업자"
             required={false}
@@ -195,7 +221,11 @@ export default function WorkOperationCorrectionForm({
           disabled={saving || loading}
           type="submit"
         >
-          {saving ? "보정 저장 중" : "보정 작업 저장"}
+          {saving
+            ? "저장 중"
+            : cancelResultCreation
+              ? "오생성 보정"
+              : "보정 작업 저장"}
         </button>
       </form>
 

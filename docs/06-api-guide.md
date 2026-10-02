@@ -202,4 +202,4 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 
 폐기는 대상별 완료 요청의 `resultDetails.discardQuantity`만큼 현재 가용 수량에서 차감한다. 일부 폐기는 기존 상태와 잔여 수량을 유지하고, 전량 폐기는 수량 0과 `폐기` 상태로 전환한다. 입력한 폐기 수량과 관계없이 해당 난 묶음의 폐기 처리는 한 번의 대상 실행으로 완료된다.
 
-완료된 구조 변경 작업의 보정은 `POST/GET /api/work-operations/{workOperationId}/corrections`로 실행·조회한다. 생성 요청의 `workDate`는 원본 작업일 보정값으로 사용하며 날짜만 변경하는 보정도 허용한다. `orchidGroupAdjustments`에는 원본 작업이 만든 결과 난 묶음만 지정할 수 있다. 작업일 전후 값은 응답의 `effectDetails.beforeWorkDate`, `effectDetails.afterWorkDate`, 수량·상태 전후 값은 `effectDetails.adjustments`에서 확인한다. 후속 운영 데이터가 연결된 결과와 예약 수량을 침해하는 변경은 거부한다.
+완료된 구조 변경 작업의 보정은 `POST/GET /api/work-operations/{workOperationId}/corrections`로 실행·조회한다. 생성 요청의 `workDate`는 원본 작업일 보정값으로 사용하며 날짜만 변경하는 보정도 허용한다. `orchidGroupAdjustments`에는 원본 작업이 만든 결과 난 묶음만 지정할 수 있다. `cancelResultCreation=true`는 결과 난 묶음 하나를 수량 0과 `생성 취소` 상태로 전환하며 수량·상태 또는 작업일 보정과 한 요청에 섞을 수 없다. 작업일 전후 값은 응답의 `effectDetails.beforeWorkDate`, `effectDetails.afterWorkDate`, 수량·상태 전후 값은 `effectDetails.adjustments`에서 확인한다. 후속 운영 데이터가 연결된 결과와 예약 수량을 침해하는 변경은 거부한다.

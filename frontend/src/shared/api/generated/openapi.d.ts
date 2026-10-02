@@ -2430,6 +2430,7 @@ export interface components {
             memo?: string;
             reason: string;
             orchidGroupAdjustments: components["schemas"]["OrchidGroupCorrectionRequest"][];
+            cancelResultCreation?: boolean;
         };
         ApiResponseWorkOperationCorrectionsResponse: {
             data?: components["schemas"]["WorkOperationCorrectionsResponse"];

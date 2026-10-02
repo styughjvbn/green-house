@@ -4693,6 +4693,8 @@ components:
             $ref: '#/components/schemas/OrchidGroupCorrectionRequest'
           maxItems: 100
           minItems: 0
+        cancelResultCreation:
+          type: boolean
       required:
       - idempotencyKey
       - orchidGroupAdjustments
