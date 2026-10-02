@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.repository;
 
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -41,6 +42,7 @@ public interface WorkEffectOrchidGroupRepository extends JpaRepository<WorkEffec
 	List<WorkEffectOrchidGroup> findByWorkAppliedEffectWorkOperationIdInAndOrchidGroupIdInOrderByWorkAppliedEffectWorkOperationIdAscIdAsc(
 			Collection<Long> workOperationIds, Collection<Long> orchidGroupIds);
 
-	boolean existsByOrchidGroupId(Long orchidGroupId);
+	boolean existsByOrchidGroupIdAndWorkAppliedEffectWorkOperationStatusNotIn(Long orchidGroupId,
+			Collection<WorkOperationStatus> ignoredStatuses);
 
 }

@@ -98,6 +98,96 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@Test
+	void reverseCancellationThenCreationCancellationPreservesHistory() throws Exception {
+		Long first = discardForCancellation("first");
+		Long second = discardForCancellation("second");
+		long links = jdbcTemplate.queryForObject(
+				"SELECT count(*) FROM work_effect_orchid_groups WHERE orchid_group_id = ?", Long.class,
+				scenario.orchidGroupId());
+		assertThatThrownBy(() -> orchidGroupCommandService.delete(scenario.orchidGroupId()))
+			.isInstanceOf(com.greenhouse.backend.common.exception.ConflictException.class);
+		assertThat(get("/api/work-operations/" + first + "/cancel-eligibility").data().path("cancellable").asBoolean())
+			.isFalse();
+		for (Long id : List.of(second, first)) {
+			var canceled = post("/api/work-operations/" + id + "/cancel", """
+					{"idempotencyKey":"cancel-%d","reason":"오등록 취소"}
+					""".formatted(id));
+			assertThat(canceled.status()).as(canceled.body().toString()).isEqualTo(200);
+		}
+		assertThat(orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow().getQuantity()).isEqualTo(100);
+		orchidGroupCommandService.delete(scenario.orchidGroupId());
+		var group = orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow();
+		assertThat(group.getQuantity()).isZero();
+		assertThat(group.getStatus()).isEqualTo("생성 취소");
+		assertThat(jdbcTemplate.queryForMap("""
+				SELECT action, before_data->>'quantity' AS before_quantity,
+				       after_data->>'quantity' AS after_quantity, after_data->>'status' AS after_status
+				FROM audit_events WHERE entity_type = 'ORCHID_GROUP' AND entity_id = ?
+				  AND source = 'ORCHID_GROUP_MANAGEMENT' ORDER BY id DESC LIMIT 1
+				""", scenario.orchidGroupId())).containsEntry("action", "DEACTIVATED")
+			.containsEntry("before_quantity", "100")
+			.containsEntry("after_quantity", "0")
+			.containsEntry("after_status", "생성 취소");
+		assertThat(
+				jdbcTemplate.queryForObject("SELECT count(*) FROM work_effect_orchid_groups WHERE orchid_group_id = ?",
+						Long.class, scenario.orchidGroupId()))
+			.isEqualTo(links);
+		assertThat(jdbcTemplate.queryForList("SELECT status FROM work_operations WHERE id IN (?, ?)", String.class,
+				first, second))
+			.containsOnly("VOIDED");
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT count(*) FROM orchid_group_mutations WHERE mutation_type = 'CANCEL_CREATION'", Long.class))
+			.isEqualTo(1);
+		assertThat(reconciliationService.reconcile().ready()).isTrue();
+	}
+
+	@Test
+	void creationCancellationWaitsForTheGroupLock() throws Exception {
+		try (var executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+			var started = new java.util.concurrent.CountDownLatch(1);
+			var transaction = new TransactionTemplate(transactionManager);
+			var deletion = transaction.execute(status -> {
+				orchidGroupRepository.findAllForUpdateByIdIn(List.of(scenario.orchidGroupId()));
+				var pending = executor.submit(() -> {
+					started.countDown();
+					orchidGroupCommandService.delete(scenario.orchidGroupId());
+				});
+				try {
+					assertThat(started.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+				}
+				catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					throw new IllegalStateException(e);
+				}
+				assertThatThrownBy(() -> pending.get(200, java.util.concurrent.TimeUnit.MILLISECONDS))
+					.isInstanceOf(java.util.concurrent.TimeoutException.class);
+				return pending;
+			});
+			deletion.get(10, java.util.concurrent.TimeUnit.SECONDS);
+			assertThat(orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow().getStatus())
+				.isEqualTo("생성 취소");
+		}
+	}
+
+	private Long discardForCancellation(String title) throws Exception {
+		Long typeId = jdbcTemplate.queryForObject("SELECT id FROM work_types WHERE code = 'DISCARD'", Long.class);
+		var planned = post("/api/work-operations", """
+				{"workTypeId":%d,"title":"%s","plannedStartDate":"2026-08-20",
+				 "sourceScopeType":"MANUAL_SELECTION","sourceOrchidGroupIds":[%d]}
+				""".formatted(typeId, title, scenario.orchidGroupId()));
+		assertThat(planned.status()).as(planned.body().toString()).isEqualTo(201);
+		Long id = planned.data().path("id").asLong();
+		Long targetId = jdbcTemplate.queryForObject("SELECT id FROM work_operation_targets WHERE work_operation_id = ?",
+				Long.class, id);
+		assertThat(post("/api/work-operations/" + id + "/start", "{}").status()).isEqualTo(200);
+		var completed = post("/api/work-operations/%d/targets/%d/complete".formatted(id, targetId), """
+				{"completedDate":"2026-08-20","resultDetails":{"discardQuantity":10,"reason":"오등록"}}
+				""");
+		assertThat(completed.status()).as(completed.body().toString()).isEqualTo(200);
+		return id;
+	}
+
+	@Test
 	void routesFarmCommandThroughEngineAfterActiveCutoverAndFenceRejectsDirectWrite() {
 		var current = orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow();
 		orchidGroupCommandService.update(scenario.orchidGroupId(),

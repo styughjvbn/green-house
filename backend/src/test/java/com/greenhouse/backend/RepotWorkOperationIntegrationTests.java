@@ -245,7 +245,7 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", resultId))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.error.code").value("CONFLICT"))
-			.andExpect(jsonPath("$.error.message").value("작업 이력과 연결된 난 묶음은 삭제할 수 없습니다. 작업 취소, 보정 또는 폐기 작업으로 처리해주세요."));
+			.andExpect(jsonPath("$.error.message").value("취소되지 않은 작업과 연결된 난 묶음은 생성 취소할 수 없습니다. 연결 작업을 먼저 취소해주세요."));
 	}
 
 	@Test

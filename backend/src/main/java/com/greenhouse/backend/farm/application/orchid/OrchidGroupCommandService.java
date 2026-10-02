@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,8 @@ public class OrchidGroupCommandService {
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	private final WorkOrchidGroupUsageInspector workUsageInspector;
+
+	private final List<OrchidGroupUsageInspector> usageInspectors;
 
 	private final OrchidGroupAuditSupport auditSupport;
 
@@ -81,12 +84,20 @@ public class OrchidGroupCommandService {
 	}
 
 	public void delete(Long orchidGroupId) {
-		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
+		OrchidGroup orchidGroup = orchidGroupRepository.findAllForUpdateByIdIn(Set.of(orchidGroupId))
+			.stream()
+			.findFirst()
 			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		OrchidGroupAuditSnapshot before = auditSupport.snapshot(orchidGroup);
-		if (workUsageInspector.hasEffectReference(orchidGroupId)) {
-			throw new ConflictException("작업 이력과 연결된 난 묶음은 삭제할 수 없습니다. 작업 취소, 보정 또는 폐기 작업으로 처리해주세요.");
+		if (workUsageInspector.hasUncanceledReference(orchidGroupId)) {
+			throw new ConflictException("취소되지 않은 작업과 연결된 난 묶음은 생성 취소할 수 없습니다. 연결 작업을 먼저 취소해주세요.");
 		}
+		usageInspectors.stream()
+			.flatMap(inspector -> inspector.inspect(Set.of(orchidGroupId), null).stream())
+			.findFirst()
+			.ifPresent(usage -> {
+				throw new ConflictException(usage.message());
+			});
 		var command = new CancelOrchidGroupCreationMutationCommand(OrchidGroupMutationSources
 			.farmRequest("ORCHID_GROUP_COMMAND", orchidGroupId.toString(), "CANCEL_CREATION"), orchidGroupId,
 				TimeConfig.farmToday(clock), "난 묶음 삭제 요청에 따른 생성 취소");

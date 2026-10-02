@@ -171,6 +171,7 @@ WorkType 1 ─ N WorkOperation 1 ─ N WorkOperationTarget 1 ─ 1 WorkTargetExe
 - 난 묶음 상태가 바뀌면 보정 이벤트를 출처로 Mutation을 기록한다. 날짜만 정정하면 Mutation을 만들지 않는다.
 - 후속 작업·이동·판매·입고 연결이 있거나 예약 수량보다 작게 줄이려는 보정은 거부한다.
 - 결과 생성 취소는 원래 생성 사실을 보존한다. 새 결과 생성과 계보 교체 보정은 후속 범위다.
+- 난 묶음 관리의 생성 취소는 연결 작업이 모두 `CANCELED`·`VOIDED`인 경우에도 허용한다. 취소되지 않은 작업(남은 작업 종료 포함), 판매·입고 연결, 예약 수량이 남아 있으면 차단하고 원본 행과 모든 이력은 보존한다.
 
 ### OrchidGroupLineage
 

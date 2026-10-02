@@ -21,8 +21,12 @@ public class WorkOrchidGroupUsageInspector {
 		this.effectOrchidGroupRepository = effectOrchidGroupRepository;
 	}
 
-	public boolean hasEffectReference(Long orchidGroupId) {
-		return effectOrchidGroupRepository.existsByOrchidGroupId(orchidGroupId);
+	public boolean hasUncanceledReference(Long orchidGroupId) {
+		var canceledStatuses = Set.of(WorkOperationStatus.CANCELED, WorkOperationStatus.VOIDED);
+		return effectOrchidGroupRepository
+			.existsByOrchidGroupIdAndWorkAppliedEffectWorkOperationStatusNotIn(orchidGroupId, canceledStatuses)
+				|| targetRepository.existsByOrchidGroupIdAndExcludedAtIsNullAndWorkOperationStatusNotIn(orchidGroupId,
+						canceledStatuses);
 	}
 
 	public long countOtherOperations(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {

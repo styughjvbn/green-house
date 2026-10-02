@@ -10,6 +10,9 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface WorkOperationTargetRepository extends JpaRepository<WorkOperationTarget, Long> {
 
+	boolean existsByOrchidGroupIdAndExcludedAtIsNullAndWorkOperationStatusNotIn(Long orchidGroupId,
+			Collection<WorkOperationStatus> ignoredStatuses);
+
 	@Query("select distinct target.orchidGroupId from WorkOperationTarget target "
 			+ "where target.orchidGroupId is not null order by target.orchidGroupId")
 	List<Long> findDistinctOrchidGroupIds();
@@ -17,7 +20,7 @@ public interface WorkOperationTargetRepository extends JpaRepository<WorkOperati
 	@Query("""
 			select count(target) from WorkOperationTarget target
 			where target.orchidGroupId in :orchidGroupIds
-			  and target.workOperation.id <> :workOperationId
+			  and (:workOperationId is null or target.workOperation.id <> :workOperationId)
 			  and target.workOperation.status not in :ignoredStatuses
 			  and target.excludedAt is null
 			""")
