@@ -57,6 +57,18 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 					WHERE work_operation_id = 101
 					""", Integer.class)).isEqualTo(4);
 			assertThat(upgrade.migrate().migrationsExecuted).isZero();
+
+			assertThat(jdbc.queryForObject("""
+					SELECT processed_quantity FROM work_target_executions
+					WHERE work_operation_target_id = 101
+					""", Integer.class)).isEqualTo(10);
+			var usageRepair = Flyway.configure().dataSource(dataSource).target("41").load();
+			assertThat(usageRepair.migrate().migrationsExecuted).isEqualTo(6);
+			assertThat(jdbc.queryForObject("""
+					SELECT processed_quantity FROM work_target_executions
+					WHERE work_operation_target_id = 101
+					""", Integer.class)).isEqualTo(4);
+			assertThat(usageRepair.migrate().migrationsExecuted).isZero();
 		}
 		finally {
 			admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
@@ -115,7 +127,7 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 						     10, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 						    (101, 101, 'COMPLETED',
 						     '{"reason":"자리 이동 중 동시 폐기","beforeQuantity":10,"discardedQuantity":4,"remainingQuantity":6,"status":"정상"}'::jsonb,
-						     4, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+						     10, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 						""");
 		jdbc.execute("""
 				INSERT INTO orchid_group_mutations (

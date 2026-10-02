@@ -131,7 +131,7 @@ membership은 목록 관계 카드의 역방향 조회용 복제이며, migratio
 ## 6. 기존 이력
 
 - 기존 `work_records`는 마이그레이션 원본과 감사 목적으로 보존하되 운영 이력 조회에는 사용하지 않는다.
-- 자리 이동 선행 폐기로 저장된 기존 `WorkOperation`은 이동 후 잔여 폐기 상태 체인으로 이관한다. 당시 원본별 폐기 배분은 과거 사실로 보존하고, 관계는 `parentOperationId`와 `MOVEMENT_DISCARD`만 사용한다. 관계를 중복 표현하던 `details.movementOperationId`와 `details.relation`은 제거한다.
+- 자리 이동 선행 폐기로 저장된 기존 `WorkOperation`은 이동 후 잔여 폐기 상태 체인으로 이관한다. 당시 원본별 폐기 배분은 과거 사실로 보존하고, 대상 수량과 완료 사용량은 이동 후 실제 폐기 수량으로 맞춘다. 관계는 `parentOperationId`와 `MOVEMENT_DISCARD`만 사용하며, 관계를 중복 표현하던 `details.movementOperationId`와 `details.relation`은 제거한다.
 - 과거 `TRANSFORM`으로 저장된 자리 이동 중 원본·결과가 명시적인 1:1 전량 대응이고 위치 외 상태가 같은 이력은 기존 원본 ID를 유지하는 `MOVE` 체인으로 이관한다. 생성됐던 중간 결과 ID의 후속 Mutation·작업·판매 참조는 원본 ID로 연결하고, 제거된 ID와 보존 ID의 대응 및 제거 직전 snapshot은 `orchid_group_identity_migrations`에 감사 기록으로 남긴다. N:M 변환, 부분 수량, 속성 변경, 대응이 불명확한 이력은 변경하지 않는다.
 - 과거 이동 실행기가 1:1 전량 이동 결과를 새로 만들면서 메모·입고 출처 같은 원본 전용 속성을 누락한 경우, 결과 생성 이후 후속 Mutation이 없는 이력에 한해 핵심 품종·수량·상태가 같음을 확인하고 원본 속성을 복원하여 `MOVE`로 이관한다.
 - 과거 하나의 폐기 작업에 여러 품종이 포함된 이력은 품종별 `WorkOperation`으로 분리한다. 대상·실행·효과를 품종별 작업으로 옮기고 Work 효과 Mutation의 source 작업 ID와 correlation ID도 새 작업에 맞춰 갱신한다. 보정·Receipt·부모 관계처럼 자동 분리가 불명확한 연결이 있으면 마이그레이션을 중단한다.
