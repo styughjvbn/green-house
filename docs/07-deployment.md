@@ -792,4 +792,4 @@ Playwright 실행을 순서대로 수행한다. 결과는
 PostgreSQL job은 먼저 `docker info`로 실행 환경을 확인하고 Testcontainers가 만든 격리 DB에서
 `workE2eTest`와 `workBenchmark -PworkBenchmarkEnforce=true`를 각각 실행한다. 운영 DB 접속 정보는 사용하지 않는다. 백엔드 테스트 보고서와 PostgreSQL 테스트·벤치마크 결과는 성공 여부와 관계없이 artifact로 업로드해 14일간 보관한다.
 Docker가 없으면 PostgreSQL 검사는 실패한다. 벤치마크는 결과 의미와 쿼리 상한을 검사하고 시간·할당량은 참고값으로 기록한다.
-포맷 수정은 `backend`에서 `./gradlew format`으로 실행하며 CI는 소스를 자동 수정하지 않는다.
+Java 포맷 기준은 Spotless의 Google Java Format이다. `backend`에서 `./gradlew format`으로 적용하고 `./gradlew spotlessCheck`로 검사한다. CI의 `./gradlew check`에도 이 검사가 포함되며 소스를 자동 수정하지 않는다. Java는 2 spaces, Kotlin Gradle 스크립트는 기존 tab 4를 유지한다. VS Code는 `.vscode/extensions.json`의 Spotless Gradle·Gradle for Java 확장을 설치한 뒤 창을 다시 로드한다. Java 저장 포맷도 같은 Gradle 설정으로 처리하며 Red Hat Java 포맷은 끈다. 최초 전체 Java 포맷 적용은 기능 변경과 분리해 커밋한다.

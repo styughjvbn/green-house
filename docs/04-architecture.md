@@ -527,7 +527,9 @@ cd backend
 - `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 5회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
 - 사용자 그룹 목록은 1·10·50개에서 SQL 3회, 난 묶음별 소속 그룹 조회는 5회 이내인지 검증한다. 보관·탈퇴 제외와 소속 순서도 함께 확인한다.
 - CI의 기본 job은 `check`와 `bootJar`, `backend-postgres` job은 Docker 확인 후 `workE2eTest`와 `workBenchmark -PworkBenchmarkEnforce=true`를 각각 실행한다. Docker가 없으면 PostgreSQL 검사는 실패하며 조용히 건너뛰지 않는다. 검사별 결과는 Actions Summary에 기록하고 테스트·벤치마크 보고서는 14일간 artifact로 보관한다. 기본 architecture 검사도 테스트 비활성화와 모듈 내부·직접 시간 조회 예외의 재도입을 막는다.
-- 백엔드의 편집 기준은 `backend/.editorconfig`를 따른다. Java는 [Spring Java Format](https://github.com/spring-io/spring-javaformat)의 `./gradlew format`으로 적용하고 `checkFormat`으로 검사한다. `check`는 검사만 수행한다. import는 static 먼저, 각 그룹 내 사전순으로 정렬하며 중복과 순서를 architecture 테스트로 검사한다. 기능 변경과 전체 포맷 적용은 별도 커밋으로 나눈다.
+- Java의 최종 포맷 기준은 Spotless의 [Google Java Format](https://github.com/diffplug/spotless/blob/main/plugin-gradle/README.md#google-java-format)이다. `backend`에서 `./gradlew format`으로 적용하고 `./gradlew spotlessCheck`로 검사한다. CI의 `check`에도 `spotlessCheck`가 연결되며 검사 중 소스를 수정하지 않는다. Spring Java Format, Eclipse formatter XML, `formatAll`은 사용하지 않는다.
+- `backend/.editorconfig`는 Java 블록 들여쓰기를 2 spaces로 정의한다. Kotlin Gradle 스크립트는 기존 tab 4, YAML은 2 spaces를 유지하며 Google Java Format의 적용 대상은 Java 소스뿐이다. FQCN 축약 → import 정렬 → 미사용 import 제거 → Google Java Format 순으로 적용한다. import는 static 먼저, 각 그룹에서 세미콜론을 제외한 이름의 사전순으로 정렬한다.
+- VS Code의 Java 저장 포맷은 [Spotless Gradle 확장](https://github.com/badsyntax/vscode-spotless-gradle)으로 같은 Gradle 설정을 사용한다. `.vscode/extensions.json`의 Spotless Gradle·Gradle for Java 권장 확장을 설치하고 창을 다시 로드한다. `.vscode/settings.json`은 Red Hat Java 포맷을 끄고 Java 기본 포맷터와 저장 포맷을 Spotless로 지정하며, 중첩 Gradle 프로젝트 `backend`를 탐색 대상으로 둔다. 별도의 Eclipse XML이나 Google formatter 설정은 유지하지 않는다. 기능 변경과 전체 포맷 적용은 별도 커밋으로 나눈다.
 
 ## 8. 프론트엔드 맵 성능 E2E
 

@@ -148,7 +148,7 @@ class ModularArchitectureTests {
 				var ordered = imports.stream()
 					.distinct()
 					.sorted(Comparator.comparing((String value) -> !value.startsWith("import static "))
-						.thenComparing(Comparator.naturalOrder()))
+						.thenComparing(value -> value.replaceFirst(";$", "")))
 					.toList();
 				assertThat(imports).as("Static imports first, then alphabetical imports: %s", source)
 					.isEqualTo(ordered);

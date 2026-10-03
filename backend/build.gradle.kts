@@ -2,7 +2,6 @@ plugins {
 	java
 	id("org.springframework.boot") version "4.1.0"
 	id("io.spring.dependency-management") version "1.1.7"
-	id("io.spring.javaformat") version "0.0.48"
 	id("com.diffplug.spotless") version "8.10.2"
 }
 
@@ -58,11 +57,12 @@ dependencies {
 }
 
 spotless {
-    java {
-        shortenFullyQualifiedTypes()
-        importOrder()
-        removeUnusedImports()
-    }
+	java {
+		shortenFullyQualifiedTypes()
+		importOrder()
+		removeUnusedImports()
+		googleJavaFormat()
+	}
 }
 
 
@@ -77,19 +77,10 @@ tasks.named<Test>("test") {
 }
 
 
-tasks.named("formatMain") {
-    mustRunAfter("spotlessJava")
-}
-
-tasks.named("formatTest") {
-    mustRunAfter("spotlessJava")
-}
-
-tasks.register("formatAll") {
-    group = "formatting"
-    description = "Cleans imports and applies Spring Java Format"
-
-    dependsOn("spotlessApply", "format")
+tasks.register("format") {
+	group = "formatting"
+	description = "Formats Java source code and cleans imports"
+	dependsOn("spotlessApply")
 }
 
 tasks.register<JavaExec>("openApiRun") {
@@ -158,12 +149,4 @@ tasks.register<Test>("workBenchmark") {
 		providers.gradleProperty("workBenchmarkEnforce").orElse("false").get()
 	)
 	shouldRunAfter(tasks.named("workE2eTest"))
-}
-
-// Gradle 9 requires ordering when formatting and verification are requested together.
-tasks.withType<io.spring.javaformat.gradle.tasks.CheckFormat>().configureEach {
-	mustRunAfter(tasks.withType<io.spring.javaformat.gradle.tasks.Format>())
-}
-tasks.withType<JavaCompile>().configureEach {
-	mustRunAfter(tasks.withType<io.spring.javaformat.gradle.tasks.Format>())
 }
