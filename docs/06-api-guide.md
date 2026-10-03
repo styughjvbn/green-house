@@ -25,6 +25,8 @@ npm run api:types
 
 기본 생성 과정은 `openApiRun` Gradle task와 테스트 프로필의 메모리 H2 DB를 사용하며 로컬 PostgreSQL에 의존하지 않는다. `AUTH_ENABLED=false`로 임시 백엔드를 실행한다. 분할 스크립트는 모든 operation이 controller tag 기준으로 정확히 하나의 slice에 포함되는지 검사하며, 새 controller tag의 매핑이 없으면 실패한다.
 
+전체 명세와 slice를 저장할 때 `properties` 키는 이름순으로 정렬한다. Springdoc 실행 환경에 따라 필드 탐색 순서가 달라도 동일한 생성 결과를 유지하며, 배열 순서와 필드 타입·제약조건은 변경하지 않는다. `api-contract` CI는 생성 순서 회귀 테스트와 명세·TypeScript 재생성 후 drift 검사를 수행한다.
+
 프론트는 생성된 schema 중 API enum과 capability 타입을 사용한다. 전체 API client는 생성하지 않는다. `npm run check`는 `openapi.yaml`과 `shared/api/generated/openapi.d.ts`의 drift를 검사한다.
 
 ## 2. 주요 그룹

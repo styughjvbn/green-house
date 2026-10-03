@@ -955,35 +955,35 @@ components:
     AffectedOperation:
       type: object
       properties:
-        workOperationId:
-          type: integer
-          format: int64
+        primary:
+          type: boolean
         title:
-          type: string
-        workTypeName:
           type: string
         workDate:
           type: string
           format: date
-        primary:
-          type: boolean
+        workOperationId:
+          type: integer
+          format: int64
+        workTypeName:
+          type: string
     AffectedOrchidGroup:
       type: object
       properties:
-        orchidGroupId:
-          type: integer
-          format: int64
-        varietyName:
-          type: string
-        quantity:
-          type: integer
-          format: int32
         impactType:
           type: string
           enum:
           - RECORD_CANCELED
           - RESTORED
           - CREATION_CANCELED
+        orchidGroupId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        varietyName:
+          type: string
     ApiResponseListInboundPottingCandidateResponse:
       type: object
       properties:
@@ -1088,29 +1088,29 @@ components:
       properties:
         code:
           type: string
-        message:
-          type: string
         count:
           type: integer
           format: int64
+        message:
+          type: string
     DiscardRecordCreateRequest:
       type: object
       properties:
-        operation:
-          $ref: '#/components/schemas/WorkOperationCreateRequest'
         completedDate:
           type: string
           format: date
-        worker:
-          type: string
-          maxLength: 100
-          minLength: 0
+        operation:
+          $ref: '#/components/schemas/WorkOperationCreateRequest'
         results:
           type: array
           items:
             $ref: '#/components/schemas/DiscardRecordResultRequest'
           maxItems: 100
           minItems: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
       required:
       - completedDate
       - operation
@@ -1118,13 +1118,13 @@ components:
     DiscardRecordResultRequest:
       type: object
       properties:
-        orchidGroupId:
-          type: integer
-          format: int64
         discardQuantity:
           type: integer
           format: int32
           minimum: 1
+        orchidGroupId:
+          type: integer
+          format: int64
         reason:
           type: string
           maxLength: 1000
@@ -1135,28 +1135,28 @@ components:
     InboundPottingCandidateResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-        varietyId:
-          type: integer
-          format: int64
-        varietyName:
-          type: string
-        status:
-          type: string
-        estimatedQuantity:
-          type: integer
-          format: int32
         actualQuantity:
           type: integer
           format: int32
-        tempLocation:
+        estimatedQuantity:
+          type: integer
+          format: int32
+        id:
+          type: integer
+          format: int64
+        potSize:
           type: string
         pottingDueDate:
           type: string
           format: date
-        potSize:
+        status:
+          type: string
+        tempLocation:
+          type: string
+        varietyId:
+          type: integer
+          format: int64
+        varietyName:
           type: string
     InboundPottingExecutionRequest:
       type: object
@@ -1168,6 +1168,10 @@ components:
         inboundRecordId:
           type: integer
           format: int64
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
         pottingDate:
           type: string
           format: date
@@ -1180,10 +1184,6 @@ components:
         worker:
           type: string
           maxLength: 50
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
           minLength: 0
       required:
       - idempotencyKey
@@ -1200,16 +1200,6 @@ components:
     InboundPottingPlanCreateRequest:
       type: object
       properties:
-        title:
-          type: string
-          maxLength: 150
-          minLength: 0
-        plannedStartDate:
-          type: string
-          format: date
-        plannedEndDate:
-          type: string
-          format: date
         inboundRecordIds:
           type: array
           items:
@@ -1217,13 +1207,23 @@ components:
             format: int64
           maxItems: 100
           minItems: 0
-        worker:
-          type: string
-          maxLength: 100
-          minLength: 0
         memo:
           type: string
           maxLength: 1000
+          minLength: 0
+        plannedEndDate:
+          type: string
+          format: date
+        plannedStartDate:
+          type: string
+          format: date
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
           minLength: 0
       required:
       - inboundRecordIds
@@ -1232,48 +1232,27 @@ components:
     InboundPottingRecordCreateRequest:
       type: object
       properties:
-        plan:
-          $ref: '#/components/schemas/InboundPottingPlanCreateRequest'
         executions:
           type: array
           items:
             $ref: '#/components/schemas/InboundPottingExecutionRequest'
           maxItems: 100
           minItems: 0
+        plan:
+          $ref: '#/components/schemas/InboundPottingPlanCreateRequest'
       required:
       - executions
       - plan
     InboundPottingResultRequest:
       type: object
       properties:
-        bedZoneId:
-          type: integer
-          format: int64
-        quantity:
-          type: integer
-          format: int32
-          minimum: 1
-        potSize:
-          type: string
-          maxLength: 50
-          minLength: 0
         ageYear:
           type: integer
           format: int32
           minimum: 0
-        placementType:
-          type: string
-          maxLength: 50
-          minLength: 0
-        trayCount:
+        bedZoneId:
           type: integer
-          format: int32
-          minimum: 0
-        splitPlacementAllowed:
-          type: boolean
-        startPosition:
-          type: number
-          minimum: 0.0
+          format: int64
         endPosition:
           type: number
           minimum: 0.0
@@ -1281,6 +1260,27 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
+        placementType:
+          type: string
+          maxLength: 50
+          minLength: 0
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        splitPlacementAllowed:
+          type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
       required:
       - bedZoneId
       - endPosition
@@ -1307,25 +1307,23 @@ components:
     OrchidGroupWorkHistoryResponse:
       type: object
       properties:
-        sourceKind:
-          type: string
-        workOperationId:
-          type: integer
-          format: int64
-        workTypeId:
-          type: integer
-          format: int64
-        workType:
-          type: string
-        title:
-          type: string
-        workDate:
-          type: string
-          format: date
-        status:
+        correctable:
+          type: boolean
+        currentLocation:
+          type: object
+          additionalProperties: {}
+        locationSnapshot:
+          type: object
+          additionalProperties: {}
+        memo:
           type: string
         propagated:
           type: boolean
+        sourceKind:
+          type: string
+        sourceScopeId:
+          type: integer
+          format: int64
         sourceScopeType:
           type: string
           enum:
@@ -1339,21 +1337,23 @@ components:
           - USER_COLLECTION
           - MANUAL_SELECTION
           - INBOUND_RECORD_SELECTION
-        sourceScopeId:
+        status:
+          type: string
+        title:
+          type: string
+        workDate:
+          type: string
+          format: date
+        workOperationId:
           type: integer
           format: int64
-        locationSnapshot:
-          type: object
-          additionalProperties: {}
-        currentLocation:
-          type: object
-          additionalProperties: {}
+        workType:
+          type: string
+        workTypeId:
+          type: integer
+          format: int64
         worker:
           type: string
-        memo:
-          type: string
-        correctable:
-          type: boolean
     PageResponseOrchidGroupWorkHistoryResponse:
       type: object
       properties:
@@ -1395,14 +1395,10 @@ components:
     StructureChangeExecutionRequest:
       type: object
       properties:
-        idempotencyKey:
-          type: string
-          maxLength: 100
-          minLength: 0
         completedDate:
           type: string
           format: date
-        worker:
+        idempotencyKey:
           type: string
           maxLength: 100
           minLength: 0
@@ -1410,18 +1406,22 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
-        sources:
-          type: array
-          items:
-            $ref: '#/components/schemas/StructureChangeSourceRequest'
-          maxItems: 100
-          minItems: 0
         results:
           type: array
           items:
             $ref: '#/components/schemas/StructureChangeResultRequest'
           maxItems: 100
           minItems: 0
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/StructureChangeSourceRequest'
+          maxItems: 100
+          minItems: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
       required:
       - completedDate
       - idempotencyKey
@@ -1441,53 +1441,26 @@ components:
     StructureChangeRecordCreateRequest:
       type: object
       properties:
-        operation:
-          $ref: '#/components/schemas/WorkOperationCreateRequest'
         execution:
           $ref: '#/components/schemas/StructureChangeExecutionRequest'
+        operation:
+          $ref: '#/components/schemas/WorkOperationCreateRequest'
       required:
       - execution
       - operation
     StructureChangeResultRequest:
       type: object
       properties:
-        bedZoneId:
-          type: integer
-          format: int64
-        quantity:
-          type: integer
-          format: int32
-          minimum: 1
-        attributeSourceOrchidGroupId:
-          type: integer
-          format: int64
-        potSize:
-          type: string
-          maxLength: 50
-          minLength: 0
         ageYear:
           type: integer
           format: int32
           minimum: 0
-        purpose:
-          type: string
-          enum:
-          - NORMAL
-          - DIVIDE_CANDIDATE
-          - HELD
-        placementType:
-          type: string
-          maxLength: 50
-          minLength: 0
-        trayCount:
+        attributeSourceOrchidGroupId:
           type: integer
-          format: int32
-          minimum: 0
-        splitPlacementAllowed:
-          type: boolean
-        startPosition:
-          type: number
-          minimum: 0.0
+          format: int64
+        bedZoneId:
+          type: integer
+          format: int64
         endPosition:
           type: number
           minimum: 0.0
@@ -1495,6 +1468,33 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
+        placementType:
+          type: string
+          maxLength: 50
+          minLength: 0
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        purpose:
+          type: string
+          enum:
+          - NORMAL
+          - DIVIDE_CANDIDATE
+          - HELD
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        splitPlacementAllowed:
+          type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
       required:
       - bedZoneId
       - endPosition
@@ -1504,197 +1504,190 @@ components:
     StructureChangeSourceRequest:
       type: object
       properties:
-        sourceOrchidGroupId:
-          type: integer
-          format: int64
         inputQuantity:
           type: integer
           format: int32
           minimum: 1
-        releasedStartPosition:
-          type: number
-          minimum: 0.0
         releasedEndPosition:
           type: number
           minimum: 0.0
+        releasedStartPosition:
+          type: number
+          minimum: 0.0
+        sourceOrchidGroupId:
+          type: integer
+          format: int64
       required:
       - inputQuantity
       - sourceOrchidGroupId
     WorkCorrectionAdjustmentResponse:
       type: object
       properties:
-        orchidGroupId:
-          type: integer
-          format: int64
-        beforeQuantity:
+        afterQuantity:
           type: integer
           format: int32
-        afterQuantity:
+        afterStatus:
+          type: string
+        beforeQuantity:
           type: integer
           format: int32
         beforeStatus:
           type: string
-        afterStatus:
-          type: string
+        orchidGroupId:
+          type: integer
+          format: int64
     WorkCorrectionDetailResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-        createdAt:
-          type: string
-          format: date-time
-        worker:
-          type: string
-        memo:
-          type: string
-        reason:
-          type: string
-        beforeWorkDate:
-          type: string
-          format: date
-        afterWorkDate:
-          type: string
-          format: date
         adjustments:
           type: array
           items:
             $ref: '#/components/schemas/WorkCorrectionAdjustmentResponse'
+        afterWorkDate:
+          type: string
+          format: date
+        beforeWorkDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        id:
+          type: integer
+          format: int64
+        memo:
+          type: string
         quantityBalances:
           type: array
           items:
             $ref: '#/components/schemas/WorkQuantityBalanceChange'
+        reason:
+          type: string
+        worker:
+          type: string
     WorkExecutionDetailResponse:
       type: object
       properties:
-        id:
+        actualQuantity:
           type: integer
-          format: int64
-        executionKey:
-          type: string
-        resultType:
-          type: string
+          format: int32
         appliedAt:
           type: string
           format: date-time
         canceledAt:
           type: string
           format: date-time
-        worker:
+        executionKey:
           type: string
-        targetId:
+        id:
           type: integer
           format: int64
         inboundRecordId:
           type: integer
           format: int64
-        sources:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkExecutionSourceResponse'
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkExecutionResultResponse'
-        lossQuantity:
-          type: integer
-          format: int32
         increaseQuantity:
           type: integer
           format: int32
-        actualQuantity:
+        linkedWorkOperationId:
+          type: integer
+          format: int64
+        lossQuantity:
           type: integer
           format: int32
         reason:
           type: string
-        linkedWorkOperationId:
+        resultType:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkExecutionResultResponse'
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkExecutionSourceResponse'
+        targetId:
           type: integer
           format: int64
+        worker:
+          type: string
     WorkExecutionLocationResponse:
       type: object
       properties:
+        bedZoneName:
+          type: string
         houseNumber:
           type: integer
           format: int32
         physicalBedNumber:
           type: integer
           format: int32
-        bedZoneName:
-          type: string
     WorkExecutionResultResponse:
       type: object
       properties:
-        orchidGroupId:
-          type: integer
-          format: int64
-        quantity:
-          type: integer
-          format: int32
-        purpose:
-          type: string
-        bedZoneId:
-          type: integer
-          format: int64
-        startPosition:
-          type: number
-        endPosition:
-          type: number
-        potSize:
-          type: string
         ageYear:
           type: integer
           format: int32
+        bedZoneId:
+          type: integer
+          format: int64
+        endPosition:
+          type: number
+        location:
+          $ref: '#/components/schemas/WorkExecutionLocationResponse'
+        memo:
+          type: string
+        orchidGroupId:
+          type: integer
+          format: int64
         placementType:
           type: string
+        potSize:
+          type: string
+        purpose:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        startPosition:
+          type: number
         trayCount:
           type: integer
           format: int32
-        memo:
-          type: string
         varietyName:
           type: string
-        location:
-          $ref: '#/components/schemas/WorkExecutionLocationResponse'
     WorkExecutionSourceResponse:
       type: object
       properties:
-        orchidGroupId:
+        afterQuantity:
+          type: integer
+          format: int32
+        afterStatus:
+          type: string
+        beforeQuantity:
+          type: integer
+          format: int32
+        beforeStatus:
+          type: string
+        fromBedZoneId:
           type: integer
           format: int64
         inputQuantity:
           type: integer
           format: int32
-        beforeQuantity:
+        orchidGroupId:
           type: integer
-          format: int32
-        afterQuantity:
-          type: integer
-          format: int32
+          format: int64
+        releasedEndPosition:
+          type: number
+        releasedStartPosition:
+          type: number
         remainingQuantity:
           type: integer
           format: int32
-        beforeStatus:
-          type: string
-        afterStatus:
-          type: string
-        fromBedZoneId:
-          type: integer
-          format: int64
-        releasedStartPosition:
-          type: number
-        releasedEndPosition:
-          type: number
     WorkOperationBatchCancellationRequest:
       type: object
       properties:
-        workOperationIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-          maxItems: 100
-          minItems: 0
         creationCancellationOrchidGroupIds:
           type: array
           items:
@@ -1711,6 +1704,13 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
+        workOperationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          maxItems: 100
+          minItems: 0
       required:
       - idempotencyKey
       - reason
@@ -1742,11 +1742,6 @@ components:
     WorkOperationCancellationEligibilityResponse:
       type: object
       properties:
-        workOperationId:
-          type: integer
-          format: int64
-        cancellable:
-          type: boolean
         affectedOperations:
           type: array
           items:
@@ -1759,6 +1754,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Blocker'
+        cancellable:
+          type: boolean
+        workOperationId:
+          type: integer
+          format: int64
     WorkOperationCancellationRequest:
       type: object
       properties:
@@ -1782,22 +1782,13 @@ components:
     WorkOperationCorrectionCreateRequest:
       type: object
       properties:
+        cancelResultCreation:
+          type: boolean
         idempotencyKey:
           type: string
           maxLength: 100
           minLength: 0
-        workDate:
-          type: string
-          format: date
-        worker:
-          type: string
-          maxLength: 100
-          minLength: 0
         memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-        reason:
           type: string
           maxLength: 1000
           minLength: 0
@@ -1807,14 +1798,23 @@ components:
             $ref: '#/components/schemas/OrchidGroupCorrectionRequest'
           maxItems: 100
           minItems: 0
-        cancelResultCreation:
-          type: boolean
         quantityCorrections:
           type: array
           items:
             $ref: '#/components/schemas/WorkQuantityCorrectionInput'
           maxItems: 100
           minItems: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        workDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
       required:
       - idempotencyKey
       - orchidGroupAdjustments
@@ -1823,12 +1823,12 @@ components:
     WorkOperationCorrectionsResponse:
       type: object
       properties:
-        originalOperation:
-          $ref: '#/components/schemas/WorkOperationResponse'
         corrections:
           type: array
           items:
             $ref: '#/components/schemas/WorkCorrectionDetailResponse'
+        originalOperation:
+          $ref: '#/components/schemas/WorkOperationResponse'
         quantityBalances:
           type: array
           items:
@@ -1838,19 +1838,34 @@ components:
     WorkOperationCreateRequest:
       type: object
       properties:
-        workTypeId:
-          type: integer
-          format: int64
-        title:
+        details:
+          type: object
+          additionalProperties: {}
+        excludedOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        memo:
           type: string
-          maxLength: 150
+          maxLength: 1000
           minLength: 0
-        plannedStartDate:
-          type: string
-          format: date
         plannedEndDate:
           type: string
           format: date
+        plannedStartDate:
+          type: string
+          format: date
+        sourceDerivedGroupKey:
+          type: string
+        sourceOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        sourceScopeId:
+          type: integer
+          format: int64
         sourceScopeType:
           type: string
           enum:
@@ -1864,32 +1879,17 @@ components:
           - USER_COLLECTION
           - MANUAL_SELECTION
           - INBOUND_RECORD_SELECTION
-        sourceScopeId:
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        workTypeId:
           type: integer
           format: int64
-        sourceDerivedGroupKey:
-          type: string
-        sourceOrchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-        details:
-          type: object
-          additionalProperties: {}
         worker:
           type: string
           maxLength: 100
           minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-        excludedOrchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
       required:
       - plannedStartDate
       - sourceScopeType
@@ -1907,35 +1907,40 @@ components:
     WorkOperationDetailResponse:
       type: object
       properties:
-        summary:
-          $ref: '#/components/schemas/WorkOperationDetailSummaryResponse'
-        fields:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkOperationDetailFieldResponse'
-        executions:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkExecutionDetailResponse'
         corrections:
           type: array
           items:
             $ref: '#/components/schemas/WorkCorrectionDetailResponse'
+        executions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkExecutionDetailResponse'
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationDetailFieldResponse'
+        summary:
+          $ref: '#/components/schemas/WorkOperationDetailSummaryResponse'
     WorkOperationDetailSummaryResponse:
       type: object
       properties:
+        actualEndAt:
+          type: string
+          format: date-time
+        actualStartAt:
+          type: string
+          format: date-time
         id:
           type: integer
           format: int64
-        workTypeId:
-          type: integer
-          format: int64
-        workTypeCode:
+        memo:
           type: string
-        workType:
+        plannedEndDate:
           type: string
-        title:
+          format: date
+        plannedStartDate:
           type: string
+          format: date
         status:
           type: string
           enum:
@@ -1946,31 +1951,20 @@ components:
           - STOPPED
           - CANCELED
           - VOIDED
-        plannedStartDate:
+        title:
           type: string
-          format: date
-        plannedEndDate:
+        workType:
           type: string
-          format: date
-        actualStartAt:
+        workTypeCode:
           type: string
-          format: date-time
-        actualEndAt:
-          type: string
-          format: date-time
+        workTypeId:
+          type: integer
+          format: int64
         worker:
-          type: string
-        memo:
           type: string
     WorkOperationGraphEdgeResponse:
       type: object
       properties:
-        id:
-          type: string
-        sourceNodeId:
-          type: string
-        targetNodeId:
-          type: string
         edgeType:
           type: string
           enum:
@@ -1981,12 +1975,29 @@ components:
           - STATE_INPUT
           - STATE_OUTPUT
           - MUTATION_RELATION
+        id:
+          type: string
         relationType:
+          type: string
+        sourceNodeId:
+          type: string
+        targetNodeId:
           type: string
     WorkOperationGraphNodeResponse:
       type: object
       properties:
+        creationBatchSize:
+          type: integer
+          format: int32
+        effectiveBusinessDate:
+          type: string
+          format: date
         id:
+          type: string
+        mutationId:
+          type: integer
+          format: int64
+        mutationType:
           type: string
         nodeType:
           type: string
@@ -1997,135 +2008,127 @@ components:
           - MUTATION
           - STATE
           - JUNCTION
-        selected:
-          type: boolean
-        originType:
-          type: string
-          enum:
-          - INBOUND
-          - WORK_MANAGEMENT
-          - SYSTEM
-        originReferenceId:
-          type: integer
-          format: int64
-        creationBatchSize:
-          type: integer
-          format: int32
-        workOperationId:
-          type: integer
-          format: int64
-        workTypeCode:
-          type: string
-        workType:
-          type: string
-        title:
-          type: string
-        status:
-          type: string
-        workDate:
-          type: string
-          format: date
-        orchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-        varietyNames:
-          type: array
-          items:
-            type: string
-        mutationId:
-          type: integer
-          format: int64
-        mutationType:
-          type: string
-        effectiveBusinessDate:
-          type: string
-          format: date
         occurredAt:
           type: string
           format: date-time
         orchidGroupId:
           type: integer
           format: int64
+        orchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        originReferenceId:
+          type: integer
+          format: int64
+        originType:
+          type: string
+          enum:
+          - INBOUND
+          - WORK_MANAGEMENT
+          - SYSTEM
+        selected:
+          type: boolean
+        state:
+          $ref: '#/components/schemas/WorkOperationGraphStateResponse'
         stateRevision:
           type: integer
           format: int64
-        state:
-          $ref: '#/components/schemas/WorkOperationGraphStateResponse'
+        status:
+          type: string
+        title:
+          type: string
+        varietyNames:
+          type: array
+          items:
+            type: string
+        workDate:
+          type: string
+          format: date
+        workOperationId:
+          type: integer
+          format: int64
+        workType:
+          type: string
+        workTypeCode:
+          type: string
     WorkOperationGraphResponse:
       type: object
       properties:
-        rootWorkOperationId:
+        depth:
           type: integer
-          format: int64
+          format: int32
         detail:
           type: string
           enum:
           - WORK
           - MUTATION
           - LINEAGE
-        depth:
-          type: integer
-          format: int32
-        maxNodes:
-          type: integer
-          format: int32
-        truncated:
-          type: boolean
-        nodes:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkOperationGraphNodeResponse'
         edges:
           type: array
           items:
             $ref: '#/components/schemas/WorkOperationGraphEdgeResponse'
+        maxNodes:
+          type: integer
+          format: int32
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationGraphNodeResponse'
+        rootWorkOperationId:
+          type: integer
+          format: int64
+        truncated:
+          type: boolean
     WorkOperationGraphStateResponse:
       type: object
       properties:
-        quantity:
-          type: integer
-          format: int32
-        reservedQuantity:
-          type: integer
-          format: int32
-        status:
-          type: string
-        varietyId:
-          type: integer
-          format: int64
-        genus:
-          type: string
-        varietyName:
-          type: string
         ageYear:
           type: integer
           format: int32
-        potSizeCode:
-          type: string
         bedZoneId:
           type: integer
           format: int64
+        bedZoneName:
+          type: string
+        endPosition:
+          type: number
+        genus:
+          type: string
         houseNumber:
           type: integer
           format: int32
         physicalBedNumber:
           type: integer
           format: int32
-        bedZoneName:
+        potSizeCode:
           type: string
+        quantity:
+          type: integer
+          format: int32
+        reservedQuantity:
+          type: integer
+          format: int32
         startPosition:
           type: number
-        endPosition:
-          type: number
+        status:
+          type: string
+        varietyId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
     WorkOperationProgressResponse:
       type: object
       properties:
-        total:
+        canceled:
           type: integer
           format: int32
-        pending:
+        completed:
+          type: integer
+          format: int32
+        failed:
           type: integer
           format: int32
         inProgress:
@@ -2134,178 +2137,140 @@ components:
         partial:
           type: integer
           format: int32
-        completed:
-          type: integer
-          format: int32
-        skipped:
-          type: integer
-          format: int32
-        canceled:
-          type: integer
-          format: int32
-        failed:
+        pending:
           type: integer
           format: int32
         progressPercent:
           type: integer
           format: int32
+        skipped:
+          type: integer
+          format: int32
+        total:
+          type: integer
+          format: int32
     WorkOperationRelationSummaryResponse:
       type: object
       properties:
+        creationBatchSize:
+          type: integer
+          format: int32
+        hasLinkedOperations:
+          type: boolean
+        inboundRecordIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        linkedOperationCount:
+          type: integer
+          format: int32
         originType:
           type: string
           enum:
           - INBOUND
           - WORK_MANAGEMENT
           - SYSTEM
-        inboundRecordIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-        creationBatchSize:
-          type: integer
-          format: int32
-        hasLinkedOperations:
-          type: boolean
-        linkedOperationCount:
-          type: integer
-          format: int32
     WorkOperationResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-        workTypeId:
-          type: integer
-          format: int64
-        workTypeCode:
-          type: string
-        workType:
-          type: string
-        workTypeTemplate:
-          type: string
-          enum:
-          - PESTICIDE
-          - FERTILIZER
-          - REPOT
-          - CLEANUP
-          - DISCARD
-          - STATUS
-          - MEMO
-          - MOVEMENT
-          - RECONCILIATION
-        workTypeWorkflow:
-          type: string
-          enum:
-          - GENERIC
-          - MOVEMENT
-          - DISCARD
-          - POTTING
-          - STRUCTURE_CHANGE
-        title:
-          type: string
-        status:
-          type: string
-          enum:
-          - PLANNED
-          - IN_PROGRESS
-          - PAUSED
-          - COMPLETED
-          - STOPPED
-          - CANCELED
-          - VOIDED
-        plannedStartDate:
-          type: string
-          format: date
-        plannedEndDate:
-          type: string
-          format: date
-        actualStartAt:
-          type: string
-          format: date-time
         actualEndAt:
           type: string
           format: date-time
-        sourceScopeType:
-          type: string
-          enum:
-          - NONE
-          - FARM
-          - HOUSE
-          - PHYSICAL_BED
-          - BED_ZONE
-          - ORCHID_GROUP
-          - DERIVED_GROUP
-          - USER_COLLECTION
-          - MANUAL_SELECTION
-          - INBOUND_RECORD_SELECTION
-        sourceScopeId:
-          type: integer
-          format: int64
-        sourceConditionSnapshot:
-          type: object
-          additionalProperties: {}
-        targetSnapshotAt:
+        actualStartAt:
           type: string
           format: date-time
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - START
+            - PAUSE
+            - RESUME
+            - COMPLETE
+            - END_REMAINING
+            - CANCEL
+            - CORRECT
+        correctionCount:
+          type: integer
+          format: int64
         details:
           type: object
           additionalProperties: {}
-        worker:
-          type: string
+        id:
+          type: integer
+          format: int64
         memo:
           type: string
         parentOperationId:
           type: integer
           format: int64
+        plannedEndDate:
+          type: string
+          format: date
+        plannedStartDate:
+          type: string
+          format: date
+        progress:
+          $ref: '#/components/schemas/WorkOperationProgressResponse'
         relationType:
           type: string
           enum:
           - MOVEMENT_DISCARD
-        voidedAt:
-          type: string
-          format: date-time
-        voidReason:
-          type: string
-        voidMutationId:
+        sourceConditionSnapshot:
+          type: object
+          additionalProperties: {}
+        sourceScopeId:
           type: integer
           format: int64
-        progress:
-          $ref: '#/components/schemas/WorkOperationProgressResponse'
+        sourceScopeType:
+          type: string
+          enum:
+          - NONE
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
+        status:
+          type: string
+          enum:
+          - PLANNED
+          - IN_PROGRESS
+          - PAUSED
+          - COMPLETED
+          - STOPPED
+          - CANCELED
+          - VOIDED
+        targetSnapshotAt:
+          type: string
+          format: date-time
         targets:
           type: array
           items:
             $ref: '#/components/schemas/WorkOperationTargetResponse'
-        availableActions:
-          type: array
-          items:
-            type: string
-            enum:
-            - START
-            - PAUSE
-            - RESUME
-            - COMPLETE
-            - END_REMAINING
-            - CANCEL
-            - CORRECT
-        correctionCount:
+        title:
+          type: string
+        voidMutationId:
           type: integer
           format: int64
-    WorkOperationSummaryResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
+        voidReason:
+          type: string
+        voidedAt:
+          type: string
+          format: date-time
+        workType:
+          type: string
+        workTypeCode:
+          type: string
         workTypeId:
           type: integer
           format: int64
-        workTypeCode:
-          type: string
-        workType:
-          type: string
         workTypeTemplate:
           type: string
           enum:
@@ -2326,71 +2291,17 @@ components:
           - DISCARD
           - POTTING
           - STRUCTURE_CHANGE
-        title:
+        worker:
           type: string
-        status:
-          type: string
-          enum:
-          - PLANNED
-          - IN_PROGRESS
-          - PAUSED
-          - COMPLETED
-          - STOPPED
-          - CANCELED
-          - VOIDED
-        plannedStartDate:
-          type: string
-          format: date
-        plannedEndDate:
-          type: string
-          format: date
-        actualStartAt:
-          type: string
-          format: date-time
+    WorkOperationSummaryResponse:
+      type: object
+      properties:
         actualEndAt:
           type: string
           format: date-time
-        sourceScopeType:
-          type: string
-          enum:
-          - NONE
-          - FARM
-          - HOUSE
-          - PHYSICAL_BED
-          - BED_ZONE
-          - ORCHID_GROUP
-          - DERIVED_GROUP
-          - USER_COLLECTION
-          - MANUAL_SELECTION
-          - INBOUND_RECORD_SELECTION
-        sourceScopeId:
-          type: integer
-          format: int64
-        sourceConditionSnapshot:
-          type: object
-          additionalProperties: {}
-        targetSnapshotAt:
+        actualStartAt:
           type: string
           format: date-time
-        details:
-          type: object
-          additionalProperties: {}
-        worker:
-          type: string
-        memo:
-          type: string
-        voidedAt:
-          type: string
-          format: date-time
-        voidReason:
-          type: string
-        voidMutationId:
-          type: integer
-          format: int64
-        relationSummary:
-          $ref: '#/components/schemas/WorkOperationRelationSummaryResponse'
-        progress:
-          $ref: '#/components/schemas/WorkOperationProgressResponse'
         availableActions:
           type: array
           items:
@@ -2406,18 +2317,127 @@ components:
         correctionCount:
           type: integer
           format: int64
-    WorkOperationTargetResponse:
-      type: object
-      properties:
+        details:
+          type: object
+          additionalProperties: {}
         id:
           type: integer
           format: int64
-        targetReferenceType:
+        memo:
+          type: string
+        plannedEndDate:
+          type: string
+          format: date
+        plannedStartDate:
+          type: string
+          format: date
+        progress:
+          $ref: '#/components/schemas/WorkOperationProgressResponse'
+        relationSummary:
+          $ref: '#/components/schemas/WorkOperationRelationSummaryResponse'
+        sourceConditionSnapshot:
+          type: object
+          additionalProperties: {}
+        sourceScopeId:
+          type: integer
+          format: int64
+        sourceScopeType:
           type: string
           enum:
+          - NONE
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
           - ORCHID_GROUP
-          - INBOUND_RECORD
-        orchidGroupId:
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
+        status:
+          type: string
+          enum:
+          - PLANNED
+          - IN_PROGRESS
+          - PAUSED
+          - COMPLETED
+          - STOPPED
+          - CANCELED
+          - VOIDED
+        targetSnapshotAt:
+          type: string
+          format: date-time
+        title:
+          type: string
+        voidMutationId:
+          type: integer
+          format: int64
+        voidReason:
+          type: string
+        voidedAt:
+          type: string
+          format: date-time
+        workType:
+          type: string
+        workTypeCode:
+          type: string
+        workTypeId:
+          type: integer
+          format: int64
+        workTypeTemplate:
+          type: string
+          enum:
+          - PESTICIDE
+          - FERTILIZER
+          - REPOT
+          - CLEANUP
+          - DISCARD
+          - STATUS
+          - MEMO
+          - MOVEMENT
+          - RECONCILIATION
+        workTypeWorkflow:
+          type: string
+          enum:
+          - GENERIC
+          - MOVEMENT
+          - DISCARD
+          - POTTING
+          - STRUCTURE_CHANGE
+        worker:
+          type: string
+    WorkOperationTargetResponse:
+      type: object
+      properties:
+        ageYearSnapshot:
+          type: integer
+          format: int32
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - START
+            - COMPLETE
+            - EXECUTE
+            - SKIP
+        completedAt:
+          type: string
+          format: date-time
+        effectAppliedAt:
+          type: string
+          format: date-time
+        executionStatus:
+          type: string
+          enum:
+          - PENDING
+          - IN_PROGRESS
+          - PARTIALLY_COMPLETED
+          - COMPLETED
+          - SKIPPED
+          - CANCELED
+          - FAILED
+        id:
           type: integer
           format: int64
         inboundRecordId:
@@ -2436,48 +2456,25 @@ components:
           - MANUAL_ADDITION
           - INBOUND_RECORD
           - LINEAGE
-        varietyName:
-          type: string
-        quantitySnapshot:
+        locationSnapshot:
+          type: object
+          additionalProperties: {}
+        orchidGroupId:
           type: integer
-          format: int32
-        ageYearSnapshot:
-          type: integer
-          format: int32
+          format: int64
         potSizeCodeSnapshot:
           type: string
         potSizeSnapshot:
           type: string
-        locationSnapshot:
-          type: object
-          additionalProperties: {}
         processedQuantity:
+          type: integer
+          format: int32
+        quantitySnapshot:
           type: integer
           format: int32
         remainingQuantity:
           type: integer
           format: int32
-        executionStatus:
-          type: string
-          enum:
-          - PENDING
-          - IN_PROGRESS
-          - PARTIALLY_COMPLETED
-          - COMPLETED
-          - SKIPPED
-          - CANCELED
-          - FAILED
-        startedAt:
-          type: string
-          format: date-time
-        completedAt:
-          type: string
-          format: date-time
-        effectAppliedAt:
-          type: string
-          format: date-time
-        worker:
-          type: string
         resultDetails:
           type: object
           additionalProperties: {}
@@ -2486,15 +2483,18 @@ components:
           items:
             type: integer
             format: int64
-        availableActions:
-          type: array
-          items:
-            type: string
-            enum:
-            - START
-            - COMPLETE
-            - EXECUTE
-            - SKIP
+        startedAt:
+          type: string
+          format: date-time
+        targetReferenceType:
+          type: string
+          enum:
+          - ORCHID_GROUP
+          - INBOUND_RECORD
+        varietyName:
+          type: string
+        worker:
+          type: string
     WorkOperationTitleUpdateRequest:
       type: object
       properties:
@@ -2510,40 +2510,40 @@ components:
         executionId:
           type: integer
           format: int64
-        sourceInputQuantities:
-          type: object
-          additionalProperties:
-            type: integer
-            format: int32
-        resultQuantities:
-          type: object
-          additionalProperties:
-            type: integer
-            format: int32
-        inputQuantity:
-          type: integer
-          format: int32
-        resultQuantity:
-          type: integer
-          format: int32
-        lossQuantity:
-          type: integer
-          format: int32
+        increaseAllowed:
+          type: boolean
         increaseQuantity:
           type: integer
           format: int32
         inputEditable:
           type: boolean
-        increaseAllowed:
-          type: boolean
+        inputQuantity:
+          type: integer
+          format: int32
         lossEditable:
           type: boolean
+        lossQuantity:
+          type: integer
+          format: int32
+        resultQuantities:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int32
+        resultQuantity:
+          type: integer
+          format: int32
+        sourceInputQuantities:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int32
     WorkQuantityBalanceChange:
       type: object
       properties:
-        before:
-          $ref: '#/components/schemas/WorkQuantityBalance'
         after:
+          $ref: '#/components/schemas/WorkQuantityBalance'
+        before:
           $ref: '#/components/schemas/WorkQuantityBalance'
     WorkQuantityCorrectionInput:
       type: object
@@ -2551,19 +2551,19 @@ components:
         executionId:
           type: integer
           format: int64
+        increaseQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        lossQuantity:
+          type: integer
+          format: int32
+          minimum: 0
         sourceInputQuantities:
           type: object
           additionalProperties:
             type: integer
             format: int32
-        lossQuantity:
-          type: integer
-          format: int32
-          minimum: 0
-        increaseQuantity:
-          type: integer
-          format: int32
-          minimum: 0
       required:
       - executionId
       - increaseQuantity
@@ -2571,19 +2571,29 @@ components:
     WorkTargetExecutionRequest:
       type: object
       properties:
+        completedDate:
+          type: string
+          format: date
+        resultDetails:
+          type: object
+          additionalProperties: {}
         worker:
           type: string
           maxLength: 100
           minLength: 0
-        resultDetails:
-          type: object
-          additionalProperties: {}
-        completedDate:
-          type: string
-          format: date
     WorkTargetPreviewRequest:
       type: object
       properties:
+        sourceDerivedGroupKey:
+          type: string
+        sourceOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        sourceScopeId:
+          type: integer
+          format: int64
         sourceScopeType:
           type: string
           enum:
@@ -2597,16 +2607,6 @@ components:
           - USER_COLLECTION
           - MANUAL_SELECTION
           - INBOUND_RECORD_SELECTION
-        sourceScopeId:
-          type: integer
-          format: int64
-        sourceDerivedGroupKey:
-          type: string
-        sourceOrchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
       required:
       - sourceScopeType
     WorkTargetPreviewResponse:
@@ -2615,10 +2615,10 @@ components:
         orchidGroupCount:
           type: integer
           format: int32
-        totalQuantity:
-          type: integer
-          format: int32
         targets:
           type: array
           items:
             $ref: '#/components/schemas/WorkOperationTargetResponse'
+        totalQuantity:
+          type: integer
+          format: int32

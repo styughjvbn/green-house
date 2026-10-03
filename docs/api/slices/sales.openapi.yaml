@@ -341,28 +341,36 @@ components:
     AuctionShipmentOptionResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-        shipmentDate:
-          type: string
-          format: date
         auctionHouseId:
           type: integer
           format: int64
         auctionMarket:
           type: string
+        id:
+          type: integer
+          format: int64
         lots:
           type: array
           items:
             $ref: '#/components/schemas/Lot'
+        shipmentDate:
+          type: string
+          format: date
     BusinessPartnerResponse:
       type: object
       properties:
+        active:
+          type: boolean
+        address:
+          type: string
         id:
           type: integer
           format: int64
+        memo:
+          type: string
         name:
+          type: string
+        ownerName:
           type: string
         partnerType:
           type: string
@@ -370,16 +378,8 @@ components:
           - WHOLESALE
           - RETAIL
           - AUCTION_HOUSE
-        ownerName:
-          type: string
         phone:
           type: string
-        address:
-          type: string
-        memo:
-          type: string
-        active:
-          type: boolean
     Lot:
       type: object
       properties:
@@ -388,41 +388,41 @@ components:
           format: int64
         itemName:
           type: string
-        varietyName:
-          type: string
         shipmentGrade:
           type: string
         shippedQuantity:
           type: integer
           format: int32
+        varietyName:
+          type: string
     ManualPaymentRequest:
       type: object
       properties:
         amount:
           type: integer
           format: int64
-        paymentDate:
-          type: string
-          format: date
-        idempotencyKey:
-          type: string
-          maxLength: 100
-          minLength: 0
-        paymentMethod:
-          type: string
-          maxLength: 30
-          minLength: 0
         depositorName:
           type: string
           maxLength: 100
           minLength: 0
-        worker:
+        idempotencyKey:
           type: string
           maxLength: 100
           minLength: 0
         memo:
           type: string
           maxLength: 1000
+          minLength: 0
+        paymentDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: string
+          maxLength: 30
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
           minLength: 0
       required:
       - amount
@@ -450,17 +450,26 @@ components:
     SalesOrchidGroupSearchResponse:
       type: object
       properties:
-        id:
+        ageYear:
           type: integer
-          format: int64
-        varietyId:
+          format: int32
+        availableQuantity:
           type: integer
-          format: int64
-        varietyName:
+          format: int32
+        bedZoneName:
           type: string
         genus:
           type: string
-        status:
+        houseNumber:
+          type: integer
+          format: int32
+        id:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
+        potSize:
           type: string
         quantity:
           type: integer
@@ -468,30 +477,27 @@ components:
         reservedQuantity:
           type: integer
           format: int32
-        availableQuantity:
-          type: integer
-          format: int32
-        potSize:
+        status:
           type: string
-        ageYear:
+        varietyId:
           type: integer
-          format: int32
-        houseNumber:
-          type: integer
-          format: int32
-        physicalBedNumber:
-          type: integer
-          format: int32
-        bedZoneName:
+          format: int64
+        varietyName:
           type: string
     SalesOrchidGroupSnapshotResponse:
       type: object
       properties:
-        snapshotType:
+        ageYear:
+          type: integer
+          format: int32
+        allocatedQuantity:
+          type: integer
+          format: int32
+        bedZoneId:
+          type: integer
+          format: int64
+        bedZoneName:
           type: string
-          enum:
-          - CREATION
-          - OUTBOUND
         captureSource:
           type: string
           enum:
@@ -500,22 +506,28 @@ components:
         capturedAt:
           type: string
           format: date-time
+        endPosition:
+          type: number
+        genus:
+          type: string
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
         orchidGroupId:
           type: integer
           format: int64
-        varietyId:
+        physicalBedId:
           type: integer
           format: int64
-        varietyName:
-          type: string
-        genus:
-          type: string
-        ageYear:
+        physicalBedNumber:
           type: integer
           format: int32
-        potSizeCode:
-          type: string
         potSize:
+          type: string
+        potSizeCode:
           type: string
         quantity:
           type: integer
@@ -523,69 +535,57 @@ components:
         reservedQuantity:
           type: integer
           format: int32
-        status:
+        snapshotType:
           type: string
-        allocatedQuantity:
-          type: integer
-          format: int32
-        houseId:
-          type: integer
-          format: int64
-        houseNumber:
-          type: integer
-          format: int32
-        physicalBedId:
-          type: integer
-          format: int64
-        physicalBedNumber:
-          type: integer
-          format: int32
-        bedZoneId:
-          type: integer
-          format: int64
-        bedZoneName:
-          type: string
+          enum:
+          - CREATION
+          - OUTBOUND
         startPosition:
           type: number
-        endPosition:
-          type: number
+        status:
+          type: string
+        varietyId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
     SalesSlipCreateRequest:
       type: object
       properties:
+        auctionShipmentId:
+          type: integer
+          format: int64
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipItemRequest'
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        partnerId:
+          type: integer
+          format: int64
+        paymentMethod:
+          type: string
+          maxLength: 50
+          minLength: 0
+        paymentStatus:
+          type: string
+          maxLength: 50
+          minLength: 0
         saleDate:
           type: string
           format: date
+        salesStatus:
+          type: string
+          maxLength: 50
+          minLength: 0
         salesType:
           type: string
           enum:
           - DIRECT
           - AUCTION
-        partnerId:
-          type: integer
-          format: int64
-        auctionShipmentId:
-          type: integer
-          format: int64
-        paymentStatus:
-          type: string
-          maxLength: 50
-          minLength: 0
-        salesStatus:
-          type: string
-          maxLength: 50
-          minLength: 0
-        paymentMethod:
-          type: string
-          maxLength: 50
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/SalesSlipItemRequest'
       required:
       - items
       - saleDate
@@ -605,63 +605,63 @@ components:
     SalesSlipItemAllocationResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-        orchidGroupId:
-          type: integer
-          format: int64
-        varietyName:
-          type: string
         allocatedQuantity:
           type: integer
           format: int32
         availableQuantity:
           type: integer
           format: int32
-        houseNumber:
-          type: integer
-          format: int32
-        physicalBedNumber:
-          type: integer
-          format: int32
         bedZoneName:
           type: string
         creationSnapshot:
           $ref: '#/components/schemas/SalesOrchidGroupSnapshotResponse'
+        houseNumber:
+          type: integer
+          format: int32
+        id:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type: integer
+          format: int64
         outboundSnapshot:
           $ref: '#/components/schemas/SalesOrchidGroupSnapshotResponse'
+        physicalBedNumber:
+          type: integer
+          format: int32
+        varietyName:
+          type: string
     SalesSlipItemRequest:
       type: object
       properties:
-        itemName:
-          type: string
-          maxLength: 150
-          minLength: 0
+        allocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipItemAllocationRequest'
         genus:
           type: string
           maxLength: 100
           minLength: 0
-        spec:
+        itemName:
           type: string
-          maxLength: 100
+          maxLength: 150
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
           minLength: 0
         quantity:
           type: integer
           format: int32
           minimum: 1
+        spec:
+          type: string
+          maxLength: 100
+          minLength: 0
         unitPrice:
           type: integer
           format: int32
           minimum: 0
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-        allocations:
-          type: array
-          items:
-            $ref: '#/components/schemas/SalesSlipItemAllocationRequest'
       required:
       - allocations
       - itemName
@@ -670,123 +670,84 @@ components:
     SalesSlipItemResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-        auctionShipmentLotId:
-          type: integer
-          format: int64
-        itemName:
-          type: string
-        genus:
-          type: string
-        spec:
-          type: string
-        quantity:
-          type: integer
-          format: int32
-        unitPrice:
-          type: integer
-          format: int32
-        amount:
-          type: integer
-          format: int32
-        memo:
-          type: string
         allocations:
           type: array
           items:
             $ref: '#/components/schemas/SalesSlipItemAllocationResponse'
+        amount:
+          type: integer
+          format: int32
+        auctionShipmentLotId:
+          type: integer
+          format: int64
+        genus:
+          type: string
+        id:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        memo:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        spec:
+          type: string
+        unitPrice:
+          type: integer
+          format: int32
     SalesSlipListItemResponse:
       type: object
       properties:
+        auctionMarket:
+          type: string
+        auctionShipmentId:
+          type: integer
+          format: int64
+        expectedPaymentDate:
+          type: string
+          format: date
         id:
           type: integer
           format: int64
-        slipNumber:
+        memo:
           type: string
+        paidAmount:
+          type: integer
+          format: int64
+        partner:
+          $ref: '#/components/schemas/BusinessPartnerResponse'
+        paymentMethod:
+          type: string
+        paymentStatus:
+          type: string
+        remainingAmount:
+          type: integer
+          format: int64
         saleDate:
           type: string
           format: date
+        salesStatus:
+          type: string
         salesType:
           type: string
           enum:
           - DIRECT
           - AUCTION
-        auctionShipmentId:
-          type: integer
-          format: int64
-        auctionMarket:
+        slipNumber:
           type: string
-        partner:
-          $ref: '#/components/schemas/BusinessPartnerResponse'
         totalAmount:
           type: integer
           format: int32
-        expectedPaymentDate:
-          type: string
-          format: date
-        paidAmount:
-          type: integer
-          format: int64
-        remainingAmount:
-          type: integer
-          format: int64
-        paymentStatus:
-          type: string
-        salesStatus:
-          type: string
-        paymentMethod:
-          type: string
-        memo:
-          type: string
     SalesSlipResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-        slipNumber:
+        auctionMarket:
           type: string
-        saleDate:
-          type: string
-          format: date
-        salesType:
-          type: string
-          enum:
-          - DIRECT
-          - AUCTION
         auctionShipmentId:
           type: integer
           format: int64
-        auctionMarket:
-          type: string
-        partner:
-          $ref: '#/components/schemas/BusinessPartnerResponse'
-        totalAmount:
-          type: integer
-          format: int32
-        expectedPaymentDate:
-          type: string
-          format: date
-        paidAmount:
-          type: integer
-          format: int64
-        remainingAmount:
-          type: integer
-          format: int64
-        paymentStatus:
-          type: string
-        salesStatus:
-          type: string
-        paymentMethod:
-          type: string
-        memo:
-          type: string
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/SalesSlipItemResponse'
         availableActions:
           type: array
           items:
@@ -796,16 +757,55 @@ components:
             - COMPLETE
             - CANCEL
             - CONFIRM_PAYMENT
+        expectedPaymentDate:
+          type: string
+          format: date
+        id:
+          type: integer
+          format: int64
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipItemResponse'
+        memo:
+          type: string
+        paidAmount:
+          type: integer
+          format: int64
+        partner:
+          $ref: '#/components/schemas/BusinessPartnerResponse'
+        paymentMethod:
+          type: string
+        paymentStatus:
+          type: string
+        remainingAmount:
+          type: integer
+          format: int64
+        saleDate:
+          type: string
+          format: date
+        salesStatus:
+          type: string
+        salesType:
+          type: string
+          enum:
+          - DIRECT
+          - AUCTION
+        slipNumber:
+          type: string
+        totalAmount:
+          type: integer
+          format: int32
     SalesSlipStatusUpdateRequest:
       type: object
       properties:
-        salesStatus:
-          type: string
-          maxLength: 50
-          minLength: 0
         memo:
           type: string
           maxLength: 1000
+          minLength: 0
+        salesStatus:
+          type: string
+          maxLength: 50
           minLength: 0
       required:
       - salesStatus

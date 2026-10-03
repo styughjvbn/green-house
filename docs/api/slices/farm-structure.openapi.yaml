@@ -274,23 +274,31 @@ components:
     BedZoneResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-        physicalBedId:
-          type: integer
-          format: int64
-        physicalBedNumber:
-          type: integer
-          format: int32
+        active:
+          type: boolean
         houseId:
           type: integer
           format: int64
         houseNumber:
           type: integer
           format: int32
+        id:
+          type: integer
+          format: int64
+        memo:
+          type: string
         name:
           type: string
+        orchidGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupResponse'
+        physicalBedId:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
         side:
           type: string
           enum:
@@ -298,6 +306,9 @@ components:
           - RIGHT
           - CUSTOM
           - HANGING
+        sortOrder:
+          type: integer
+          format: int32
         zoneType:
           type: string
           enum:
@@ -306,30 +317,19 @@ components:
           - HANGING
           - TRAY
           - GRID
-        sortOrder:
-          type: integer
-          format: int32
-        active:
-          type: boolean
-        memo:
-          type: string
-        orchidGroups:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupResponse'
     HouseResponse:
       type: object
       properties:
         id:
           type: integer
           format: int64
+        memo:
+          type: string
+        name:
+          type: string
         number:
           type: integer
           format: int32
-        name:
-          type: string
-        memo:
-          type: string
         physicalBeds:
           type: array
           items:
@@ -337,6 +337,9 @@ components:
     OrchidGroupLineageItemResponse:
       type: object
       properties:
+        createdAt:
+          type: string
+          format: date-time
         id:
           type: integer
           format: int64
@@ -350,41 +353,38 @@ components:
           - MOVED_TO
           - POTTED_TO
           - CORRECTED_TO
-        workOperationId:
-          type: integer
-          format: int64
-        sourceQuantity:
-          type: integer
-          format: int32
+        resultOrchidGroup:
+          $ref: '#/components/schemas/OrchidGroupResponse'
         resultQuantity:
           type: integer
           format: int32
-        createdAt:
-          type: string
-          format: date-time
         sourceOrchidGroup:
           $ref: '#/components/schemas/OrchidGroupResponse'
-        resultOrchidGroup:
-          $ref: '#/components/schemas/OrchidGroupResponse'
+        sourceQuantity:
+          type: integer
+          format: int32
+        workOperationId:
+          type: integer
+          format: int64
     OrchidGroupLineageNodeResponse:
       type: object
       properties:
+        orchidGroup:
+          $ref: '#/components/schemas/OrchidGroupResponse'
         quantity:
           type: integer
           format: int32
-        orchidGroup:
-          $ref: '#/components/schemas/OrchidGroupResponse'
     OrchidGroupLineageResponse:
       type: object
       properties:
         orchidGroupId:
           type: integer
           format: int64
-        sources:
+        results:
           type: array
           items:
             $ref: '#/components/schemas/OrchidGroupLineageItemResponse'
-        results:
+        sources:
           type: array
           items:
             $ref: '#/components/schemas/OrchidGroupLineageItemResponse'
@@ -395,9 +395,18 @@ components:
     OrchidGroupLineageTransformationResponse:
       type: object
       properties:
+        createdAt:
+          type: string
+          format: date-time
         id:
           type: integer
           format: int64
+        increaseQuantity:
+          type: integer
+          format: int32
+        lossQuantity:
+          type: integer
+          format: int32
         relationType:
           type: string
           enum:
@@ -408,53 +417,54 @@ components:
           - MOVED_TO
           - POTTED_TO
           - CORRECTED_TO
-        workOperationId:
-          type: integer
-          format: int64
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupLineageNodeResponse'
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupLineageNodeResponse'
         totalInputQuantity:
           type: integer
           format: int32
         totalResultQuantity:
           type: integer
           format: int32
-        lossQuantity:
+        workOperationId:
           type: integer
-          format: int32
-        increaseQuantity:
-          type: integer
-          format: int32
-        createdAt:
-          type: string
-          format: date-time
-        sources:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupLineageNodeResponse'
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupLineageNodeResponse'
+          format: int64
     OrchidGroupResponse:
       type: object
       properties:
-        id:
+        ageYear:
           type: integer
-          format: int64
+          format: int32
         bedZoneId:
           type: integer
           format: int64
-        varietyId:
-          type: integer
-          format: int64
-        varietyColor:
+        bedZoneName:
           type: string
+        endPosition:
+          type: number
         genus:
           type: string
-        varietyName:
-          type: string
-        quantity:
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
           type: integer
           format: int32
+        id:
+          type: integer
+          format: int64
+        memo:
+          type: string
+        physicalBedNumber:
+          type: integer
+          format: int32
+        placementType:
+          type: string
         potSize:
           type: string
         potSizeCode:
@@ -472,57 +482,60 @@ components:
           - POT_6
           - HANGING
           - ETC
-        ageYear:
+        quantity:
           type: integer
           format: int32
-        status:
-          type: string
-        placementType:
-          type: string
-        trayCount:
+        sortOrder:
           type: integer
           format: int32
         splitPlacementAllowed:
           type: boolean
         startPosition:
           type: number
-        endPosition:
-          type: number
-        sortOrder:
+        status:
+          type: string
+        trayCount:
           type: integer
           format: int32
-        memo:
+        varietyColor:
           type: string
-        houseId:
+        varietyId:
           type: integer
           format: int64
-        houseNumber:
-          type: integer
-          format: int32
-        physicalBedNumber:
-          type: integer
-          format: int32
-        bedZoneName:
+        varietyName:
           type: string
     PhysicalBedResponse:
       type: object
       properties:
-        id:
+        bedZones:
+          type: array
+          items:
+            $ref: '#/components/schemas/BedZoneResponse'
+        displayOrder:
           type: integer
-          format: int64
+          format: int32
         houseId:
           type: integer
           format: int64
         houseNumber:
           type: integer
           format: int32
+        id:
+          type: integer
+          format: int64
+        lengthCm:
+          type: integer
+          format: int32
+        memo:
+          type: string
         number:
           type: integer
           format: int32
-        displayOrder:
-          type: integer
-          format: int32
-        lengthCm:
+        positionUnitCount:
+          type: number
+        positionUnitLabel:
+          type: string
+        supportIntervalCm:
           type: integer
           format: int32
         widthCm:
@@ -531,16 +544,3 @@ components:
         wireCount:
           type: integer
           format: int32
-        supportIntervalCm:
-          type: integer
-          format: int32
-        positionUnitCount:
-          type: number
-        positionUnitLabel:
-          type: string
-        memo:
-          type: string
-        bedZones:
-          type: array
-          items:
-            $ref: '#/components/schemas/BedZoneResponse'

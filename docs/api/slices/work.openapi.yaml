@@ -175,13 +175,36 @@ components:
     WorkTypeResponse:
       type: object
       properties:
+        active:
+          type: boolean
+        code:
+          type: string
+        defaultType:
+          type: boolean
         id:
           type: integer
           format: int64
-        code:
-          type: string
         name:
           type: string
+        registrationModes:
+          type: array
+          items:
+            type: string
+            enum:
+            - RECORD
+            - PLAN
+        settingsEditable:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+        systemType:
+          type: boolean
+        targetSource:
+          type: string
+          enum:
+          - ORCHID_GROUP
+          - INBOUND_RECORD
         template:
           type: string
           enum:
@@ -194,24 +217,6 @@ components:
           - MEMO
           - MOVEMENT
           - RECONCILIATION
-        defaultType:
-          type: boolean
-        systemType:
-          type: boolean
-        active:
-          type: boolean
-        sortOrder:
-          type: integer
-          format: int32
-        settingsEditable:
-          type: boolean
-        registrationModes:
-          type: array
-          items:
-            type: string
-            enum:
-            - RECORD
-            - PLAN
         workflow:
           type: string
           enum:
@@ -220,14 +225,11 @@ components:
           - DISCARD
           - POTTING
           - STRUCTURE_CHANGE
-        targetSource:
-          type: string
-          enum:
-          - ORCHID_GROUP
-          - INBOUND_RECORD
     WorkTypeUpdateRequest:
       type: object
       properties:
+        active:
+          type: boolean
         name:
           type: string
           maxLength: 50
@@ -244,8 +246,6 @@ components:
           - MEMO
           - MOVEMENT
           - RECONCILIATION
-        active:
-          type: boolean
       required:
       - name
       - template

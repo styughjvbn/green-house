@@ -187,7 +187,7 @@ components:
     AuctionSettlementLineResponse:
       type: object
       properties:
-        id:
+        amount:
           type: integer
           format: int64
         auctionResultLineId:
@@ -196,22 +196,17 @@ components:
         auctionShipmentLotId:
           type: integer
           format: int64
-        shipmentDate:
-          type: string
-          format: date
-        varietyName:
-          type: string
-        shipmentGrade:
-          type: string
+        id:
+          type: integer
+          format: int64
         quantity:
           type: integer
           format: int32
-        unitPrice:
-          type: integer
-          format: int32
-        amount:
-          type: integer
-          format: int64
+        shipmentDate:
+          type: string
+          format: date
+        shipmentGrade:
+          type: string
         status:
           type: string
           enum:
@@ -220,44 +215,60 @@ components:
           - PARTIALLY_PAID
           - EXCLUDED
           - REVIEW_REQUIRED
+        unitPrice:
+          type: integer
+          format: int32
+        varietyName:
+          type: string
     AuctionSettlementResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
+        auctionDate:
+          type: string
+          format: date
         auctionHouseId:
           type: integer
           format: int64
         auctionHouseName:
           type: string
-        auctionDate:
-          type: string
-          format: date
-        resultReceivedAt:
+        confirmedAt:
           type: string
           format: date-time
-        expectedPaymentDate:
+        confirmedBy:
           type: string
-          format: date
-        grossAmount:
-          type: integer
-          format: int64
-        feeAmount:
-          type: integer
-          format: int64
         deductionAmount:
           type: integer
           format: int64
         expectedDepositAmount:
           type: integer
           format: int64
+        expectedPaymentDate:
+          type: string
+          format: date
+        feeAmount:
+          type: integer
+          format: int64
+        grossAmount:
+          type: integer
+          format: int64
+        id:
+          type: integer
+          format: int64
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuctionSettlementLineResponse'
+        memo:
+          type: string
         paidAmount:
           type: integer
           format: int64
         remainingAmount:
           type: integer
           format: int64
+        resultReceivedAt:
+          type: string
+          format: date-time
         status:
           type: string
           enum:
@@ -268,45 +279,34 @@ components:
           - AMOUNT_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
-        memo:
-          type: string
-        confirmedAt:
-          type: string
-          format: date-time
-        confirmedBy:
-          type: string
-        lines:
-          type: array
-          items:
-            $ref: '#/components/schemas/AuctionSettlementLineResponse'
     ManualPaymentRequest:
       type: object
       properties:
         amount:
           type: integer
           format: int64
-        paymentDate:
-          type: string
-          format: date
-        idempotencyKey:
-          type: string
-          maxLength: 100
-          minLength: 0
-        paymentMethod:
-          type: string
-          maxLength: 30
-          minLength: 0
         depositorName:
           type: string
           maxLength: 100
           minLength: 0
-        worker:
+        idempotencyKey:
           type: string
           maxLength: 100
           minLength: 0
         memo:
           type: string
           maxLength: 1000
+          minLength: 0
+        paymentDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: string
+          maxLength: 30
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
           minLength: 0
       required:
       - amount
@@ -334,31 +334,35 @@ components:
     PartnerBalanceSummaryResponse:
       type: object
       properties:
+        creditBalance:
+          type: integer
+          format: int64
         partnerId:
           type: integer
           format: int64
         partnerName:
           type: string
-        creditBalance:
+        receivableBalance:
           type: integer
           format: int64
         unappliedPaymentAmount:
           type: integer
           format: int64
-        receivableBalance:
-          type: integer
-          format: int64
     PartnerPaymentEventResponse:
       type: object
       properties:
-        id:
+        amount:
           type: integer
           format: int64
-        partnerId:
-          type: integer
-          format: int64
-        partnerName:
+        createdBy:
           type: string
+        depositorName:
+          type: string
+        description:
+          type: string
+        eventDate:
+          type: string
+          format: date
         eventType:
           type: string
           enum:
@@ -373,32 +377,20 @@ components:
           - MATCH_REJECTED
           - PAYMENT_UNLINKED
           - ADJUSTMENT
-        eventDate:
+        id:
+          type: integer
+          format: int64
+        memo:
           type: string
-          format: date
-        amount:
-          type: integer
-          format: int64
-        unappliedAmount:
-          type: integer
-          format: int64
-        targetType:
-          type: string
-          enum:
-          - SALES_SLIP
-          - AUCTION_SETTLEMENT
-          - NONE
-        targetId:
-          type: integer
-          format: int64
         parentEventId:
           type: integer
           format: int64
+        partnerId:
+          type: integer
+          format: int64
+        partnerName:
+          type: string
         paymentMethod:
-          type: string
-        depositorName:
-          type: string
-        description:
           type: string
         status:
           type: string
@@ -410,7 +402,15 @@ components:
           - CONFIRMED
           - REJECTED
           - CANCELLED
-        memo:
+        targetId:
+          type: integer
+          format: int64
+        targetType:
           type: string
-        createdBy:
-          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - NONE
+        unappliedAmount:
+          type: integer
+          format: int64
