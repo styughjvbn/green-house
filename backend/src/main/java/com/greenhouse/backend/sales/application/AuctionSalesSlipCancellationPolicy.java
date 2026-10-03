@@ -40,7 +40,7 @@ public class AuctionSalesSlipCancellationPolicy {
     Set<Long> blockedShipmentIds =
         new HashSet<>(auctionSettlementReader.findSettledAuctionShipmentIds(shipmentIds));
     blockedShipmentIds.addAll(
-        auctionShipmentLifecycleService.findShipmentIdsWithResults(shipmentIds));
+        auctionShipmentLifecycleService.findNonCancelableShipmentIds(shipmentIds));
     return Set.copyOf(blockedShipmentIds);
   }
 }

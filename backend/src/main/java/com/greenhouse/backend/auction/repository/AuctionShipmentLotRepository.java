@@ -15,18 +15,37 @@ import org.springframework.data.repository.query.Param;
 public interface AuctionShipmentLotRepository
     extends JpaRepository<AuctionShipmentLot, Long>, AuctionShipmentLotRepositoryCustom {
 
-  List<AuctionShipmentLot> findAllByShipmentIdIn(Collection<Long> shipmentIds);
+  @Query(
+      """
+      select lot.id as lotId, lot.shipment.id as shipmentId from AuctionShipmentLot lot
+      where lot.shipment.id in :shipmentIds
+      """)
+  List<LotShipmentIdRow> findLotShipmentIds(@Param("shipmentIds") Collection<Long> shipmentIds);
 
-  boolean existsByShipmentIdAndCurrentStatusNot(Long shipmentId, AuctionLotStatus status);
+  interface LotShipmentIdRow {
+    Long getLotId();
+
+    Long getShipmentId();
+  }
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      "select lot from AuctionShipmentLot lot where lot.shipment.id = :shipmentId order by lot.id")
+  List<AuctionShipmentLot> findAllForUpdateByShipmentId(@Param("shipmentId") Long shipmentId);
 
   @Query(
       """
 			select distinct lot.shipment.id from AuctionShipmentLot lot
 			where lot.shipment.id in :shipmentIds
-			  and lot.currentStatus <> :status
+			  and (lot.currentStatus <> :waitingStatus
+			       or lot.soldQuantity <> 0
+			       or lot.returnedQuantity <> 0
+			       or lot.attempts is not empty
+			       or lot.statusHistory is not empty)
 			""")
-  List<Long> findShipmentIdsWithStatusNot(
-      @Param("shipmentIds") Collection<Long> shipmentIds, @Param("status") AuctionLotStatus status);
+  List<Long> findNonCancelableShipmentIds(
+      @Param("shipmentIds") Collection<Long> shipmentIds,
+      @Param("waitingStatus") AuctionLotStatus waitingStatus);
 
   @EntityGraph(attributePaths = {"shipment"})
   List<AuctionShipmentLot> findAllByOrderByIdDesc();
@@ -35,7 +54,7 @@ public interface AuctionShipmentLotRepository
   Optional<AuctionShipmentLot> findWithDetailsById(Long id);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @EntityGraph(attributePaths = {"shipment"})
+  // Lock only the lot root; a shipment fetch graph would also introduce parent row locks.
   @Query("select lot from AuctionShipmentLot lot where lot.id = :id")
   Optional<AuctionShipmentLot> findForUpdateById(@Param("id") Long id);
 }

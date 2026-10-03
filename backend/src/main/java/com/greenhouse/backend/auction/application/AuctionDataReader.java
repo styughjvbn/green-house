@@ -4,6 +4,7 @@ import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.auction.repository.AuctionResultLineRepository;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
+import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository.LotShipmentIdRow;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import java.time.LocalDate;
@@ -102,8 +103,8 @@ public class AuctionDataReader {
     if (shipmentIds.isEmpty()) {
       return Map.of();
     }
-    return lotRepository.findAllByShipmentIdIn(shipmentIds).stream()
-        .collect(Collectors.toMap(lot -> lot.getId(), lot -> lot.getShipment().getId()));
+    return lotRepository.findLotShipmentIds(shipmentIds).stream()
+        .collect(Collectors.toMap(LotShipmentIdRow::getLotId, LotShipmentIdRow::getShipmentId));
   }
 
   public record Shipment(
