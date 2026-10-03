@@ -29,7 +29,7 @@ class ConsolidatedWorkMigrationPostgresE2ETest extends WorkE2ETestBase {
       Flyway.configure().dataSource(dataSource).target("27").load().migrate();
       var jdbc = new JdbcTemplate(dataSource);
       seed(jdbc);
-      var upgrade = Flyway.configure().dataSource(dataSource).load();
+      var upgrade = Flyway.configure().dataSource(dataSource).target("34").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(7);
       assertThat(upgrade.info().current().getVersion().getVersion()).isEqualTo("34");
       assertThat(

@@ -115,15 +115,21 @@ public class SalesSlip extends BaseEntity {
   }
 
   public void addItem(SalesSlipItem item) {
+    int totalAmount = addAmount(calculateTotalAmount(this.items), item.getAmount());
     item.setSalesSlip(this);
     this.items.add(item);
-    recalculateAmounts();
+    applyAmounts(totalAmount);
   }
 
   public void replaceItems(List<SalesSlipItem> items) {
+    var replacement = List.copyOf(items);
+    int totalAmount = calculateTotalAmount(replacement);
     this.items.clear();
-    items.forEach(this::addItem);
-    recalculateAmounts();
+    for (var item : replacement) {
+      item.setSalesSlip(this);
+      this.items.add(item);
+    }
+    applyAmounts(totalAmount);
   }
 
   public void refreshAmounts() {
@@ -234,7 +240,30 @@ public class SalesSlip extends BaseEntity {
   }
 
   private void recalculateAmounts() {
-    this.totalAmount = this.items.stream().mapToInt(SalesSlipItem::getAmount).sum();
+    applyAmounts(calculateTotalAmount(this.items));
+  }
+
+  private static int calculateTotalAmount(List<SalesSlipItem> items) {
+    int total = 0;
+    for (var item : items) {
+      total = addAmount(total, item.getAmount());
+    }
+    return total;
+  }
+
+  private static int addAmount(int total, Integer amount) {
+    if (amount == null || amount < 0) {
+      throw new IllegalArgumentException("판매 품목 금액은 0 이상이어야 합니다.");
+    }
+    try {
+      return Math.addExact(total, amount);
+    } catch (ArithmeticException exception) {
+      throw new IllegalArgumentException("판매 전표 금액은 2,147,483,647원 이하여야 합니다.", exception);
+    }
+  }
+
+  private void applyAmounts(int totalAmount) {
+    this.totalAmount = totalAmount;
     this.remainingAmount = Math.max(0L, this.totalAmount.longValue() - getPaidAmount());
   }
 

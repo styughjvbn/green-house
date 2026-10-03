@@ -93,9 +93,51 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `./gradlew spotlessCheck`, `git diff --check`: 성공.
 - 전체 검증 이후 변경은 이 진행 문서의 결과 갱신뿐이며 실행 코드·테스트는 바꾸지 않았다.
 
+## 3차 변경 — BE-003 판매 금액 overflow
+
+상태: 코드·DB 제약·정책 문서 수정 및 전체 회귀 검증 완료. 기존 운영 금액은 대사하거나 자동 보정하지 않았다.
+
+### 수정 전 재현
+
+- 도메인 회귀 14건 중 13건이 기존 구현에서 실패했다. 금액 초과·잘못된 수량/단가를 거절하지 않았고, 품목 수정·추가·교체·재계산에서 잘못된 상태를 허용했다. 이 수에는 자기 품목 목록으로 교체하면 목록이 비는 기존 실패도 포함한다.
+- PostgreSQL 생성 3건·수정 3건 모두 기존 구현에서 실패했다. 수량 2×단가 15억원은 음수로, 수량 3×단가 15억원은 양수 205,032,704원으로 돌아왔다. 각각 15억원인 두 품목의 합계도 초과를 거절하지 않았다. 단순 비음수 검사로는 양수 overflow를 방어할 수 없다.
+
+### 구현
+
+- `SalesSlipItem`이 생성·수정의 수량·단가 검증과 `Math.multiplyExact`를 소유한다. 모든 검증을 필드 변경 전에 수행해 실패한 품목 수정이 메모·수량·단가를 일부 바꾸지 않는다.
+- `SalesSlip`이 품목 합계를 `Math.addExact`로 계산한다. 추가·교체는 합계 검증 후 품목을 연결하고, 기존 품목 수정 후 재계산도 같은 규칙을 사용한다. 교체 입력은 먼저 복사해 자신의 목록을 전달해도 안전하게 처리한다. 새 범용 금액 추상화는 추가하지 않았다.
+- 품목과 전표의 현재 INTEGER 저장 범위를 유지한다. 초과는 기존 `400 / VALIDATION_ERROR`로 거절하며 잘라 저장하거나 0원으로 보정하지 않는다. HTTP DTO·schema는 변경하지 않아 OpenAPI와 생성 TypeScript를 다시 만들지 않았다.
+- 최상위 판매 생성·수정 트랜잭션을 유지한다. 수정 중 이미 수행한 예약 해제, Mutation, 이동 이력과 품목·배분·스냅샷·감사·잔액은 금액 검사 실패 시 전체 rollback한다.
+- V35는 품목 수량 양수·단가/금액 비음수·수량×단가와 금액의 일치, 전표 합계 비음수 CHECK를 추가한다. DB 곱셈은 BIGINT로 수행해 제약 자체의 INTEGER overflow를 피한다. 여러 품목의 합계는 행 CHECK로 보호할 수 없으므로 도메인의 정확 합계를 함께 유지한다.
+- 제약은 `NOT VALID`로 추가한다. 기존 금액·입금·잔액을 backfill하지 않고 새 행과 기존 행 갱신을 즉시 검증한다. 기존 위반 품목은 메모 변경도, 음수 총액 전표는 상태 변경도 거절될 수 있다. 운영 대사·감사 가능한 복구·전체 제약 검증은 별도 작업이며 배포 문서에 적용 순서를 반영했다.
+- 기존 V27→V34 Work 통합 migration 시험은 해당 범위로 target을 고정했다. 원장 통합 migration 목록 시험도 소유하는 V21~V34로 조회 범위를 제한했다. 미래 migration이 추가될 때마다 해당 통합 맥락의 기대 개수·버전을 바꾸는 취약성을 제거하고, V34→V35 금액 제약 업그레이드는 별도 실제 PostgreSQL 시험에서 검증한다.
+
+### 회귀 방어
+
+- [SalesSlipAmountRulesTest](../backend/src/test/java/com/greenhouse/backend/sales/domain/SalesSlipAmountRulesTest.java): 도메인 14건. 음수·양수 overflow, null/잘못된 수량·단가, 실패 시 품목/전표 상태 보존, 최대 합계·부분입금·완납, 0원 및 자기 목록 교체를 검증한다.
+- [SalesAmountPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/SalesAmountPostgresE2ETest.java): PostgreSQL 14건. HTTP 생성 실패 3건·서비스 수정 실패 3건에서 관련 14개 테이블과 기존 상세·예약을 비교하고 정상 재시도도 확인한다. 기존 정상 수정의 감사·스냅샷·재고 이동이 남은 상태에서 후속 실패를 검증한다. 최대 금액 저장·잔액·완납과 동일 키 재요청, 0원 경매 출하, SQL 우회 시 품목 5종·음수 전표 거절을 검증한다. 입금 replay는 수신·연결 이벤트를 포함한 전체 snapshot 보존으로 확인한다. SQL 배열과 JSONB는 JDBC 객체 identity 대신 DB의 JSON 값으로 비교한다.
+- [SalesAmountMigrationPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/SalesAmountMigrationPostgresE2ETest.java): 음수·양수 overflow legacy 자료를 V34에 넣고 V35로 갱신하는 2건. 기존 행 불변, 신규 삽입·기존 행 갱신 차단, 위반이 남아 있는 상태의 제약 검증 실패, Flyway 재기동 시 추가 적용 없음과 checksum 검증을 확인한다.
+
+### 검증
+
+- 집중 검증: 도메인 금액·판매 상태 25건 성공. PostgreSQL 금액·migration·기존 Work 업그레이드 시험에서 입금 이벤트 개수 기대를 보완한 뒤 해당 입금 회귀 성공.
+- 백엔드 전체 `./gradlew test`: 114개 클래스, 539건 성공. 신규 도메인 14건과 기존 architecture·query-count 회귀 포함.
+- 첫 PostgreSQL 전체 실행: 38개 클래스, 213건 중 212건 성공. 새 V35가 추가돼 기존 원장 통합 migration 목록의 고정 기대 1건이 실패했다. 해당 조회 범위를 V21~V34로 고정한 뒤 전체를 다시 실행했다.
+- PostgreSQL 전체 `./gradlew workE2eTest` 최종 실행: 38개 클래스, 213건 성공. 신규 16건과 BE-001·BE-002를 포함한 기존 197건 모두 성공.
+- 프론트엔드 `npm run check`, `./gradlew spotlessCheck`, `git diff --check`: 성공.
+- 백엔드 전체 성공 이후 실행 코드 변경은 없다. 이후 변경은 PostgreSQL 전용 migration 시험의 조회 범위와 정책·결과 문서뿐이다. 해당 시험은 최종 PostgreSQL 전체 실행에 포함했고, 최종 전체 검증 뒤에는 이 문서의 결과만 갱신했다.
+
+## 커밋 진행
+
+- `7ff08ffa` — 감사 03·06·07·08·09 문서.
+- `d0a661d6` — BE-001 판매 수정 예약 identity와 회귀·정책 문서.
+- `1509e55f` — BE-002 경매 이력 보존과 rollback·경쟁 회귀·정책 문서.
+- BE-003 — `fix: reject overflowing sales amounts`. 금액 보호 코드·migration·회귀와 이 진행 문서를 한 목적의 별도 커밋으로 저장한다.
+
 ## 남은 작업
 
 - BE-001의 기존 운영 데이터 대사·복구는 별도 작업이다. 수정 코드가 기존 allocation/예약/이력을 자동 보정하지 않는다. 기존 read-only 대사로 영향 전표를 확인하고, 이력 보존 및 원장과 일치하는 복구 정책을 정해야 한다.
 - BE-002의 과거 삭제 이력은 코드 수정으로 복원되지 않는다. 운영 영향과 복원 가능한 백업·자료의 존재 여부는 확인하지 않았다.
-- 다음 P0는 BE-003 직접 판매 금액 overflow, BE-004 판매 가능 상태 정책의 조회·예약 통일, BE-005 경매 부분 결과·반환 재전송의 중복 반영 방지다.
+- BE-003의 과거 잘못된 금액·잔액·입금은 별도 대사·복구 대상이다. V35 적용만으로 운영 자료의 정합성이 입증되거나 기존 위반 행이 모두 검증되는 것은 아니다.
+- 다음 P0는 BE-004 판매 가능 상태 정책의 조회·예약 통일, BE-005 경매 부분 결과·반환 재전송의 중복 반영 방지다.
 - BE-006의 전역 lock ordering, 성능·추상화·테스트 체계의 나머지 finding은 후속 변경으로 남긴다. 이번 변경으로 전체 P0 또는 운영 정합성이 해결됐다고 판정하지 않는다.

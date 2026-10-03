@@ -69,13 +69,14 @@ public class SalesSlipItem {
       Integer quantity,
       Integer unitPrice,
       String memo) {
+    int amount = calculateAmount(quantity, unitPrice);
     this.auctionShipmentLotId = auctionShipmentLotId;
     this.itemName = itemName;
     this.genus = genus;
     this.spec = spec;
     this.quantity = quantity;
     this.unitPrice = unitPrice;
-    this.amount = quantity * unitPrice;
+    this.amount = amount;
     this.memo = memo;
   }
 
@@ -95,13 +96,28 @@ public class SalesSlipItem {
       Integer quantity,
       Integer unitPrice,
       String memo) {
+    int amount = calculateAmount(quantity, unitPrice);
     this.itemName = itemName;
     this.genus = genus;
     this.spec = spec;
     this.quantity = quantity;
     this.unitPrice = unitPrice;
-    this.amount = quantity * unitPrice;
+    this.amount = amount;
     this.memo = memo;
+  }
+
+  private static int calculateAmount(Integer quantity, Integer unitPrice) {
+    if (quantity == null || quantity <= 0) {
+      throw new IllegalArgumentException("판매 품목 수량은 0보다 커야 합니다.");
+    }
+    if (unitPrice == null || unitPrice < 0) {
+      throw new IllegalArgumentException("판매 품목 단가는 0 이상이어야 합니다.");
+    }
+    try {
+      return Math.multiplyExact(quantity, unitPrice);
+    } catch (ArithmeticException exception) {
+      throw new IllegalArgumentException("판매 품목 금액은 2,147,483,647원 이하여야 합니다.", exception);
+    }
   }
 
   public void replaceAllocations(List<SalesSlipItemAllocation> allocations) {

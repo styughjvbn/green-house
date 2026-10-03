@@ -60,7 +60,7 @@ class OrchidGroupStateChainMigrationPostgresE2ETest extends WorkE2ETestBase {
 				SELECT version || ':' || description
 				FROM flyway_schema_history
 				WHERE success = TRUE
-				  AND version::INTEGER > 20
+				  AND version::INTEGER BETWEEN 21 AND 34
 				ORDER BY installed_rank
 				""",
                 String.class))
