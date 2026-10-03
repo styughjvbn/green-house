@@ -5,6 +5,7 @@ import hashlib
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from sanitize_demo import (
     CatalogPair,
@@ -17,6 +18,9 @@ from sanitize_demo import (
     load_catalog,
     transform_business_json,
     unique_catalog_mapping,
+    json_scaling_fits,
+    INT_MAX,
+    choose_scaling_factors,
 )
 
 
@@ -54,6 +58,85 @@ class CatalogTest(unittest.TestCase):
 
 
 class JsonSanitizationTest(unittest.TestCase):
+    def transform(self, value: object) -> object:
+        return transform_business_json(
+            value, key="k" * 32, namespace="test", quantity_factor=3, price_factor=2,
+            master_mapping={5: CatalogPair("데모속", "데모품종")},
+            catalog=[CatalogPair("대체속", "대체품종")], date_shift_days=10,
+        )
+
+    def test_correction_audit_preserves_status_dates_and_quantity_balances(self) -> None:
+        result = self.transform({
+            "beforeWorkDate": "2026-09-01", "afterWorkDate": [2026, 9, 2],
+            "adjustments": [{"orchidGroupId": 348, "beforeQuantity": 850,
+                             "afterQuantity": 1050, "beforeStatus": "정상", "afterStatus": "생성 취소"}],
+            "quantityBalances": [{"sourceInputQuantities": {"185": 1000},
+                                  "resultQuantities": {"348": 1050},
+                                  "lossQuantity": 150, "increaseQuantity": 200,
+                                  "executionId": 447}],
+            "worker": "개인 작업자", "reason": "개인 사유",
+        })
+        self.assertEqual(result["beforeWorkDate"], "2026-09-11")
+        self.assertEqual(result["afterWorkDate"], [2026, 9, 12])
+        self.assertEqual(result["adjustments"][0], {
+            "orchidGroupId": 348, "beforeQuantity": 2550, "afterQuantity": 3150,
+            "beforeStatus": "정상", "afterStatus": "생성 취소",
+        })
+        self.assertEqual(result["quantityBalances"][0], {
+            "sourceInputQuantities": {"185": 3000}, "resultQuantities": {"348": 3150},
+            "lossQuantity": 450, "increaseQuantity": 600, "executionId": 447,
+        })
+        self.assertIsNone(result["worker"])
+        self.assertIsNone(result["reason"])
+
+    def test_identity_migration_snapshot_handles_database_column_names(self) -> None:
+        self.assertEqual(self.transform({
+            "id": 348, "variety_id": 5, "genus": "실제 속", "variety_name": "실제 품종",
+            "quantity": 100, "reserved_quantity": 10, "tray_count": 5,
+            "pot_size_code": "POT_3", "created_at": "2026-09-01T12:34:56Z",
+            "memo": "실제 메모",
+        }), {
+            "id": 348, "variety_id": 5, "genus": "데모속", "variety_name": "데모품종",
+            "quantity": 300, "reserved_quantity": 30, "tray_count": 15,
+            "pot_size_code": "POT_3", "created_at": "2026-09-11T12:34:56Z", "memo": None,
+        })
+
+    def test_effect_results_scale_quantities_without_changing_keys_ids_or_counts(self) -> None:
+        result = self.transform({
+            "executionKey": "execution-key-348", "fromBedZoneId": "12",
+            "actualQuantity": 100, "inputQuantity": 110, "totalInputQuantity": 110,
+            "discardedQuantity": 10, "remainingQuantity": 100, "resultCount": 1,
+            "createdOrchidGroupIds": [348],
+        })
+        self.assertEqual(result, {
+            "executionKey": "execution-key-348", "fromBedZoneId": "12",
+            "actualQuantity": 300, "inputQuantity": 330, "totalInputQuantity": 330,
+            "discardedQuantity": 30, "remainingQuantity": 300, "resultCount": 1,
+            "createdOrchidGroupIds": [348],
+        })
+
+    def test_snapshot_scaling_checks_historical_values_and_quantity_maps(self) -> None:
+        self.assertFalse(json_scaling_fits({"beforeQuantity": INT_MAX}, 2, 2))
+        self.assertFalse(json_scaling_fits({"sourceInputQuantities": {"348": INT_MAX}}, 2, 2))
+        self.assertTrue(json_scaling_fits({"orchidGroupId": INT_MAX, "quantity": 10}, 2, 2))
+
+    def test_scaling_factor_selection_accounts_for_historical_json(self) -> None:
+        def rows(cursor: object, query: str, params: object = ()) -> list[tuple]:
+            if query.startswith("SELECT coalesce(max"):
+                return [(0,)]
+            if query == "SELECT result_details FROM work_operation_corrections":
+                return [({"adjustments": [{"beforeQuantity": INT_MAX}]},)]
+            return []
+
+        with patch("sanitize_demo.fetch_all", side_effect=rows):
+            self.assertEqual(choose_scaling_factors(object(), 3, 2), (1, 2))
+
+    def test_invalid_dates_or_quantity_maps_fail_closed(self) -> None:
+        with self.assertRaises(SanitizationError):
+            self.transform({"workDate": "실제 개인 정보"})
+        with self.assertRaises(SanitizationError):
+            self.transform({"sourceInputQuantities": {"348": "개인 정보"}})
+
     def test_active_engine_snapshot_transformation_preserves_shape(self) -> None:
         source = {
             "quantity": 2,

@@ -277,6 +277,21 @@ coverage의 ID·FK·행 순서·revision chain·mutation/correlation 연결을 �
 작업 타입의 code·name과 `work_records.work_type`은 개인정보가 아닌 업무 분류 기준이므로
 사용자 정의 타입을 포함해 원문을 보존한다.
 
+현재 비식별화 기준은 V34 스키마다. 입고는 접수 모델의 `estimated_quantity`만 변환하며,
+삭제된 포트 결과 컬럼을 참조하지 않는다. 작업 취소 사유, 보정 감사 이벤트와 실사 기록의
+작업자·사유·메모, 묶음 ID 이관의 삭제 전 스냅샷도 처리한다. 보정 전후·실사·손실·증가 수량과
+난 묶음별 투입/결과 수량 맵은 같은 배율을 적용하고, JSON의 작업일·시점은 DB 날짜와 같은
+일수만큼 이동한다. 보정 전후 상태와 식별자는 유지한다. 접수 소속 관계·감사 연결·완료된
+멱등 접수와 원장 체인을 검증하며, 스키마 allowlist는 실제 PostgreSQL 컬럼 기준으로 확인한다.
+
+회귀 검증:
+
+```bash
+python3 -m unittest discover -s scripts/demo -p 'test_sanitize_demo.py'
+# 별도 PostgreSQL 14 컨테이너에서 V1~V34와 전체 변환·검증 실행 (Docker 필요)
+DEMO_SANITIZE_POSTGRES_TEST=1 python3 -m unittest discover -s scripts/demo -p 'test_sanitize_demo_postgres.py'
+```
+
 비식별화 key와 날짜 이동값은 실행마다 바꾸지 않는다. 32자 이상의 key, 0이 아닌 날짜 이동,
 수량·가격 배율 2~9를 `/etc/green-house/demo-refresh.env` 같은 root 관리 파일에 고정한다.
 원본 dump는 mode 0700 임시 디렉터리에만 만들고 성공·실패와 관계없이 즉시 제거한다.
