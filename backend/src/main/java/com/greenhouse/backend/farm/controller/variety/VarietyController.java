@@ -28,52 +28,56 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class VarietyController {
 
-	private final VarietyService varietyService;
+  private final VarietyService varietyService;
 
-	@GetMapping
-	public ApiResponse<PageResponse<VarietyResponse>> getVarieties(@RequestParam(required = false) String keyword,
-			@RequestParam(required = false) String genus, @RequestParam(required = false) Boolean saleEnabled,
-			@RequestParam(required = false) Boolean active, @RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "10") int size) {
-		return ApiResponse.ok(varietyService.getVarieties(keyword, genus, saleEnabled, active, page, size));
-	}
+  @GetMapping
+  public ApiResponse<PageResponse<VarietyResponse>> getVarieties(
+      @RequestParam(required = false) String keyword,
+      @RequestParam(required = false) String genus,
+      @RequestParam(required = false) Boolean saleEnabled,
+      @RequestParam(required = false) Boolean active,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+    return ApiResponse.ok(
+        varietyService.getVarieties(keyword, genus, saleEnabled, active, page, size));
+  }
 
-	@GetMapping("/genera")
-	public ApiResponse<VarietyGeneraResponse> getGenera() {
-		return ApiResponse.ok(varietyService.getGenera());
-	}
+  @GetMapping("/genera")
+  public ApiResponse<VarietyGeneraResponse> getGenera() {
+    return ApiResponse.ok(varietyService.getGenera());
+  }
 
-	@GetMapping("/{varietyId}")
-	public ApiResponse<VarietyResponse> getVariety(@PathVariable Long varietyId) {
-		return ApiResponse.ok(varietyService.getVariety(varietyId));
-	}
+  @GetMapping("/{varietyId}")
+  public ApiResponse<VarietyResponse> getVariety(@PathVariable Long varietyId) {
+    return ApiResponse.ok(varietyService.getVariety(varietyId));
+  }
 
-	@PostMapping
-	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<VarietyResponse> create(@Valid @RequestBody VarietyCreateRequest request) {
-		return ApiResponse.ok(varietyService.create(request));
-	}
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<VarietyResponse> create(@Valid @RequestBody VarietyCreateRequest request) {
+    return ApiResponse.ok(varietyService.create(request));
+  }
 
-	@PatchMapping("/{varietyId}")
-	public ApiResponse<VarietyResponse> update(@PathVariable Long varietyId,
-			@Valid @RequestBody VarietyUpdateRequest request) {
-		return ApiResponse.ok(varietyService.update(varietyId, request));
-	}
+  @PatchMapping("/{varietyId}")
+  public ApiResponse<VarietyResponse> update(
+      @PathVariable Long varietyId, @Valid @RequestBody VarietyUpdateRequest request) {
+    return ApiResponse.ok(varietyService.update(varietyId, request));
+  }
 
-	@PatchMapping("/{varietyId}/deactivate")
-	public ApiResponse<VarietyResponse> deactivate(@PathVariable Long varietyId) {
-		return ApiResponse.ok(varietyService.deactivate(varietyId));
-	}
+  @PatchMapping("/{varietyId}/deactivate")
+  public ApiResponse<VarietyResponse> deactivate(@PathVariable Long varietyId) {
+    return ApiResponse.ok(varietyService.deactivate(varietyId));
+  }
 
-	@DeleteMapping("/{varietyId}")
-	public ApiResponse<Void> delete(@PathVariable Long varietyId) {
-		varietyService.delete(varietyId);
-		return ApiResponse.ok(null);
-	}
+  @DeleteMapping("/{varietyId}")
+  public ApiResponse<Void> delete(@PathVariable Long varietyId) {
+    varietyService.delete(varietyId);
+    return ApiResponse.ok(null);
+  }
 
-	@GetMapping("/{varietyId}/orchid-groups")
-	public ApiResponse<List<VarietyConnectedOrchidGroupResponse>> getOrchidGroups(@PathVariable Long varietyId) {
-		return ApiResponse.ok(varietyService.getOrchidGroups(varietyId));
-	}
-
+  @GetMapping("/{varietyId}/orchid-groups")
+  public ApiResponse<List<VarietyConnectedOrchidGroupResponse>> getOrchidGroups(
+      @PathVariable Long varietyId) {
+    return ApiResponse.ok(varietyService.getOrchidGroups(varietyId));
+  }
 }

@@ -29,70 +29,69 @@ import org.springframework.transaction.support.TransactionTemplate;
 @ActiveProfiles("test")
 abstract class AbstractBackendIntegrationTest {
 
-	@Autowired
-	protected MockMvc mockMvc;
+  @Autowired protected MockMvc mockMvc;
 
-	@Autowired
-	protected HouseRepository houseRepository;
+  @Autowired protected HouseRepository houseRepository;
 
-	@Autowired
-	protected PhysicalBedRepository physicalBedRepository;
+  @Autowired protected PhysicalBedRepository physicalBedRepository;
 
-	@Autowired
-	protected BedZoneRepository bedZoneRepository;
+  @Autowired protected BedZoneRepository bedZoneRepository;
 
-	@Autowired
-	protected OrchidGroupRepository orchidGroupRepository;
+  @Autowired protected OrchidGroupRepository orchidGroupRepository;
 
-	@Autowired
-	protected WorkCommandReceiptRepository workCommandReceiptRepository;
+  @Autowired protected WorkCommandReceiptRepository workCommandReceiptRepository;
 
-	@Autowired
-	protected WorkTypeRepository workTypeRepository;
+  @Autowired protected WorkTypeRepository workTypeRepository;
 
-	@Autowired
-	protected VarietyRepository varietyRepository;
+  @Autowired protected VarietyRepository varietyRepository;
 
-	@Autowired
-	protected InboundRecordRepository inboundRecordRepository;
+  @Autowired protected InboundRecordRepository inboundRecordRepository;
 
-	@Autowired
-	protected MaterialRepository materialRepository;
+  @Autowired protected MaterialRepository materialRepository;
 
-	@Autowired
-	private EntityManager baselineEntityManager;
+  @Autowired private EntityManager baselineEntityManager;
 
-	@Autowired
-	private PlatformTransactionManager baselineTransactionManager;
+  @Autowired private PlatformTransactionManager baselineTransactionManager;
 
-	protected OrchidGroup saveOrchidGroup(OrchidGroup group) {
-		return new TransactionTemplate(baselineTransactionManager).execute(status -> {
-			var saved = orchidGroupRepository.saveAndFlush(group);
-			if (saved.getStateRevision() == null) {
-				FarmTestFixtures.baseline(baselineEntityManager, saved);
-			}
-			baselineEntityManager.flush();
-			return saved;
-		});
-	}
+  protected OrchidGroup saveOrchidGroup(OrchidGroup group) {
+    return new TransactionTemplate(baselineTransactionManager)
+        .execute(
+            status -> {
+              var saved = orchidGroupRepository.saveAndFlush(group);
+              if (saved.getStateRevision() == null) {
+                FarmTestFixtures.baseline(baselineEntityManager, saved);
+              }
+              baselineEntityManager.flush();
+              return saved;
+            });
+  }
 
-	protected MockHttpServletRequestBuilder movementRecord(Long groupId,
-			Long zoneId, int start, int end) throws Exception {
-		var group = orchidGroupRepository.findById(groupId);
-		int quantity = group.map(OrchidGroup::getQuantity).orElse(1);
-		long typeId = workTypeRepository.findByCode("MOVEMENT").orElseThrow().getId();
-		return MockMvcRequestBuilders
-			.post("/api/work-operations/structure-change-records/batch")
-			.contentType(MediaType.APPLICATION_JSON)
-			.content("""
+  protected MockHttpServletRequestBuilder movementRecord(
+      Long groupId, Long zoneId, int start, int end) throws Exception {
+    var group = orchidGroupRepository.findById(groupId);
+    int quantity = group.map(OrchidGroup::getQuantity).orElse(1);
+    long typeId = workTypeRepository.findByCode("MOVEMENT").orElseThrow().getId();
+    return MockMvcRequestBuilders.post("/api/work-operations/structure-change-records/batch")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(
+            """
 					{"records":[{"operation":{"workTypeId":%d,"title":"자리 이동","plannedStartDate":"2026-07-16",
 					 "sourceScopeType":"MANUAL_SELECTION","sourceOrchidGroupIds":[%d]},
 					 "execution":{"idempotencyKey":"%s","completedDate":"2026-07-16","worker":"테스터",
 					 "sources":[{"sourceOrchidGroupId":%d,"inputQuantity":%d}],
 					 "results":[{"bedZoneId":%d,"quantity":%d,"attributeSourceOrchidGroupId":%d,
 					 "purpose":"NORMAL","startPosition":%d,"endPosition":%d}]}}]}
-					""".formatted(typeId, groupId, UUID.randomUUID(), groupId, quantity, zoneId, quantity,
-					groupId, start, end));
-	}
-
+					"""
+                .formatted(
+                    typeId,
+                    groupId,
+                    UUID.randomUUID(),
+                    groupId,
+                    quantity,
+                    zoneId,
+                    quantity,
+                    groupId,
+                    start,
+                    end));
+  }
 }

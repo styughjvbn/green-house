@@ -20,37 +20,67 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @org.springframework.test.context.TestPropertySource(
-		properties = "spring.datasource.url=jdbc:h2:mem:orchidgroupauditrollbackintegrationtest;MODE=PostgreSQL;DB_CLOSE_DELAY=-1")
+    properties =
+        "spring.datasource.url=jdbc:h2:mem:orchidgroupauditrollbackintegrationtest;MODE=PostgreSQL;DB_CLOSE_DELAY=-1")
 class OrchidGroupAuditRollbackIntegrationTest extends AbstractBackendIntegrationTest {
 
-	@Autowired
-	OrchidGroupCommandService commandService;
+  @Autowired OrchidGroupCommandService commandService;
 
-	@MockitoBean
-	AuditRecorder auditRecorder;
+  @MockitoBean AuditRecorder auditRecorder;
 
-	@Test
-	void auditFailureRollsBackCorrection() {
-		House house = new House(9902, "롤백 테스트동");
-		PhysicalBed bed = new PhysicalBed(1, 1);
-		bed.updatePositionUnits(new BigDecimal("20"), "칸");
-		BedZone zone = new BedZone("왼쪽", BedZoneSide.LEFT, 1);
-		bed.addBedZone(zone);
-		house.addPhysicalBed(bed);
-		houseRepository.saveAndFlush(house);
-		Variety variety = varietyRepository.saveAndFlush(
-				new Variety("ROLLBACK-" + System.nanoTime(), "Phal", "롤백품종", null, "4인치", true, true, null, null));
-		OrchidGroup group = new OrchidGroup(zone, variety.getGenus(), variety.getName(), 10, "4인치", 2, "정상", 1,
-				BigDecimal.ONE, BigDecimal.TWO);
-		group.assignVariety(variety);
-		Long groupId = saveOrchidGroup(group).getId();
-		doThrow(new IllegalStateException("audit unavailable")).when(auditRecorder).record(any());
+  @Test
+  void auditFailureRollsBackCorrection() {
+    House house = new House(9902, "롤백 테스트동");
+    PhysicalBed bed = new PhysicalBed(1, 1);
+    bed.updatePositionUnits(new BigDecimal("20"), "칸");
+    BedZone zone = new BedZone("왼쪽", BedZoneSide.LEFT, 1);
+    bed.addBedZone(zone);
+    house.addPhysicalBed(bed);
+    houseRepository.saveAndFlush(house);
+    Variety variety =
+        varietyRepository.saveAndFlush(
+            new Variety(
+                "ROLLBACK-" + System.nanoTime(),
+                "Phal",
+                "롤백품종",
+                null,
+                "4인치",
+                true,
+                true,
+                null,
+                null));
+    OrchidGroup group =
+        new OrchidGroup(
+            zone,
+            variety.getGenus(),
+            variety.getName(),
+            10,
+            "4인치",
+            2,
+            "정상",
+            1,
+            BigDecimal.ONE,
+            BigDecimal.TWO);
+    group.assignVariety(variety);
+    Long groupId = saveOrchidGroup(group).getId();
+    doThrow(new IllegalStateException("audit unavailable")).when(auditRecorder).record(any());
 
-		var request = new OrchidGroupUpdateRequest(variety.getId(), 15, "4인치", 2, "정상", null, null, false,
-				BigDecimal.ONE, BigDecimal.TWO, null);
-		assertThatThrownBy(() -> commandService.update(groupId, request)).isInstanceOf(IllegalStateException.class);
+    var request =
+        new OrchidGroupUpdateRequest(
+            variety.getId(),
+            15,
+            "4인치",
+            2,
+            "정상",
+            null,
+            null,
+            false,
+            BigDecimal.ONE,
+            BigDecimal.TWO,
+            null);
+    assertThatThrownBy(() -> commandService.update(groupId, request))
+        .isInstanceOf(IllegalStateException.class);
 
-		assertThat(orchidGroupRepository.findById(groupId).orElseThrow().getQuantity()).isEqualTo(10);
-	}
-
+    assertThat(orchidGroupRepository.findById(groupId).orElseThrow().getQuantity()).isEqualTo(10);
+  }
 }

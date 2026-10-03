@@ -11,12 +11,17 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DashboardQueryService {
 
-	private final FarmMetricsReader farmMetricsReader;
+  private final FarmMetricsReader farmMetricsReader;
 
-	public DashboardSummaryResponse getSummary() {
-		var snapshot = farmMetricsReader.getSnapshot();
-		return new DashboardSummaryResponse(snapshot.houseCount(), snapshot.physicalBedCount(), snapshot.bedZoneCount(),
-				snapshot.orchidGroupCount(), snapshot.warningCount(), 0, null);
-	}
-
+  public DashboardSummaryResponse getSummary() {
+    var snapshot = farmMetricsReader.getSnapshot();
+    return new DashboardSummaryResponse(
+        snapshot.houseCount(),
+        snapshot.physicalBedCount(),
+        snapshot.bedZoneCount(),
+        snapshot.orchidGroupCount(),
+        snapshot.warningCount(),
+        0,
+        null);
+  }
 }

@@ -13,14 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PrintQueryService {
 
-	private final SalesQueryService salesQueryService;
+  private final SalesQueryService salesQueryService;
 
-	public PageResponse<SalesSlipSummary> getPrintableSalesSlips(int page, int size) {
-		return salesQueryService.getSalesSlipPage(null, null, null, null, null, null, page, size);
-	}
+  public PageResponse<SalesSlipSummary> getPrintableSalesSlips(int page, int size) {
+    return salesQueryService.getSalesSlipPage(null, null, null, null, null, null, page, size);
+  }
 
-	public SalesSlipDocument getSalesSlipPrintData(Long salesSlipId) {
-		return salesQueryService.getSalesSlip(salesSlipId);
-	}
-
+  public SalesSlipDocument getSalesSlipPrintData(Long salesSlipId) {
+    return salesQueryService.getSalesSlip(salesSlipId);
+  }
 }

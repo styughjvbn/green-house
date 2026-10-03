@@ -10,18 +10,21 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface OrchidGroupLedgerCoverageRepository extends JpaRepository<OrchidGroupLedgerCoverage, Long> {
+public interface OrchidGroupLedgerCoverageRepository
+    extends JpaRepository<OrchidGroupLedgerCoverage, Long> {
 
-	Optional<OrchidGroupLedgerCoverage> findByCutoverKey(UUID cutoverKey);
+  Optional<OrchidGroupLedgerCoverage> findByCutoverKey(UUID cutoverKey);
 
-	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select coverage from OrchidGroupLedgerCoverage coverage where coverage.cutoverKey = :cutoverKey")
-	Optional<OrchidGroupLedgerCoverage> findForUpdateByCutoverKey(@Param("cutoverKey") UUID cutoverKey);
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      "select coverage from OrchidGroupLedgerCoverage coverage where coverage.cutoverKey = :cutoverKey")
+  Optional<OrchidGroupLedgerCoverage> findForUpdateByCutoverKey(
+      @Param("cutoverKey") UUID cutoverKey);
 
-	Optional<OrchidGroupLedgerCoverage> findFirstByStatus(OrchidGroupLedgerCoverageStatus status);
+  Optional<OrchidGroupLedgerCoverage> findFirstByStatus(OrchidGroupLedgerCoverageStatus status);
 
-	Optional<OrchidGroupLedgerCoverage> findFirstByStatusOrderByIdDesc(OrchidGroupLedgerCoverageStatus status);
+  Optional<OrchidGroupLedgerCoverage> findFirstByStatusOrderByIdDesc(
+      OrchidGroupLedgerCoverageStatus status);
 
-	long countByStatus(OrchidGroupLedgerCoverageStatus status);
-
+  long countByStatus(OrchidGroupLedgerCoverageStatus status);
 }

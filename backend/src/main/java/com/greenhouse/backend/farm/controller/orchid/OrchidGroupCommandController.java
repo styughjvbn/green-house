@@ -34,58 +34,61 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class OrchidGroupCommandController {
 
-	private final OrchidGroupCommandService orchidGroupCommandService;
+  private final OrchidGroupCommandService orchidGroupCommandService;
 
-	private final OrchidStockCountService stockCounts;
+  private final OrchidStockCountService stockCounts;
 
-	@GetMapping("/{orchidGroupId}/stock-count-context")
-	public ApiResponse<OrchidStockCountContext> stockCountContext(@PathVariable Long orchidGroupId) {
-		return ApiResponse.ok(stockCounts.context(orchidGroupId));
-	}
+  @GetMapping("/{orchidGroupId}/stock-count-context")
+  public ApiResponse<OrchidStockCountContext> stockCountContext(@PathVariable Long orchidGroupId) {
+    return ApiResponse.ok(stockCounts.context(orchidGroupId));
+  }
 
-	@GetMapping("/{orchidGroupId}/stock-counts")
-	public ApiResponse<Page<OrchidStockCountResponse>> stockCountHistory(@PathVariable Long orchidGroupId,
-			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-		return ApiResponse.ok(stockCounts.history(orchidGroupId, page, size));
-	}
+  @GetMapping("/{orchidGroupId}/stock-counts")
+  public ApiResponse<Page<OrchidStockCountResponse>> stockCountHistory(
+      @PathVariable Long orchidGroupId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return ApiResponse.ok(stockCounts.history(orchidGroupId, page, size));
+  }
 
-	@PostMapping("/{orchidGroupId}/stock-counts")
-	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<OrchidStockCountResponse> stockCount(@PathVariable Long orchidGroupId,
-			@Valid @RequestBody OrchidStockCountRequest request) {
-		return ApiResponse.ok(stockCounts.count(orchidGroupId, request));
-	}
+  @PostMapping("/{orchidGroupId}/stock-counts")
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<OrchidStockCountResponse> stockCount(
+      @PathVariable Long orchidGroupId, @Valid @RequestBody OrchidStockCountRequest request) {
+    return ApiResponse.ok(stockCounts.count(orchidGroupId, request));
+  }
 
-	@PostMapping
-	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<OrchidGroupResponse> create(@Valid @RequestBody OrchidGroupCreateRequest request) {
-		return ApiResponse.ok(orchidGroupCommandService.create(request));
-	}
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<OrchidGroupResponse> create(
+      @Valid @RequestBody OrchidGroupCreateRequest request) {
+    return ApiResponse.ok(orchidGroupCommandService.create(request));
+  }
 
-	@PatchMapping("/{orchidGroupId}")
-	public ApiResponse<OrchidGroupResponse> update(@PathVariable Long orchidGroupId,
-			@Valid @RequestBody OrchidGroupUpdateRequest request) {
-		return ApiResponse.ok(orchidGroupCommandService.update(orchidGroupId, request));
-	}
+  @PatchMapping("/{orchidGroupId}")
+  public ApiResponse<OrchidGroupResponse> update(
+      @PathVariable Long orchidGroupId, @Valid @RequestBody OrchidGroupUpdateRequest request) {
+    return ApiResponse.ok(orchidGroupCommandService.update(orchidGroupId, request));
+  }
 
-	@PatchMapping("/batch")
-	public ApiResponse<List<OrchidGroupResponse>> updateBatch(
-			@Valid @RequestBody OrchidGroupBatchUpdateRequest request) {
-		return ApiResponse.ok(orchidGroupCommandService.updateBatch(request));
-	}
+  @PatchMapping("/batch")
+  public ApiResponse<List<OrchidGroupResponse>> updateBatch(
+      @Valid @RequestBody OrchidGroupBatchUpdateRequest request) {
+    return ApiResponse.ok(orchidGroupCommandService.updateBatch(request));
+  }
 
-	@DeleteMapping("/{orchidGroupId}")
-	public ApiResponse<Void> delete(@PathVariable Long orchidGroupId) {
-		orchidGroupCommandService.delete(orchidGroupId);
-		return ApiResponse.ok(null);
-	}
+  @DeleteMapping("/{orchidGroupId}")
+  public ApiResponse<Void> delete(@PathVariable Long orchidGroupId) {
+    orchidGroupCommandService.delete(orchidGroupId);
+    return ApiResponse.ok(null);
+  }
 
-	@PostMapping("/{orchidGroupId}/reconciliations")
-	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationView> reconcile(@PathVariable Long orchidGroupId,
-			@Valid @RequestBody OrchidGroupReconciliationRequest request) {
-		// TODO: 보류 - 현장 상태 동기화 정책을 재검토한 뒤 다시 활성화한다.
-		throw new ConflictException("FEATURE_ON_HOLD", "현장 상태 동기화 기능은 보류 중입니다.");
-	}
-
+  @PostMapping("/{orchidGroupId}/reconciliations")
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<WorkOperationView> reconcile(
+      @PathVariable Long orchidGroupId,
+      @Valid @RequestBody OrchidGroupReconciliationRequest request) {
+    // TODO: 보류 - 현장 상태 동기화 정책을 재검토한 뒤 다시 활성화한다.
+    throw new ConflictException("FEATURE_ON_HOLD", "현장 상태 동기화 기능은 보류 중입니다.");
+  }
 }

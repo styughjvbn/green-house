@@ -12,19 +12,20 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface OrchidGroupMutationEntryRepository extends JpaRepository<OrchidGroupMutationEntry, Long> {
+public interface OrchidGroupMutationEntryRepository
+    extends JpaRepository<OrchidGroupMutationEntry, Long> {
 
-	interface InboundPottingDateRow {
+  interface InboundPottingDateRow {
 
-		Long getInboundRecordId();
+    Long getInboundRecordId();
 
-		LocalDate getPottingDate();
+    LocalDate getPottingDate();
+  }
 
-	}
+  List<OrchidGroupMutationEntry> findByMutationIdOrderByIdAsc(Long mutationId);
 
-	List<OrchidGroupMutationEntry> findByMutationIdOrderByIdAsc(Long mutationId);
-
-	@Query("""
+  @Query(
+      """
 			select orchidGroup.inboundRecord.id as inboundRecordId,
 			       max(entry.mutation.effectiveBusinessDate) as pottingDate
 			from OrchidGroupMutationEntry entry
@@ -34,35 +35,42 @@ public interface OrchidGroupMutationEntryRepository extends JpaRepository<Orchid
 			  and entry.entryKind = :entryKind
 			group by orchidGroup.inboundRecord.id
 			""")
-	List<InboundPottingDateRow> findInboundPottingDates(@Param("inboundRecordIds") Collection<Long> inboundRecordIds,
-			@Param("entryKind") OrchidGroupMutationEntryKind entryKind);
+  List<InboundPottingDateRow> findInboundPottingDates(
+      @Param("inboundRecordIds") Collection<Long> inboundRecordIds,
+      @Param("entryKind") OrchidGroupMutationEntryKind entryKind);
 
-	List<OrchidGroupMutationEntry> findByMutationIdInOrderByMutationIdAscIdAsc(Collection<Long> mutationIds);
+  List<OrchidGroupMutationEntry> findByMutationIdInOrderByMutationIdAscIdAsc(
+      Collection<Long> mutationIds);
 
-	@EntityGraph(attributePaths = "mutation")
-	@Query("select entry from OrchidGroupMutationEntry entry " + "where entry.orchidGroupId in :orchidGroupIds "
-			+ "order by entry.orchidGroupId, entry.stateRevisionAfter")
-	List<OrchidGroupMutationEntry> findStateChainByOrchidGroupIdIn(
-			@Param("orchidGroupIds") Collection<Long> orchidGroupIds);
+  @EntityGraph(attributePaths = "mutation")
+  @Query(
+      "select entry from OrchidGroupMutationEntry entry "
+          + "where entry.orchidGroupId in :orchidGroupIds "
+          + "order by entry.orchidGroupId, entry.stateRevisionAfter")
+  List<OrchidGroupMutationEntry> findStateChainByOrchidGroupIdIn(
+      @Param("orchidGroupIds") Collection<Long> orchidGroupIds);
 
-	List<OrchidGroupMutationEntry> findByMutationIdOrderByOrchidGroupIdAsc(Long mutationId);
+  List<OrchidGroupMutationEntry> findByMutationIdOrderByOrchidGroupIdAsc(Long mutationId);
 
-	@EntityGraph(attributePaths = "mutation")
-	@Query("select entry from OrchidGroupMutationEntry entry " + "where entry.orchidGroupId in :orchidGroupIds "
-			+ "order by entry.mutation.occurredAt desc, entry.mutation.id desc, entry.id asc")
-	Slice<OrchidGroupMutationEntry> findGraphEntriesByOrchidGroupIdIn(
-			@Param("orchidGroupIds") Collection<Long> orchidGroupIds, Pageable pageable);
+  @EntityGraph(attributePaths = "mutation")
+  @Query(
+      "select entry from OrchidGroupMutationEntry entry "
+          + "where entry.orchidGroupId in :orchidGroupIds "
+          + "order by entry.mutation.occurredAt desc, entry.mutation.id desc, entry.id asc")
+  Slice<OrchidGroupMutationEntry> findGraphEntriesByOrchidGroupIdIn(
+      @Param("orchidGroupIds") Collection<Long> orchidGroupIds, Pageable pageable);
 
-	@EntityGraph(attributePaths = "mutation")
-	@Query("select entry from OrchidGroupMutationEntry entry where entry.mutation.id in :mutationIds "
-			+ "order by entry.mutation.id asc, entry.id asc")
-	Slice<OrchidGroupMutationEntry> findGraphEntriesByMutationIdIn(@Param("mutationIds") Collection<Long> mutationIds,
-			Pageable pageable);
+  @EntityGraph(attributePaths = "mutation")
+  @Query(
+      "select entry from OrchidGroupMutationEntry entry where entry.mutation.id in :mutationIds "
+          + "order by entry.mutation.id asc, entry.id asc")
+  Slice<OrchidGroupMutationEntry> findGraphEntriesByMutationIdIn(
+      @Param("mutationIds") Collection<Long> mutationIds, Pageable pageable);
 
-	@EntityGraph(attributePaths = "mutation")
-	@Query("select entry from OrchidGroupMutationEntry entry "
-			+ "where not exists (select group.id from OrchidGroup group where group.id = entry.orchidGroupId) "
-			+ "order by entry.orchidGroupId, entry.stateRevisionAfter")
-	List<OrchidGroupMutationEntry> findChainsWithoutCurrentGroup();
-
+  @EntityGraph(attributePaths = "mutation")
+  @Query(
+      "select entry from OrchidGroupMutationEntry entry "
+          + "where not exists (select group.id from OrchidGroup group where group.id = entry.orchidGroupId) "
+          + "order by entry.orchidGroupId, entry.stateRevisionAfter")
+  List<OrchidGroupMutationEntry> findChainsWithoutCurrentGroup();
 }

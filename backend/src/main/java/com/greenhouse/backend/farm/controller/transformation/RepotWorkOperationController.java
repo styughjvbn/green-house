@@ -20,17 +20,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RepotWorkOperationController {
 
-	private final RepotWorkOperationService service;
+  private final RepotWorkOperationService service;
 
-	@PostMapping("/repot")
-	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<RepotWorkOperationResponse> execute(@Valid @RequestBody RepotWorkOperationRequest request) {
-		return ApiResponse.ok(service.execute(request));
-	}
+  @PostMapping("/repot")
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<RepotWorkOperationResponse> execute(
+      @Valid @RequestBody RepotWorkOperationRequest request) {
+    return ApiResponse.ok(service.execute(request));
+  }
 
-	@GetMapping("/{workOperationId}/repot-results")
-	public ApiResponse<RepotWorkOperationResponse> get(@PathVariable Long workOperationId) {
-		return ApiResponse.ok(service.get(workOperationId));
-	}
-
+  @GetMapping("/{workOperationId}/repot-results")
+  public ApiResponse<RepotWorkOperationResponse> get(@PathVariable Long workOperationId) {
+    return ApiResponse.ok(service.get(workOperationId));
+  }
 }

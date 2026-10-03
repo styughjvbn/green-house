@@ -23,69 +23,65 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Tag("work-e2e")
 abstract class WorkUndoSafetyTestBase extends WorkE2ETestBase {
 
-	@Autowired
-	WorkTestDataSeeder seeder;
+  @Autowired WorkTestDataSeeder seeder;
 
-	@Autowired
-	JdbcTemplate jdbc;
+  @Autowired JdbcTemplate jdbc;
 
-	@Autowired
-	DataSource dataSource;
+  @Autowired DataSource dataSource;
 
-	@Autowired
-	OrchidGroupMutationQueryService mutationQuery;
+  @Autowired OrchidGroupMutationQueryService mutationQuery;
 
-	@Autowired
-	OrchidGroupMutationGraphQueryService mutationGraph;
+  @Autowired OrchidGroupMutationGraphQueryService mutationGraph;
 
-	@Autowired
-	WorkOrchidGroupLedgerRehearsalInspector rehearsal;
+  @Autowired WorkOrchidGroupLedgerRehearsalInspector rehearsal;
 
-	@Autowired
-	OrchidGroupLedgerReconciliationService reconciliation;
+  @Autowired OrchidGroupLedgerReconciliationService reconciliation;
 
-	@Autowired
-	OrchidGroupStateChainMigrationService migration;
+  @Autowired OrchidGroupStateChainMigrationService migration;
 
-	@Autowired
-	OrchidGroupLedgerCutoverService cutover;
+  @Autowired OrchidGroupLedgerCutoverService cutover;
 
-	@Autowired
-	OrchidGroupRepository groups;
+  @Autowired OrchidGroupRepository groups;
 
-	private long originalId;
+  private long originalId;
 
-	private List<Long> resultIds;
+  private List<Long> resultIds;
 
-	@BeforeEach
-	void prepare() throws Exception {
-		seeder.resetKeepingSequences();
-		var scenario = seeder.seedContractScenario();
-		var key = UUID.randomUUID();
-		var date = LocalDate.of(2026, 8, 20);
-		OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, date,
-				"1.0.0");
-		cutover.execute(new OrchidGroupLedgerCutoverCommand(key,
-				date, "1.0.0", "1.1.0", true));
-		var plan = post("/api/work-operations", """
-				{"workTypeId":%d,"title":"보정 대상","plannedStartDate":"2026-07-15",
-				 "sourceScopeType":"MANUAL_SELECTION","sourceOrchidGroupIds":[%d]}
-				""".formatted(scenario.repotWorkTypeId(), scenario.orchidGroupId()));
-		assertThat(plan.status()).as(plan.body().toString()).isEqualTo(201);
-		originalId = plan.data().path("id").asLong();
-		assertThat(post("/api/work-operations/" + originalId + "/start", "{}").status()).isEqualTo(200);
-		var execution = post("/api/work-operations/" + originalId + "/structure-change-executions",
-				"""
+  @BeforeEach
+  void prepare() throws Exception {
+    seeder.resetKeepingSequences();
+    var scenario = seeder.seedContractScenario();
+    var key = UUID.randomUUID();
+    var date = LocalDate.of(2026, 8, 20);
+    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, date, "1.0.0");
+    cutover.execute(new OrchidGroupLedgerCutoverCommand(key, date, "1.0.0", "1.1.0", true));
+    var plan =
+        post(
+            "/api/work-operations",
+            """
+						{"workTypeId":%d,"title":"보정 대상","plannedStartDate":"2026-07-15",
+						 "sourceScopeType":"MANUAL_SELECTION","sourceOrchidGroupIds":[%d]}
+						"""
+                .formatted(scenario.repotWorkTypeId(), scenario.orchidGroupId()));
+    assertThat(plan.status()).as(plan.body().toString()).isEqualTo(201);
+    originalId = plan.data().path("id").asLong();
+    assertThat(post("/api/work-operations/" + originalId + "/start", "{}").status()).isEqualTo(200);
+    var execution =
+        post(
+            "/api/work-operations/" + originalId + "/structure-change-executions",
+            """
 						{"idempotencyKey":"original","completedDate":"2026-07-15",
 						 "sources":[{"sourceOrchidGroupId":%d,"inputQuantity":100}],
 						 "results":[
 						  {"bedZoneId":%d,"quantity":60,"potSize":"4치","ageYear":3,"purpose":"NORMAL","startPosition":6,"endPosition":8},
 						  {"bedZoneId":%d,"quantity":40,"potSize":"4치","ageYear":3,"purpose":"NORMAL","startPosition":9,"endPosition":11}]}
 						"""
-					.formatted(scenario.orchidGroupId(), scenario.bedZoneId(), scenario.bedZoneId()));
-		assertThat(execution.status()).as(execution.body().toString()).isEqualTo(201);
-		resultIds = jdbc.queryForList("SELECT id FROM orchid_groups WHERE id <> ? ORDER BY id", Long.class,
-				scenario.orchidGroupId());
-	}
-
+                .formatted(scenario.orchidGroupId(), scenario.bedZoneId(), scenario.bedZoneId()));
+    assertThat(execution.status()).as(execution.body().toString()).isEqualTo(201);
+    resultIds =
+        jdbc.queryForList(
+            "SELECT id FROM orchid_groups WHERE id <> ? ORDER BY id",
+            Long.class,
+            scenario.orchidGroupId());
+  }
 }

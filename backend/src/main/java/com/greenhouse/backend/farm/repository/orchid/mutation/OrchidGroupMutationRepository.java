@@ -12,15 +12,20 @@ import org.springframework.data.repository.query.Param;
 
 public interface OrchidGroupMutationRepository extends JpaRepository<OrchidGroupMutation, Long> {
 
-	Optional<OrchidGroupMutation> findBySourceDomainAndSourceTypeAndSourceReferenceIdAndSourceOperationKey(
-			OrchidGroupMutationSourceDomain sourceDomain, String sourceType, String sourceReferenceId,
-			String sourceOperationKey);
+  Optional<OrchidGroupMutation>
+      findBySourceDomainAndSourceTypeAndSourceReferenceIdAndSourceOperationKey(
+          OrchidGroupMutationSourceDomain sourceDomain,
+          String sourceType,
+          String sourceReferenceId,
+          String sourceOperationKey);
 
-	@Query("select count(m) from OrchidGroupMutation m where not exists "
-			+ "(select e.id from OrchidGroupMutationEntry e where e.mutation = m)")
-	long countWithoutEntries();
+  @Query(
+      "select count(m) from OrchidGroupMutation m where not exists "
+          + "(select e.id from OrchidGroupMutationEntry e where e.mutation = m)")
+  long countWithoutEntries();
 
-	@Query("""
+  @Query(
+      """
 			select mutation from OrchidGroupMutation mutation
 			where (:mutationType is null or mutation.mutationType = :mutationType)
 			  and (:sourceDomain is null or mutation.sourceDomain = :sourceDomain)
@@ -29,8 +34,9 @@ public interface OrchidGroupMutationRepository extends JpaRepository<OrchidGroup
 			      where entry.mutation = mutation and entry.orchidGroupId = :orchidGroupId
 			  ))
 			""")
-	Page<OrchidGroupMutation> search(@Param("orchidGroupId") Long orchidGroupId,
-			@Param("mutationType") OrchidGroupMutationType mutationType,
-			@Param("sourceDomain") OrchidGroupMutationSourceDomain sourceDomain, Pageable pageable);
-
+  Page<OrchidGroupMutation> search(
+      @Param("orchidGroupId") Long orchidGroupId,
+      @Param("mutationType") OrchidGroupMutationType mutationType,
+      @Param("sourceDomain") OrchidGroupMutationSourceDomain sourceDomain,
+      Pageable pageable);
 }

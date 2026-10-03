@@ -5,12 +5,11 @@ import java.util.List;
 
 public interface WorkTargetSelectionInput {
 
-	WorkSourceScopeType sourceScopeType();
+  WorkSourceScopeType sourceScopeType();
 
-	Long sourceScopeId();
+  Long sourceScopeId();
 
-	String sourceDerivedGroupKey();
+  String sourceDerivedGroupKey();
 
-	List<Long> sourceOrchidGroupIds();
-
+  List<Long> sourceOrchidGroupIds();
 }

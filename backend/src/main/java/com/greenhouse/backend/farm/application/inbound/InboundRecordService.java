@@ -39,187 +39,226 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class InboundRecordService {
 
-	private static final String DEFAULT_ORCHID_STATUS = "정상";
+  private static final String DEFAULT_ORCHID_STATUS = "정상";
 
-	private final InboundRecordRepository inboundRecordRepository;
+  private final InboundRecordRepository inboundRecordRepository;
 
-	private final VarietyService varietyService;
+  private final VarietyService varietyService;
 
-	private final BedZoneRepository bedZoneRepository;
+  private final BedZoneRepository bedZoneRepository;
 
-	private final OrchidGroupRepository orchidGroupRepository;
+  private final OrchidGroupRepository orchidGroupRepository;
 
-	private final InboundWorkOperationRecorder inboundWorkOperationRecorder;
+  private final InboundWorkOperationRecorder inboundWorkOperationRecorder;
 
-	private final InboundWorkOperationLifecycleService inboundWorkOperationLifecycleService;
+  private final InboundWorkOperationLifecycleService inboundWorkOperationLifecycleService;
 
-	private final OrchidPlacementPolicy orchidPlacementPolicy;
+  private final OrchidPlacementPolicy orchidPlacementPolicy;
 
-	private final InboundRecordFinder inboundRecordFinder;
+  private final InboundRecordFinder inboundRecordFinder;
 
-	private final InboundWorkOperationRequestFactory workOperationRequestFactory;
+  private final InboundWorkOperationRequestFactory workOperationRequestFactory;
 
-	private final RequestActorProvider requestActorProvider;
+  private final RequestActorProvider requestActorProvider;
 
-	private final InboundRecordAuditSupport auditSupport;
+  private final InboundRecordAuditSupport auditSupport;
 
-	private final OrchidGroupMutationEngine mutationEngine;
+  private final OrchidGroupMutationEngine mutationEngine;
 
-	private final InboundRecordResponseAssembler responseAssembler;
+  private final InboundRecordResponseAssembler responseAssembler;
 
-	private final WorkCommandReceipts commandReceipts;
+  private final WorkCommandReceipts commandReceipts;
 
-	public InboundRecordResponse create(InboundRecordCreateCommand request) {
-		InboundStatus status = resolveCreateStatus(request);
-		validateCreate(request);
-		Variety variety = varietyService.resolveInboundVariety(request.varietyId(), request.newVariety());
-		InboundPlacementInput placement = request.placement();
-		BedZone bedZone = placement == null ? null : findBedZone(placement.bedZoneId());
-		InboundRecord inboundRecord = new InboundRecord(request.inboundDate(), request.inboundType(), variety, status,
-				request.estimatedQuantity(), normalize(request.tempLocation()), request.pottingDueDate(),
-				requestActorProvider.resolve(request.worker()), normalize(request.memo()));
-		InboundRecord saved = inboundRecordRepository.save(inboundRecord);
-		WorkMutationLink mutationLink = null;
-		List<OrchidGroup> createdGroups = List.of();
+  public InboundRecordResponse create(InboundRecordCreateCommand request) {
+    InboundStatus status = resolveCreateStatus(request);
+    validateCreate(request);
+    Variety variety =
+        varietyService.resolveInboundVariety(request.varietyId(), request.newVariety());
+    InboundPlacementInput placement = request.placement();
+    BedZone bedZone = placement == null ? null : findBedZone(placement.bedZoneId());
+    InboundRecord inboundRecord =
+        new InboundRecord(
+            request.inboundDate(),
+            request.inboundType(),
+            variety,
+            status,
+            request.estimatedQuantity(),
+            normalize(request.tempLocation()),
+            request.pottingDueDate(),
+            requestActorProvider.resolve(request.worker()),
+            normalize(request.memo()));
+    InboundRecord saved = inboundRecordRepository.save(inboundRecord);
+    WorkMutationLink mutationLink = null;
+    List<OrchidGroup> createdGroups = List.of();
 
-		if (requiresPlacement(request.inboundType())) {
-			OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.resolveRange(bedZone,
-					placement.startPosition(), placement.endPosition());
-			var mutationCommand = new CreateInboundOrchidGroupsMutationCommand(
-					OrchidGroupMutationSources.inbound(saved.getId(), "CREATE_PLACED_GROUP"), saved.getId(),
-					List.of(new CreateOrchidGroupMutationItem(bedZone.getId(),
-							new OrchidGroupMutationDetails(variety.getId(), placement.quantity(), placement.potSize(),
-									placement.ageYear(), DEFAULT_ORCHID_STATUS, placement.placementType(),
-									placement.trayCount(), false, placementRange.startPosition(),
-									placementRange.endPosition(), request.memo()))),
-					request.inboundDate(), "즉시 배치 입고");
-			var mutation = mutationEngine.createFromInbound(mutationCommand);
-			List<Long> orchidGroupIds = mutation.entries().stream().map(entry -> entry.orchidGroupId()).toList();
-			createdGroups = orchidGroupRepository.findAllById(orchidGroupIds);
-			if (createdGroups.size() != orchidGroupIds.size()) {
-				throw new NotFoundException("생성된 난 묶음을 찾을 수 없습니다.");
-			}
-			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
-			saved.markPlaced();
-		}
-		else {
-			saved.markPottingPending(status);
-		}
-		inboundWorkOperationRecorder.record(workOperationRequestFactory.create(saved, createdGroups), mutationLink);
-		return responseAssembler.assemble(inboundRecordFinder.find(saved.getId()));
-	}
+    if (requiresPlacement(request.inboundType())) {
+      OrchidPlacementPolicy.PlacementRange placementRange =
+          orchidPlacementPolicy.resolveRange(
+              bedZone, placement.startPosition(), placement.endPosition());
+      var mutationCommand =
+          new CreateInboundOrchidGroupsMutationCommand(
+              OrchidGroupMutationSources.inbound(saved.getId(), "CREATE_PLACED_GROUP"),
+              saved.getId(),
+              List.of(
+                  new CreateOrchidGroupMutationItem(
+                      bedZone.getId(),
+                      new OrchidGroupMutationDetails(
+                          variety.getId(),
+                          placement.quantity(),
+                          placement.potSize(),
+                          placement.ageYear(),
+                          DEFAULT_ORCHID_STATUS,
+                          placement.placementType(),
+                          placement.trayCount(),
+                          false,
+                          placementRange.startPosition(),
+                          placementRange.endPosition(),
+                          request.memo()))),
+              request.inboundDate(),
+              "즉시 배치 입고");
+      var mutation = mutationEngine.createFromInbound(mutationCommand);
+      List<Long> orchidGroupIds =
+          mutation.entries().stream().map(entry -> entry.orchidGroupId()).toList();
+      createdGroups = orchidGroupRepository.findAllById(orchidGroupIds);
+      if (createdGroups.size() != orchidGroupIds.size()) {
+        throw new NotFoundException("생성된 난 묶음을 찾을 수 없습니다.");
+      }
+      mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
+      saved.markPlaced();
+    } else {
+      saved.markPottingPending(status);
+    }
+    inboundWorkOperationRecorder.record(
+        workOperationRequestFactory.create(saved, createdGroups), mutationLink);
+    return responseAssembler.assemble(inboundRecordFinder.find(saved.getId()));
+  }
 
-	public InboundRecordResponse update(Long inboundRecordId, InboundRecordUpdateRequest request) {
-		InboundRecord inboundRecord = inboundRecordFinder.findForUpdate(inboundRecordId);
-		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
-		inboundRecord.updateMetadata(request.inboundDate(), request.estimatedQuantity(),
-				normalize(request.tempLocation()), request.pottingDueDate(),
-				requestActorProvider.resolve(request.worker()), normalize(request.memo()));
-		auditSupport.record(AuditAction.UPDATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
-		return responseAssembler.assemble(inboundRecord);
-	}
+  public InboundRecordResponse update(Long inboundRecordId, InboundRecordUpdateRequest request) {
+    InboundRecord inboundRecord = inboundRecordFinder.findForUpdate(inboundRecordId);
+    Map<String, Object> before = auditSupport.snapshot(inboundRecord);
+    inboundRecord.updateMetadata(
+        request.inboundDate(),
+        request.estimatedQuantity(),
+        normalize(request.tempLocation()),
+        request.pottingDueDate(),
+        requestActorProvider.resolve(request.worker()),
+        normalize(request.memo()));
+    auditSupport.record(
+        AuditAction.UPDATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
+    return responseAssembler.assemble(inboundRecord);
+  }
 
-	public InboundRecordResponse cancel(Long inboundRecordId, InboundRecordCancelRequest request) {
-		inboundWorkOperationLifecycleService.lockForInboundChange(inboundRecordId);
-		InboundRecord inboundRecord = inboundRecordFinder.findForUpdate(inboundRecordId);
-		if (inboundRecord.getStatus() == InboundStatus.CANCELED) {
-			return responseAssembler.assemble(inboundRecord);
-		}
-		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
-		String reason = normalize(request.memo()) == null ? "입고 취소" : normalize(request.memo());
-		String requestKey = resolveRequestKey(request.idempotencyKey(), "inbound-cancel", inboundRecordId);
-		if (inboundRecord.getStatus() == InboundStatus.PLACED) {
-			if (inboundRecord.getInboundType() == InboundType.FLASK_SEEDLING) {
-				inboundWorkOperationLifecycleService.voidPottingForInboundRecord(inboundRecordId,
-						childRequestKey(requestKey, "potting"), reason);
-			}
-			else {
-				inboundWorkOperationLifecycleService.voidInboundRegistrationForCancellation(inboundRecordId,
-						childRequestKey(requestKey, "registration"), reason);
-			}
-		}
-		inboundRecord.requireCancellable();
-		inboundWorkOperationLifecycleService.cancelForInboundRecord(inboundRecordId);
-		inboundRecord.cancel(normalize(request.memo()));
-		auditSupport.record(AuditAction.DEACTIVATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
-		return responseAssembler.assemble(inboundRecord);
-	}
+  public InboundRecordResponse cancel(Long inboundRecordId, InboundRecordCancelRequest request) {
+    inboundWorkOperationLifecycleService.lockForInboundChange(inboundRecordId);
+    InboundRecord inboundRecord = inboundRecordFinder.findForUpdate(inboundRecordId);
+    if (inboundRecord.getStatus() == InboundStatus.CANCELED) {
+      return responseAssembler.assemble(inboundRecord);
+    }
+    Map<String, Object> before = auditSupport.snapshot(inboundRecord);
+    String reason = normalize(request.memo()) == null ? "입고 취소" : normalize(request.memo());
+    String requestKey =
+        resolveRequestKey(request.idempotencyKey(), "inbound-cancel", inboundRecordId);
+    if (inboundRecord.getStatus() == InboundStatus.PLACED) {
+      if (inboundRecord.getInboundType() == InboundType.FLASK_SEEDLING) {
+        inboundWorkOperationLifecycleService.voidPottingForInboundRecord(
+            inboundRecordId, childRequestKey(requestKey, "potting"), reason);
+      } else {
+        inboundWorkOperationLifecycleService.voidInboundRegistrationForCancellation(
+            inboundRecordId, childRequestKey(requestKey, "registration"), reason);
+      }
+    }
+    inboundRecord.requireCancellable();
+    inboundWorkOperationLifecycleService.cancelForInboundRecord(inboundRecordId);
+    inboundRecord.cancel(normalize(request.memo()));
+    auditSupport.record(
+        AuditAction.DEACTIVATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
+    return responseAssembler.assemble(inboundRecord);
+  }
 
-	public InboundRecordResponse voidPotting(Long inboundRecordId, InboundRecordPottingVoidRequest request) {
-		String reason = normalize(request.reason());
-		commandReceipts.executeExisting("INBOUND_POTTING_VOID:" + inboundRecordId, request.idempotencyKey(),
-				new PottingVoidIdentity(inboundRecordId, reason), () -> {
-					inboundWorkOperationLifecycleService.lockForInboundChange(inboundRecordId);
-					InboundRecord inboundRecord = inboundRecordFinder.findForUpdate(inboundRecordId);
-					inboundRecord.requirePottingVoidAllowed();
-					Map<String, Object> before = auditSupport.snapshot(inboundRecord);
-					Long operationId = inboundWorkOperationLifecycleService.voidPottingForInboundRecord(inboundRecordId,
-							resolveRequestKey(request.idempotencyKey(), "inbound-potting-void", inboundRecordId),
-							reason);
-					auditSupport.record(AuditAction.UPDATED, inboundRecord, before,
-							auditSupport.snapshot(inboundRecord));
-					return List.of(operationId);
-				});
-		return responseAssembler.assemble(inboundRecordFinder.find(inboundRecordId));
-	}
+  public InboundRecordResponse voidPotting(
+      Long inboundRecordId, InboundRecordPottingVoidRequest request) {
+    String reason = normalize(request.reason());
+    commandReceipts.executeExisting(
+        "INBOUND_POTTING_VOID:" + inboundRecordId,
+        request.idempotencyKey(),
+        new PottingVoidIdentity(inboundRecordId, reason),
+        () -> {
+          inboundWorkOperationLifecycleService.lockForInboundChange(inboundRecordId);
+          InboundRecord inboundRecord = inboundRecordFinder.findForUpdate(inboundRecordId);
+          inboundRecord.requirePottingVoidAllowed();
+          Map<String, Object> before = auditSupport.snapshot(inboundRecord);
+          Long operationId =
+              inboundWorkOperationLifecycleService.voidPottingForInboundRecord(
+                  inboundRecordId,
+                  resolveRequestKey(
+                      request.idempotencyKey(), "inbound-potting-void", inboundRecordId),
+                  reason);
+          auditSupport.record(
+              AuditAction.UPDATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
+          return List.of(operationId);
+        });
+    return responseAssembler.assemble(inboundRecordFinder.find(inboundRecordId));
+  }
 
-	private record PottingVoidIdentity(Long inboundRecordId, String reason) {
-	}
+  private record PottingVoidIdentity(Long inboundRecordId, String reason) {}
 
-	private void validateCreate(InboundRecordCreateCommand request) {
-		if (request.varietyId() == null && request.newVariety() == null) {
-			throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");
-		}
-		if (request.inboundType() == InboundType.FLASK_SEEDLING) {
-			if (request.estimatedQuantity() == null) {
-				throw new IllegalArgumentException("유리병 모종은 예상 수량이 필요합니다.");
-			}
-			if (request.placement() != null) {
-				throw new IllegalArgumentException("유리병 모종 입고에는 즉시 배치 결과를 입력할 수 없습니다.");
-			}
-			return;
-		}
-		if (request.placement() == null) {
-			throw new IllegalArgumentException("즉시 배치 입고는 난 묶음 배치 결과가 필요합니다.");
-		}
-	}
+  private void validateCreate(InboundRecordCreateCommand request) {
+    if (request.varietyId() == null && request.newVariety() == null) {
+      throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");
+    }
+    if (request.inboundType() == InboundType.FLASK_SEEDLING) {
+      if (request.estimatedQuantity() == null) {
+        throw new IllegalArgumentException("유리병 모종은 예상 수량이 필요합니다.");
+      }
+      if (request.placement() != null) {
+        throw new IllegalArgumentException("유리병 모종 입고에는 즉시 배치 결과를 입력할 수 없습니다.");
+      }
+      return;
+    }
+    if (request.placement() == null) {
+      throw new IllegalArgumentException("즉시 배치 입고는 난 묶음 배치 결과가 필요합니다.");
+    }
+  }
 
-	private InboundStatus resolveCreateStatus(InboundRecordCreateCommand request) {
-		if (request.inboundType() == InboundType.FLASK_SEEDLING) {
-			return InboundStatus.POTTING_PENDING;
-		}
-		return InboundStatus.PLACED;
-	}
+  private InboundStatus resolveCreateStatus(InboundRecordCreateCommand request) {
+    if (request.inboundType() == InboundType.FLASK_SEEDLING) {
+      return InboundStatus.POTTING_PENDING;
+    }
+    return InboundStatus.PLACED;
+  }
 
-	private boolean requiresPlacement(InboundType inboundType) {
-		return inboundType != InboundType.FLASK_SEEDLING;
-	}
+  private boolean requiresPlacement(InboundType inboundType) {
+    return inboundType != InboundType.FLASK_SEEDLING;
+  }
 
-	private BedZone findBedZone(Long bedZoneId) {
-		if (bedZoneId == null) {
-			throw new IllegalArgumentException("배치 구역이 필요합니다.");
-		}
-		return bedZoneRepository.findWithDetailsById(bedZoneId)
-			.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
-	}
+  private BedZone findBedZone(Long bedZoneId) {
+    if (bedZoneId == null) {
+      throw new IllegalArgumentException("배치 구역이 필요합니다.");
+    }
+    return bedZoneRepository
+        .findWithDetailsById(bedZoneId)
+        .orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
+  }
 
-	private String normalize(String value) {
-		if (value == null) {
-			return null;
-		}
-		String trimmed = value.trim();
-		return trimmed.isEmpty() ? null : trimmed;
-	}
+  private String normalize(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
 
-	private String resolveRequestKey(String provided, String prefix, Long inboundRecordId) {
-		String normalized = normalize(provided);
-		String generated = prefix + "-" + inboundRecordId + "-" + UUID.randomUUID();
-		return normalized == null ? generated.substring(0, Math.min(100, generated.length())) : normalized;
-	}
+  private String resolveRequestKey(String provided, String prefix, Long inboundRecordId) {
+    String normalized = normalize(provided);
+    String generated = prefix + "-" + inboundRecordId + "-" + UUID.randomUUID();
+    return normalized == null
+        ? generated.substring(0, Math.min(100, generated.length()))
+        : normalized;
+  }
 
-	private String childRequestKey(String requestKey, String suffix) {
-		String childSuffix = "-" + suffix;
-		return requestKey.substring(0, Math.min(requestKey.length(), 100 - childSuffix.length())) + childSuffix;
-	}
-
+  private String childRequestKey(String requestKey, String suffix) {
+    String childSuffix = "-" + suffix;
+    return requestKey.substring(0, Math.min(requestKey.length(), 100 - childSuffix.length()))
+        + childSuffix;
+  }
 }

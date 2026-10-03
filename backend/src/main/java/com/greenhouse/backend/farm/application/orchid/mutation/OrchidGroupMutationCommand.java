@@ -5,18 +5,27 @@ import java.time.LocalDate;
 
 /** A new mutation command must declare its canonical fingerprint at compile time. */
 public sealed interface OrchidGroupMutationCommand
-		permits CreateOrchidGroupMutationCommand, CreateInboundOrchidGroupsMutationCommand,
-		TransformOrchidGroupsMutationCommand, UpdateOrchidGroupMutationCommand, MoveOrchidGroupMutationCommand,
-		MoveOrchidGroupsMutationCommand, CancelOrchidGroupCreationMutationCommand, DiscardOrchidGroupMutationCommand,
-		ReserveOrchidGroupsMutationCommand, ReleaseOrchidGroupReservationsMutationCommand,
-		ConsumeOrchidGroupReservationsMutationCommand, RestoreOutboundOrchidGroupsMutationCommand,
-		CorrectOrchidGroupsMutationCommand, ReconcileOrchidGroupMutationCommand, StockCountOrchidGroupMutationCommand,
-		CompensateTransformMutationsCommand, CompensateCreateMutationsCommand {
+    permits CreateOrchidGroupMutationCommand,
+        CreateInboundOrchidGroupsMutationCommand,
+        TransformOrchidGroupsMutationCommand,
+        UpdateOrchidGroupMutationCommand,
+        MoveOrchidGroupMutationCommand,
+        MoveOrchidGroupsMutationCommand,
+        CancelOrchidGroupCreationMutationCommand,
+        DiscardOrchidGroupMutationCommand,
+        ReserveOrchidGroupsMutationCommand,
+        ReleaseOrchidGroupReservationsMutationCommand,
+        ConsumeOrchidGroupReservationsMutationCommand,
+        RestoreOutboundOrchidGroupsMutationCommand,
+        CorrectOrchidGroupsMutationCommand,
+        ReconcileOrchidGroupMutationCommand,
+        StockCountOrchidGroupMutationCommand,
+        CompensateTransformMutationsCommand,
+        CompensateCreateMutationsCommand {
 
-	OrchidGroupMutationSource source();
+  OrchidGroupMutationSource source();
 
-	LocalDate effectiveBusinessDate();
+  LocalDate effectiveBusinessDate();
 
-	String reason();
-
+  String reason();
 }

@@ -7,13 +7,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface AuctionLotStatusHistoryRepository extends JpaRepository<AuctionLotStatusHistory, Long> {
+public interface AuctionLotStatusHistoryRepository
+    extends JpaRepository<AuctionLotStatusHistory, Long> {
 
-	@Query("""
+  @Query(
+      """
 			select history from AuctionLotStatusHistory history
 			where history.shipmentLot.id in :lotIds
 			order by history.shipmentLot.id asc, history.changedAt asc
 			""")
-	List<AuctionLotStatusHistory> findAllByLotIdIn(@Param("lotIds") Collection<Long> lotIds);
-
+  List<AuctionLotStatusHistory> findAllByLotIdIn(@Param("lotIds") Collection<Long> lotIds);
 }

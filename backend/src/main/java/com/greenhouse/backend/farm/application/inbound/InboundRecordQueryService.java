@@ -19,36 +19,54 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class InboundRecordQueryService {
 
-	private final InboundRecordRepository inboundRecordRepository;
+  private final InboundRecordRepository inboundRecordRepository;
 
-	private final InboundRecordFinder inboundRecordFinder;
+  private final InboundRecordFinder inboundRecordFinder;
 
-	private final InboundRecordResponseAssembler responseAssembler;
+  private final InboundRecordResponseAssembler responseAssembler;
 
-	public PageResponse<InboundRecordResponse> getInboundRecords(LocalDate from, LocalDate to, InboundType inboundType,
-			InboundStatus status, String varietyKeyword, int page, int size) {
-		PageRequests.validate(page, size);
-		String keyword = normalize(varietyKeyword);
-		var records = inboundRecordRepository.search(from, to, inboundType, status, keyword == null ? "" : keyword,
-				PageRequest.of(page, size, Sort.by(Sort.Order.desc("inboundDate"), Sort.Order.desc("id"))));
-		var groupsByInboundId = responseAssembler.resultGroupsByInboundRecordId(records.getContent());
-		var pottingDatesByInboundId = responseAssembler.pottingDatesByInboundRecordId(records.getContent());
-		var undoableInboundIds = responseAssembler.inboundIdsWithUndoablePotting(records.getContent());
-		return PageResponse.from(records.map(record -> InboundRecordResponse.from(record,
-				groupsByInboundId.getOrDefault(record.getId(), List.of()),
-				pottingDatesByInboundId.get(record.getId()), undoableInboundIds.contains(record.getId()))));
-	}
+  public PageResponse<InboundRecordResponse> getInboundRecords(
+      LocalDate from,
+      LocalDate to,
+      InboundType inboundType,
+      InboundStatus status,
+      String varietyKeyword,
+      int page,
+      int size) {
+    PageRequests.validate(page, size);
+    String keyword = normalize(varietyKeyword);
+    var records =
+        inboundRecordRepository.search(
+            from,
+            to,
+            inboundType,
+            status,
+            keyword == null ? "" : keyword,
+            PageRequest.of(
+                page, size, Sort.by(Sort.Order.desc("inboundDate"), Sort.Order.desc("id"))));
+    var groupsByInboundId = responseAssembler.resultGroupsByInboundRecordId(records.getContent());
+    var pottingDatesByInboundId =
+        responseAssembler.pottingDatesByInboundRecordId(records.getContent());
+    var undoableInboundIds = responseAssembler.inboundIdsWithUndoablePotting(records.getContent());
+    return PageResponse.from(
+        records.map(
+            record ->
+                InboundRecordResponse.from(
+                    record,
+                    groupsByInboundId.getOrDefault(record.getId(), List.of()),
+                    pottingDatesByInboundId.get(record.getId()),
+                    undoableInboundIds.contains(record.getId()))));
+  }
 
-	public InboundRecordResponse getInboundRecord(Long inboundRecordId) {
-		return responseAssembler.assemble(inboundRecordFinder.find(inboundRecordId));
-	}
+  public InboundRecordResponse getInboundRecord(Long inboundRecordId) {
+    return responseAssembler.assemble(inboundRecordFinder.find(inboundRecordId));
+  }
 
-	private String normalize(String value) {
-		if (value == null) {
-			return null;
-		}
-		String trimmed = value.trim();
-		return trimmed.isEmpty() ? null : trimmed;
-	}
-
+  private String normalize(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
 }

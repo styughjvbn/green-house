@@ -17,55 +17,98 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OrchidGroupAuditSupport {
 
-	private static final List<String> FIELDS = List.of("varietyId", "ageYear", "potSize", "quantity", "houseId",
-			"physicalBedId", "zoneId", "startPosition", "endPosition", "status");
+  private static final List<String> FIELDS =
+      List.of(
+          "varietyId",
+          "ageYear",
+          "potSize",
+          "quantity",
+          "houseId",
+          "physicalBedId",
+          "zoneId",
+          "startPosition",
+          "endPosition",
+          "status");
 
-	private final AuditEventWriter auditWriter;
+  private final AuditEventWriter auditWriter;
 
-	public OrchidGroupAuditSnapshot snapshot(OrchidGroup group) {
-		var zone = group.getBedZone();
-		var bed = zone.getPhysicalBed();
-		return new OrchidGroupAuditSnapshot(group.getVariety() == null ? null : group.getVariety().getId(),
-				group.getAgeYear(), group.getPotSize(), group.getQuantity(), bed.getHouse().getId(), bed.getId(),
-				zone.getId(), group.getStartPosition(), group.getEndPosition(), group.getStatus());
-	}
+  public OrchidGroupAuditSnapshot snapshot(OrchidGroup group) {
+    var zone = group.getBedZone();
+    var bed = zone.getPhysicalBed();
+    return new OrchidGroupAuditSnapshot(
+        group.getVariety() == null ? null : group.getVariety().getId(),
+        group.getAgeYear(),
+        group.getPotSize(),
+        group.getQuantity(),
+        bed.getHouse().getId(),
+        bed.getId(),
+        zone.getId(),
+        group.getStartPosition(),
+        group.getEndPosition(),
+        group.getStatus());
+  }
 
-	public List<String> detectChanges(OrchidGroupAuditSnapshot before, OrchidGroupAuditSnapshot after) {
-		var changes = new ArrayList<String>();
-		Object[] left = values(before);
-		Object[] right = values(after);
-		for (int index = 0; index < FIELDS.size(); index++) {
-			if (!Objects.equals(left[index], right[index]))
-				changes.add(FIELDS.get(index));
-		}
-		return List.copyOf(changes);
-	}
+  public List<String> detectChanges(
+      OrchidGroupAuditSnapshot before, OrchidGroupAuditSnapshot after) {
+    var changes = new ArrayList<String>();
+    Object[] left = values(before);
+    Object[] right = values(after);
+    for (int index = 0; index < FIELDS.size(); index++) {
+      if (!Objects.equals(left[index], right[index])) changes.add(FIELDS.get(index));
+    }
+    return List.copyOf(changes);
+  }
 
-	public AuditAction actionForCorrection(OrchidGroupAuditSnapshot before, OrchidGroupAuditSnapshot after) {
-		if (before != null && after != null && !OrchidGroupStatusPolicy.isInactive(before.status())
-				&& OrchidGroupStatusPolicy.isInactive(after.status())) {
-			return AuditAction.DEACTIVATED;
-		}
-		return AuditAction.UPDATED;
-	}
+  public AuditAction actionForCorrection(
+      OrchidGroupAuditSnapshot before, OrchidGroupAuditSnapshot after) {
+    if (before != null
+        && after != null
+        && !OrchidGroupStatusPolicy.isInactive(before.status())
+        && OrchidGroupStatusPolicy.isInactive(after.status())) {
+      return AuditAction.DEACTIVATED;
+    }
+    return AuditAction.UPDATED;
+  }
 
-	public Long record(Long entityId, AuditAction action, AuditSource source, OrchidGroupAuditSnapshot before,
-			OrchidGroupAuditSnapshot after, Map<String, Object> contextData) {
-		List<String> changedFields = detectChanges(before, after);
-		if (changedFields.isEmpty())
-			return null;
-		var location = after != null ? after : before;
-		return auditWriter.recordChanges(
-				action, source, new AuditEvent.Target("ORCHID_GROUP", entityId, location.houseId(),
-						location.physicalBedId(), location.zoneId(), location.varietyId()),
-				changedFields, before, after, contextData);
-	}
+  public Long record(
+      Long entityId,
+      AuditAction action,
+      AuditSource source,
+      OrchidGroupAuditSnapshot before,
+      OrchidGroupAuditSnapshot after,
+      Map<String, Object> contextData) {
+    List<String> changedFields = detectChanges(before, after);
+    if (changedFields.isEmpty()) return null;
+    var location = after != null ? after : before;
+    return auditWriter.recordChanges(
+        action,
+        source,
+        new AuditEvent.Target(
+            "ORCHID_GROUP",
+            entityId,
+            location.houseId(),
+            location.physicalBedId(),
+            location.zoneId(),
+            location.varietyId()),
+        changedFields,
+        before,
+        after,
+        contextData);
+  }
 
-	private Object[] values(OrchidGroupAuditSnapshot value) {
-		if (value == null)
-			return new Object[FIELDS.size()];
-		return new Object[] { value.varietyId(), value.ageYear(), value.potSize(), value.quantity(), value.houseId(),
-				value.physicalBedId(), value.zoneId(), value.startPosition(), value.endPosition(), value.status() };
-	}
-
+  private Object[] values(OrchidGroupAuditSnapshot value) {
+    if (value == null) return new Object[FIELDS.size()];
+    return new Object[] {
+      value.varietyId(),
+      value.ageYear(),
+      value.potSize(),
+      value.quantity(),
+      value.houseId(),
+      value.physicalBedId(),
+      value.zoneId(),
+      value.startPosition(),
+      value.endPosition(),
+      value.status()
+    };
+  }
 }

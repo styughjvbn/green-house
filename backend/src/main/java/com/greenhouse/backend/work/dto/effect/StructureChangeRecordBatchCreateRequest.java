@@ -6,5 +6,4 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record StructureChangeRecordBatchCreateRequest(
-		@NotEmpty @Size(max = 100) List<@Valid StructureChangeRecordCreateRequest> records) {
-}
+    @NotEmpty @Size(max = 100) List<@Valid StructureChangeRecordCreateRequest> records) {}

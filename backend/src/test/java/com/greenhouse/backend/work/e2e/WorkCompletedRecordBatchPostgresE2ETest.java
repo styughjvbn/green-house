@@ -14,27 +14,28 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Tag("work-e2e")
 class WorkCompletedRecordBatchPostgresE2ETest extends WorkE2ETestBase {
 
-	private static final int TARGET_COUNT = 120;
+  private static final int TARGET_COUNT = 120;
 
-	@Autowired
-	WorkTestDataSeeder seeder;
+  @Autowired WorkTestDataSeeder seeder;
 
-	@Autowired
-	EntityManagerFactory entityManagerFactory;
+  @Autowired EntityManagerFactory entityManagerFactory;
 
-	@BeforeEach
-	void setUp() {
-		seeder.reset();
-		seeder.seedBenchmark(1, TARGET_COUNT);
-	}
+  @BeforeEach
+  void setUp() {
+    seeder.reset();
+    seeder.seedBenchmark(1, TARGET_COUNT);
+  }
 
-	@Test
-	void createsFarmCompletedRecordWithoutPerTargetQueries() throws Exception {
-		long workTypeId = pesticideWorkTypeId();
-		Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
-		statistics.clear();
+  @Test
+  void createsFarmCompletedRecordWithoutPerTargetQueries() throws Exception {
+    long workTypeId = pesticideWorkTypeId();
+    Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+    statistics.clear();
 
-		ApiResult recorded = post("/api/work-operations/record", """
+    ApiResult recorded =
+        post(
+            "/api/work-operations/record",
+            """
 				{
 				  "workTypeId": %d,
 				  "title": "농장 전체 배치 기록",
@@ -43,23 +44,23 @@ class WorkCompletedRecordBatchPostgresE2ETest extends WorkE2ETestBase {
 				  "details": {"materialName": "배치 살균제"},
 				  "worker": "E2E 기록자"
 				}
-				""".formatted(workTypeId));
+				"""
+                .formatted(workTypeId));
 
-		assertThat(recorded.status()).isEqualTo(201);
-		assertThat(recorded.data().path("status").asText()).isEqualTo("COMPLETED");
-		assertThat(recorded.data().path("targets")).hasSize(TARGET_COUNT);
-		// 대상 건수와 무관한 일괄 root 잠금·활성 검증 쿼리 두 개를 포함한다.
-		assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(32L);
-	}
+    assertThat(recorded.status()).isEqualTo(201);
+    assertThat(recorded.data().path("status").asText()).isEqualTo("COMPLETED");
+    assertThat(recorded.data().path("targets")).hasSize(TARGET_COUNT);
+    // 대상 건수와 무관한 일괄 root 잠금·활성 검증 쿼리 두 개를 포함한다.
+    assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(32L);
+  }
 
-	private long pesticideWorkTypeId() throws Exception {
-		ApiResult workTypes = get("/api/work-types");
-		for (JsonNode workType : workTypes.data()) {
-			if ("PESTICIDE".equals(workType.path("code").asText())) {
-				return workType.path("id").asLong();
-			}
-		}
-		throw new AssertionError("PESTICIDE 작업 유형을 찾을 수 없습니다.");
-	}
-
+  private long pesticideWorkTypeId() throws Exception {
+    ApiResult workTypes = get("/api/work-types");
+    for (JsonNode workType : workTypes.data()) {
+      if ("PESTICIDE".equals(workType.path("code").asText())) {
+        return workType.path("id").asLong();
+      }
+    }
+    throw new AssertionError("PESTICIDE 작업 유형을 찾을 수 없습니다.");
+  }
 }

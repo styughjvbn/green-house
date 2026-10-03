@@ -26,34 +26,35 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class WorkTypeController {
 
-	private final WorkTypeService workTypeService;
+  private final WorkTypeService workTypeService;
 
-	@GetMapping
-	public ApiResponse<List<WorkTypeResponse>> getWorkTypes(
-			@RequestParam(defaultValue = "false") boolean includeInactive) {
-		return ApiResponse.ok(workTypeService.getWorkTypes(includeInactive));
-	}
+  @GetMapping
+  public ApiResponse<List<WorkTypeResponse>> getWorkTypes(
+      @RequestParam(defaultValue = "false") boolean includeInactive) {
+    return ApiResponse.ok(workTypeService.getWorkTypes(includeInactive));
+  }
 
-	@GetMapping("/metadata")
-	public ApiResponse<WorkTypeMetadataResponse> getWorkTypeMetadata() {
-		return ApiResponse.ok(workTypeService.getMetadata());
-	}
+  @GetMapping("/metadata")
+  public ApiResponse<WorkTypeMetadataResponse> getWorkTypeMetadata() {
+    return ApiResponse.ok(workTypeService.getMetadata());
+  }
 
-	@PostMapping
-	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkTypeResponse> createWorkType(@Valid @RequestBody WorkTypeCreateRequest request) {
-		return ApiResponse.ok(workTypeService.create(request));
-	}
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<WorkTypeResponse> createWorkType(
+      @Valid @RequestBody WorkTypeCreateRequest request) {
+    return ApiResponse.ok(workTypeService.create(request));
+  }
 
-	@PatchMapping("/{workTypeId}")
-	public ApiResponse<WorkTypeResponse> updateWorkType(@PathVariable Long workTypeId,
-			@Valid @RequestBody WorkTypeUpdateRequest request) {
-		return ApiResponse.ok(workTypeService.update(workTypeId, request));
-	}
+  @PatchMapping("/{workTypeId}")
+  public ApiResponse<WorkTypeResponse> updateWorkType(
+      @PathVariable Long workTypeId, @Valid @RequestBody WorkTypeUpdateRequest request) {
+    return ApiResponse.ok(workTypeService.update(workTypeId, request));
+  }
 
-	@PatchMapping("/reorder")
-	public ApiResponse<List<WorkTypeResponse>> reorderWorkTypes(@Valid @RequestBody WorkTypeReorderRequest request) {
-		return ApiResponse.ok(workTypeService.reorder(request));
-	}
-
+  @PatchMapping("/reorder")
+  public ApiResponse<List<WorkTypeResponse>> reorderWorkTypes(
+      @Valid @RequestBody WorkTypeReorderRequest request) {
+    return ApiResponse.ok(workTypeService.reorder(request));
+  }
 }

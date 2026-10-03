@@ -18,32 +18,33 @@ import org.springframework.data.repository.query.Param;
 
 public interface InboundRecordRepository extends JpaRepository<InboundRecord, Long> {
 
-	@EntityGraph(attributePaths = { "variety", "createdOrchidGroups" })
-	Optional<InboundRecord> findWithDetailsById(Long id);
+  @EntityGraph(attributePaths = {"variety", "createdOrchidGroups"})
+  Optional<InboundRecord> findWithDetailsById(Long id);
 
-	@EntityGraph(attributePaths = { "variety", "createdOrchidGroups" })
-	List<InboundRecord> findByIdIn(Collection<Long> ids);
+  @EntityGraph(attributePaths = {"variety", "createdOrchidGroups"})
+  List<InboundRecord> findByIdIn(Collection<Long> ids);
 
-	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("""
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      """
 			select record from InboundRecord record
 			where record.id in :ids
 			order by record.id asc
 			""")
-	List<InboundRecord> findRootsForUpdateByIdIn(@Param("ids") Collection<Long> ids);
+  List<InboundRecord> findRootsForUpdateByIdIn(@Param("ids") Collection<Long> ids);
 
-	default List<InboundRecord> findAllForUpdateByIdIn(Collection<Long> ids) {
-		var records = findRootsForUpdateByIdIn(ids);
-		if (!records.isEmpty())
-			findByIdIn(ids);
-		return records;
-	}
+  default List<InboundRecord> findAllForUpdateByIdIn(Collection<Long> ids) {
+    var records = findRootsForUpdateByIdIn(ids);
+    if (!records.isEmpty()) findByIdIn(ids);
+    return records;
+  }
 
-	@EntityGraph(attributePaths = { "variety", "createdOrchidGroups" })
-	List<InboundRecord> findByInboundTypeAndStatusInOrderByPottingDueDateAscIdAsc(InboundType inboundType,
-			Collection<InboundStatus> statuses);
+  @EntityGraph(attributePaths = {"variety", "createdOrchidGroups"})
+  List<InboundRecord> findByInboundTypeAndStatusInOrderByPottingDueDateAscIdAsc(
+      InboundType inboundType, Collection<InboundStatus> statuses);
 
-	@Query("""
+  @Query(
+      """
 			select record from InboundRecord record
 			join record.variety variety
 			where (:from is null or record.inboundDate >= :from)
@@ -53,26 +54,32 @@ public interface InboundRecordRepository extends JpaRepository<InboundRecord, Lo
 			  and (:varietyKeyword = '' or lower(variety.name) like lower(concat('%', :varietyKeyword, '%')))
 			order by record.inboundDate desc, record.id desc
 			""")
-	@EntityGraph(attributePaths = { "variety" })
-	Page<InboundRecord> search(@Param("from") LocalDate from, @Param("to") LocalDate to,
-			@Param("inboundType") InboundType inboundType, @Param("status") InboundStatus status,
-			@Param("varietyKeyword") String varietyKeyword, Pageable pageable);
+  @EntityGraph(attributePaths = {"variety"})
+  Page<InboundRecord> search(
+      @Param("from") LocalDate from,
+      @Param("to") LocalDate to,
+      @Param("inboundType") InboundType inboundType,
+      @Param("status") InboundStatus status,
+      @Param("varietyKeyword") String varietyKeyword,
+      Pageable pageable);
 
-	boolean existsByVarietyId(Long varietyId);
+  boolean existsByVarietyId(Long varietyId);
 
-	@Query("""
+  @Query(
+      """
 			select max(record.inboundDate)
 			from InboundRecord record
 			where record.variety.id = :varietyId
 			""")
-	LocalDate findLatestInboundDateByVarietyId(@Param("varietyId") Long varietyId);
+  LocalDate findLatestInboundDateByVarietyId(@Param("varietyId") Long varietyId);
 
-	@Query("""
+  @Query(
+      """
 			select record.variety.id, max(record.inboundDate)
 			from InboundRecord record
 			where record.variety.id in :varietyIds
 			group by record.variety.id
 			""")
-	List<Object[]> findLatestInboundDatesByVarietyIds(@Param("varietyIds") Collection<Long> varietyIds);
-
+  List<Object[]> findLatestInboundDatesByVarietyIds(
+      @Param("varietyIds") Collection<Long> varietyIds);
 }

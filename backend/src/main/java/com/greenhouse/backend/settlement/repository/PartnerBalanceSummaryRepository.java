@@ -9,32 +9,32 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface PartnerBalanceSummaryRepository extends JpaRepository<PartnerBalanceSummary, Long> {
+public interface PartnerBalanceSummaryRepository
+    extends JpaRepository<PartnerBalanceSummary, Long> {
 
-	@Query("""
+  @Query(
+      """
 			select b.partnerId as partnerId, b.receivableBalance as receivableBalance,
 			       b.creditBalance as creditBalance, b.unappliedPaymentAmount as unappliedPaymentAmount
 			from PartnerBalanceSummary b
 			where b.receivableBalance <> 0 or b.creditBalance <> 0 or b.unappliedPaymentAmount <> 0
 			""")
-	List<Balance> findNonzeroBalances();
+  List<Balance> findNonzeroBalances();
 
-	interface Balance {
+  interface Balance {
 
-		Long getPartnerId();
+    Long getPartnerId();
 
-		long getReceivableBalance();
+    long getReceivableBalance();
 
-		long getCreditBalance();
+    long getCreditBalance();
 
-		long getUnappliedPaymentAmount();
+    long getUnappliedPaymentAmount();
+  }
 
-	}
+  Optional<PartnerBalanceSummary> findByPartnerId(Long partnerId);
 
-	Optional<PartnerBalanceSummary> findByPartnerId(Long partnerId);
-
-	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select summary from PartnerBalanceSummary summary where summary.partnerId = :partnerId")
-	Optional<PartnerBalanceSummary> findForUpdateByPartnerId(@Param("partnerId") Long partnerId);
-
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select summary from PartnerBalanceSummary summary where summary.partnerId = :partnerId")
+  Optional<PartnerBalanceSummary> findForUpdateByPartnerId(@Param("partnerId") Long partnerId);
 }

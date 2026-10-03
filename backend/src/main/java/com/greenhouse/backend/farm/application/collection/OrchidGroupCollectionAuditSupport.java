@@ -14,23 +14,32 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OrchidGroupCollectionAuditSupport {
 
-	private final AuditEventWriter auditWriter;
+  private final AuditEventWriter auditWriter;
 
-	public Map<String, Object> snapshot(OrchidGroupCollection collection, List<Long> memberIds) {
-		var data = new LinkedHashMap<String, Object>();
-		data.put("name", collection.getName());
-		data.put("description", collection.getDescription());
-		data.put("purpose", collection.getPurpose());
-		data.put("status", collection.getStatus());
-		data.put("createdBy", collection.getCreatedBy());
-		data.put("memberIds", memberIds.stream().sorted().toList());
-		return data;
-	}
+  public Map<String, Object> snapshot(OrchidGroupCollection collection, List<Long> memberIds) {
+    var data = new LinkedHashMap<String, Object>();
+    data.put("name", collection.getName());
+    data.put("description", collection.getDescription());
+    data.put("purpose", collection.getPurpose());
+    data.put("status", collection.getStatus());
+    data.put("createdBy", collection.getCreatedBy());
+    data.put("memberIds", memberIds.stream().sorted().toList());
+    return data;
+  }
 
-	public Long record(AuditAction action, OrchidGroupCollection collection, Map<String, Object> before,
-			Map<String, Object> after, Map<String, Object> context) {
-		return auditWriter.record(action, AuditSource.ORCHID_GROUP_COLLECTION, "ORCHID_GROUP_COLLECTION",
-				collection.getId(), before, after, context);
-	}
-
+  public Long record(
+      AuditAction action,
+      OrchidGroupCollection collection,
+      Map<String, Object> before,
+      Map<String, Object> after,
+      Map<String, Object> context) {
+    return auditWriter.record(
+        action,
+        AuditSource.ORCHID_GROUP_COLLECTION,
+        "ORCHID_GROUP_COLLECTION",
+        collection.getId(),
+        before,
+        after,
+        context);
+  }
 }

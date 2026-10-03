@@ -26,33 +26,63 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MovementTestSupport {
 
-	private final OrchidGroupReader groups;
+  private final OrchidGroupReader groups;
 
-	private final StructureChangeRecordService records;
+  private final StructureChangeRecordService records;
 
-	private final WorkTypeRepository types;
+  private final WorkTypeRepository types;
 
-	private final Clock clock;
+  private final Clock clock;
 
-	@Transactional
-	public OrchidGroupResponse move(Long id, MoveTestRequest request) {
-		var group = groups.findDetailById(id).orElseThrow();
-		var date = TimeConfig.farmToday(clock);
-		var operation = new WorkOperationCreateRequest(types.findByCode("MOVEMENT").orElseThrow().getId(), "자리 이동",
-				date, null, WorkSourceScopeType.MANUAL_SELECTION, null, null, List.of(id), null, request.worker(),
-				request.memo(), null);
-		var execution = new StructureChangeCommand(UUID.randomUUID().toString(), date, request.worker(), request.memo(),
-				List.of(new StructureChangeSourceInput(id, group.getQuantity(), null, null)),
-				List.of(new StructureChangeResultInput(request.toBedZoneId(), group.getQuantity(), id, null, null,
-						StructureChangeResultPurpose.NORMAL, null, null, false, request.startPosition(),
-						request.endPosition(), null)));
-		records.createStructureChangeRecords(new StructureChangeRecordBatchCreateRequest(
-				List.of(new StructureChangeRecordCreateRequest(operation, execution))));
-		return OrchidGroupResponse.from(groups.findDetailById(id).orElseThrow(), date);
-	}
+  @Transactional
+  public OrchidGroupResponse move(Long id, MoveTestRequest request) {
+    var group = groups.findDetailById(id).orElseThrow();
+    var date = TimeConfig.farmToday(clock);
+    var operation =
+        new WorkOperationCreateRequest(
+            types.findByCode("MOVEMENT").orElseThrow().getId(),
+            "자리 이동",
+            date,
+            null,
+            WorkSourceScopeType.MANUAL_SELECTION,
+            null,
+            null,
+            List.of(id),
+            null,
+            request.worker(),
+            request.memo(),
+            null);
+    var execution =
+        new StructureChangeCommand(
+            UUID.randomUUID().toString(),
+            date,
+            request.worker(),
+            request.memo(),
+            List.of(new StructureChangeSourceInput(id, group.getQuantity(), null, null)),
+            List.of(
+                new StructureChangeResultInput(
+                    request.toBedZoneId(),
+                    group.getQuantity(),
+                    id,
+                    null,
+                    null,
+                    StructureChangeResultPurpose.NORMAL,
+                    null,
+                    null,
+                    false,
+                    request.startPosition(),
+                    request.endPosition(),
+                    null)));
+    records.createStructureChangeRecords(
+        new StructureChangeRecordBatchCreateRequest(
+            List.of(new StructureChangeRecordCreateRequest(operation, execution))));
+    return OrchidGroupResponse.from(groups.findDetailById(id).orElseThrow(), date);
+  }
 
-	public record MoveTestRequest(Long toBedZoneId, BigDecimal startPosition, BigDecimal endPosition, String worker,
-			String memo) {
-	}
-
+  public record MoveTestRequest(
+      Long toBedZoneId,
+      BigDecimal startPosition,
+      BigDecimal endPosition,
+      String worker,
+      String memo) {}
 }

@@ -11,13 +11,13 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface AuctionShipmentRepository extends JpaRepository<AuctionShipment, Long> {
 
-	@Query("select shipment.id from AuctionShipment shipment order by shipment.shipmentDate desc, shipment.id desc")
-	List<Long> findIdsNewestFirst(Pageable pageable);
+  @Query(
+      "select shipment.id from AuctionShipment shipment order by shipment.shipmentDate desc, shipment.id desc")
+  List<Long> findIdsNewestFirst(Pageable pageable);
 
-	@EntityGraph(attributePaths = { "lots" })
-	List<AuctionShipment> findAllByIdInOrderByShipmentDateDescIdDesc(Collection<Long> ids);
+  @EntityGraph(attributePaths = {"lots"})
+  List<AuctionShipment> findAllByIdInOrderByShipmentDateDescIdDesc(Collection<Long> ids);
 
-	@EntityGraph(attributePaths = { "lots" })
-	Optional<AuctionShipment> findWithLotsById(Long id);
-
+  @EntityGraph(attributePaths = {"lots"})
+  Optional<AuctionShipment> findWithLotsById(Long id);
 }

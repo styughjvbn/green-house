@@ -13,11 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class DashboardController {
 
-	private final DashboardQueryService dashboardQueryService;
+  private final DashboardQueryService dashboardQueryService;
 
-	@GetMapping("/summary")
-	public ApiResponse<DashboardSummaryResponse> getSummary() {
-		return ApiResponse.ok(dashboardQueryService.getSummary());
-	}
-
+  @GetMapping("/summary")
+  public ApiResponse<DashboardSummaryResponse> getSummary() {
+    return ApiResponse.ok(dashboardQueryService.getSummary());
+  }
 }

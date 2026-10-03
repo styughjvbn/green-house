@@ -13,19 +13,21 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class WorkOrchidGroupUsageAdapter implements OrchidGroupUsageInspector {
 
-	private final WorkOrchidGroupUsageInspector workUsage;
+  private final WorkOrchidGroupUsageInspector workUsage;
 
-	@Override
-	public List<OrchidGroupUsage> inspect(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {
-		long count = workUsage.countOtherOperations(orchidGroupIds, sourceWorkOperationId);
-		return count == 0 ? List.of()
-				: List.of(new OrchidGroupUsage("WORK_OPERATION", "다른 작업에 포함된 난 묶음이 있습니다.", count));
-	}
+  @Override
+  public List<OrchidGroupUsage> inspect(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {
+    long count = workUsage.countOtherOperations(orchidGroupIds, sourceWorkOperationId);
+    return count == 0
+        ? List.of()
+        : List.of(new OrchidGroupUsage("WORK_OPERATION", "다른 작업에 포함된 난 묶음이 있습니다.", count));
+  }
 
-	@Override
-	public List<OrchidGroupUsage> inspectExcludingWorkOperations(Set<Long> orchidGroupIds, Set<Long> workOperationIds) {
-		return workUsage.hasReferencesOutside(orchidGroupIds, workOperationIds)
-				? List.of(new OrchidGroupUsage("WORK_OPERATION", "일괄 취소 범위 밖의 작업에 연결된 난 묶음이 있습니다.", 1)) : List.of();
-	}
-
+  @Override
+  public List<OrchidGroupUsage> inspectExcludingWorkOperations(
+      Set<Long> orchidGroupIds, Set<Long> workOperationIds) {
+    return workUsage.hasReferencesOutside(orchidGroupIds, workOperationIds)
+        ? List.of(new OrchidGroupUsage("WORK_OPERATION", "일괄 취소 범위 밖의 작업에 연결된 난 묶음이 있습니다.", 1))
+        : List.of();
+  }
 }

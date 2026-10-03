@@ -33,155 +33,196 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class StructureChangeExecutionService {
 
-	private final WorkTargetExecutionRepository executionRepository;
+  private final WorkTargetExecutionRepository executionRepository;
 
-	private final WorkAppliedEffectRepository appliedEffectRepository;
+  private final WorkAppliedEffectRepository appliedEffectRepository;
 
-	private final WorkEffectProcessor workEffectProcessor;
+  private final WorkEffectProcessor workEffectProcessor;
 
-	private final WorkEffectStore effectStore;
+  private final WorkEffectStore effectStore;
 
-	private final WorkOperationProgressService progressService;
+  private final WorkOperationProgressService progressService;
 
-	private final WorkOperationQueryService queryService;
+  private final WorkOperationQueryService queryService;
 
-	private final WorkOperationSupport support;
+  private final WorkOperationSupport support;
 
-	private final DiscardRecordService discardRecordService;
+  private final DiscardRecordService discardRecordService;
 
-	private final WorkOperationLockService operationLocks;
+  private final WorkOperationLockService operationLocks;
 
-	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-	/**
-	 * @deprecated Use {@link #execute(Long, StructureChangeCommand)}.
-	 */
-	@Deprecated(since = "2026-08", forRemoval = false)
-	public WorkOperationView completeMerge(Long operationId, WorkTargetExecutionRequest request) {
-		operationLocks.lock(operationId);
-		List<WorkTargetExecution> executions = executionRepository
-			.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
-		WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
-		if (!WorkTypeDefinition.MERGE.name().equals(operation.getWorkType().getCode())) {
-			throw new IllegalArgumentException("합식 작업만 일괄 실행할 수 있습니다.");
-		}
-		if (executions.stream().allMatch(WorkTargetExecution::isEffectApplied)) {
-			var existing = appliedEffectRepository
-				.findByWorkOperationIdAndEffectKey(operationId, "EXECUTION:LEGACY_MERGE")
-				.orElseThrow(() -> new ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE", "원래 합식 실행 요청을 확인할 수 없습니다."));
-			var completedAt = request.completedDate() == null ? existing.getAppliedAt()
-					: support.completionTime(request.completedDate());
-			effectStore.validateReplay(existing,
-					new WorkEffectCommand(completedAt, support.actor(request.worker()), request.resultDetails(), null));
-			return queryService.get(operationId);
-		}
-		if (executions.stream().anyMatch(WorkTargetExecution::isEffectApplied)) {
-			throw new IllegalStateException("합식 작업 대상의 효과 적용 상태가 일치하지 않습니다.");
-		}
-		validateInProgress(operation);
-		LocalDateTime completedAt = support.completionTime(request.completedDate());
-		String worker = support.actor(request.worker());
-		List<Long> sourceOrchidGroupIds = executions.stream()
-			.map(execution -> execution.getTarget().getOrchidGroupId())
-			.filter(Objects::nonNull)
-			.sorted()
-			.toList();
-		var result = workEffectProcessor.applyBatch(operation, "LEGACY_MERGE", sourceOrchidGroupIds,
-				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
-		executions.forEach(execution -> execution.completeWithEffect(completedAt, worker, result.resultDetails()));
-		progressService.completeIfAllTargetsClosed(operation, completedAt);
-		return queryService.get(operationId);
-	}
+  /**
+   * @deprecated Use {@link #execute(Long, StructureChangeCommand)}.
+   */
+  @Deprecated(since = "2026-08", forRemoval = false)
+  public WorkOperationView completeMerge(Long operationId, WorkTargetExecutionRequest request) {
+    operationLocks.lock(operationId);
+    List<WorkTargetExecution> executions =
+        executionRepository.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
+    WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
+    if (!WorkTypeDefinition.MERGE.name().equals(operation.getWorkType().getCode())) {
+      throw new IllegalArgumentException("합식 작업만 일괄 실행할 수 있습니다.");
+    }
+    if (executions.stream().allMatch(WorkTargetExecution::isEffectApplied)) {
+      var existing =
+          appliedEffectRepository
+              .findByWorkOperationIdAndEffectKey(operationId, "EXECUTION:LEGACY_MERGE")
+              .orElseThrow(
+                  () ->
+                      new ConflictException(
+                          "IDEMPOTENCY_REPLAY_UNAVAILABLE", "원래 합식 실행 요청을 확인할 수 없습니다."));
+      var completedAt =
+          request.completedDate() == null
+              ? existing.getAppliedAt()
+              : support.completionTime(request.completedDate());
+      effectStore.validateReplay(
+          existing,
+          new WorkEffectCommand(
+              completedAt, support.actor(request.worker()), request.resultDetails(), null));
+      return queryService.get(operationId);
+    }
+    if (executions.stream().anyMatch(WorkTargetExecution::isEffectApplied)) {
+      throw new IllegalStateException("합식 작업 대상의 효과 적용 상태가 일치하지 않습니다.");
+    }
+    validateInProgress(operation);
+    LocalDateTime completedAt = support.completionTime(request.completedDate());
+    String worker = support.actor(request.worker());
+    List<Long> sourceOrchidGroupIds =
+        executions.stream()
+            .map(execution -> execution.getTarget().getOrchidGroupId())
+            .filter(Objects::nonNull)
+            .sorted()
+            .toList();
+    var result =
+        workEffectProcessor.applyBatch(
+            operation,
+            "LEGACY_MERGE",
+            sourceOrchidGroupIds,
+            new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
+    executions.forEach(
+        execution -> execution.completeWithEffect(completedAt, worker, result.resultDetails()));
+    progressService.completeIfAllTargetsClosed(operation, completedAt);
+    return queryService.get(operationId);
+  }
 
-	public WorkOperationView execute(Long operationId, StructureChangeCommand request) {
-		return execute(operationId, request, Set.of());
-	}
+  public WorkOperationView execute(Long operationId, StructureChangeCommand request) {
+    return execute(operationId, request, Set.of());
+  }
 
-	WorkOperationView execute(Long operationId, StructureChangeCommand request,
-			Set<Long> placementExclusionOrchidGroupIds) {
-		operationLocks.lock(operationId);
-		List<WorkTargetExecution> executions = executionRepository
-			.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
-		if (executions.isEmpty()) {
-			throw new IllegalArgumentException("구조 변경 작업 대상이 없습니다.");
-		}
-		WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
-		if (!operation.getWorkType().definition().supportsStructureExecution()) {
-			throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업만 회차 실행할 수 있습니다.");
-		}
-		LocalDateTime executedAt = support.completionTime(request.completedDate());
-		String worker = support.actor(request.worker());
-		Map<String, Object> commandDetails = objectMapper.convertValue(request,
-				new TypeReference<Map<String, Object>>() {
-				});
-		var command = new WorkEffectCommand(executedAt, worker, commandDetails, request,
-				placementExclusionOrchidGroupIds);
-		String effectKey = "EXECUTION:" + request.idempotencyKey();
-		var existing = appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey);
-		if (existing.isPresent()) {
-			effectStore.validateReplay(existing.get(), command);
-			return queryService.get(operationId);
-		}
-		validateInProgress(operation);
+  WorkOperationView execute(
+      Long operationId,
+      StructureChangeCommand request,
+      Set<Long> placementExclusionOrchidGroupIds) {
+    operationLocks.lock(operationId);
+    List<WorkTargetExecution> executions =
+        executionRepository.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
+    if (executions.isEmpty()) {
+      throw new IllegalArgumentException("구조 변경 작업 대상이 없습니다.");
+    }
+    WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
+    if (!operation.getWorkType().definition().supportsStructureExecution()) {
+      throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업만 회차 실행할 수 있습니다.");
+    }
+    LocalDateTime executedAt = support.completionTime(request.completedDate());
+    String worker = support.actor(request.worker());
+    Map<String, Object> commandDetails =
+        objectMapper.convertValue(request, new TypeReference<Map<String, Object>>() {});
+    var command =
+        new WorkEffectCommand(
+            executedAt, worker, commandDetails, request, placementExclusionOrchidGroupIds);
+    String effectKey = "EXECUTION:" + request.idempotencyKey();
+    var existing =
+        appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey);
+    if (existing.isPresent()) {
+      effectStore.validateReplay(existing.get(), command);
+      return queryService.get(operationId);
+    }
+    validateInProgress(operation);
 
-		Map<Long, WorkTargetExecution> executionByGroupId = executions.stream()
-			.filter(execution -> execution.getTarget().getOrchidGroupId() != null)
-			.collect(Collectors.toMap(execution -> execution.getTarget().getOrchidGroupId(), Function.identity()));
-		Set<Long> requestedIds = request.sources()
-			.stream()
-			.map(source -> source.sourceOrchidGroupId())
-			.collect(Collectors.toSet());
-		if (requestedIds.size() != request.sources().size() || !executionByGroupId.keySet().containsAll(requestedIds)) {
-			throw new IllegalArgumentException("실행 원본은 계획에 확정된 난 묶음이어야 하며 중복될 수 없습니다.");
-		}
-		request.sources().forEach(source -> {
-			WorkTargetExecution execution = executionByGroupId.get(source.sourceOrchidGroupId());
-			int remaining = execution.getTarget().getQuantitySnapshot() - execution.getProcessedQuantity();
-			if (source.inputQuantity() > remaining) {
-				throw new IllegalArgumentException("작업 수량은 대상의 계획 잔여 수량보다 클 수 없습니다.");
-			}
-		});
+    Map<Long, WorkTargetExecution> executionByGroupId =
+        executions.stream()
+            .filter(execution -> execution.getTarget().getOrchidGroupId() != null)
+            .collect(
+                Collectors.toMap(
+                    execution -> execution.getTarget().getOrchidGroupId(), Function.identity()));
+    Set<Long> requestedIds =
+        request.sources().stream()
+            .map(source -> source.sourceOrchidGroupId())
+            .collect(Collectors.toSet());
+    if (requestedIds.size() != request.sources().size()
+        || !executionByGroupId.keySet().containsAll(requestedIds)) {
+      throw new IllegalArgumentException("실행 원본은 계획에 확정된 난 묶음이어야 하며 중복될 수 없습니다.");
+    }
+    request
+        .sources()
+        .forEach(
+            source -> {
+              WorkTargetExecution execution = executionByGroupId.get(source.sourceOrchidGroupId());
+              int remaining =
+                  execution.getTarget().getQuantitySnapshot() - execution.getProcessedQuantity();
+              if (source.inputQuantity() > remaining) {
+                throw new IllegalArgumentException("작업 수량은 대상의 계획 잔여 수량보다 클 수 없습니다.");
+              }
+            });
 
-		var result = workEffectProcessor.applyBatch(operation, request.idempotencyKey(),
-				requestedIds.stream().sorted().toList(), command);
-		WorkOperationView discardOperation = null;
-		if (WorkTypeDefinition.MOVEMENT.name().equals(operation.getWorkType().getCode())) {
-			Map<Long, Integer> inputQuantities = request.sources()
-				.stream()
-				.sorted(Comparator.comparing(source -> source.sourceOrchidGroupId()))
-				.collect(Collectors.toMap(source -> source.sourceOrchidGroupId(), source -> source.inputQuantity(),
-						(left, right) -> left, LinkedHashMap::new));
-			discardOperation = discardRecordService.createForMovement(operation, request.completedDate(), worker,
-					request.memo(), inputQuantities, movementDiscardQuantities(request));
-		}
-		Map<String, Object> resultDetails = result.resultDetails();
-		if (discardOperation != null) {
-			resultDetails = new LinkedHashMap<>(resultDetails);
-			resultDetails.put("discardWorkOperationId", discardOperation.id());
-		}
-		Map<String, Object> completedResultDetails = resultDetails;
-		request.sources().forEach(source -> {
-			WorkTargetExecution execution = executionByGroupId.get(source.sourceOrchidGroupId());
-			execution.recordPartialEffect(source.inputQuantity(), execution.getTarget().getQuantitySnapshot(),
-					executedAt, worker, completedResultDetails);
-		});
-		progressService.completeIfAllTargetsClosed(operation, executedAt);
-		return queryService.get(operationId);
-	}
+    var result =
+        workEffectProcessor.applyBatch(
+            operation, request.idempotencyKey(), requestedIds.stream().sorted().toList(), command);
+    WorkOperationView discardOperation = null;
+    if (WorkTypeDefinition.MOVEMENT.name().equals(operation.getWorkType().getCode())) {
+      Map<Long, Integer> inputQuantities =
+          request.sources().stream()
+              .sorted(Comparator.comparing(source -> source.sourceOrchidGroupId()))
+              .collect(
+                  Collectors.toMap(
+                      source -> source.sourceOrchidGroupId(),
+                      source -> source.inputQuantity(),
+                      (left, right) -> left,
+                      LinkedHashMap::new));
+      discardOperation =
+          discardRecordService.createForMovement(
+              operation,
+              request.completedDate(),
+              worker,
+              request.memo(),
+              inputQuantities,
+              movementDiscardQuantities(request));
+    }
+    Map<String, Object> resultDetails = result.resultDetails();
+    if (discardOperation != null) {
+      resultDetails = new LinkedHashMap<>(resultDetails);
+      resultDetails.put("discardWorkOperationId", discardOperation.id());
+    }
+    Map<String, Object> completedResultDetails = resultDetails;
+    request
+        .sources()
+        .forEach(
+            source -> {
+              WorkTargetExecution execution = executionByGroupId.get(source.sourceOrchidGroupId());
+              execution.recordPartialEffect(
+                  source.inputQuantity(),
+                  execution.getTarget().getQuantitySnapshot(),
+                  executedAt,
+                  worker,
+                  completedResultDetails);
+            });
+    progressService.completeIfAllTargetsClosed(operation, executedAt);
+    return queryService.get(operationId);
+  }
 
-	private Map<Long, Integer> movementDiscardQuantities(StructureChangeCommand request) {
-		return MovementQuantityAllocator.allocateDiscardBySource(request)
-			.entrySet()
-			.stream()
-			.filter(entry -> entry.getValue() > 0)
-			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (left, right) -> left,
-					LinkedHashMap::new));
-	}
+  private Map<Long, Integer> movementDiscardQuantities(StructureChangeCommand request) {
+    return MovementQuantityAllocator.allocateDiscardBySource(request).entrySet().stream()
+        .filter(entry -> entry.getValue() > 0)
+        .collect(
+            Collectors.toMap(
+                Map.Entry::getKey, Map.Entry::getValue, (left, right) -> left, LinkedHashMap::new));
+  }
 
-	private void validateInProgress(WorkOperation operation) {
-		if (operation.getStatus() != WorkOperationStatus.IN_PROGRESS) {
-			throw new IllegalArgumentException("진행 중인 구조 변경·자리 이동 작업만 실행할 수 있습니다.");
-		}
-	}
-
+  private void validateInProgress(WorkOperation operation) {
+    if (operation.getStatus() != WorkOperationStatus.IN_PROGRESS) {
+      throw new IllegalArgumentException("진행 중인 구조 변경·자리 이동 작업만 실행할 수 있습니다.");
+    }
+  }
 }

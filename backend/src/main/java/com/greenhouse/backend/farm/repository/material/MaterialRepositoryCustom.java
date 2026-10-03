@@ -6,6 +6,6 @@ import org.springframework.data.domain.Pageable;
 
 public interface MaterialRepositoryCustom {
 
-	Page<Material> search(String keyword, String category, String manufacturer, Boolean active, Pageable pageable);
-
+  Page<Material> search(
+      String keyword, String category, String manufacturer, Boolean active, Pageable pageable);
 }

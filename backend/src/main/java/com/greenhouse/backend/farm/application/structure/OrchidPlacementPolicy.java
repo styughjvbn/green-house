@@ -15,154 +15,176 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OrchidPlacementPolicy {
 
-	private static final BigDecimal MIN_SPAN = BigDecimal.ONE.setScale(2);
+  private static final BigDecimal MIN_SPAN = BigDecimal.ONE.setScale(2);
 
-	private final OrchidGroupRepository orchidGroupRepository;
+  private final OrchidGroupRepository orchidGroupRepository;
 
-	public PlacementRange resolveRange(BedZone bedZone, BigDecimal requestedStartPosition,
-			BigDecimal requestedEndPosition) {
-		if (requestedStartPosition == null && requestedEndPosition == null) {
-			return findFirstAvailableSingleSlot(bedZone);
-		}
-		BigDecimal startPosition = normalizeNumber(requestedStartPosition);
-		BigDecimal endPosition = normalizeNumber(requestedEndPosition);
-		validatePlacement(bedZone, startPosition, endPosition, null);
-		return new PlacementRange(startPosition, endPosition);
-	}
+  public PlacementRange resolveRange(
+      BedZone bedZone, BigDecimal requestedStartPosition, BigDecimal requestedEndPosition) {
+    if (requestedStartPosition == null && requestedEndPosition == null) {
+      return findFirstAvailableSingleSlot(bedZone);
+    }
+    BigDecimal startPosition = normalizeNumber(requestedStartPosition);
+    BigDecimal endPosition = normalizeNumber(requestedEndPosition);
+    validatePlacement(bedZone, startPosition, endPosition, null);
+    return new PlacementRange(startPosition, endPosition);
+  }
 
-	public BigDecimal normalizeNumber(BigDecimal value) {
-		if (value == null) {
-			return null;
-		}
-		return value.setScale(2, RoundingMode.HALF_UP);
-	}
+  public BigDecimal normalizeNumber(BigDecimal value) {
+    if (value == null) {
+      return null;
+    }
+    return value.setScale(2, RoundingMode.HALF_UP);
+  }
 
-	public void validatePlacement(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition,
-			Long excludeOrchidGroupId) {
-		validatePlacementExcluding(bedZone, startPosition, endPosition,
-				excludeOrchidGroupId == null ? Set.of() : Set.of(excludeOrchidGroupId));
-	}
+  public void validatePlacement(
+      BedZone bedZone,
+      BigDecimal startPosition,
+      BigDecimal endPosition,
+      Long excludeOrchidGroupId) {
+    validatePlacementExcluding(
+        bedZone,
+        startPosition,
+        endPosition,
+        excludeOrchidGroupId == null ? Set.of() : Set.of(excludeOrchidGroupId));
+  }
 
-	public void validatePlacementExcluding(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition,
-			Set<Long> excludeOrchidGroupIds) {
-		validateRange(bedZone, startPosition, endPosition);
-		validateNoOverlap(bedZone, startPosition, endPosition, excludeOrchidGroupIds);
-	}
+  public void validatePlacementExcluding(
+      BedZone bedZone,
+      BigDecimal startPosition,
+      BigDecimal endPosition,
+      Set<Long> excludeOrchidGroupIds) {
+    validateRange(bedZone, startPosition, endPosition);
+    validateNoOverlap(bedZone, startPosition, endPosition, excludeOrchidGroupIds);
+  }
 
-	public void validateRestoredPlacements(List<RestoredPlacement> placements, Set<Long> excludedIds) {
-		if (placements.isEmpty()) {
-			return;
-		}
-		var zoneIds = placements.stream().map(placement -> placement.bedZone().getId()).distinct().toList();
-		var remaining = orchidGroupRepository.findByBedZoneIdInAndQuantityGreaterThan(zoneIds, 0)
-			.stream()
-			.filter(group -> !excludedIds.contains(group.getId()))
-			.toList();
-		for (int index = 0; index < placements.size(); index++) {
-			RestoredPlacement placement = placements.get(index);
-			validateRange(placement.bedZone(), placement.startPosition(), placement.endPosition());
-			for (OrchidGroup group : remaining) {
-				if (placement.bedZone().getId().equals(group.getBedZone().getId())) {
-					validateRestoredPair(placement, group.getStartPosition(), group.getEndPosition(),
-							group.getSortOrder());
-				}
-			}
-			for (int other = 0; other < index; other++) {
-				RestoredPlacement previous = placements.get(other);
-				if (placement.bedZone().getId().equals(previous.bedZone().getId())) {
-					validateRestoredPair(placement, previous.startPosition(), previous.endPosition(),
-							previous.sortOrder());
-				}
-			}
-		}
-	}
+  public void validateRestoredPlacements(
+      List<RestoredPlacement> placements, Set<Long> excludedIds) {
+    if (placements.isEmpty()) {
+      return;
+    }
+    var zoneIds =
+        placements.stream().map(placement -> placement.bedZone().getId()).distinct().toList();
+    var remaining =
+        orchidGroupRepository.findByBedZoneIdInAndQuantityGreaterThan(zoneIds, 0).stream()
+            .filter(group -> !excludedIds.contains(group.getId()))
+            .toList();
+    for (int index = 0; index < placements.size(); index++) {
+      RestoredPlacement placement = placements.get(index);
+      validateRange(placement.bedZone(), placement.startPosition(), placement.endPosition());
+      for (OrchidGroup group : remaining) {
+        if (placement.bedZone().getId().equals(group.getBedZone().getId())) {
+          validateRestoredPair(
+              placement, group.getStartPosition(), group.getEndPosition(), group.getSortOrder());
+        }
+      }
+      for (int other = 0; other < index; other++) {
+        RestoredPlacement previous = placements.get(other);
+        if (placement.bedZone().getId().equals(previous.bedZone().getId())) {
+          validateRestoredPair(
+              placement, previous.startPosition(), previous.endPosition(), previous.sortOrder());
+        }
+      }
+    }
+  }
 
-	private void validateRestoredPair(RestoredPlacement placement, BigDecimal start, BigDecimal end,
-			Integer sortOrder) {
-		if (start != null && end != null
-				&& isOverlapping(placement.startPosition(), placement.endPosition(), start, end)) {
-			throw new IllegalArgumentException("복구할 난 묶음의 배치가 다른 난 묶음 배치와 겹칩니다.");
-		}
-		if (placement.sortOrder() != null && placement.sortOrder().equals(sortOrder)) {
-			throw new IllegalArgumentException("복구할 난 묶음의 구역 내 표시 순서가 다른 난 묶음과 중복됩니다.");
-		}
-	}
+  private void validateRestoredPair(
+      RestoredPlacement placement, BigDecimal start, BigDecimal end, Integer sortOrder) {
+    if (start != null
+        && end != null
+        && isOverlapping(placement.startPosition(), placement.endPosition(), start, end)) {
+      throw new IllegalArgumentException("복구할 난 묶음의 배치가 다른 난 묶음 배치와 겹칩니다.");
+    }
+    if (placement.sortOrder() != null && placement.sortOrder().equals(sortOrder)) {
+      throw new IllegalArgumentException("복구할 난 묶음의 구역 내 표시 순서가 다른 난 묶음과 중복됩니다.");
+    }
+  }
 
-	private void validateRange(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition) {
-		if (startPosition == null || endPosition == null) {
-			throw new IllegalArgumentException("시작 위치와 종료 위치를 모두 입력해야 합니다.");
-		}
-		if (endPosition.compareTo(startPosition) <= 0) {
-			throw new IllegalArgumentException("종료 위치는 시작 위치보다 커야 합니다.");
-		}
-		if (endPosition.subtract(startPosition).compareTo(MIN_SPAN) < 0) {
-			throw new IllegalArgumentException("난 묶음은 최소 1칸 이상을 차지해야 합니다.");
-		}
-		BigDecimal maxPosition = bedZone.getPhysicalBed().getPositionUnitCount();
-		if (maxPosition != null && endPosition.compareTo(maxPosition) > 0) {
-			throw new IllegalArgumentException("종료 위치는 배드 최대 칸 수를 넘을 수 없습니다.");
-		}
-	}
+  private void validateRange(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition) {
+    if (startPosition == null || endPosition == null) {
+      throw new IllegalArgumentException("시작 위치와 종료 위치를 모두 입력해야 합니다.");
+    }
+    if (endPosition.compareTo(startPosition) <= 0) {
+      throw new IllegalArgumentException("종료 위치는 시작 위치보다 커야 합니다.");
+    }
+    if (endPosition.subtract(startPosition).compareTo(MIN_SPAN) < 0) {
+      throw new IllegalArgumentException("난 묶음은 최소 1칸 이상을 차지해야 합니다.");
+    }
+    BigDecimal maxPosition = bedZone.getPhysicalBed().getPositionUnitCount();
+    if (maxPosition != null && endPosition.compareTo(maxPosition) > 0) {
+      throw new IllegalArgumentException("종료 위치는 배드 최대 칸 수를 넘을 수 없습니다.");
+    }
+  }
 
-	public PlacementRange findFirstAvailableSingleSlot(BedZone bedZone) {
-		BigDecimal maxPosition = bedZone.getPhysicalBed().getPositionUnitCount();
-		if (maxPosition == null) {
-			throw new IllegalArgumentException("배드 칸 수 정보가 없어 자동 배치할 수 없습니다.");
-		}
+  public PlacementRange findFirstAvailableSingleSlot(BedZone bedZone) {
+    BigDecimal maxPosition = bedZone.getPhysicalBed().getPositionUnitCount();
+    if (maxPosition == null) {
+      throw new IllegalArgumentException("배드 칸 수 정보가 없어 자동 배치할 수 없습니다.");
+    }
 
-		BigDecimal cursor = BigDecimal.ZERO.setScale(2);
-		List<OrchidGroup> positionedGroups = orchidGroupRepository
-			.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(bedZone.getId(), 0)
-			.stream()
-			.filter(group -> group.getStartPosition() != null && group.getEndPosition() != null)
-			.sorted(Comparator.comparing(OrchidGroup::getStartPosition).thenComparing(OrchidGroup::getSortOrder))
-			.toList();
+    BigDecimal cursor = BigDecimal.ZERO.setScale(2);
+    List<OrchidGroup> positionedGroups =
+        orchidGroupRepository
+            .findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(bedZone.getId(), 0)
+            .stream()
+            .filter(group -> group.getStartPosition() != null && group.getEndPosition() != null)
+            .sorted(
+                Comparator.comparing(OrchidGroup::getStartPosition)
+                    .thenComparing(OrchidGroup::getSortOrder))
+            .toList();
 
-		for (OrchidGroup group : positionedGroups) {
-			BigDecimal start = normalizeNumber(group.getStartPosition());
-			BigDecimal end = normalizeNumber(group.getEndPosition());
-			if (start.subtract(cursor).compareTo(MIN_SPAN) >= 0) {
-				return new PlacementRange(cursor, cursor.add(MIN_SPAN));
-			}
-			if (end.compareTo(cursor) > 0) {
-				cursor = end;
-			}
-		}
+    for (OrchidGroup group : positionedGroups) {
+      BigDecimal start = normalizeNumber(group.getStartPosition());
+      BigDecimal end = normalizeNumber(group.getEndPosition());
+      if (start.subtract(cursor).compareTo(MIN_SPAN) >= 0) {
+        return new PlacementRange(cursor, cursor.add(MIN_SPAN));
+      }
+      if (end.compareTo(cursor) > 0) {
+        cursor = end;
+      }
+    }
 
-		if (maxPosition.subtract(cursor).compareTo(MIN_SPAN) >= 0) {
-			return new PlacementRange(cursor, cursor.add(MIN_SPAN));
-		}
+    if (maxPosition.subtract(cursor).compareTo(MIN_SPAN) >= 0) {
+      return new PlacementRange(cursor, cursor.add(MIN_SPAN));
+    }
 
-		throw new IllegalArgumentException("선택한 구역에 1칸 이상 비어 있는 공간이 없습니다.");
-	}
+    throw new IllegalArgumentException("선택한 구역에 1칸 이상 비어 있는 공간이 없습니다.");
+  }
 
-	private void validateNoOverlap(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition,
-			Set<Long> excludeOrchidGroupIds) {
-		for (OrchidGroup group : orchidGroupRepository
-			.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(bedZone.getId(), 0)) {
-			if (excludeOrchidGroupIds.contains(group.getId())) {
-				continue;
-			}
-			if (group.getStartPosition() == null || group.getEndPosition() == null) {
-				continue;
-			}
-			if (isOverlapping(startPosition, endPosition, normalizeNumber(group.getStartPosition()),
-					normalizeNumber(group.getEndPosition()))) {
-				throw new IllegalArgumentException("선택한 위치가 기존 난 묶음 배치와 겹칩니다.");
-			}
-		}
-	}
+  private void validateNoOverlap(
+      BedZone bedZone,
+      BigDecimal startPosition,
+      BigDecimal endPosition,
+      Set<Long> excludeOrchidGroupIds) {
+    for (OrchidGroup group :
+        orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+            bedZone.getId(), 0)) {
+      if (excludeOrchidGroupIds.contains(group.getId())) {
+        continue;
+      }
+      if (group.getStartPosition() == null || group.getEndPosition() == null) {
+        continue;
+      }
+      if (isOverlapping(
+          startPosition,
+          endPosition,
+          normalizeNumber(group.getStartPosition()),
+          normalizeNumber(group.getEndPosition()))) {
+        throw new IllegalArgumentException("선택한 위치가 기존 난 묶음 배치와 겹칩니다.");
+      }
+    }
+  }
 
-	private boolean isOverlapping(BigDecimal candidateStart, BigDecimal candidateEnd, BigDecimal existingStart,
-			BigDecimal existingEnd) {
-		return candidateStart.compareTo(existingEnd) < 0 && candidateEnd.compareTo(existingStart) > 0;
-	}
+  private boolean isOverlapping(
+      BigDecimal candidateStart,
+      BigDecimal candidateEnd,
+      BigDecimal existingStart,
+      BigDecimal existingEnd) {
+    return candidateStart.compareTo(existingEnd) < 0 && candidateEnd.compareTo(existingStart) > 0;
+  }
 
-	public record PlacementRange(BigDecimal startPosition, BigDecimal endPosition) {
-	}
+  public record PlacementRange(BigDecimal startPosition, BigDecimal endPosition) {}
 
-	public record RestoredPlacement(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition,
-			Integer sortOrder) {
-	}
-
+  public record RestoredPlacement(
+      BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition, Integer sortOrder) {}
 }

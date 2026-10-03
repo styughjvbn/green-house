@@ -17,24 +17,26 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AnalyticsController {
 
-	private final AnalyticsQueryService analyticsQueryService;
+  private final AnalyticsQueryService analyticsQueryService;
 
-	@GetMapping("/sales")
-	public ApiResponse<SalesAnalyticsResponse> getSalesAnalytics(@RequestParam(required = false) LocalDate from,
-			@RequestParam(required = false) LocalDate to) {
-		return ApiResponse.ok(analyticsQueryService.getSalesAnalytics(from, to));
-	}
+  @GetMapping("/sales")
+  public ApiResponse<SalesAnalyticsResponse> getSalesAnalytics(
+      @RequestParam(required = false) LocalDate from,
+      @RequestParam(required = false) LocalDate to) {
+    return ApiResponse.ok(analyticsQueryService.getSalesAnalytics(from, to));
+  }
 
-	@GetMapping("/partners")
-	public ApiResponse<PartnerAnalyticsResponse> getPartnerAnalytics(@RequestParam(required = false) LocalDate from,
-			@RequestParam(required = false) LocalDate to) {
-		return ApiResponse.ok(analyticsQueryService.getPartnerAnalytics(from, to));
-	}
+  @GetMapping("/partners")
+  public ApiResponse<PartnerAnalyticsResponse> getPartnerAnalytics(
+      @RequestParam(required = false) LocalDate from,
+      @RequestParam(required = false) LocalDate to) {
+    return ApiResponse.ok(analyticsQueryService.getPartnerAnalytics(from, to));
+  }
 
-	@GetMapping("/work")
-	public ApiResponse<WorkAnalyticsResponse> getWorkAnalytics(@RequestParam(required = false) LocalDate from,
-			@RequestParam(required = false) LocalDate to) {
-		return ApiResponse.ok(analyticsQueryService.getWorkAnalytics(from, to));
-	}
-
+  @GetMapping("/work")
+  public ApiResponse<WorkAnalyticsResponse> getWorkAnalytics(
+      @RequestParam(required = false) LocalDate from,
+      @RequestParam(required = false) LocalDate to) {
+    return ApiResponse.ok(analyticsQueryService.getWorkAnalytics(from, to));
+  }
 }

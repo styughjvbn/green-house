@@ -14,31 +14,35 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ExpectedPaymentDateCalculator {
 
-	private final PartnerSettlementSettingsRepository settingsRepository;
+  private final PartnerSettlementSettingsRepository settingsRepository;
 
-	public LocalDate calculate(Long partnerId, LocalDate baseDate) {
-		var settings = settingsRepository.findByPartnerId(partnerId).orElse(null);
-		return calculate(baseDate, settings);
-	}
+  public LocalDate calculate(Long partnerId, LocalDate baseDate) {
+    var settings = settingsRepository.findByPartnerId(partnerId).orElse(null);
+    return calculate(baseDate, settings);
+  }
 
-	public Map<PaymentDateTarget, LocalDate> calculateAll(Collection<PaymentDateTarget> targets) {
-		if (targets.isEmpty()) {
-			return Map.of();
-		}
-		var settingsByPartnerId = settingsRepository
-			.findByPartnerIdIn(targets.stream().map(PaymentDateTarget::partnerId).collect(Collectors.toSet()))
-			.stream()
-			.collect(Collectors.toMap(PartnerSettlementSettings::getPartnerId, Function.identity()));
-		return targets.stream()
-			.collect(Collectors.toMap(Function.identity(),
-					target -> calculate(target.baseDate(), settingsByPartnerId.get(target.partnerId()))));
-	}
+  public Map<PaymentDateTarget, LocalDate> calculateAll(Collection<PaymentDateTarget> targets) {
+    if (targets.isEmpty()) {
+      return Map.of();
+    }
+    var settingsByPartnerId =
+        settingsRepository
+            .findByPartnerIdIn(
+                targets.stream().map(PaymentDateTarget::partnerId).collect(Collectors.toSet()))
+            .stream()
+            .collect(
+                Collectors.toMap(PartnerSettlementSettings::getPartnerId, Function.identity()));
+    return targets.stream()
+        .collect(
+            Collectors.toMap(
+                Function.identity(),
+                target ->
+                    calculate(target.baseDate(), settingsByPartnerId.get(target.partnerId()))));
+  }
 
-	private LocalDate calculate(LocalDate baseDate, PartnerSettlementSettings settings) {
-		return settings == null ? baseDate : settings.calculateExpectedPaymentDate(baseDate);
-	}
+  private LocalDate calculate(LocalDate baseDate, PartnerSettlementSettings settings) {
+    return settings == null ? baseDate : settings.calculateExpectedPaymentDate(baseDate);
+  }
 
-	public record PaymentDateTarget(Long partnerId, LocalDate baseDate) {
-	}
-
+  public record PaymentDateTarget(Long partnerId, LocalDate baseDate) {}
 }

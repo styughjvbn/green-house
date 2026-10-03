@@ -9,41 +9,43 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class OrchidGroupWriteFenceRepository {
 
-	private static final String CONTEXT_SETTING = "greenhouse.orchid_group_mutation";
+  private static final String CONTEXT_SETTING = "greenhouse.orchid_group_mutation";
 
-	private final JdbcTemplate jdbcTemplate;
+  private final JdbcTemplate jdbcTemplate;
 
-	private volatile Boolean postgresqlDatabase;
+  private volatile Boolean postgresqlDatabase;
 
-	public void authorizeMutation(Long mutationId) {
-		if (mutationId == null) {
-			throw new IllegalArgumentException("Write fence에 전달할 Mutation ID가 필요합니다.");
-		}
-		setTransactionContext("MUTATION:" + mutationId);
-	}
+  public void authorizeMutation(Long mutationId) {
+    if (mutationId == null) {
+      throw new IllegalArgumentException("Write fence에 전달할 Mutation ID가 필요합니다.");
+    }
+    setTransactionContext("MUTATION:" + mutationId);
+  }
 
-	public void lockOrchidGroupsForCutover() {
-		if (isPostgresqlDatabase()) {
-			jdbcTemplate.execute("LOCK TABLE orchid_groups IN SHARE ROW EXCLUSIVE MODE");
-		}
-	}
+  public void lockOrchidGroupsForCutover() {
+    if (isPostgresqlDatabase()) {
+      jdbcTemplate.execute("LOCK TABLE orchid_groups IN SHARE ROW EXCLUSIVE MODE");
+    }
+  }
 
-	private void setTransactionContext(String context) {
-		if (isPostgresqlDatabase()) {
-			jdbcTemplate.queryForObject("SELECT set_config(?, ?, TRUE)", String.class, CONTEXT_SETTING, context);
-		}
-	}
+  private void setTransactionContext(String context) {
+    if (isPostgresqlDatabase()) {
+      jdbcTemplate.queryForObject(
+          "SELECT set_config(?, ?, TRUE)", String.class, CONTEXT_SETTING, context);
+    }
+  }
 
-	private boolean isPostgresqlDatabase() {
-		Boolean cached = postgresqlDatabase;
-		if (cached != null) {
-			return cached;
-		}
-		Boolean detected = jdbcTemplate.execute((ConnectionCallback<Boolean>) connection -> connection.getMetaData()
-			.getDatabaseProductName()
-			.startsWith("PostgreSQL"));
-		postgresqlDatabase = Boolean.TRUE.equals(detected);
-		return postgresqlDatabase;
-	}
-
+  private boolean isPostgresqlDatabase() {
+    Boolean cached = postgresqlDatabase;
+    if (cached != null) {
+      return cached;
+    }
+    Boolean detected =
+        jdbcTemplate.execute(
+            (ConnectionCallback<Boolean>)
+                connection ->
+                    connection.getMetaData().getDatabaseProductName().startsWith("PostgreSQL"));
+    postgresqlDatabase = Boolean.TRUE.equals(detected);
+    return postgresqlDatabase;
+  }
 }

@@ -16,42 +16,53 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-	@ExceptionHandler({ ObjectOptimisticLockingFailureException.class,
-			PessimisticLockingFailureException.class })
-	ResponseEntity<ErrorResponse> handleConcurrentChange(Exception exception) {
-		return ResponseEntity.status(HttpStatus.CONFLICT)
-			.body(ErrorResponse.of("CONCURRENT_MODIFICATION", "다른 요청이 먼저 처리되었습니다. 최신 상태를 확인하고 다시 요청해주세요.", List.of()));
-	}
+  @ExceptionHandler({
+    ObjectOptimisticLockingFailureException.class,
+    PessimisticLockingFailureException.class
+  })
+  ResponseEntity<ErrorResponse> handleConcurrentChange(Exception exception) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(
+            ErrorResponse.of(
+                "CONCURRENT_MODIFICATION", "다른 요청이 먼저 처리되었습니다. 최신 상태를 확인하고 다시 요청해주세요.", List.of()));
+  }
 
-	@ExceptionHandler(CapacityConflictException.class)
-	ResponseEntity<ErrorResponse> handleCapacityConflict(CapacityConflictException exception) {
-		return ResponseEntity.status(HttpStatus.CONFLICT)
-			.body(ErrorResponse.of("CAPACITY_CONFLICT", exception.getMessage(), List.of()));
-	}
+  @ExceptionHandler(CapacityConflictException.class)
+  ResponseEntity<ErrorResponse> handleCapacityConflict(CapacityConflictException exception) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ErrorResponse.of("CAPACITY_CONFLICT", exception.getMessage(), List.of()));
+  }
 
-	@ExceptionHandler(ConflictException.class)
-	ResponseEntity<ErrorResponse> handleConflict(ConflictException exception) {
-		return ResponseEntity.status(HttpStatus.CONFLICT)
-			.body(ErrorResponse.of(exception.getCode(), exception.getMessage(), List.of()));
-	}
+  @ExceptionHandler(ConflictException.class)
+  ResponseEntity<ErrorResponse> handleConflict(ConflictException exception) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ErrorResponse.of(exception.getCode(), exception.getMessage(), List.of()));
+  }
 
-	@ExceptionHandler(NotFoundException.class)
-	ResponseEntity<ErrorResponse> handleNotFound(NotFoundException exception) {
-		return ResponseEntity.status(HttpStatus.NOT_FOUND)
-			.body(ErrorResponse.of("NOT_FOUND", exception.getMessage(), List.of()));
-	}
+  @ExceptionHandler(NotFoundException.class)
+  ResponseEntity<ErrorResponse> handleNotFound(NotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ErrorResponse.of("NOT_FOUND", exception.getMessage(), List.of()));
+  }
 
-	@ExceptionHandler(DataIntegrityViolationException.class)
-	ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException exception) {
-		return ResponseEntity.status(HttpStatus.CONFLICT)
-			.body(ErrorResponse.of("DATA_INTEGRITY_CONFLICT", "데이터 정합성 제약으로 요청을 처리할 수 없습니다.", List.of()));
-	}
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+      DataIntegrityViolationException exception) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(
+            ErrorResponse.of("DATA_INTEGRITY_CONFLICT", "데이터 정합성 제약으로 요청을 처리할 수 없습니다.", List.of()));
+  }
 
-	@ExceptionHandler({ IllegalArgumentException.class, MethodArgumentNotValidException.class,
-			MissingServletRequestParameterException.class, MethodArgumentTypeMismatchException.class })
-	ResponseEntity<ErrorResponse> handleValidation(Exception exception) {
-		return ResponseEntity.badRequest()
-			.body(ErrorResponse.of("VALIDATION_ERROR", "요청 값이 올바르지 않습니다.", List.of(exception.getMessage())));
-	}
-
+  @ExceptionHandler({
+    IllegalArgumentException.class,
+    MethodArgumentNotValidException.class,
+    MissingServletRequestParameterException.class,
+    MethodArgumentTypeMismatchException.class
+  })
+  ResponseEntity<ErrorResponse> handleValidation(Exception exception) {
+    return ResponseEntity.badRequest()
+        .body(
+            ErrorResponse.of(
+                "VALIDATION_ERROR", "요청 값이 올바르지 않습니다.", List.of(exception.getMessage())));
+  }
 }

@@ -22,68 +22,91 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class VarietyResponseAssembler {
 
-	private final OrchidGroupRepository orchidGroupRepository;
+  private final OrchidGroupRepository orchidGroupRepository;
 
-	private final InboundRecordRepository inboundRecordRepository;
+  private final InboundRecordRepository inboundRecordRepository;
 
-	private final WorkOperationMetricsReader workOperationMetricsReader;
+  private final WorkOperationMetricsReader workOperationMetricsReader;
 
-	public Page<VarietyResponse> assemble(Page<Variety> varieties) {
-		var varietyIds = varieties.getContent().stream().map(Variety::getId).toList();
-		if (varietyIds.isEmpty()) {
-			return varieties.map(variety -> assemble(variety, List.of(), Map.of(), null));
-		}
-		var orchidGroups = orchidGroupRepository.findByVarietyIdInOrderByLocation(varietyIds);
-		var groupsByVarietyId = orchidGroups.stream()
-			.collect(Collectors.groupingBy(group -> group.getVariety().getId()));
-		var latestWorkDates = latestWorkDates(orchidGroups);
-		var latestInboundDates = inboundRecordRepository.findLatestInboundDatesByVarietyIds(varietyIds)
-			.stream()
-			.collect(Collectors.toMap(row -> (Long) row[0], row -> (LocalDate) row[1]));
-		return varieties.map(variety -> assemble(variety, groupsByVarietyId.getOrDefault(variety.getId(), List.of()),
-				latestWorkDates, latestInboundDates.get(variety.getId())));
-	}
+  public Page<VarietyResponse> assemble(Page<Variety> varieties) {
+    var varietyIds = varieties.getContent().stream().map(Variety::getId).toList();
+    if (varietyIds.isEmpty()) {
+      return varieties.map(variety -> assemble(variety, List.of(), Map.of(), null));
+    }
+    var orchidGroups = orchidGroupRepository.findByVarietyIdInOrderByLocation(varietyIds);
+    var groupsByVarietyId =
+        orchidGroups.stream().collect(Collectors.groupingBy(group -> group.getVariety().getId()));
+    var latestWorkDates = latestWorkDates(orchidGroups);
+    var latestInboundDates =
+        inboundRecordRepository.findLatestInboundDatesByVarietyIds(varietyIds).stream()
+            .collect(Collectors.toMap(row -> (Long) row[0], row -> (LocalDate) row[1]));
+    return varieties.map(
+        variety ->
+            assemble(
+                variety,
+                groupsByVarietyId.getOrDefault(variety.getId(), List.of()),
+                latestWorkDates,
+                latestInboundDates.get(variety.getId())));
+  }
 
-	public VarietyResponse assemble(Variety variety) {
-		var orchidGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(variety.getId());
-		return assemble(variety, orchidGroups, latestWorkDates(orchidGroups),
-				inboundRecordRepository.findLatestInboundDateByVarietyId(variety.getId()));
-	}
+  public VarietyResponse assemble(Variety variety) {
+    var orchidGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(variety.getId());
+    return assemble(
+        variety,
+        orchidGroups,
+        latestWorkDates(orchidGroups),
+        inboundRecordRepository.findLatestInboundDateByVarietyId(variety.getId()));
+  }
 
-	public List<VarietyConnectedOrchidGroupResponse> connectedOrchidGroups(Variety variety) {
-		var orchidGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(variety.getId());
-		var latestWorkDates = latestWorkDates(orchidGroups);
-		return orchidGroups.stream()
-			.map(group -> new VarietyConnectedOrchidGroupResponse(group.getId(), formatLocation(group),
-					group.getQuantity(), group.getStatus(), latestWorkDates.get(group.getId())))
-			.toList();
-	}
+  public List<VarietyConnectedOrchidGroupResponse> connectedOrchidGroups(Variety variety) {
+    var orchidGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(variety.getId());
+    var latestWorkDates = latestWorkDates(orchidGroups);
+    return orchidGroups.stream()
+        .map(
+            group ->
+                new VarietyConnectedOrchidGroupResponse(
+                    group.getId(),
+                    formatLocation(group),
+                    group.getQuantity(),
+                    group.getStatus(),
+                    latestWorkDates.get(group.getId())))
+        .toList();
+  }
 
-	private VarietyResponse assemble(Variety variety, List<OrchidGroup> orchidGroups,
-			Map<Long, LocalDate> latestWorkDates, LocalDate latestInboundDate) {
-		long totalQuantity = orchidGroups.stream().mapToLong(OrchidGroup::getQuantity).sum();
-		long saleableQuantity = orchidGroups.stream()
-			.filter(group -> OrchidGroupStatusPolicy.isSaleable(group.getStatus()))
-			.mapToLong(OrchidGroup::getAvailableQuantity)
-			.sum();
-		LocalDate recentWorkDate = latestWorkDates.values()
-			.stream()
-			.filter(Objects::nonNull)
-			.max(Comparator.naturalOrder())
-			.orElse(null);
-		return VarietyResponse.from(variety, orchidGroups.size(), totalQuantity, saleableQuantity, latestInboundDate,
-				recentWorkDate);
-	}
+  private VarietyResponse assemble(
+      Variety variety,
+      List<OrchidGroup> orchidGroups,
+      Map<Long, LocalDate> latestWorkDates,
+      LocalDate latestInboundDate) {
+    long totalQuantity = orchidGroups.stream().mapToLong(OrchidGroup::getQuantity).sum();
+    long saleableQuantity =
+        orchidGroups.stream()
+            .filter(group -> OrchidGroupStatusPolicy.isSaleable(group.getStatus()))
+            .mapToLong(OrchidGroup::getAvailableQuantity)
+            .sum();
+    LocalDate recentWorkDate =
+        latestWorkDates.values().stream()
+            .filter(Objects::nonNull)
+            .max(Comparator.naturalOrder())
+            .orElse(null);
+    return VarietyResponse.from(
+        variety,
+        orchidGroups.size(),
+        totalQuantity,
+        saleableQuantity,
+        latestInboundDate,
+        recentWorkDate);
+  }
 
-	private Map<Long, LocalDate> latestWorkDates(List<OrchidGroup> orchidGroups) {
-		return workOperationMetricsReader.getLatestWorkDates(orchidGroups.stream().map(OrchidGroup::getId).toList());
-	}
+  private Map<Long, LocalDate> latestWorkDates(List<OrchidGroup> orchidGroups) {
+    return workOperationMetricsReader.getLatestWorkDates(
+        orchidGroups.stream().map(OrchidGroup::getId).toList());
+  }
 
-	private String formatLocation(OrchidGroup orchidGroup) {
-		var bedZone = orchidGroup.getBedZone();
-		var physicalBed = bedZone.getPhysicalBed();
-		var house = physicalBed.getHouse();
-		return "%d동-%d다이 %s".formatted(house.getNumber(), physicalBed.getNumber(), bedZone.getName());
-	}
-
+  private String formatLocation(OrchidGroup orchidGroup) {
+    var bedZone = orchidGroup.getBedZone();
+    var physicalBed = bedZone.getPhysicalBed();
+    var house = physicalBed.getHouse();
+    return "%d동-%d다이 %s".formatted(house.getNumber(), physicalBed.getNumber(), bedZone.getName());
+  }
 }

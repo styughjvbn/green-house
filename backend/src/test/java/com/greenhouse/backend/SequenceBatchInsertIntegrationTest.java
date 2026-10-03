@@ -24,28 +24,31 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class SequenceBatchInsertIntegrationTest {
 
-	@Autowired
-	BusinessPartnerRepository businessPartnerRepository;
+  @Autowired BusinessPartnerRepository businessPartnerRepository;
 
-	@Autowired
-	EntityManager entityManager;
+  @Autowired EntityManager entityManager;
 
-	@Autowired
-	EntityManagerFactory entityManagerFactory;
+  @Autowired EntityManagerFactory entityManagerFactory;
 
-	@Test
-	void insertsEntitiesWithPooledSequenceAndJdbcBatch() {
-		List<BusinessPartner> partners = IntStream.range(0, 120)
-			.mapToObj(index -> new BusinessPartner("배치 거래처 " + index, PartnerType.WHOLESALE, null, null, null, null))
-			.toList();
-		Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
-		statistics.clear();
+  @Test
+  void insertsEntitiesWithPooledSequenceAndJdbcBatch() {
+    List<BusinessPartner> partners =
+        IntStream.range(0, 120)
+            .mapToObj(
+                index ->
+                    new BusinessPartner(
+                        "배치 거래처 " + index, PartnerType.WHOLESALE, null, null, null, null))
+            .toList();
+    Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+    statistics.clear();
 
-		businessPartnerRepository.saveAll(partners);
-		entityManager.flush();
+    businessPartnerRepository.saveAll(partners);
+    entityManager.flush();
 
-		assertThat(partners).extracting(BusinessPartner::getId).doesNotContainNull().doesNotHaveDuplicates();
-		assertThat(statistics.getPrepareStatementCount()).isLessThan(10L);
-	}
-
+    assertThat(partners)
+        .extracting(BusinessPartner::getId)
+        .doesNotContainNull()
+        .doesNotHaveDuplicates();
+    assertThat(statistics.getPrepareStatementCount()).isLessThan(10L);
+  }
 }

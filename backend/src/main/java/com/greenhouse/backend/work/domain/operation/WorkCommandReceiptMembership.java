@@ -13,14 +13,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class WorkCommandReceiptMembership {
 
-	@EmbeddedId
-	private WorkCommandReceiptMembershipId id;
+  @EmbeddedId private WorkCommandReceiptMembershipId id;
 
-	public WorkCommandReceiptMembership(String receiptKey, Long operationId) {
-		if (receiptKey == null || operationId == null) {
-			throw new IllegalArgumentException("작업 요청과 결과 작업 ID가 필요합니다.");
-		}
-		this.id = new WorkCommandReceiptMembershipId(receiptKey, operationId);
-	}
-
+  public WorkCommandReceiptMembership(String receiptKey, Long operationId) {
+    if (receiptKey == null || operationId == null) {
+      throw new IllegalArgumentException("작업 요청과 결과 작업 ID가 필요합니다.");
+    }
+    this.id = new WorkCommandReceiptMembershipId(receiptKey, operationId);
+  }
 }

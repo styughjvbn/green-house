@@ -18,17 +18,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BedPlacementController {
 
-	private final BedPlacementProfileService service;
+  private final BedPlacementProfileService service;
 
-	@GetMapping
-	public ApiResponse<BedZonePlacementProfileResponse> get(@PathVariable Long bedZoneId) {
-		return ApiResponse.ok(service.getProfile(bedZoneId));
-	}
+  @GetMapping
+  public ApiResponse<BedZonePlacementProfileResponse> get(@PathVariable Long bedZoneId) {
+    return ApiResponse.ok(service.getProfile(bedZoneId));
+  }
 
-	@PutMapping
-	public ApiResponse<BedZonePlacementProfileResponse> update(@PathVariable Long bedZoneId,
-			@Valid @RequestBody BedZonePlacementProfileRequest request) {
-		return ApiResponse.ok(service.updateProfile(bedZoneId, request));
-	}
-
+  @PutMapping
+  public ApiResponse<BedZonePlacementProfileResponse> update(
+      @PathVariable Long bedZoneId, @Valid @RequestBody BedZonePlacementProfileRequest request) {
+    return ApiResponse.ok(service.updateProfile(bedZoneId, request));
+  }
 }

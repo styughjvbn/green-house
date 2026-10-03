@@ -25,52 +25,53 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "auction_settlement_lines")
 public class AuctionSettlementLine extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "auction_settlement_lines_id_seq")
-	@SequenceGenerator(name = "auction_settlement_lines_id_seq", sequenceName = "auction_settlement_lines_id_seq",
-			allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "auction_settlement_lines_id_seq")
+  @SequenceGenerator(
+      name = "auction_settlement_lines_id_seq",
+      sequenceName = "auction_settlement_lines_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@Getter(AccessLevel.NONE)
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "settlement_id", nullable = false)
-	private AuctionSettlement settlement;
+  @Getter(AccessLevel.NONE)
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "settlement_id", nullable = false)
+  private AuctionSettlement settlement;
 
-	@Column(name = "auction_result_line_id", nullable = false, unique = true)
-	private Long auctionResultLineId;
+  @Column(name = "auction_result_line_id", nullable = false, unique = true)
+  private Long auctionResultLineId;
 
-	@Column(name = "auction_shipment_lot_id", nullable = false)
-	private Long auctionShipmentLotId;
+  @Column(name = "auction_shipment_lot_id", nullable = false)
+  private Long auctionShipmentLotId;
 
-	@Column(nullable = false)
-	private Integer quantity;
+  @Column(nullable = false)
+  private Integer quantity;
 
-	@Column(name = "unit_price", nullable = false)
-	private Integer unitPrice;
+  @Column(name = "unit_price", nullable = false)
+  private Integer unitPrice;
 
-	@Column(nullable = false)
-	private Long amount;
+  @Column(nullable = false)
+  private Long amount;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
-	private AuctionSettlementLineStatus status;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private AuctionSettlementLineStatus status;
 
-	@Column(name = "line_meta_json", columnDefinition = "jsonb")
-	@JdbcTypeCode(SqlTypes.JSON)
-	private String lineMetaJson;
+  @Column(name = "line_meta_json", columnDefinition = "jsonb")
+  @JdbcTypeCode(SqlTypes.JSON)
+  private String lineMetaJson;
 
-	public AuctionSettlementLine(Long resultLineId, Long shipmentLotId, Integer quantity, Integer unitPrice,
-			Long amount) {
-		this.auctionResultLineId = resultLineId;
-		this.auctionShipmentLotId = shipmentLotId;
-		this.quantity = quantity;
-		this.unitPrice = unitPrice;
-		this.amount = amount;
-		this.status = AuctionSettlementLineStatus.UNPAID;
-	}
+  public AuctionSettlementLine(
+      Long resultLineId, Long shipmentLotId, Integer quantity, Integer unitPrice, Long amount) {
+    this.auctionResultLineId = resultLineId;
+    this.auctionShipmentLotId = shipmentLotId;
+    this.quantity = quantity;
+    this.unitPrice = unitPrice;
+    this.amount = amount;
+    this.status = AuctionSettlementLineStatus.UNPAID;
+  }
 
-	void setSettlement(AuctionSettlement settlement) {
-		this.settlement = settlement;
-	}
-
+  void setSettlement(AuctionSettlement settlement) {
+    this.settlement = settlement;
+  }
 }

@@ -19,74 +19,96 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MaterialService {
 
-	private final MaterialRepository materialRepository;
+  private final MaterialRepository materialRepository;
 
-	@Transactional(readOnly = true)
-	public PageResponse<MaterialResponse> getMaterials(String keyword, String category, String manufacturer,
-			Boolean active, int page, int size) {
-		PageRequests.validate(page, size);
-		return PageResponse.from(materialRepository
-			.search(normalize(keyword) == null ? "" : normalize(keyword),
-					normalize(category) == null ? "" : normalize(category),
-					normalize(manufacturer) == null ? "" : normalize(manufacturer), active,
-					PageRequest.of(page, size,
-							Sort.by(Sort.Order.desc("active"), Sort.Order.asc("category"), Sort.Order.asc("name"))))
-			.map(MaterialResponse::from));
-	}
+  @Transactional(readOnly = true)
+  public PageResponse<MaterialResponse> getMaterials(
+      String keyword, String category, String manufacturer, Boolean active, int page, int size) {
+    PageRequests.validate(page, size);
+    return PageResponse.from(
+        materialRepository
+            .search(
+                normalize(keyword) == null ? "" : normalize(keyword),
+                normalize(category) == null ? "" : normalize(category),
+                normalize(manufacturer) == null ? "" : normalize(manufacturer),
+                active,
+                PageRequest.of(
+                    page,
+                    size,
+                    Sort.by(
+                        Sort.Order.desc("active"),
+                        Sort.Order.asc("category"),
+                        Sort.Order.asc("name"))))
+            .map(MaterialResponse::from));
+  }
 
-	@Transactional(readOnly = true)
-	public MaterialResponse getMaterial(Long materialId) {
-		return MaterialResponse.from(findMaterial(materialId));
-	}
+  @Transactional(readOnly = true)
+  public MaterialResponse getMaterial(Long materialId) {
+    return MaterialResponse.from(findMaterial(materialId));
+  }
 
-	public MaterialResponse create(MaterialCreateRequest request) {
-		Material material = materialRepository.save(new Material(nextCode(), normalizeRequired(request.category()),
-				normalizeRequired(request.name()), normalize(request.manufacturer()),
-				normalize(request.specification()), normalize(request.stockQuantity()),
-				normalize(request.storageLocation()), normalize(request.usage()), true));
-		return MaterialResponse.from(material);
-	}
+  public MaterialResponse create(MaterialCreateRequest request) {
+    Material material =
+        materialRepository.save(
+            new Material(
+                nextCode(),
+                normalizeRequired(request.category()),
+                normalizeRequired(request.name()),
+                normalize(request.manufacturer()),
+                normalize(request.specification()),
+                normalize(request.stockQuantity()),
+                normalize(request.storageLocation()),
+                normalize(request.usage()),
+                true));
+    return MaterialResponse.from(material);
+  }
 
-	public MaterialResponse update(Long materialId, MaterialUpdateRequest request) {
-		Material material = findMaterial(materialId);
-		material.update(normalizeRequired(request.category()), normalizeRequired(request.name()),
-				normalize(request.manufacturer()), normalize(request.specification()),
-				normalize(request.stockQuantity()), normalize(request.storageLocation()), normalize(request.usage()));
-		return MaterialResponse.from(material);
-	}
+  public MaterialResponse update(Long materialId, MaterialUpdateRequest request) {
+    Material material = findMaterial(materialId);
+    material.update(
+        normalizeRequired(request.category()),
+        normalizeRequired(request.name()),
+        normalize(request.manufacturer()),
+        normalize(request.specification()),
+        normalize(request.stockQuantity()),
+        normalize(request.storageLocation()),
+        normalize(request.usage()));
+    return MaterialResponse.from(material);
+  }
 
-	public MaterialResponse deactivate(Long materialId) {
-		Material material = findMaterial(materialId);
-		material.deactivate();
-		return MaterialResponse.from(material);
-	}
+  public MaterialResponse deactivate(Long materialId) {
+    Material material = findMaterial(materialId);
+    material.deactivate();
+    return MaterialResponse.from(material);
+  }
 
-	public void delete(Long materialId) {
-		materialRepository.delete(findMaterial(materialId));
-	}
+  public void delete(Long materialId) {
+    materialRepository.delete(findMaterial(materialId));
+  }
 
-	private Material findMaterial(Long materialId) {
-		return materialRepository.findById(materialId).orElseThrow(() -> new NotFoundException("자재를 찾을 수 없습니다."));
-	}
+  private Material findMaterial(Long materialId) {
+    return materialRepository
+        .findById(materialId)
+        .orElseThrow(() -> new NotFoundException("자재를 찾을 수 없습니다."));
+  }
 
-	private String nextCode() {
-		return "MAT-%04d".formatted(materialRepository.nextCodeValue());
-	}
+  private String nextCode() {
+    return "MAT-%04d".formatted(materialRepository.nextCodeValue());
+  }
 
-	private String normalize(String value) {
-		if (value == null) {
-			return null;
-		}
-		String trimmed = value.trim();
-		return trimmed.isEmpty() ? null : trimmed;
-	}
+  private String normalize(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
 
-	private String normalizeRequired(String value) {
-		String normalized = normalize(value);
-		if (normalized == null) {
-			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
-		}
-		return normalized;
-	}
-
+  private String normalizeRequired(String value) {
+    String normalized = normalize(value);
+    if (normalized == null) {
+      throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
+    }
+    return normalized;
+  }
 }

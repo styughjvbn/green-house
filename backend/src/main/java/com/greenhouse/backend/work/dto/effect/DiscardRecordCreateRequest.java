@@ -8,7 +8,8 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
 
-public record DiscardRecordCreateRequest(@NotNull @Valid WorkOperationCreateRequest operation,
-		@NotNull LocalDate completedDate, @Size(max = 100) String worker,
-		@NotEmpty @Size(max = 100) List<@Valid DiscardRecordResultRequest> results) {
-}
+public record DiscardRecordCreateRequest(
+    @NotNull @Valid WorkOperationCreateRequest operation,
+    @NotNull LocalDate completedDate,
+    @Size(max = 100) String worker,
+    @NotEmpty @Size(max = 100) List<@Valid DiscardRecordResultRequest> results) {}

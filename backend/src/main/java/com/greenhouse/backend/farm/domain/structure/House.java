@@ -23,32 +23,31 @@ import lombok.NoArgsConstructor;
 @Table(name = "houses")
 public class House extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "houses_id_seq")
-	@SequenceGenerator(name = "houses_id_seq", sequenceName = "houses_id_seq", allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "houses_id_seq")
+  @SequenceGenerator(name = "houses_id_seq", sequenceName = "houses_id_seq", allocationSize = 50)
+  private Long id;
 
-	@Column(nullable = false, unique = true)
-	private Integer number;
+  @Column(nullable = false, unique = true)
+  private Integer number;
 
-	@Column(nullable = false)
-	private String name;
+  @Column(nullable = false)
+  private String name;
 
-	@Column(columnDefinition = "text")
-	private String memo;
+  @Column(columnDefinition = "text")
+  private String memo;
 
-	@OneToMany(mappedBy = "house", cascade = CascadeType.ALL, orphanRemoval = true)
-	@OrderBy("displayOrder ASC")
-	private List<PhysicalBed> physicalBeds = new ArrayList<>();
+  @OneToMany(mappedBy = "house", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OrderBy("displayOrder ASC")
+  private List<PhysicalBed> physicalBeds = new ArrayList<>();
 
-	public House(Integer number, String name) {
-		this.number = number;
-		this.name = name;
-	}
+  public House(Integer number, String name) {
+    this.number = number;
+    this.name = name;
+  }
 
-	public void addPhysicalBed(PhysicalBed physicalBed) {
-		this.physicalBeds.add(physicalBed);
-		physicalBed.setHouse(this);
-	}
-
+  public void addPhysicalBed(PhysicalBed physicalBed) {
+    this.physicalBeds.add(physicalBed);
+    physicalBed.setHouse(this);
+  }
 }

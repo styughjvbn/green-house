@@ -14,27 +14,34 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class InboundRecordAuditSupport {
 
-	private final AuditEventWriter auditWriter;
+  private final AuditEventWriter auditWriter;
 
-	public Map<String, Object> snapshot(InboundRecord record) {
-		var data = new LinkedHashMap<String, Object>();
-		data.put("inboundDate", record.getInboundDate());
-		data.put("inboundType", record.getInboundType());
-		data.put("varietyId", record.getVariety().getId());
-		data.put("status", record.getStatus());
-		data.put("estimatedQuantity", record.getEstimatedQuantity());
-		data.put("tempLocation", record.getTempLocation());
-		data.put("pottingDueDate", record.getPottingDueDate());
-		data.put("worker", record.getWorker());
-		data.put("memo", record.getMemo());
-		return data;
-	}
+  public Map<String, Object> snapshot(InboundRecord record) {
+    var data = new LinkedHashMap<String, Object>();
+    data.put("inboundDate", record.getInboundDate());
+    data.put("inboundType", record.getInboundType());
+    data.put("varietyId", record.getVariety().getId());
+    data.put("status", record.getStatus());
+    data.put("estimatedQuantity", record.getEstimatedQuantity());
+    data.put("tempLocation", record.getTempLocation());
+    data.put("pottingDueDate", record.getPottingDueDate());
+    data.put("worker", record.getWorker());
+    data.put("memo", record.getMemo());
+    return data;
+  }
 
-	public Long record(AuditAction action, InboundRecord record, Map<String, Object> before,
-			Map<String, Object> after) {
-		return auditWriter.record(action, AuditSource.INBOUND_MANAGEMENT,
-				new AuditEvent.Target("INBOUND_RECORD", record.getId(), null, null, null, record.getVariety().getId()),
-				before, after, Map.of());
-	}
-
+  public Long record(
+      AuditAction action,
+      InboundRecord record,
+      Map<String, Object> before,
+      Map<String, Object> after) {
+    return auditWriter.record(
+        action,
+        AuditSource.INBOUND_MANAGEMENT,
+        new AuditEvent.Target(
+            "INBOUND_RECORD", record.getId(), null, null, null, record.getVariety().getId()),
+        before,
+        after,
+        Map.of());
+  }
 }

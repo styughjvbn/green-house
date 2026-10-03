@@ -21,35 +21,37 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class WorkOperationVoidController {
 
-	private final WorkOperationVoidService service;
+  private final WorkOperationVoidService service;
 
-	@PostMapping("/cancel-batch")
-	public ApiResponse<WorkOperationBatchCancellationResponse> cancelBatch(
-			@Valid @RequestBody WorkOperationBatchCancellationRequest request) {
-		return ApiResponse.ok(service.cancelBatch(request));
-	}
+  @PostMapping("/cancel-batch")
+  public ApiResponse<WorkOperationBatchCancellationResponse> cancelBatch(
+      @Valid @RequestBody WorkOperationBatchCancellationRequest request) {
+    return ApiResponse.ok(service.cancelBatch(request));
+  }
 
-	@GetMapping("/{workOperationId}/void-eligibility")
-	public ApiResponse<WorkOperationCancellationEligibilityResponse> eligibility(@PathVariable Long workOperationId) {
-		return ApiResponse.ok(service.eligibility(workOperationId));
-	}
+  @GetMapping("/{workOperationId}/void-eligibility")
+  public ApiResponse<WorkOperationCancellationEligibilityResponse> eligibility(
+      @PathVariable Long workOperationId) {
+    return ApiResponse.ok(service.eligibility(workOperationId));
+  }
 
-	@GetMapping("/{workOperationId}/cancel-eligibility")
-	public ApiResponse<WorkOperationCancellationEligibilityResponse> cancelEligibility(
-			@PathVariable Long workOperationId) {
-		return ApiResponse.ok(service.eligibility(workOperationId));
-	}
+  @GetMapping("/{workOperationId}/cancel-eligibility")
+  public ApiResponse<WorkOperationCancellationEligibilityResponse> cancelEligibility(
+      @PathVariable Long workOperationId) {
+    return ApiResponse.ok(service.eligibility(workOperationId));
+  }
 
-	@PostMapping("/{workOperationId}/void")
-	public ApiResponse<WorkOperationView> voidOperation(@PathVariable Long workOperationId,
-			@Valid @RequestBody WorkOperationCancellationRequest request) {
-		return ApiResponse.ok(service.voidOperation(workOperationId, request));
-	}
+  @PostMapping("/{workOperationId}/void")
+  public ApiResponse<WorkOperationView> voidOperation(
+      @PathVariable Long workOperationId,
+      @Valid @RequestBody WorkOperationCancellationRequest request) {
+    return ApiResponse.ok(service.voidOperation(workOperationId, request));
+  }
 
-	@PostMapping("/{workOperationId}/cancel")
-	public ApiResponse<WorkOperationView> cancelOperation(@PathVariable Long workOperationId,
-			@Valid @RequestBody WorkOperationCancellationRequest request) {
-		return ApiResponse.ok(service.cancelOperation(workOperationId, request));
-	}
-
+  @PostMapping("/{workOperationId}/cancel")
+  public ApiResponse<WorkOperationView> cancelOperation(
+      @PathVariable Long workOperationId,
+      @Valid @RequestBody WorkOperationCancellationRequest request) {
+    return ApiResponse.ok(service.cancelOperation(workOperationId, request));
+  }
 }

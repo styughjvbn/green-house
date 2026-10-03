@@ -5,7 +5,6 @@ import java.util.function.Supplier;
 
 public interface WorkCorrectionPort {
 
-	WorkExecutionResult correct(Long originalOperationId, Supplier<Long> correctionId,
-			WorkCorrectionCommand request);
-
+  WorkExecutionResult correct(
+      Long originalOperationId, Supplier<Long> correctionId, WorkCorrectionCommand request);
 }

@@ -15,11 +15,10 @@ import lombok.NoArgsConstructor;
 @Table(name = "sales_slip_daily_sequences")
 public class SalesSlipDailySequence {
 
-	@Id
-	@Column(name = "sale_date", nullable = false)
-	private LocalDate saleDate;
+  @Id
+  @Column(name = "sale_date", nullable = false)
+  private LocalDate saleDate;
 
-	@Column(name = "last_value", nullable = false)
-	private Long lastValue;
-
+  @Column(name = "last_value", nullable = false)
+  private Long lastValue;
 }

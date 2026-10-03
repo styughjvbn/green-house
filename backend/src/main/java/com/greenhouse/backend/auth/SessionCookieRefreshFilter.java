@@ -19,31 +19,32 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class SessionCookieRefreshFilter extends OncePerRequestFilter {
 
-	private final AuthProperties authProperties;
+  private final AuthProperties authProperties;
 
-	private final SessionCookieWriter sessionCookieWriter;
+  private final SessionCookieWriter sessionCookieWriter;
 
-	@Override
-	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-			throws ServletException, IOException {
-		filterChain.doFilter(request, response);
+  @Override
+  protected void doFilterInternal(
+      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      throws ServletException, IOException {
+    filterChain.doFilter(request, response);
 
-		if (!authProperties.enabled()) {
-			return;
-		}
+    if (!authProperties.enabled()) {
+      return;
+    }
 
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !authentication.isAuthenticated()
-				|| authentication instanceof AnonymousAuthenticationToken) {
-			return;
-		}
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null
+        || !authentication.isAuthenticated()
+        || authentication instanceof AnonymousAuthenticationToken) {
+      return;
+    }
 
-		HttpSession session = request.getSession(false);
-		if (session == null) {
-			return;
-		}
+    HttpSession session = request.getSession(false);
+    if (session == null) {
+      return;
+    }
 
-		sessionCookieWriter.refresh(session, response);
-	}
-
+    sessionCookieWriter.refresh(session, response);
+  }
 }

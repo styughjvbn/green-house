@@ -12,28 +12,36 @@ import org.springframework.context.annotation.Import;
 
 class OrchidGroupMutationQueryControllerConditionTest {
 
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withBean(OrchidGroupMutationQueryService.class, () -> mock(OrchidGroupMutationQueryService.class))
-		.withBean(OrchidGroupMutationGraphQueryService.class, () -> mock(OrchidGroupMutationGraphQueryService.class))
-		.withUserConfiguration(TestConfiguration.class);
+  private final ApplicationContextRunner contextRunner =
+      new ApplicationContextRunner()
+          .withBean(
+              OrchidGroupMutationQueryService.class,
+              () -> mock(OrchidGroupMutationQueryService.class))
+          .withBean(
+              OrchidGroupMutationGraphQueryService.class,
+              () -> mock(OrchidGroupMutationGraphQueryService.class))
+          .withUserConfiguration(TestConfiguration.class);
 
-	@Test
-	void registersControllerOnlyInDevEnvironment() {
-		contextRunner.withPropertyValues("app.environment=dev")
-			.run(context -> assertThat(context).hasSingleBean(OrchidGroupMutationQueryController.class));
-	}
+  @Test
+  void registersControllerOnlyInDevEnvironment() {
+    contextRunner
+        .withPropertyValues("app.environment=dev")
+        .run(
+            context -> assertThat(context).hasSingleBean(OrchidGroupMutationQueryController.class));
+  }
 
-	@Test
-	void doesNotRegisterControllerInProdOrWithoutEnvironment() {
-		contextRunner.withPropertyValues("app.environment=prod")
-			.run(context -> assertThat(context).doesNotHaveBean(OrchidGroupMutationQueryController.class));
-		contextRunner.run(context -> assertThat(context).doesNotHaveBean(OrchidGroupMutationQueryController.class));
-	}
+  @Test
+  void doesNotRegisterControllerInProdOrWithoutEnvironment() {
+    contextRunner
+        .withPropertyValues("app.environment=prod")
+        .run(
+            context ->
+                assertThat(context).doesNotHaveBean(OrchidGroupMutationQueryController.class));
+    contextRunner.run(
+        context -> assertThat(context).doesNotHaveBean(OrchidGroupMutationQueryController.class));
+  }
 
-	@Configuration(proxyBeanMethods = false)
-	@Import(OrchidGroupMutationQueryController.class)
-	static class TestConfiguration {
-
-	}
-
+  @Configuration(proxyBeanMethods = false)
+  @Import(OrchidGroupMutationQueryController.class)
+  static class TestConfiguration {}
 }

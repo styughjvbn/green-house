@@ -25,67 +25,73 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "physical_beds", uniqueConstraints = @UniqueConstraint(name = "uk_physical_beds_house_number",
-		columnNames = { "house_id", "number" }))
+@Table(
+    name = "physical_beds",
+    uniqueConstraints =
+        @UniqueConstraint(
+            name = "uk_physical_beds_house_number",
+            columnNames = {"house_id", "number"}))
 public class PhysicalBed extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "physical_beds_id_seq")
-	@SequenceGenerator(name = "physical_beds_id_seq", sequenceName = "physical_beds_id_seq", allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "physical_beds_id_seq")
+  @SequenceGenerator(
+      name = "physical_beds_id_seq",
+      sequenceName = "physical_beds_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "house_id", nullable = false)
-	private House house;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "house_id", nullable = false)
+  private House house;
 
-	@Column(nullable = false)
-	private Integer number;
+  @Column(nullable = false)
+  private Integer number;
 
-	@Column(name = "display_order", nullable = false)
-	private Integer displayOrder;
+  @Column(name = "display_order", nullable = false)
+  private Integer displayOrder;
 
-	@Column(name = "length_cm")
-	private Integer lengthCm;
+  @Column(name = "length_cm")
+  private Integer lengthCm;
 
-	@Column(name = "width_cm")
-	private Integer widthCm;
+  @Column(name = "width_cm")
+  private Integer widthCm;
 
-	@Column(name = "wire_count")
-	private Integer wireCount;
+  @Column(name = "wire_count")
+  private Integer wireCount;
 
-	@Column(name = "support_interval_cm")
-	private Integer supportIntervalCm;
+  @Column(name = "support_interval_cm")
+  private Integer supportIntervalCm;
 
-	@Column(name = "position_unit_count", precision = 6, scale = 2)
-	private BigDecimal positionUnitCount;
+  @Column(name = "position_unit_count", precision = 6, scale = 2)
+  private BigDecimal positionUnitCount;
 
-	@Column(name = "position_unit_label", length = 50)
-	private String positionUnitLabel;
+  @Column(name = "position_unit_label", length = 50)
+  private String positionUnitLabel;
 
-	@Column(columnDefinition = "text")
-	private String memo;
+  @Column(columnDefinition = "text")
+  private String memo;
 
-	@OneToMany(mappedBy = "physicalBed", cascade = CascadeType.ALL, orphanRemoval = true)
-	@OrderBy("sortOrder ASC")
-	private List<BedZone> bedZones = new ArrayList<>();
+  @OneToMany(mappedBy = "physicalBed", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OrderBy("sortOrder ASC")
+  private List<BedZone> bedZones = new ArrayList<>();
 
-	public PhysicalBed(Integer number, Integer displayOrder) {
-		this.number = number;
-		this.displayOrder = displayOrder;
-	}
+  public PhysicalBed(Integer number, Integer displayOrder) {
+    this.number = number;
+    this.displayOrder = displayOrder;
+  }
 
-	public void updatePositionUnits(BigDecimal positionUnitCount, String positionUnitLabel) {
-		this.positionUnitCount = positionUnitCount;
-		this.positionUnitLabel = positionUnitLabel;
-	}
+  public void updatePositionUnits(BigDecimal positionUnitCount, String positionUnitLabel) {
+    this.positionUnitCount = positionUnitCount;
+    this.positionUnitLabel = positionUnitLabel;
+  }
 
-	void setHouse(House house) {
-		this.house = house;
-	}
+  void setHouse(House house) {
+    this.house = house;
+  }
 
-	public void addBedZone(BedZone bedZone) {
-		this.bedZones.add(bedZone);
-		bedZone.setPhysicalBed(this);
-	}
-
+  public void addBedZone(BedZone bedZone) {
+    this.bedZones.add(bedZone);
+    bedZone.setPhysicalBed(this);
+  }
 }
