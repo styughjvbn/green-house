@@ -28,7 +28,7 @@ class WorkCorrectionMigrationPostgresE2ETest extends WorkE2ETestBase {
     var dataSource =
         new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
     try {
-      Flyway.configure().dataSource(dataSource).target("41").load().migrate();
+      Flyway.configure().dataSource(dataSource).target("32").load().migrate();
       var jdbc = new JdbcTemplate(dataSource);
       jdbc.update(
           """

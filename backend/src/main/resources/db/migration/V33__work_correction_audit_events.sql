@@ -1,10 +1,11 @@
+-- Consolidated from V42__work_correction_audit_events.sql: preserve this stage's SQL order.
 -- No historical correction conversion: stop rather than discard existing audit data.
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM work_operation_corrections)
        OR EXISTS (SELECT 1 FROM work_operations o JOIN work_types t ON t.id = o.work_type_id WHERE t.code = 'CORRECTION')
        OR EXISTS (SELECT 1 FROM work_operations WHERE status = 'CORRECTED') THEN
-        RAISE EXCEPTION 'Existing work corrections require a separate migration before V42';
+        RAISE EXCEPTION 'Existing work corrections require a separate migration before V33';
     END IF;
 END $$;
 ALTER TABLE work_operation_corrections DROP COLUMN correction_work_operation_id;

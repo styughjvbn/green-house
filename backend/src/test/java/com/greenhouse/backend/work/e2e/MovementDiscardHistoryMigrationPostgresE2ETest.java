@@ -26,13 +26,13 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
     var dataSource =
         new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
     try {
-      Flyway.configure().dataSource(dataSource).target("33").load().migrate();
+      Flyway.configure().dataSource(dataSource).target("30").load().migrate();
       var jdbc = new JdbcTemplate(dataSource);
       seedPreDiscardHistory(jdbc);
       activateLedger(jdbc);
       var original = jdbc.queryForMap("SELECT * FROM orchid_groups WHERE id = 1");
 
-      var upgrade = Flyway.configure().dataSource(dataSource).target("35").load();
+      var upgrade = Flyway.configure().dataSource(dataSource).target("31").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
 
       assertThat(
@@ -123,18 +123,7 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 					WHERE work_operation_target_id = 101
 					""",
                   Integer.class))
-          .isEqualTo(10);
-      var usageRepair = Flyway.configure().dataSource(dataSource).target("41").load();
-      assertThat(usageRepair.migrate().migrationsExecuted).isEqualTo(6);
-      assertThat(
-              jdbc.queryForObject(
-                  """
-					SELECT processed_quantity FROM work_target_executions
-					WHERE work_operation_target_id = 101
-					""",
-                  Integer.class))
           .isEqualTo(4);
-      assertThat(usageRepair.migrate().migrationsExecuted).isZero();
     } finally {
       admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
     }
@@ -155,7 +144,7 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
               POSTGRES.getUsername(),
               POSTGRES.getPassword());
       try {
-        Flyway.configure().dataSource(dataSource).target("33").load().migrate();
+        Flyway.configure().dataSource(dataSource).target("30").load().migrate();
         var jdbc = new JdbcTemplate(dataSource);
         seedPreDiscardHistory(jdbc);
         if (later) {
@@ -184,7 +173,7 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
         }
         activateLedger(jdbc);
         var original = jdbc.queryForMap("SELECT * FROM orchid_groups WHERE id = 1");
-        Flyway.configure().dataSource(dataSource).target("35").load().migrate();
+        Flyway.configure().dataSource(dataSource).target("31").load().migrate();
         assertThat(jdbc.queryForMap("SELECT * FROM orchid_groups WHERE id = 1"))
             .isEqualTo(original);
         assertThat(

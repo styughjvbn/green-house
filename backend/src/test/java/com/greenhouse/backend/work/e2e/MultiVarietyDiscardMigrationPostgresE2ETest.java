@@ -1,10 +1,12 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.FlywayException;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,11 +27,11 @@ class MultiVarietyDiscardMigrationPostgresE2ETest extends WorkE2ETestBase {
     var dataSource =
         new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
     try {
-      Flyway.configure().dataSource(dataSource).target("37").load().migrate();
+      Flyway.configure().dataSource(dataSource).target("30").load().migrate();
       var jdbc = new JdbcTemplate(dataSource);
       seedMultiVarietyDiscard(jdbc);
 
-      var upgrade = Flyway.configure().dataSource(dataSource).target("38").load();
+      var upgrade = Flyway.configure().dataSource(dataSource).target("31").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
 
       assertThat(
@@ -102,6 +104,52 @@ class MultiVarietyDiscardMigrationPostgresE2ETest extends WorkE2ETestBase {
                   Long.class))
           .isZero();
       assertThat(upgrade.migrate().migrationsExecuted).isZero();
+    } finally {
+      admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
+    }
+  }
+
+  @Test
+  void lateStageFailureRollsBackTheEntireHistoricalContext() {
+    String database = "history_rollback_" + UUID.randomUUID().toString().replace("-", "");
+    var admin =
+        new JdbcTemplate(
+            new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
+    admin.execute("CREATE DATABASE " + database);
+    var dataSource =
+        new DriverManagerDataSource(
+            POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database),
+            POSTGRES.getUsername(),
+            POSTGRES.getPassword());
+    try {
+      Flyway.configure().dataSource(dataSource).target("30").load().migrate();
+      var jdbc = new JdbcTemplate(dataSource);
+      seedMultiVarietyDiscard(jdbc);
+      jdbc.update("UPDATE work_operations SET request_key='unsupported' WHERE id=100");
+      var upgrade = Flyway.configure().dataSource(dataSource).target("31").load();
+      assertThatThrownBy(upgrade::migrate)
+          .isInstanceOf(FlywayException.class)
+          .hasMessageContaining("unsupported operation metadata");
+      assertThat(upgrade.info().current().getVersion().getVersion()).isEqualTo("30");
+      assertThat(
+              jdbc.queryForObject(
+                  "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='orchid_group_identity_migrations'",
+                  Long.class))
+          .isZero();
+      assertThat(jdbc.queryForObject("SELECT count(*) FROM work_operations", Long.class))
+          .isEqualTo(1);
+      assertThat(
+              jdbc.queryForObject(
+                  "SELECT count(*) FROM work_operation_targets WHERE work_operation_id=100",
+                  Long.class))
+          .isEqualTo(3);
+      assertThat(
+              jdbc.queryForList(
+                  "SELECT tgenabled::text FROM pg_trigger WHERE tgrelid='orchid_groups'::regclass AND tgname IN ('trg_orchid_group_write_fence','trg_orchid_group_ledger_entry')",
+                  String.class))
+          .containsExactlyInAnyOrder("O", "O");
+      Flyway.configure().dataSource(dataSource).target("30").load().validate();
     } finally {
       admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
     }

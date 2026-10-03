@@ -26,11 +26,11 @@ class MovementIdentityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
     var dataSource =
         new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
     try {
-      Flyway.configure().dataSource(dataSource).target("35").load().migrate();
+      Flyway.configure().dataSource(dataSource).target("30").load().migrate();
       var jdbc = new JdbcTemplate(dataSource);
       seedHistoricalMovement(jdbc);
 
-      var upgrade = Flyway.configure().dataSource(dataSource).target("36").load();
+      var upgrade = Flyway.configure().dataSource(dataSource).target("31").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
 
       assertThat(
@@ -143,11 +143,11 @@ class MovementIdentityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
     var dataSource =
         new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
     try {
-      Flyway.configure().dataSource(dataSource).target("36").load().migrate();
+      Flyway.configure().dataSource(dataSource).target("30").load().migrate();
       var jdbc = new JdbcTemplate(dataSource);
       seedLegacyMetadataLoss(jdbc);
 
-      var upgrade = Flyway.configure().dataSource(dataSource).target("37").load();
+      var upgrade = Flyway.configure().dataSource(dataSource).target("31").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
       assertThat(
               jdbc.queryForList(

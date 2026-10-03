@@ -1,3 +1,4 @@
+-- Consolidated from V43__orchid_stock_count_audits.sql: preserve this stage's SQL order.
 CREATE TABLE orchid_stock_counts (
     request_key VARCHAR(100) PRIMARY KEY,
     request_fingerprint VARCHAR(64) NOT NULL,

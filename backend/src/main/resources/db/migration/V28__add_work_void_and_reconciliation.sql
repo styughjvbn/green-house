@@ -1,3 +1,4 @@
+-- Consolidated from V28__add_work_void_and_reconciliation.sql: preserve this stage's SQL order.
 ALTER TABLE work_operations
     ADD COLUMN voided_at TIMESTAMP,
     ADD COLUMN void_reason TEXT,
@@ -28,3 +29,7 @@ ON CONFLICT (code) DO UPDATE SET
     is_default = EXCLUDED.is_default,
     sort_order = EXCLUDED.sort_order,
     updated_at = CURRENT_TIMESTAMP;
+
+-- Consolidated from V29__remove_multi_create_work_type.sql: preserve this stage's SQL order.
+DELETE FROM work_types
+WHERE code = 'MULTI_CREATE';

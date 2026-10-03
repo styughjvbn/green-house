@@ -73,19 +73,12 @@ class OrchidGroupStateChainMigrationPostgresE2ETest extends WorkE2ETestBase {
             "26:align work effect idempotency",
             "27:repair orchid group audit provenance",
             "28:add work void and reconciliation",
-            "29:remove multi create work type",
-            "30:link movement discard operations",
-            "32:normalize inbound receipt model",
-            "33:normalize work command receipt memberships",
-            "35:normalize movement discard history",
-            "36:preserve identity for historical movements",
-            "37:recover legacy movement source attributes",
-            "38:split multi variety discard operations",
-            "39:normalize work operation titles",
-            "40:separate stopped work operations",
-            "41:repair movement discard processed quantity",
-            "42:work correction audit events",
-            "43:orchid stock count audits");
+            "29:link movement discard operations",
+            "30:normalize inbound and work receipts",
+            "31:normalize historical movement and discard",
+            "32:normalize work operation metadata",
+            "33:work correction audit events",
+            "34:orchid stock count audits");
 
     assertThat(
             jdbcTemplate.queryForObject(

@@ -25,11 +25,11 @@ class WorkOperationTitleMigrationPostgresE2ETest extends WorkE2ETestBase {
     var dataSource =
         new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
     try {
-      Flyway.configure().dataSource(dataSource).target("38").load().migrate();
+      Flyway.configure().dataSource(dataSource).target("31").load().migrate();
       var jdbc = new JdbcTemplate(dataSource);
       seedOperations(jdbc);
 
-      var upgrade = Flyway.configure().dataSource(dataSource).target("39").load();
+      var upgrade = Flyway.configure().dataSource(dataSource).target("32").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
 
       assertThat(
