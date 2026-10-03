@@ -1,3 +1,4 @@
+import { farmMutationQueryKeys } from "@/entities/farm/model/farmMutationQueries";
 import type { WorkRecordUrlState } from "../lib/workRecordUrlState";
 
 export const workRecordQueryKeys = {
@@ -8,11 +9,10 @@ export const workRecordQueryKeys = {
     houses: ["workRecords", "references", "houses"] as const,
   },
   operations: {
-    all: ["workRecords", "operations"] as const,
+    all: farmMutationQueryKeys.workOperations,
     page: (state: WorkRecordUrlState) =>
       [
-        "workRecords",
-        "operations",
+        ...farmMutationQueryKeys.workOperations,
         "page",
         state.scope,
         state.filters,
@@ -21,29 +21,30 @@ export const workRecordQueryKeys = {
       ] as const,
     calendar: (state: WorkRecordUrlState) =>
       [
-        "workRecords",
-        "operations",
+        ...farmMutationQueryKeys.workOperations,
         "calendar",
         state.scope,
         state.month,
         state.filters.status,
       ] as const,
     operation: (workOperationId: number) =>
-      ["workRecords", "operations", workOperationId] as const,
+      [...farmMutationQueryKeys.workOperations, workOperationId] as const,
     details: (workOperationId: number) =>
-      ["workRecords", "operations", workOperationId, "details"] as const,
+      [
+        ...farmMutationQueryKeys.workOperations,
+        workOperationId,
+        "details",
+      ] as const,
     relations: (workOperationId: number, kind: string) =>
       [
-        "workRecords",
-        "operations",
+        ...farmMutationQueryKeys.workOperations,
         workOperationId,
         "relations",
         kind,
       ] as const,
     graph: (workOperationId: number, detail: string, depth: number) =>
       [
-        "workRecords",
-        "operations",
+        ...farmMutationQueryKeys.workOperations,
         workOperationId,
         "graph",
         detail,
