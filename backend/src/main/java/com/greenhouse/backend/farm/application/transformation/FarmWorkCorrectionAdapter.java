@@ -84,6 +84,8 @@ public class FarmWorkCorrectionAdapter implements WorkCorrectionPort {
 			.filter(a -> !groupsById.get(a.orchidGroupId()).getQuantity().equals(a.quantity()))
 			.map(OrchidGroupCorrectionInput::orchidGroupId)
 			.collect(Collectors.toSet());
+		if (!request.cancelResultCreation() && !changedQuantities.isEmpty())
+			quantityService.requireEnabled();
 		if (!request.cancelResultCreation() && !changedQuantities.isEmpty()
 				&& !context.stream()
 					.flatMap(b -> b.resultQuantities().keySet().stream())

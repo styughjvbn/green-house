@@ -32,6 +32,9 @@ import CopiedOrchidGroupPanel from "./CopiedOrchidGroupPanel";
 import OrchidGroupList from "./OrchidGroupList";
 import OrchidGroupMutationPanel from "./OrchidGroupMutationPanel";
 
+// 구역·묶음 단위 실사 흐름으로 개편하기 전까지 진입점을 숨긴다.
+const STOCK_COUNT_ENABLED = false;
+
 export default function OrchidSelectionPanel({
   copiedOrchidGroup,
   errorMessage,
@@ -546,14 +549,16 @@ export default function OrchidSelectionPanel({
                     onClick={onOpenMovementRecord}
                     disabled={!selectedOrchidGroup}
                   />
-                  <div className="col-span-2">
-                    <ActionButton
-                      icon={<RefreshCcw className="h-4 w-4" />}
-                      label="실사 수량 조정"
-                      onClick={onOpenReconciliation}
-                      disabled={!selectedOrchidGroup}
-                    />
-                  </div>
+                  {STOCK_COUNT_ENABLED ? (
+                    <div className="col-span-2">
+                      <ActionButton
+                        icon={<RefreshCcw className="h-4 w-4" />}
+                        label="실사 수량 조정"
+                        onClick={onOpenReconciliation}
+                        disabled={!selectedOrchidGroup}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>

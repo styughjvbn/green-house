@@ -72,7 +72,7 @@ public class WorkOperationCorrectionService {
 					.stream()
 					.map(WorkCorrectionDetailResponse::from)
 					.toList(),
-				quantities.context(originalId));
+				quantities.context(originalId), quantities.isEnabled());
 	}
 
 	private record Request(Long originalId, WorkCorrectionCommand command) {

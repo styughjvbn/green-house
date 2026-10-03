@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Tag("work-e2e")
+@org.springframework.test.context.TestPropertySource(properties = "features.work-quantity-correction.enabled=true")
 class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 
 	@Autowired

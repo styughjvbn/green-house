@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+@org.springframework.test.context.TestPropertySource(properties = "features.work-quantity-correction.enabled=true")
 class WorkQuantityCorrectionPostgresE2ETest extends WorkUndoSafetyTestBase {
 
 	@Test

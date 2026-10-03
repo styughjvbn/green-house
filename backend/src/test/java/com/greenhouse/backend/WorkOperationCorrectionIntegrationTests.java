@@ -37,6 +37,7 @@ import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
+@org.springframework.test.context.TestPropertySource(properties = "features.work-quantity-correction.enabled=true")
 class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegrationTest {
 
 	@Autowired

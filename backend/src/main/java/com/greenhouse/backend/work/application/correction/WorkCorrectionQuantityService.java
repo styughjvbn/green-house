@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.correction;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.domain.correction.WorkQuantityBalancePolicy;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,18 @@ public class WorkCorrectionQuantityService {
 	private final WorkOperationCorrectionRepository corrections;
 
 	private final WorkOperationRepository operations;
+
+	@Value("${features.work-quantity-correction.enabled:false}")
+	private boolean enabled;
+
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	public void requireEnabled() {
+		if (!enabled)
+			throw new ConflictException("FEATURE_ON_HOLD", "작업 기록의 수량 정정은 현재 비활성화되어 있습니다.");
+	}
 
 	public List<WorkQuantityBalance> context(Long workId) {
 		var work = operations.findWithWorkTypeById(workId).orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
@@ -104,6 +118,11 @@ public class WorkCorrectionQuantityService {
 	}
 
 	public List<WorkQuantityBalanceChange> validate(Long workId, WorkCorrectionCommand request) {
+		if (!enabled) {
+			if (request.quantityCorrections() != null && !request.quantityCorrections().isEmpty())
+				requireEnabled();
+			return List.of();
+		}
 		if (request.cancelResultCreation()) {
 			if (request.quantityCorrections() != null && !request.quantityCorrections().isEmpty())
 				throw new IllegalArgumentException("생성 취소와 작업 수량 정정은 별도로 처리해야 합니다.");

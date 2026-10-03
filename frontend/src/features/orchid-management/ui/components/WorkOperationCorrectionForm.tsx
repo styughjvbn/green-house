@@ -47,6 +47,8 @@ export default function WorkOperationCorrectionForm({
     queryFn: () => getWorkOperationCorrections(originalWorkOperationId),
   });
   const corrections = correctionQuery.data;
+  const quantityCorrectionEnabled =
+    corrections?.quantityCorrectionEnabled === true;
   const balance = corrections?.quantityBalances.find(
     (item) => orchidGroup.id in (item.resultQuantities ?? {}),
   );
@@ -54,7 +56,8 @@ export default function WorkOperationCorrectionForm({
   const [inputDrafts, setInputDrafts] = useState<Record<string, string>>({});
   const [lossDraft, setLossDraft] = useState<string | null>(null);
   const [growthDraft, setGrowthDraft] = useState<string | null>(null);
-  const quantityChanged = Number(quantity) !== orchidGroup.quantity;
+  const quantityChanged =
+    quantityCorrectionEnabled && Number(quantity) !== orchidGroup.quantity;
   const lossQuantity = lossDraft ?? String(balance?.lossQuantity ?? 0);
   const increaseQuantity =
     growthDraft ?? String(balance?.increaseQuantity ?? 0);
@@ -68,7 +71,9 @@ export default function WorkOperationCorrectionForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextQuantity = Number(quantity);
+    const nextQuantity = quantityCorrectionEnabled
+      ? Number(quantity)
+      : orchidGroup.quantity;
     if (!Number.isInteger(nextQuantity) || nextQuantity < 0) {
       setError("수량은 0 이상의 정수로 입력해주세요.");
       return;
@@ -80,13 +85,16 @@ export default function WorkOperationCorrectionForm({
     if (
       !cancelResultCreation &&
       nextQuantity === orchidGroup.quantity &&
-      !correctInputs &&
-      lossDraft == null &&
-      growthDraft == null &&
+      (!quantityCorrectionEnabled ||
+        (!correctInputs && lossDraft == null && growthDraft == null)) &&
       status.trim() === orchidGroup.status &&
       workDate === corrections?.originalOperation.plannedStartDate
     ) {
-      setError("수량, 상태 또는 작업일을 기존 값과 다르게 입력해주세요.");
+      setError(
+        quantityCorrectionEnabled
+          ? "수량, 상태 또는 작업일을 기존 값과 다르게 입력해주세요."
+          : "상태 또는 작업일을 기존 값과 다르게 입력해주세요.",
+      );
       return;
     }
 
@@ -114,6 +122,7 @@ export default function WorkOperationCorrectionForm({
               ]
             : [],
         quantityCorrections:
+          quantityCorrectionEnabled &&
           !cancelResultCreation &&
           balance &&
           (quantityChanged ||
@@ -164,8 +173,9 @@ export default function WorkOperationCorrectionForm({
         <div>
           <p className="text-sm font-bold text-[#8a5a12]">작업 기록 정정</p>
           <p className="mt-1 text-xs text-[#5c6a60]">
-            작업 당시 입력 오류만 정정합니다. 현재 세어본 수량 차이는 난 묶음
-            관리의 ‘실사 수량 조정’을 사용하세요.
+            {quantityCorrectionEnabled
+              ? "작업 당시 입력 오류만 정정합니다."
+              : "수량 정정은 현재 비활성화되어 있습니다. 작업일·상태 정정과 결과 생성 취소는 가능합니다."}
           </p>
         </div>
         <button
@@ -214,14 +224,16 @@ export default function WorkOperationCorrectionForm({
               onChange={setWorkDate}
               disabled={cancelResultCreation}
             />
-            <Field
-              label="보정 수량"
-              type="number"
-              min="0"
-              value={quantity}
-              onChange={setQuantity}
-              disabled={cancelResultCreation}
-            />
+            {quantityCorrectionEnabled ? (
+              <Field
+                label="보정 수량"
+                type="number"
+                min="0"
+                value={quantity}
+                onChange={setQuantity}
+                disabled={cancelResultCreation}
+              />
+            ) : null}
             <Field
               label="보정 상태"
               value={status}
@@ -241,7 +253,7 @@ export default function WorkOperationCorrectionForm({
               onChange={setMemo}
             />
           </div>
-          {!cancelResultCreation && balance ? (
+          {quantityCorrectionEnabled && !cancelResultCreation && balance ? (
             <div className="space-y-2 rounded border border-[#ead9b9] p-3 text-xs">
               <p>
                 현재 유효 작업 기록: 투입 {balance.inputQuantity} · 결과{" "}

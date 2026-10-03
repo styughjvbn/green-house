@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+@org.springframework.test.context.TestPropertySource(
+		properties = { "features.stock-count.enabled=true", "features.work-quantity-correction.enabled=true" })
 class OrchidStockCountPostgresE2ETest extends WorkUndoSafetyTestBase {
 
 	@Autowired

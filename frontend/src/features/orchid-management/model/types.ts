@@ -103,6 +103,7 @@ export type WorkOperationCorrectionItem = NonNullable<
 >[number];
 
 export type WorkOperationCorrections = {
+  quantityCorrectionEnabled: import("@/shared/api/generated/openapi").components["schemas"]["WorkOperationCorrectionsResponse"]["quantityCorrectionEnabled"];
   originalOperation: WorkOperation;
   corrections: WorkOperationCorrectionItem[];
   quantityBalances: NonNullable<
