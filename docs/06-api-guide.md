@@ -192,7 +192,7 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 
 입고 수정은 난 묶음 생성·배치 완료 전에만 허용한다. `InboundRecordResponse.editable`은 서버가 판정한 수정 가능 여부이며, 화면은 상태 조합을 다시 추론하지 않고 이 값을 사용한다. 취소된 입고는 물리 삭제하지 않으며, 상태 조건이 없는 전체 목록에도 포함한다. `status=CANCELED`를 지정하면 취소 이력만 조회한다.
 
-입고 화면의 취소 동작은 `InboundRecordResponse.availableActions`를 기준으로 표시한다. `VOID_POTTING`은 `POST /api/inbound-records/{inboundRecordId}/potting-void`로 포트 작업의 생성 Mutation을 보상하고 유리병 모종 입고를 `POTTING_PENDING`으로 되돌린다. `CANCEL`은 기존 입고 취소 API를 사용하며, 즉시 배치 입고는 입고 생성 Mutation을 보상하고, 배치 완료 유리병 모종은 포트 작업을 먼저 보상한 뒤 입고를 `CANCELED`로 전환한다. 같은 포트 작업에 여러 입고가 포함되면 포트 작업 보상은 작업 전체에 적용된다. 생성 결과에 후속 작업·판매·다른 외부 참조가 있으면 취소하지 않는다.
+입고 화면의 취소 동작은 `InboundRecordResponse.availableActions`를 기준으로 표시한다. `VOID_POTTING`은 `POST /api/inbound-records/{inboundRecordId}/potting-void`로 포트 작업의 생성 Mutation을 보상하고 유리병 모종 입고를 `POTTING_PENDING`으로 되돌린다. `CANCEL`은 기존 입고 취소 API를 사용하며, 즉시 배치 입고는 입고 생성 Mutation을 보상하고, 배치 완료 유리병 모종은 포트 작업을 먼저 보상한 뒤 입고를 `CANCELED`로 전환한다. 같은 포트 작업에 여러 입고가 포함되면 일부 대상만 실행된 상태에서도 보상은 작업 전체에 적용되며 미실행 대상도 닫는다. 포트 취소의 같은 멱등 키·사유 재요청은 다시 실행하지 않으며, 이후 새로 실행한 포트 작업에도 영향을 주지 않는다. 같은 키의 사유 변경은 `409`로 거부한다. 생성 결과에 후속 작업·판매·다른 외부 참조가 있으면 취소하지 않는다.
 
 즉시 배치 입고의 난 묶음 속성은 입고 최상위 필드가 아닌 `placement`에 전달한다. 입고 응답의 `createdOrchidGroups`는 `OrchidGroup.inboundRecord`로 연결된 결과를 반환하며, 실제 수량·화분·년생·배치 위치는 이 결과를 기준으로 확인한다. 유리병 모종의 `pottingDate`는 입고 컬럼이 아니라 결과 난 묶음 생성 Mutation의 `effectiveBusinessDate`에서 파생하며, 생성 이력이 `BASELINE`만 있는 과거 묶음은 날짜를 추정하지 않는다.
 
