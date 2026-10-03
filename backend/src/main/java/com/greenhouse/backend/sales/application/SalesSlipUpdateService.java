@@ -17,6 +17,7 @@ import com.greenhouse.backend.settlement.application.PaymentEventReader;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,7 +68,9 @@ public class SalesSlipUpdateService {
     partnerBalanceService.lockPartners(List.of(previousPartnerId, partner.id()));
     var expectedPaymentDate = paymentDateCalculator.calculate(partner.id(), request.saleDate());
 
-    salesSlipInventoryService.releaseForEdit(salesSlip);
+    // Child-only edits need a new identity even when JPA does not increment the slip version.
+    UUID editId = UUID.randomUUID();
+    salesSlipInventoryService.releaseForEdit(salesSlip, editId);
 
     List<SalesSlipItem> items = salesSlipAllocationFactory.createItems(request.items());
     if (salesSlip.getItems().size() != items.size()) {
@@ -100,7 +103,7 @@ public class SalesSlipUpdateService {
         salesSlipRepository
             .findWithDetailsById(salesSlipId)
             .orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
-    salesSlipInventoryService.reserve(persisted);
+    salesSlipInventoryService.reserveForEdit(persisted, editId);
     partnerBalanceService.updateReceivable(
         partner.id(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);
     if (!previousPartnerId.equals(partner.id())) {

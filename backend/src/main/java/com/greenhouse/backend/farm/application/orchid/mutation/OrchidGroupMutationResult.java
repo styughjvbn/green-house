@@ -13,7 +13,8 @@ public record OrchidGroupMutationResult(
     Long mutationId,
     OrchidGroupMutationType mutationType,
     UUID correlationId,
-    List<Entry> entries) {
+    List<Entry> entries,
+    boolean replayed) {
 
   public static OrchidGroupMutationResult from(
       OrchidGroupMutation mutation, List<OrchidGroupMutationEntry> entries) {
@@ -21,7 +22,12 @@ public record OrchidGroupMutationResult(
         mutation.getId(),
         mutation.getMutationType(),
         mutation.getCorrelationId(),
-        entries.stream().map(Entry::from).toList());
+        entries.stream().map(Entry::from).toList(),
+        false);
+  }
+
+  OrchidGroupMutationResult asReplay() {
+    return new OrchidGroupMutationResult(mutationId, mutationType, correlationId, entries, true);
   }
 
   public record Entry(

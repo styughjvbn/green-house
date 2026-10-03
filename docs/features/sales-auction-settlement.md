@@ -54,6 +54,7 @@ BusinessPartner
 - `작성중` 일반 판매 전표는 입금액과 입금 이력이 없을 때 수정할 수 있다. 버튼 가능 여부와 수정 API가 같은 기준을 사용한다.
 - 수정 시 기존 예약 수량을 해제한 뒤 새 allocation 기준으로 다시 예약한다.
 - 수정 예약 해제와 재예약은 각각 `SALES_RELEASE`, `SALES_RESERVE` 이력으로 남긴다.
+- 각 수정 실행은 ORM 버전과 별개의 식별자로 예약 해제와 재예약을 연결한다. 품목 규격·메모만 바꾸거나 총액을 유지한 채 배분을 바꿔도 새 예약을 실제로 반영하며, 이미 적용된 Mutation을 재사용할 때는 재고 이동 이력을 중복 생성하지 않는다. 수정 API 재호출은 새로운 편집이며 클라이언트 요청 키 기반 replay를 제공하는 것은 아니다.
 - 예약·해제·출고·복구는 Farm Mutation Engine의 typed command를 통과하며 별도 Legacy writer를 두지 않는다. 각 `SalesInventoryMovement`는 같은 transaction의 Mutation ID와 correlation ID를 보존하며, 출고 취소 Mutation은 엔진 전환 후 출고 Mutation을 `COMPENSATES`로 연결한다. 전환 전 출고 이력은 legacy source로 복구한다.
 - 수정으로 거래처가 바뀌면 이전 거래처와 신규 거래처의 미수 잔액을 모두 다시 계산한다.
 - 같은 거래처의 전표 생성·수정·취소·입금은 거래처 행을 먼저 잠근 뒤 미수 잔액을 다시 계산한다. 잔액 요약에는 낙관적 버전도 저장해 동시 갱신 유실을 막는다.

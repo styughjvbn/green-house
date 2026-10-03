@@ -15,11 +15,15 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(propagation = Propagation.MANDATORY)
 @RequiredArgsConstructor
 public class SalesSlipInventoryService {
 
@@ -28,6 +32,14 @@ public class SalesSlipInventoryService {
   private final OrchidGroupMutationEngine mutationEngine;
 
   public void reserve(SalesSlip salesSlip) {
+    reserve(salesSlip, "RESERVE:" + salesSlip.getVersion());
+  }
+
+  void reserveForEdit(SalesSlip salesSlip, UUID editId) {
+    reserve(salesSlip, "EDIT:" + editId + ":RESERVE");
+  }
+
+  private void reserve(SalesSlip salesSlip, String operationKey) {
     var allocations = SalesSlipAllocationBatch.from(salesSlip);
     if (allocations.lines().isEmpty()) {
       return;
@@ -35,23 +47,25 @@ public class SalesSlipInventoryService {
     var mutation =
         mutationEngine.reserve(
             new ReserveOrchidGroupsMutationCommand(
-                OrchidGroupMutationSources.sales(
-                    salesSlip.getId(), "RESERVE:" + salesSlip.getVersion()),
+                OrchidGroupMutationSources.sales(salesSlip.getId(), operationKey),
                 mutationItems(allocations),
                 salesSlip.getSaleDate(),
                 salesSlip.getMemo()));
     recordMovements(allocations, SalesInventoryMovementType.SALES_RESERVE, 1, mutation);
   }
 
-  public void releaseForEdit(SalesSlip salesSlip) {
-    release(salesSlip, "RELEASE_EDIT:", SalesInventoryMovementType.SALES_RELEASE);
+  void releaseForEdit(SalesSlip salesSlip, UUID editId) {
+    release(salesSlip, "EDIT:" + editId + ":RELEASE", SalesInventoryMovementType.SALES_RELEASE);
   }
 
   public void cancelReserve(SalesSlip salesSlip) {
-    release(salesSlip, "CANCEL_RESERVE:", SalesInventoryMovementType.SALES_CANCEL_RESERVE);
+    release(
+        salesSlip,
+        "CANCEL_RESERVE:" + salesSlip.getVersion(),
+        SalesInventoryMovementType.SALES_CANCEL_RESERVE);
   }
 
-  private void release(SalesSlip salesSlip, String operation, SalesInventoryMovementType type) {
+  private void release(SalesSlip salesSlip, String operationKey, SalesInventoryMovementType type) {
     var allocations = SalesSlipAllocationBatch.from(salesSlip);
     if (allocations.lines().isEmpty()) {
       return;
@@ -59,8 +73,7 @@ public class SalesSlipInventoryService {
     var mutation =
         mutationEngine.releaseReservation(
             new ReleaseOrchidGroupReservationsMutationCommand(
-                OrchidGroupMutationSources.sales(
-                    salesSlip.getId(), operation + salesSlip.getVersion()),
+                OrchidGroupMutationSources.sales(salesSlip.getId(), operationKey),
                 mutationItems(allocations),
                 salesSlip.getSaleDate(),
                 salesSlip.getMemo()));
@@ -135,6 +148,10 @@ public class SalesSlipInventoryService {
       SalesInventoryMovementType type,
       int direction,
       OrchidGroupMutationResult mutation) {
+    // Inventory and movement history commit together, so a replay already has its movements.
+    if (mutation.replayed()) {
+      return;
+    }
     var salesSlip = allocations.salesSlip();
     for (var line : allocations.lines()) {
       var movement =

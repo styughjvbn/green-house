@@ -27,7 +27,8 @@ class OrchidGroupMutationReplayResolver {
                 throw new ConflictException("같은 Mutation source key를 다른 command에 재사용할 수 없습니다.");
               }
               return OrchidGroupMutationResult.from(
-                  existing, entryRepository.findByMutationIdOrderByIdAsc(existing.getId()));
+                      existing, entryRepository.findByMutationIdOrderByIdAsc(existing.getId()))
+                  .asReplay();
             });
   }
 }

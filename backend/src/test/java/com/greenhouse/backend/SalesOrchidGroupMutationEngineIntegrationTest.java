@@ -86,6 +86,8 @@ class SalesOrchidGroupMutationEngineIntegrationTest extends AbstractBackendInteg
                 " 판매 전표 예약 "));
 
     assertThat(replayed.mutationId()).isEqualTo(reserved.mutationId());
+    assertThat(reserved.replayed()).isFalse();
+    assertThat(replayed.replayed()).isTrue();
     assertThat(reserved.mutationType()).isEqualTo(OrchidGroupMutationType.RESERVE);
     assertAffectedEntries(reserved.entries(), 0L, 1L);
     assertGroupState(fixture.first().getId(), 20, 5, 1L);
