@@ -1,8 +1,8 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.operation.WorkOperationProgress;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
+import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationProgressProjection;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.util.List;
@@ -20,7 +20,7 @@ class WorkOperationSummaryAssembler {
 
 	private final WorkOperationActionResolver actionResolver;
 
-	private final com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository correctionRepository;
+	private final WorkOperationCorrectionRepository correctionRepository;
 
 	private final WorkOperationRelationSummaryAssembler relationSummaryAssembler;
 

@@ -14,6 +14,7 @@ import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
 import java.time.Clock;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ public class FarmQueryService {
 		var groups = groupsByZone(beds.stream().map(PhysicalBed::getId).toList());
 		var bedsByHouse = beds.stream().collect(Collectors.groupingBy(bed -> bed.getHouse().getId()));
 		return houses.stream()
-			.sorted(java.util.Comparator.comparing(house -> house.getNumber()))
+			.sorted(Comparator.comparing(house -> house.getNumber()))
 			.map(house -> HouseResponse.from(house,
 					bedsByHouse.getOrDefault(house.getId(), List.of())
 						.stream()

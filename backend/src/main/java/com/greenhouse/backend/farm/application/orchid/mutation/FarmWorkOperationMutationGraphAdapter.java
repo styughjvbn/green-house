@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.application.orchid.mutation;
 
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneLocationRow;
@@ -151,7 +152,7 @@ public class FarmWorkOperationMutationGraphAdapter implements WorkOperationMutat
 	}
 
 	private StateNode stateNode(String id, Long orchidGroupId, Long revision,
-			com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot snapshot,
+			OrchidGroupStateSnapshot snapshot,
 			Map<Long, BedZoneLocationRow> locations) {
 		if (snapshot == null)
 			return new StateNode(id, orchidGroupId, revision, null);

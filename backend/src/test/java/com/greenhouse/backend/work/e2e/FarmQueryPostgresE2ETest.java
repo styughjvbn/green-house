@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.application.status.FarmStatusService;
 import com.greenhouse.backend.farm.application.structure.FarmQueryService;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
@@ -17,6 +18,7 @@ import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
 import jakarta.persistence.EntityManagerFactory;
 import java.math.BigDecimal;
+import java.time.Clock;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -107,7 +109,7 @@ class FarmQueryPostgresE2ETest extends WorkE2ETestBase {
 		jdbc.update("UPDATE varieties SET name = name || ' 변경', color = '#AABBCC'");
 		var expectedMap = transactions.execute(tx -> groups.search(null, "", null, null, null).stream().map(group -> {
 			var detail = OrchidGroupResponse.from(group,
-					com.greenhouse.backend.common.config.TimeConfig.farmToday(java.time.Clock.systemUTC()));
+					TimeConfig.farmToday(Clock.systemUTC()));
 			return new FarmStatusMapOrchidGroupResponse(detail.id(), detail.houseId(),
 					group.getBedZone().getPhysicalBed().getId(), detail.bedZoneId(), detail.startPosition(),
 					detail.endPosition(), detail.varietyId(), detail.varietyColor(), detail.varietyName(),

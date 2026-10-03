@@ -1,7 +1,5 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.operation.WorkOperationProgress;
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
@@ -12,6 +10,7 @@ import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
+import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.util.LinkedHashMap;
@@ -41,7 +40,7 @@ class WorkOperationResponseAssembler {
 
 	private final WorkOperationActionResolver actionResolver;
 
-	private final com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository correctionRepository;
+	private final WorkOperationCorrectionRepository correctionRepository;
 
 	WorkOperationView assemble(WorkOperation operation) {
 		return assembleAll(List.of(operation)).getFirst();

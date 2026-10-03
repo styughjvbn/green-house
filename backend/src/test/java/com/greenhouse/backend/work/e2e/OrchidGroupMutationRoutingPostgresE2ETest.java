@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
@@ -12,7 +13,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedger
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
-import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
@@ -24,10 +24,15 @@ import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -105,7 +110,7 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 				"SELECT count(*) FROM work_effect_orchid_groups WHERE orchid_group_id = ?", Long.class,
 				scenario.orchidGroupId());
 		assertThatThrownBy(() -> orchidGroupCommandService.delete(scenario.orchidGroupId()))
-			.isInstanceOf(com.greenhouse.backend.common.exception.ConflictException.class);
+			.isInstanceOf(ConflictException.class);
 		assertThat(get("/api/work-operations/" + first + "/cancel-eligibility").data().path("cancellable").asBoolean())
 			.isFalse();
 		for (Long id : List.of(second, first)) {
@@ -143,8 +148,8 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 
 	@Test
 	void creationCancellationWaitsForTheGroupLock() throws Exception {
-		try (var executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
-			var started = new java.util.concurrent.CountDownLatch(1);
+		try (var executor = Executors.newSingleThreadExecutor()) {
+			var started = new CountDownLatch(1);
 			var transaction = new TransactionTemplate(transactionManager);
 			var deletion = transaction.execute(status -> {
 				orchidGroupRepository.findAllForUpdateByIdIn(List.of(scenario.orchidGroupId()));
@@ -153,17 +158,17 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 					orchidGroupCommandService.delete(scenario.orchidGroupId());
 				});
 				try {
-					assertThat(started.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+					assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
 				}
 				catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 					throw new IllegalStateException(e);
 				}
-				assertThatThrownBy(() -> pending.get(200, java.util.concurrent.TimeUnit.MILLISECONDS))
-					.isInstanceOf(java.util.concurrent.TimeoutException.class);
+				assertThatThrownBy(() -> pending.get(200, TimeUnit.MILLISECONDS))
+					.isInstanceOf(TimeoutException.class);
 				return pending;
 			});
-			deletion.get(10, java.util.concurrent.TimeUnit.SECONDS);
+			deletion.get(10, TimeUnit.SECONDS);
 			assertThat(orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow().getStatus())
 				.isEqualTo("생성 취소");
 		}
@@ -274,7 +279,7 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 			.containsEntry("source_type", "WORK_EFFECT")
 			.containsEntry("source_reference_id", Long.toString(operationId))
 			.containsEntry("source_operation_key", effect.getEffectKey())
-			.containsEntry("effective_business_date", java.sql.Date.valueOf("2026-08-20"))
+			.containsEntry("effective_business_date", Date.valueOf("2026-08-20"))
 			.containsEntry("reason", "폐기 사유")
 			.containsEntry("correlation_id", effect.getCorrelationId());
 		assertThat(reconciliationService.reconcile().ready()).isTrue();

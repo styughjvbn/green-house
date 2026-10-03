@@ -8,7 +8,6 @@ import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.transformation.RepotWorkOperationService;
 import com.greenhouse.backend.farm.application.variety.VarietyService;
-import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
@@ -57,7 +56,9 @@ import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -228,7 +229,7 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 		var operation = discardRecordService
 			.create(new DiscardRecordCreateRequest(
 					new WorkOperationCreateRequest(discardType.getId(), "라우팅 폐기", LocalDate.of(2026, 8, 20),
-							LocalDate.of(2026, 8, 20), WorkTargetSelection.orchidGroup(group.id()), java.util.Map.of(),
+							LocalDate.of(2026, 8, 20), WorkTargetSelection.orchidGroup(group.id()), Map.of(),
 							"작업자", null, List.of()),
 					LocalDate.of(2026, 8, 20), "작업자", List.of(new DiscardRecordResultRequest(group.id(), 5, "상태 불량"))))
 			.getFirst();
@@ -278,13 +279,15 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 		WorkType movementType = workTypeRepository.findByCode(WorkTypeDefinition.MOVEMENT.name()).orElseThrow();
 		var planned = workOperationPlanService.create(new WorkOperationCreateRequest(movementType.getId(), "라우팅 직접 이동",
 				LocalDate.of(2026, 8, 20), LocalDate.of(2026, 8, 20), WorkTargetSelection.orchidGroup(group.id()),
-				java.util.Map.of(), "작업자", null, List.of()));
+				Map.of(), "작업자", null, List.of()));
 		workOperationProgressService.start(planned.id());
-		org.assertj.core.api.Assertions
-			.assertThatThrownBy(() -> workOperationProgressService.completeTarget(planned.id(),
-					planned.targets().getFirst().id(),
-					new WorkTargetExecutionRequest("작업자", java.util.Map.of("toBedZoneId", fixture.zone().getId(),
-							"startPosition", 2, "endPosition", 3), LocalDate.of(2026, 8, 20))))
+		Assertions
+			.assertThatThrownBy(
+					() -> workOperationProgressService.completeTarget(planned.id(), planned.targets().getFirst().id(),
+							new WorkTargetExecutionRequest("작업자",
+									Map.of("toBedZoneId", fixture.zone().getId(), "startPosition", 2,
+											"endPosition", 3),
+									LocalDate.of(2026, 8, 20))))
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("자리 이동은 구조 변경 실행 또는 즉시 기록으로 처리해야 합니다.");
 

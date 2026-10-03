@@ -8,7 +8,6 @@ import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.application.effect.WorkEffectStore;
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
@@ -17,9 +16,11 @@ import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -82,7 +83,7 @@ public class StructureChangeExecutionService {
 		String worker = support.actor(request.worker());
 		List<Long> sourceOrchidGroupIds = executions.stream()
 			.map(execution -> execution.getTarget().getOrchidGroupId())
-			.filter(java.util.Objects::nonNull)
+			.filter(Objects::nonNull)
 			.sorted()
 			.toList();
 		var result = workEffectProcessor.applyBatch(operation, "LEGACY_MERGE", sourceOrchidGroupIds,
@@ -147,7 +148,7 @@ public class StructureChangeExecutionService {
 		if (WorkTypeDefinition.MOVEMENT.name().equals(operation.getWorkType().getCode())) {
 			Map<Long, Integer> inputQuantities = request.sources()
 				.stream()
-				.sorted(java.util.Comparator.comparing(source -> source.sourceOrchidGroupId()))
+				.sorted(Comparator.comparing(source -> source.sourceOrchidGroupId()))
 				.collect(Collectors.toMap(source -> source.sourceOrchidGroupId(), source -> source.inputQuantity(),
 						(left, right) -> left, LinkedHashMap::new));
 			discardOperation = discardRecordService.createForMovement(operation, request.completedDate(), worker,

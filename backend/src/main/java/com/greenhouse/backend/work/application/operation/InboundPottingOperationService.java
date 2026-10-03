@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
@@ -48,7 +49,7 @@ public class InboundPottingOperationService {
 				() -> {
 					operationLocks.lockInboundPlans(List.of(request.inboundRecordId()));
 					return List
-							.of(findExistingOperationId(request).orElseGet(() -> executeActiveOrNewPlan(request).id()));
+						.of(findExistingOperationId(request).orElseGet(() -> executeActiveOrNewPlan(request).id()));
 				});
 		return queryService.get(ids.getFirst());
 	}
@@ -56,10 +57,10 @@ public class InboundPottingOperationService {
 	public List<WorkOperationView> executeRecord(InboundPottingPlanCreateRequest plan,
 			List<InboundPottingCommand> executions) {
 		List<Long> inboundRecordIds = executions.stream()
-				.map(InboundPottingCommand::inboundRecordId)
-				.distinct()
-				.sorted()
-				.toList();
+			.map(InboundPottingCommand::inboundRecordId)
+			.distinct()
+			.sorted()
+			.toList();
 		operationLocks.lockInboundPlans(inboundRecordIds);
 
 		Map<Long, Long> existingOperationIds = findExistingOperationIds(executions);
@@ -85,7 +86,7 @@ public class InboundPottingOperationService {
 	private WorkOperationView executeActiveOrNewPlan(InboundPottingCommand request) {
 		Long inboundRecordId = request.inboundRecordId();
 		List<WorkTargetExecution> activeExecutions = workTargetExecutionRepository
-				.findActiveInboundPottingForUpdate(inboundRecordId);
+			.findActiveInboundPottingForUpdate(inboundRecordId);
 		if (!activeExecutions.isEmpty()) {
 			return executeActivePlan(activeExecutions.getFirst(), request);
 		}
@@ -95,23 +96,23 @@ public class InboundPottingOperationService {
 	private WorkOperationView executeNewPlan(InboundPottingCommand request) {
 		Long inboundRecordId = request.inboundRecordId();
 		WorkOperationView planned = planService
-				.create(new InboundPottingPlanCreateRequest("입고 #" + inboundRecordId + " 포트 작업", request.pottingDate(),
-						request.pottingDate(), List.of(inboundRecordId), request.worker(), request.memo()));
+			.create(new InboundPottingPlanCreateRequest("입고 #" + inboundRecordId + " 포트 작업", request.pottingDate(),
+					request.pottingDate(), List.of(inboundRecordId), request.worker(), request.memo()));
 		WorkOperationView started = progressService.start(planned.id());
 		Long targetId = started.targets()
-				.stream()
-				.filter(target -> inboundRecordId.equals(target.inboundRecordId()))
-				.findFirst()
-				.orElseThrow(() -> new IllegalStateException("포트 작업 대상을 찾을 수 없습니다."))
-				.id();
+			.stream()
+			.filter(target -> inboundRecordId.equals(target.inboundRecordId()))
+			.findFirst()
+			.orElseThrow(() -> new IllegalStateException("포트 작업 대상을 찾을 수 없습니다."))
+			.id();
 		return executeTarget(started, targetId, request);
 	}
 
 	private Optional<Long> findExistingOperationId(InboundPottingCommand request) {
 		return workAppliedEffectRepository.findInboundPottingEffects(List.of(request.inboundRecordId()), keys(request))
-				.stream()
-				.findFirst()
-				.map(effect -> validatedOperationId(effect, request));
+			.stream()
+			.findFirst()
+			.map(effect -> validatedOperationId(effect, request));
 	}
 
 	private Map<Long, Long> findExistingOperationIds(List<InboundPottingCommand> requests) {
@@ -124,11 +125,10 @@ public class InboundPottingOperationService {
 		Map<Long, Long> operationIds = new LinkedHashMap<>();
 		for (InboundPottingCommand request : requests) {
 			effects.stream()
-					.filter(effect -> matches(effect, request))
-					.findFirst()
-					.ifPresent(
-							effect -> operationIds.put(request.inboundRecordId(),
-									validatedOperationId(effect, request)));
+				.filter(effect -> matches(effect, request))
+				.findFirst()
+				.ifPresent(
+						effect -> operationIds.put(request.inboundRecordId(), validatedOperationId(effect, request)));
 		}
 		return operationIds;
 	}
@@ -140,8 +140,8 @@ public class InboundPottingOperationService {
 
 	private Long validatedOperationId(WorkAppliedEffect effect, InboundPottingCommand request) {
 		if (!fingerprints.calculate(effect.getCommandDetails())
-				.equals(fingerprints.calculate(commandDetails(request)))) {
-			throw new com.greenhouse.backend.common.exception.ConflictException("IDEMPOTENCY_KEY_REUSED",
+			.equals(fingerprints.calculate(commandDetails(request)))) {
+			throw new ConflictException("IDEMPOTENCY_KEY_REUSED",
 					"같은 멱등 키를 다른 포트 작업 요청에 사용할 수 없습니다.");
 		}
 		return effect.getWorkOperation().getId();
@@ -155,12 +155,12 @@ public class InboundPottingOperationService {
 		Map<Long, WorkTargetExecution> executionsByInboundRecordId = indexExecutions(
 				workTargetExecutionRepository.findActiveInboundPottingForUpdate(inboundRecordIds));
 		List<Long> unplannedIds = inboundRecordIds.stream()
-				.filter(id -> !executionsByInboundRecordId.containsKey(id))
-				.toList();
+			.filter(id -> !executionsByInboundRecordId.containsKey(id))
+			.toList();
 		if (!unplannedIds.isEmpty()) {
 			planService.createBatch(new InboundPottingPlanBatchCreateRequest(copyPlan(plan, unplannedIds)));
 			indexExecutions(workTargetExecutionRepository.findActiveInboundPottingForUpdate(unplannedIds))
-					.forEach(executionsByInboundRecordId::putIfAbsent);
+				.forEach(executionsByInboundRecordId::putIfAbsent);
 		}
 		return executionsByInboundRecordId;
 	}

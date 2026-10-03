@@ -1,17 +1,15 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
 import com.greenhouse.backend.work.application.target.WorkTargetResolver;
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
@@ -79,7 +77,7 @@ public class ImmediateWorkExecutionService {
 			String worker, String memo, Long orchidGroupId, Map<String, Object> details, Object payload) {
 		worker = support.actor(worker);
 		if (operationRepository.findByRequestKey(requestKey).isPresent()) {
-			throw new com.greenhouse.backend.common.exception.ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE",
+			throw new ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE",
 					"과거 요청 원문이 없어 재실행 내용을 확인할 수 없습니다. 기존 작업을 조회해 주세요.");
 		}
 
@@ -105,7 +103,7 @@ public class ImmediateWorkExecutionService {
 			String memo, Map<String, Object> details, Object payload) {
 		worker = support.actor(worker);
 		if (operationRepository.findByRequestKey(requestKey).isPresent()) {
-			throw new com.greenhouse.backend.common.exception.ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE",
+			throw new ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE",
 					"과거 요청 원문이 없어 재실행 내용을 확인할 수 없습니다. 기존 작업을 조회해 주세요.");
 		}
 

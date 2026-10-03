@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
@@ -33,7 +34,7 @@ public class RepotWorkHandler implements WorkEffectHandler {
 	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
 		var target = context.target();
 		if (command
-			.payload() instanceof com.greenhouse.backend.work.application.effect.StructureChangeCommand request) {
+			.payload() instanceof StructureChangeCommand request) {
 			return structureChangeExecutor.execute(context, request, command.placementExclusionOrchidGroupIds());
 		}
 		if (target == null)

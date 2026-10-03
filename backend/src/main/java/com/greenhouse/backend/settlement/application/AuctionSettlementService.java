@@ -1,7 +1,7 @@
 package com.greenhouse.backend.settlement.application;
 
-import com.greenhouse.backend.auction.application.AuctionDataReader.Result;
 import com.greenhouse.backend.auction.application.AuctionDataReader;
+import com.greenhouse.backend.auction.application.AuctionDataReader.Result;
 import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.config.TimeConfig;

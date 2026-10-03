@@ -1,6 +1,8 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
 class UnifiedMovementRecordPostgresE2ETest extends WorkUndoSafetyTestBase {
@@ -27,7 +29,7 @@ class UnifiedMovementRecordPostgresE2ETest extends WorkUndoSafetyTestBase {
 				"{\"idempotencyKey\":\"undo-historical\",\"reason\":\"오등록\"}")
 			.status()).isEqualTo(200);
 		assertThat(jdbc.queryForObject("SELECT start_position FROM orchid_groups WHERE id=?",
-				java.math.BigDecimal.class, group))
+				BigDecimal.class, group))
 			.isEqualByComparingTo("6");
 		assertThat(reconciliation.reconcile().ready()).isTrue();
 	}
@@ -55,7 +57,7 @@ class UnifiedMovementRecordPostgresE2ETest extends WorkUndoSafetyTestBase {
 				"{\"idempotencyKey\":\"undo-unified\",\"reason\":\"오등록\"}")
 			.status()).isEqualTo(200);
 		assertThat(jdbc.queryForObject("SELECT start_position FROM orchid_groups WHERE id=?",
-				java.math.BigDecimal.class, source))
+				BigDecimal.class, source))
 			.isEqualByComparingTo("6");
 		assertThat(reconciliation.reconcile().ready()).isTrue();
 	}

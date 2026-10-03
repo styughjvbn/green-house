@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
@@ -18,11 +19,15 @@ import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -201,7 +206,7 @@ public class WorkOperationVoidService {
 		var effects = effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(ids);
 		if (effects.stream().anyMatch(effect -> effect.getMutationId() == null) || !effects.stream()
 			.map(effect -> effect.getWorkOperation().getId())
-			.collect(java.util.stream.Collectors.toSet())
+			.collect(Collectors.toSet())
 			.containsAll(operationIds)) {
 			throw new IllegalArgumentException("모든 선택 작업에 취소할 Mutation이 있어야 합니다.");
 		}
@@ -232,7 +237,7 @@ public class WorkOperationVoidService {
 				throw new IllegalArgumentException("이미 다른 요청으로 취소된 작업입니다.");
 			}
 			if (!reason.equals(operation.getVoidReason())) {
-				throw new com.greenhouse.backend.common.exception.ConflictException("IDEMPOTENCY_KEY_REUSED",
+				throw new ConflictException("IDEMPOTENCY_KEY_REUSED",
 						"같은 취소 키를 다른 사유에 사용할 수 없습니다.");
 			}
 			return queryService.get(operationId);
@@ -285,7 +290,7 @@ public class WorkOperationVoidService {
 				|| status == WorkOperationStatus.PAUSED || status == WorkOperationStatus.COMPLETED;
 	}
 
-	private void cancelOpenExecutions(List<WorkTargetExecution> executions, java.time.LocalDateTime canceledAt) {
+	private void cancelOpenExecutions(List<WorkTargetExecution> executions, LocalDateTime canceledAt) {
 		executions.stream()
 			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
 			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.SKIPPED)
@@ -317,7 +322,7 @@ public class WorkOperationVoidService {
 				throw new IllegalArgumentException("이미 다른 요청으로 무효화된 입고 작업입니다.");
 			}
 			if (!reason.equals(operation.getVoidReason())) {
-				throw new com.greenhouse.backend.common.exception.ConflictException("IDEMPOTENCY_KEY_REUSED",
+				throw new ConflictException("IDEMPOTENCY_KEY_REUSED",
 						"같은 취소 키를 다른 사유에 사용할 수 없습니다.");
 			}
 			return;
@@ -344,8 +349,8 @@ public class WorkOperationVoidService {
 	}
 
 	private String batchRequestKey(String key, Long operationId) {
-		return "batch-" + java.util.UUID.nameUUIDFromBytes(
-				("BATCH_VOID:" + key + ":" + operationId).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		return "batch-" + UUID.nameUUIDFromBytes(
+				("BATCH_VOID:" + key + ":" + operationId).getBytes(StandardCharsets.UTF_8));
 	}
 
 	private String relatedRequestKey(String requestKey, Long operationId) {

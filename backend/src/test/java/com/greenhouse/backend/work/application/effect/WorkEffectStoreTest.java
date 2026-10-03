@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
@@ -29,7 +30,7 @@ class WorkEffectStoreTest {
 			WorkEffectOrchidGroupRepository.class);
 
 	private final WorkEffectStore store = new WorkEffectStore(appliedEffectRepository, effectOrchidGroupRepository,
-			new com.greenhouse.backend.work.application.operation.WorkRequestFingerprint());
+			new WorkRequestFingerprint());
 
 	@Test
 	void persistsAndReplaysTheMutationLinkWithoutFarmDomainDependency() {

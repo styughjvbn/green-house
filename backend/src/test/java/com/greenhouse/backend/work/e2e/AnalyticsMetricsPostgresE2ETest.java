@@ -2,16 +2,16 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.application.status.FarmMetricsReader.VarietyInventory;
 import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
+import com.greenhouse.backend.farm.application.status.FarmMetricsReader.VarietyInventory;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
 import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader.RecentRecord;
 import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader.TypeCount;
-import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;

@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.domain.structure;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -63,7 +64,7 @@ public class BedZone extends BaseEntity {
 	@OrderBy("sortOrder ASC")
 	private List<OrchidGroup> orchidGroups = new ArrayList<>();
 
-	@OneToMany(mappedBy = "bedZone", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
+	@OneToMany(mappedBy = "bedZone", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("capacityMode ASC")
 	private Set<BedZoneCapacity> capacities = new LinkedHashSet<>();
 

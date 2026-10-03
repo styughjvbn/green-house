@@ -1,7 +1,20 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,28 +30,28 @@ abstract class WorkUndoSafetyTestBase extends WorkE2ETestBase {
 	JdbcTemplate jdbc;
 
 	@Autowired
-	javax.sql.DataSource dataSource;
+	DataSource dataSource;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService mutationQuery;
+	OrchidGroupMutationQueryService mutationQuery;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService mutationGraph;
+	OrchidGroupMutationGraphQueryService mutationGraph;
 
 	@Autowired
-	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector rehearsal;
+	WorkOrchidGroupLedgerRehearsalInspector rehearsal;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService reconciliation;
+	OrchidGroupLedgerReconciliationService reconciliation;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService migration;
+	OrchidGroupStateChainMigrationService migration;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService cutover;
+	OrchidGroupLedgerCutoverService cutover;
 
 	@Autowired
-	com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository groups;
+	OrchidGroupRepository groups;
 
 	private long originalId;
 
@@ -48,11 +61,11 @@ abstract class WorkUndoSafetyTestBase extends WorkE2ETestBase {
 	void prepare() throws Exception {
 		seeder.resetKeepingSequences();
 		var scenario = seeder.seedContractScenario();
-		var key = java.util.UUID.randomUUID();
-		var date = java.time.LocalDate.of(2026, 8, 20);
-		com.greenhouse.backend.OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, date,
+		var key = UUID.randomUUID();
+		var date = LocalDate.of(2026, 8, 20);
+		OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, date,
 				"1.0.0");
-		cutover.execute(new com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand(key,
+		cutover.execute(new OrchidGroupLedgerCutoverCommand(key,
 				date, "1.0.0", "1.1.0", true));
 		var plan = post("/api/work-operations", """
 				{"workTypeId":%d,"title":"보정 대상","plannedStartDate":"2026-07-15",

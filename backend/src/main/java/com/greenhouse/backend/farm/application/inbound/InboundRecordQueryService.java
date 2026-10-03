@@ -7,6 +7,7 @@ import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -34,7 +35,7 @@ public class InboundRecordQueryService {
 		var pottingDatesByInboundId = responseAssembler.pottingDatesByInboundRecordId(records.getContent());
 		var undoableInboundIds = responseAssembler.inboundIdsWithUndoablePotting(records.getContent());
 		return PageResponse.from(records.map(record -> InboundRecordResponse.from(record,
-				groupsByInboundId.getOrDefault(record.getId(), java.util.List.of()),
+				groupsByInboundId.getOrDefault(record.getId(), List.of()),
 				pottingDatesByInboundId.get(record.getId()), undoableInboundIds.contains(record.getId()))));
 	}
 

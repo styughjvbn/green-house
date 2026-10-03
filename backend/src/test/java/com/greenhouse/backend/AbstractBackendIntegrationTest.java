@@ -12,11 +12,15 @@ import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptRepository;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;
 import jakarta.persistence.EntityManager;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -72,14 +76,14 @@ abstract class AbstractBackendIntegrationTest {
 		});
 	}
 
-	protected org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder movementRecord(Long groupId,
+	protected MockHttpServletRequestBuilder movementRecord(Long groupId,
 			Long zoneId, int start, int end) throws Exception {
 		var group = orchidGroupRepository.findById(groupId);
 		int quantity = group.map(OrchidGroup::getQuantity).orElse(1);
 		long typeId = workTypeRepository.findByCode("MOVEMENT").orElseThrow().getId();
-		return org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+		return MockMvcRequestBuilders
 			.post("/api/work-operations/structure-change-records/batch")
-			.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+			.contentType(MediaType.APPLICATION_JSON)
 			.content("""
 					{"records":[{"operation":{"workTypeId":%d,"title":"자리 이동","plannedStartDate":"2026-07-16",
 					 "sourceScopeType":"MANUAL_SELECTION","sourceOrchidGroupIds":[%d]},
@@ -87,7 +91,7 @@ abstract class AbstractBackendIntegrationTest {
 					 "sources":[{"sourceOrchidGroupId":%d,"inputQuantity":%d}],
 					 "results":[{"bedZoneId":%d,"quantity":%d,"attributeSourceOrchidGroupId":%d,
 					 "purpose":"NORMAL","startPosition":%d,"endPosition":%d}]}}]}
-					""".formatted(typeId, groupId, java.util.UUID.randomUUID(), groupId, quantity, zoneId, quantity,
+					""".formatted(typeId, groupId, UUID.randomUUID(), groupId, quantity, zoneId, quantity,
 					groupId, start, end));
 	}
 

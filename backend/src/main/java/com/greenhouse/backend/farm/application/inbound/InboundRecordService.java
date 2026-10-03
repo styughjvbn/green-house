@@ -101,7 +101,8 @@ public class InboundRecordService {
 			}
 			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 			saved.markPlaced();
-		} else {
+		}
+		else {
 			saved.markPottingPending(status);
 		}
 		inboundWorkOperationRecorder.record(workOperationRequestFactory.create(saved, createdGroups), mutationLink);
@@ -131,7 +132,8 @@ public class InboundRecordService {
 			if (inboundRecord.getInboundType() == InboundType.FLASK_SEEDLING) {
 				inboundWorkOperationLifecycleService.voidPottingForInboundRecord(inboundRecordId,
 						childRequestKey(requestKey, "potting"), reason);
-			} else {
+			}
+			else {
 				inboundWorkOperationLifecycleService.voidInboundRegistrationForCancellation(inboundRecordId,
 						childRequestKey(requestKey, "registration"), reason);
 			}
@@ -198,7 +200,7 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("배치 구역이 필요합니다.");
 		}
 		return bedZoneRepository.findWithDetailsById(bedZoneId)
-				.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
 	}
 
 	private String normalize(String value) {

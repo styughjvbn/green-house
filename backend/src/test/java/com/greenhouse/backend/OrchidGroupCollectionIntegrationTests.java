@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,9 +18,11 @@ import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
@@ -91,7 +92,7 @@ class OrchidGroupCollectionIntegrationTests extends AbstractBackendIntegrationTe
 					AuditAction.DEACTIVATED, AuditAction.UPDATED);
 		assertThat(auditEvents.stream()
 			.filter(event -> event.getAction() == AuditAction.UPDATED)
-			.filter(event -> java.util.Arrays.asList(event.getChangedFields()).contains("memberIds"))
+			.filter(event -> Arrays.asList(event.getChangedFields()).contains("memberIds"))
 			.toList()).allSatisfy(event -> assertThat(event.getChangedFields()).containsExactly("memberIds"));
 	}
 
@@ -105,7 +106,7 @@ class OrchidGroupCollectionIntegrationTests extends AbstractBackendIntegrationTe
 		return Long.valueOf(result.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
 	}
 
-	private org.springframework.test.web.servlet.ResultActions addMember(Long collectionId, Long orchidGroupId)
+	private ResultActions addMember(Long collectionId, Long orchidGroupId)
 			throws Exception {
 		return mockMvc.perform(
 				post("/api/orchid-group-collections/{id}/members", collectionId).contentType(MediaType.APPLICATION_JSON)

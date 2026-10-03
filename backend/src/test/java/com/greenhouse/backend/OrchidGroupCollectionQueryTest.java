@@ -9,6 +9,7 @@ import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberRes
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import java.time.LocalDateTime;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -44,16 +45,16 @@ class OrchidGroupCollectionQueryTest {
 			var collection = new OrchidGroupCollection("목록 " + index, null, null, "worker");
 			entityManager.persist(collection);
 			entityManager.persist(new OrchidGroupCollectionMember(collection.getId(), second.getId(), "worker",
-					java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
+					LocalDateTime.of(2026, 9, 8, 1, 2)));
 			entityManager.persist(new OrchidGroupCollectionMember(collection.getId(), first.getId(), "worker",
-					java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
+					LocalDateTime.of(2026, 9, 8, 1, 2)));
 		}
 		var archived = new OrchidGroupCollection("보관", null, null, "worker");
 		archived.archive();
 		entityManager.persist(archived);
 		var removed = new OrchidGroupCollectionMember(archived.getId(), first.getId(), "worker",
-				java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
-		removed.remove(java.time.LocalDateTime.of(2026, 9, 8, 2, 3));
+				LocalDateTime.of(2026, 9, 8, 1, 2));
+		removed.remove(LocalDateTime.of(2026, 9, 8, 2, 3));
 		entityManager.persist(removed);
 		entityManager.flush();
 		entityManager.clear();

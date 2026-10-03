@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -67,7 +68,7 @@ class WorkTypeCapabilitiesTest {
 
 	@Test
 	void metadataStillOffersOnlyTheFiveRecordTemplates() {
-		assertThat(java.util.Arrays.stream(WorkTypeTemplate.values()).filter(WorkTypeTemplate::isCustomTypeAllowed))
+		assertThat(Arrays.stream(WorkTypeTemplate.values()).filter(WorkTypeTemplate::isCustomTypeAllowed))
 			.containsExactly(WorkTypeTemplate.PESTICIDE, WorkTypeTemplate.FERTILIZER, WorkTypeTemplate.CLEANUP,
 					WorkTypeTemplate.STATUS, WorkTypeTemplate.MEMO);
 	}

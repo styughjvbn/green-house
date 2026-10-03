@@ -3,6 +3,7 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.orchid.mutation.CompensateTransformMutationsCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
@@ -70,7 +71,7 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
 		assertThatThrownBy(
 				() -> mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(command.source(),
 						command.mutationIds(), date, command.reason())))
-			.isInstanceOf(com.greenhouse.backend.common.exception.ConflictException.class);
+			.isInstanceOf(ConflictException.class);
 	}
 
 	@Test

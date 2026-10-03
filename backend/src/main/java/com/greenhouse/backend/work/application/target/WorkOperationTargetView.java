@@ -1,8 +1,6 @@
 package com.greenhouse.backend.work.application.target;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
-import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetAction;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
@@ -12,6 +10,7 @@ import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +84,7 @@ public record WorkOperationTargetView(Long id, WorkTargetReferenceType targetRef
 	}
 
 	private static Map<String, Object> inboundLocation(InboundPottingPlanTarget inbound) {
-		Map<String, Object> location = new java.util.LinkedHashMap<>();
+		Map<String, Object> location = new LinkedHashMap<>();
 		location.put("tempLocation", inbound.tempLocation());
 		location.put("pottingDueDate", inbound.pottingDueDate());
 		return location;

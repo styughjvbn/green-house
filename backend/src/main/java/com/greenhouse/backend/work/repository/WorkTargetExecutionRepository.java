@@ -1,6 +1,8 @@
 package com.greenhouse.backend.work.repository;
 
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,13 +19,13 @@ public interface WorkTargetExecutionRepository
 			+ "and e.target.workOperation.workType.code = :code and e.target.workOperation.status in :statuses "
 			+ "order by e.target.workOperation.id")
 	List<Long> findAppliedOperationIdsForInbound(Long inboundRecordId, String code,
-			java.util.Collection<com.greenhouse.backend.work.domain.operation.WorkOperationStatus> statuses);
+			Collection<WorkOperationStatus> statuses);
 
 	@Query("select distinct e.target.inboundRecordId from WorkTargetExecution e "
 			+ "where e.target.inboundRecordId in :inboundIds and e.effectAppliedAt is not null "
 			+ "and e.target.workOperation.workType.code = :code and e.target.workOperation.status in :statuses")
-	List<Long> findInboundIdsWithAppliedOperation(java.util.Collection<Long> inboundIds, String code,
-			java.util.Collection<com.greenhouse.backend.work.domain.operation.WorkOperationStatus> statuses);
+	List<Long> findInboundIdsWithAppliedOperation(Collection<Long> inboundIds, String code,
+			Collection<WorkOperationStatus> statuses);
 
 	@Query("""
 			select new com.greenhouse.backend.work.repository.WorkExecutionReconciliationRow(

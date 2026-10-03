@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -255,7 +256,7 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 		var start = new CountDownLatch(1);
 		var executor = Executors.newFixedThreadPool(2);
 		try {
-			var tasks = List.<java.util.concurrent.Callable<ApiResult>>of(
+			var tasks = List.<Callable<ApiResult>>of(
 					() -> completeConcurrently(path, request, ready, start),
 					() -> completeConcurrently(path, request, ready, start));
 			var futures = tasks.stream().map(executor::submit).toList();

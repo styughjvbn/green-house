@@ -1,8 +1,8 @@
 package com.greenhouse.backend.farm.application.structure;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.domain.structure.BedPlacementProfilePolicy.CapacityRule;
 import com.greenhouse.backend.farm.domain.structure.BedPlacementProfilePolicy;
+import com.greenhouse.backend.farm.domain.structure.BedPlacementProfilePolicy.CapacityRule;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.dto.structure.BedZoneCapacityRequest;
 import com.greenhouse.backend.farm.dto.structure.BedZonePlacementProfileRequest;

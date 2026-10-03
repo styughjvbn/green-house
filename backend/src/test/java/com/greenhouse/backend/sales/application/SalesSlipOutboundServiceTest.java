@@ -6,9 +6,9 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
 import com.greenhouse.backend.auction.application.AuctionShipmentCreator.CreatedShipment;
 import com.greenhouse.backend.auction.application.AuctionShipmentCreator.LotDraft;
-import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;
@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class SalesSlipOutboundServiceTest {
 
@@ -46,8 +47,8 @@ class SalesSlipOutboundServiceTest {
 		when(salesSlip.getSaleDate()).thenReturn(date);
 		var first = new SalesSlipItem(null, " 호접란 ", " 팔레놉시스 ", " 특품 ", 12, 0, null);
 		var second = new SalesSlipItem(null, " 호접란 ", null, " ", 3, 0, null);
-		org.springframework.test.util.ReflectionTestUtils.setField(first, "id", 9L);
-		org.springframework.test.util.ReflectionTestUtils.setField(second, "id", 3L);
+		ReflectionTestUtils.setField(first, "id", 9L);
+		ReflectionTestUtils.setField(second, "id", 3L);
 		first.addAllocation(allocation);
 		when(salesSlip.getItems()).thenReturn(List.of(first, second));
 		var allocations = SalesSlipAllocationBatch.from(salesSlip);

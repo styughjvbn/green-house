@@ -3,8 +3,10 @@ package com.greenhouse.backend.common.exception;
 import com.greenhouse.backend.common.api.ErrorResponse;
 import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,8 +16,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-	@ExceptionHandler({ org.springframework.orm.ObjectOptimisticLockingFailureException.class,
-			org.springframework.dao.PessimisticLockingFailureException.class })
+	@ExceptionHandler({ ObjectOptimisticLockingFailureException.class,
+			PessimisticLockingFailureException.class })
 	ResponseEntity<ErrorResponse> handleConcurrentChange(Exception exception) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
 			.body(ErrorResponse.of("CONCURRENT_MODIFICATION", "다른 요청이 먼저 처리되었습니다. 최신 상태를 확인하고 다시 요청해주세요.", List.of()));

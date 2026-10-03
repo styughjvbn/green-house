@@ -4,8 +4,6 @@ import static com.greenhouse.backend.work.application.effect.WorkEffectResults.i
 import static com.greenhouse.backend.work.application.effect.WorkEffectResults.resultQuantities;
 import static com.greenhouse.backend.work.application.effect.WorkEffectResults.sourceQuantities;
 
-import com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView;
-import com.greenhouse.backend.work.application.effect.StructureChangeLineageGroupView;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;

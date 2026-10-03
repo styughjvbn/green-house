@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.auction.application.AuctionTrackingService;
 import com.greenhouse.backend.sales.application.SalesQueryService;
+import com.sun.management.ThreadMXBean;
 import jakarta.persistence.EntityManagerFactory;
+import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -34,7 +36,7 @@ class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
 
 	@Test
 	void preservesGlobalPaginationWithThousandsOfMatchingPartners() throws Exception {
-		var allocations = (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
+		var allocations = (ThreadMXBean) ManagementFactory.getThreadMXBean();
 		var stats = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
 		List<Map<String, Object>> samples = new ArrayList<>();
 		for (int count : List.of(501, 5001)) {

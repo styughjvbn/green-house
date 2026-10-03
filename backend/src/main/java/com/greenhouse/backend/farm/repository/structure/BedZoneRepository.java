@@ -3,6 +3,7 @@ package com.greenhouse.backend.farm.repository.structure;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -47,7 +48,7 @@ public interface BedZoneRepository extends JpaRepository<BedZone, Long> {
 			where z.id in :ids
 			order by z.id
 			""")
-	List<BedZone> findAllForUpdateByIdIn(@Param("ids") java.util.Collection<Long> ids);
+	List<BedZone> findAllForUpdateByIdIn(@Param("ids") Collection<Long> ids);
 
 	@Query("""
 			select z from BedZone z
@@ -67,6 +68,6 @@ public interface BedZoneRepository extends JpaRepository<BedZone, Long> {
 			where z.id in :bedZoneIds
 			order by z.id asc
 			""")
-	List<BedZoneLocationRow> findLocationRowsByIdIn(@Param("bedZoneIds") java.util.Collection<Long> bedZoneIds);
+	List<BedZoneLocationRow> findLocationRowsByIdIn(@Param("bedZoneIds") Collection<Long> bedZoneIds);
 
 }

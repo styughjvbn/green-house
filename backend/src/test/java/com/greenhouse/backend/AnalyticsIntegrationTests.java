@@ -24,6 +24,7 @@ import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,7 +72,7 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data.salesInsights.length()").value(1))
 			.andExpect(jsonPath("$.data.salesInsights[0].tone").value("green"))
 			.andExpect(jsonPath("$.data.salesInsights[0].text").value("현재 기간 미수 전표 없음"))
-			.andExpect(jsonPath("$.data.salesInsights[0].actionHref").value(org.hamcrest.Matchers.nullValue()))
+			.andExpect(jsonPath("$.data.salesInsights[0].actionHref").value(Matchers.nullValue()))
 			.andExpect(jsonPath("$.data.monthlySales").isArray())
 			.andExpect(jsonPath("$.data.recentSlips").isArray());
 	}

@@ -17,6 +17,7 @@ import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphEdgeType;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
@@ -96,10 +97,10 @@ class OrchidGroupMutationQueryServiceIntegrationTest extends AbstractBackendInte
 					"group-" + orchidGroupId + "-revision-1", "group-" + orchidGroupId + "-revision-2");
 		assertThat(graph.edges()).extracting("edgeType")
 			.containsExactlyInAnyOrder(
-					com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphEdgeType.STATE_INPUT,
-					com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphEdgeType.STATE_OUTPUT,
-					com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphEdgeType.STATE_OUTPUT,
-					com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphEdgeType.MUTATION_RELATION);
+					OrchidGroupMutationGraphEdgeType.STATE_INPUT,
+					OrchidGroupMutationGraphEdgeType.STATE_OUTPUT,
+					OrchidGroupMutationGraphEdgeType.STATE_OUTPUT,
+					OrchidGroupMutationGraphEdgeType.MUTATION_RELATION);
 	}
 
 	@Test

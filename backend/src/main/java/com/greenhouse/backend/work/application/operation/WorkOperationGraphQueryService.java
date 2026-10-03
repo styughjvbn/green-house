@@ -1,7 +1,6 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
@@ -13,6 +12,7 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationGraphNodeType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationGraphResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationGraphStateResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationOriginType;
+import com.greenhouse.backend.work.dto.operation.WorkOperationRelationSummaryResponse;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -244,7 +245,7 @@ public class WorkOperationGraphQueryService {
 	}
 
 	private void addOrigin(WorkOperation root,
-			com.greenhouse.backend.work.dto.operation.WorkOperationRelationSummaryResponse summary,
+			WorkOperationRelationSummaryResponse summary,
 			List<WorkOperationGraphNodeResponse> nodes, List<WorkOperationGraphEdgeResponse> edges) {
 		if (summary.originType() == WorkOperationOriginType.INBOUND) {
 			for (Long inboundId : summary.inboundRecordIds()) {
@@ -270,7 +271,7 @@ public class WorkOperationGraphQueryService {
 			List<WorkOperationTarget> targets) {
 		List<Long> groupIds = targets.stream()
 			.map(WorkOperationTarget::getOrchidGroupId)
-			.filter(java.util.Objects::nonNull)
+			.filter(Objects::nonNull)
 			.distinct()
 			.toList();
 		List<String> varieties = targets.stream().map(WorkOperationTarget::getVarietyNameSnapshot).distinct().toList();

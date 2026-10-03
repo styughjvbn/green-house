@@ -7,7 +7,9 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRel
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -28,10 +30,10 @@ public class OrchidGroupMutationEffectiveHeadPolicy {
 	public boolean hasBrokenCompensationChain(Collection<OrchidGroupMutationEntry> selectedEntries) {
 		var selectedByGroup = selectedEntries.stream()
 			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId));
-		var gaps = new java.util.ArrayList<ChainGap>();
+		var gaps = new ArrayList<ChainGap>();
 		for (var selected : selectedByGroup.values()) {
 			var ordered = selected.stream()
-				.sorted(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+				.sorted(Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
 				.toList();
 			for (int index = 1; index < ordered.size(); index++) {
 				var previous = ordered.get(index - 1);
@@ -51,14 +53,14 @@ public class OrchidGroupMutationEffectiveHeadPolicy {
 		var chains = entryRepository.findStateChainByOrchidGroupIdIn(selectedByGroup.keySet())
 			.stream()
 			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId));
-		var segmentIds = new java.util.ArrayList<Set<Long>>();
+		var segmentIds = new ArrayList<Set<Long>>();
 		Set<Long> allIds = new LinkedHashSet<>();
 		for (var gap : gaps) {
 			var segment = chains.getOrDefault(gap.previous().getOrchidGroupId(), List.of())
 				.stream()
 				.filter(entry -> entry.getStateRevisionAfter() > gap.previous().getStateRevisionAfter()
 						&& entry.getStateRevisionAfter() <= gap.next().getStateRevisionBefore())
-				.sorted(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+				.sorted(Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
 				.toList();
 			var previous = gap.previous();
 			Set<Long> ids = new LinkedHashSet<>();

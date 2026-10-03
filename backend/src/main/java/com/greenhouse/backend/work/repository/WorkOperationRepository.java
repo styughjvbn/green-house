@@ -2,8 +2,10 @@ package com.greenhouse.backend.work.repository;
 
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
+import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -13,11 +15,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface WorkOperationRepository extends JpaRepository<WorkOperation, Long>, WorkOperationRepositoryCustom {
 
-	@org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+	@org.springframework.data.jpa.repository.Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select o from WorkOperation o where o.id = :id")
-	java.util.Optional<WorkOperation> findForUpdateById(@Param("id") Long id);
+	Optional<WorkOperation> findForUpdateById(@Param("id") Long id);
 
-	@org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+	@org.springframework.data.jpa.repository.Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select o from WorkOperation o where o.id in :ids order by o.id")
 	List<WorkOperation> findAllForUpdateByIdIn(@Param("ids") Collection<Long> ids);
 

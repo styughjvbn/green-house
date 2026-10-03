@@ -7,6 +7,7 @@ import com.greenhouse.backend.work.application.operation.WorkOperationMetadataRe
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,7 @@ class OrchidGroupMutationWorkOperationReader {
 		}
 
 		Map<Long, OrchidGroupMutationWorkOperationResponse> workOperationsById = new LinkedHashMap<>();
-		(workOperationIds.isEmpty() ? java.util.List.<WorkOperationMetadataReader.WorkOperationMetadata>of()
+		(workOperationIds.isEmpty() ? List.<WorkOperationMetadataReader.WorkOperationMetadata>of()
 				: workOperationMetadataReader.findByIds(workOperationIds))
 			.forEach(workOperation -> workOperationsById.put(workOperation.id(),
 					new OrchidGroupMutationWorkOperationResponse(workOperation.id(), workOperation.workTypeCode(),

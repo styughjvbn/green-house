@@ -3,12 +3,14 @@ package com.greenhouse.backend.work.repository;
 import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOperation;
 import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
+import com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -121,8 +123,8 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 	private BooleanExpression correctionCondition(Boolean hasCorrections) {
 		if (hasCorrections == null)
 			return null;
-		var correction = com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection.workOperationCorrection;
-		var exists = com.querydsl.jpa.JPAExpressions.selectOne()
+		var correction = QWorkOperationCorrection.workOperationCorrection;
+		var exists = JPAExpressions.selectOne()
 			.from(correction)
 			.where(correction.originalWorkOperation.eq(workOperation))
 			.exists();
@@ -139,11 +141,11 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 			case MANAGEMENT -> workOperation.status
 				.in(WorkOperationStatus.PLANNED, WorkOperationStatus.IN_PROGRESS, WorkOperationStatus.PAUSED)
 				.or(workOperation.updatedAt.goe(todayStartedAt))
-				.or(com.querydsl.jpa.JPAExpressions.selectOne()
-					.from(com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection.workOperationCorrection)
-					.where(com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection.workOperationCorrection.originalWorkOperation
+				.or(JPAExpressions.selectOne()
+					.from(QWorkOperationCorrection.workOperationCorrection)
+					.where(QWorkOperationCorrection.workOperationCorrection.originalWorkOperation
 						.eq(workOperation),
-							com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection.workOperationCorrection.createdAt
+							QWorkOperationCorrection.workOperationCorrection.createdAt
 								.goe(todayStartedAt))
 					.exists());
 		};

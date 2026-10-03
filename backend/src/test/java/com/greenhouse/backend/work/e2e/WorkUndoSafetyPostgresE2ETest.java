@@ -1,18 +1,27 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.Test;
 
-@org.springframework.context.annotation.Import(com.greenhouse.backend.support.MovementTestSupport.class)
+import com.greenhouse.backend.support.MovementTestSupport;
+import com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Test;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+@org.springframework.context.annotation.Import(MovementTestSupport.class)
 class WorkUndoSafetyPostgresE2ETest extends WorkUndoSafetyTestBase {
 
 	@org.springframework.beans.factory.annotation.Autowired
-	org.springframework.transaction.PlatformTransactionManager transactionManager;
+	PlatformTransactionManager transactionManager;
 
 	@org.springframework.beans.factory.annotation.Autowired
-	com.greenhouse.backend.support.MovementTestSupport movement;
+	MovementTestSupport movement;
 
 	private long original() {
 		return jdbc.queryForObject("select min(id) from work_operations", Long.class);
@@ -138,10 +147,10 @@ class WorkUndoSafetyPostgresE2ETest extends WorkUndoSafetyTestBase {
 		long orig = original(), group = result();
 		long zone = jdbc.queryForObject("select bed_zone_id from orchid_groups where id = ?", Long.class, group);
 		try (var executor = Executors.newSingleThreadExecutor()) {
-			var pending = new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.Future<ApiResult>>();
-			new org.springframework.transaction.support.TransactionTemplate(transactionManager)
+			var pending = new AtomicReference<Future<ApiResult>>();
+			new TransactionTemplate(transactionManager)
 				.executeWithoutResult(status -> {
-					groups.findAllForUpdateByIdIn(java.util.List.of(group));
+					groups.findAllForUpdateByIdIn(List.of(group));
 					pending.set(executor.submit(() -> post("/api/work-operations/" + orig + "/cancel",
 							"{\"idempotencyKey\":\"mutation-race\",\"reason\":\"audit\"}")));
 					try {
@@ -150,8 +159,8 @@ class WorkUndoSafetyPostgresE2ETest extends WorkUndoSafetyTestBase {
 					catch (Exception exception) {
 						throw new RuntimeException(exception);
 					}
-					movement.move(group, new com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest(zone,
-							java.math.BigDecimal.valueOf(12), java.math.BigDecimal.valueOf(14), "audit", null));
+					movement.move(group, new MoveTestRequest(zone,
+							BigDecimal.valueOf(12), BigDecimal.valueOf(14), "audit", null));
 				});
 			var undo = pending.get().get(20, TimeUnit.SECONDS);
 			assertThat(undo.status()).as(undo.body().toString()).isEqualTo(400);

@@ -1,7 +1,6 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.work.application.operation.WorkExecutionLocation;
 import com.greenhouse.backend.work.application.target.WorkExecutionReferenceGateway;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;

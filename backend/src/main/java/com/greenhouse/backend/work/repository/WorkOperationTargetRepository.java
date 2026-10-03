@@ -12,13 +12,13 @@ public interface WorkOperationTargetRepository extends JpaRepository<WorkOperati
 
 	@Query("select distinct t.inboundRecordId from WorkOperationTarget t where t.workOperation.id in :operationIds "
 			+ "and t.inboundRecordId is not null order by t.inboundRecordId")
-	List<Long> findInboundRecordIdsIn(java.util.Collection<Long> operationIds);
+	List<Long> findInboundRecordIdsIn(Collection<Long> operationIds);
 
 	@Query("select distinct t.workOperation.id from WorkOperationTarget t where t.inboundRecordId in :inboundIds "
 			+ "and t.workOperation.workType.code = 'POTTING' and t.workOperation.status in :statuses "
 			+ "order by t.workOperation.id")
-	List<Long> findActivePottingOperationIds(java.util.Collection<Long> inboundIds,
-			java.util.Collection<WorkOperationStatus> statuses);
+	List<Long> findActivePottingOperationIds(Collection<Long> inboundIds,
+			Collection<WorkOperationStatus> statuses);
 
 	boolean existsByOrchidGroupIdAndExcludedAtIsNullAndWorkOperationStatusNotIn(Long orchidGroupId,
 			Collection<WorkOperationStatus> ignoredStatuses);

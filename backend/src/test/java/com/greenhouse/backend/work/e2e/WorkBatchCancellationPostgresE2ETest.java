@@ -1,18 +1,23 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest;
 import com.greenhouse.backend.support.MovementTestSupport;
+import com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -154,17 +159,17 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
 	void concurrentRetriesCreateOnlyOneCompensationAndAuditSet() throws Exception {
 		prepare();
 		String payload = request(workIds, sourceIds, "parallel");
-		var start = new java.util.concurrent.CountDownLatch(1);
-		try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
-			java.util.concurrent.Callable<ApiResult> task = () -> {
+		var start = new CountDownLatch(1);
+		try (var executor = Executors.newFixedThreadPool(2)) {
+			Callable<ApiResult> task = () -> {
 				start.await();
 				return post("/api/work-operations/cancel-batch", payload);
 			};
 			var first = executor.submit(task);
 			var second = executor.submit(task);
 			start.countDown();
-			var firstResult = first.get(30, java.util.concurrent.TimeUnit.SECONDS);
-			var secondResult = second.get(30, java.util.concurrent.TimeUnit.SECONDS);
+			var firstResult = first.get(30, TimeUnit.SECONDS);
+			var secondResult = second.get(30, TimeUnit.SECONDS);
 			assertThat(firstResult.status()).as(firstResult.body().toString()).isEqualTo(200);
 			assertThat(secondResult.status()).as(secondResult.body().toString()).isEqualTo(200);
 			assertThat(firstResult.data().path("compensationMutationId"))

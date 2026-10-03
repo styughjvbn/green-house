@@ -8,7 +8,6 @@ import com.greenhouse.backend.work.domain.operation.WorkCommandReceipt;
 import com.greenhouse.backend.work.domain.operation.WorkCommandReceiptMembership;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
-import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.dto.operation.WorkOperationOriginType;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptMembershipRepository;

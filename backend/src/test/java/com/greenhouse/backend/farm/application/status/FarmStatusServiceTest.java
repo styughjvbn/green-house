@@ -12,6 +12,9 @@ import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedOrderRow;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +29,7 @@ class FarmStatusServiceTest {
 	private final OrchidGroupRepository orchidGroupRepository = mock(OrchidGroupRepository.class);
 
 	private final FarmStatusService service = new FarmStatusService(
-			java.time.Clock.fixed(java.time.Instant.parse("2026-09-08T00:00:00Z"), java.time.ZoneOffset.UTC),
+			Clock.fixed(Instant.parse("2026-09-08T00:00:00Z"), ZoneOffset.UTC),
 			houseRepository, physicalBedRepository, bedZoneRepository, orchidGroupRepository);
 
 	@Test

@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
@@ -13,9 +14,18 @@ import com.greenhouse.backend.work.application.operation.InboundPottingOperation
 import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -65,14 +75,14 @@ class WorkUndoStateProtectionPostgresE2ETest extends WorkUndoSafetyTestBase {
 		assertThat(post("/api/work-operations/" + operation + "/cancel",
 				"{\"idempotencyKey\":\"undo-audit\",\"reason\":\"audit\"}")
 			.status()).isEqualTo(200);
-		var request = java.net.http.HttpRequest
-			.newBuilder(java.net.URI.create("http://localhost:" + port + "/api/orchid-groups/" + group))
+		var request = HttpRequest
+			.newBuilder(URI.create("http://localhost:" + port + "/api/orchid-groups/" + group))
 			.header("Content-Type", "application/json")
-			.method("PATCH", java.net.http.HttpRequest.BodyPublishers.ofString("{\"varietyId\":" + variety
+			.method("PATCH", HttpRequest.BodyPublishers.ofString("{\"varietyId\":" + variety
 					+ ",\"quantity\":60,\"potSize\":\"4치\",\"ageYear\":3,\"status\":\"정상\",\"startPosition\":6,\"endPosition\":8}"))
 			.build();
-		var response = java.net.http.HttpClient.newHttpClient()
-			.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+		var response = HttpClient.newHttpClient()
+			.send(request, HttpResponse.BodyHandlers.ofString());
 		assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
 		assertThat(jdbc.queryForObject("select sum(quantity) from orchid_groups", Long.class)).isEqualTo(100);
 		assertThat(jdbc.queryForObject("select status from orchid_groups where id = ?", String.class, group))
@@ -92,7 +102,7 @@ class WorkUndoStateProtectionPostgresE2ETest extends WorkUndoSafetyTestBase {
 		assertThat(get("/api/inbound-records/" + first).data().path("availableActions").isEmpty()).isTrue();
 		var page = get("/api/inbound-records?page=0&size=20");
 		assertThat(page.status()).as(page.body().toString()).isEqualTo(200);
-		var row = java.util.stream.StreamSupport.stream(page.data().path("content").spliterator(), false)
+		var row = StreamSupport.stream(page.data().path("content").spliterator(), false)
 			.filter(item -> item.path("id").asLong() == first)
 			.findFirst()
 			.orElseThrow();
@@ -130,8 +140,8 @@ class WorkUndoStateProtectionPostgresE2ETest extends WorkUndoSafetyTestBase {
 	}
 
 	private void updateAfterTransition(long inbound, Runnable transition) throws Exception {
-		try (var executor = java.util.concurrent.Executors.newFixedThreadPool(1)) {
-			var update = new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.Future<?>>();
+		try (var executor = Executors.newFixedThreadPool(1)) {
+			var update = new AtomicReference<Future<?>>();
 			new TransactionTemplate(transactions).executeWithoutResult(tx -> {
 				jdbc.queryForObject("select id from inbound_records where id = ? for update", Long.class, inbound);
 				update.set(executor.submit(() -> inbounds.update(inbound,
@@ -150,7 +160,7 @@ class WorkUndoStateProtectionPostgresE2ETest extends WorkUndoSafetyTestBase {
 				transition.run();
 			});
 			assertThatThrownBy(() -> update.get().get(15, TimeUnit.SECONDS))
-				.isInstanceOf(java.util.concurrent.ExecutionException.class)
+				.isInstanceOf(ExecutionException.class)
 				.hasCauseInstanceOf(IllegalArgumentException.class);
 		}
 	}

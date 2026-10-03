@@ -6,6 +6,7 @@ import com.greenhouse.backend.sales.repository.SalesSlipNumberRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ class SalesSlipNumberPostgresE2ETest extends WorkE2ETestBase {
 		LocalDate saleDate = LocalDate.of(2040, 1, 2);
 		var executor = Executors.newFixedThreadPool(8);
 		try {
-			var tasks = new ArrayList<java.util.concurrent.Callable<Long>>();
+			var tasks = new ArrayList<Callable<Long>>();
 			for (int index = 0; index < 8; index++) {
 				tasks.add(() -> repository.nextDailySequence(saleDate));
 			}

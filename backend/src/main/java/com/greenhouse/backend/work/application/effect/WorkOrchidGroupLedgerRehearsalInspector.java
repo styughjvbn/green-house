@@ -1,10 +1,16 @@
 package com.greenhouse.backend.work.application.effect;
 
+import com.greenhouse.backend.work.dto.operation.WorkCorrectionAdjustmentResponse;
+import com.greenhouse.backend.work.dto.operation.WorkCorrectionDetailResponse;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkExecutionReconciliationRow;
+import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import java.util.ArrayList;
+import java.util.List;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,12 +24,12 @@ public class WorkOrchidGroupLedgerRehearsalInspector {
 
 	private final WorkAppliedEffectRepository appliedEffectRepository;
 
-	private final com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository correctionRepository;
+	private final WorkOperationCorrectionRepository correctionRepository;
 
 	public WorkOrchidGroupLedgerRehearsalInspector(WorkTargetExecutionRepository executionRepository,
 			WorkOperationTargetRepository targetRepository, WorkEffectOrchidGroupRepository effectGroupRepository,
 			WorkAppliedEffectRepository appliedEffectRepository,
-			com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository correctionRepository) {
+			WorkOperationCorrectionRepository correctionRepository) {
 		this.executionRepository = executionRepository;
 		this.targetRepository = targetRepository;
 		this.effectGroupRepository = effectGroupRepository;
@@ -42,19 +48,19 @@ public class WorkOrchidGroupLedgerRehearsalInspector {
 				appliedEffectRepository.findIdsWithIncompleteMutationLink(), corrections());
 	}
 
-	private java.util.List<WorkOrchidGroupLedgerRehearsalReport.CorrectionReference> corrections() {
-		var references = new java.util.ArrayList<WorkOrchidGroupLedgerRehearsalReport.CorrectionReference>();
+	private List<WorkOrchidGroupLedgerRehearsalReport.CorrectionReference> corrections() {
+		var references = new ArrayList<WorkOrchidGroupLedgerRehearsalReport.CorrectionReference>();
 		long afterId = Long.MIN_VALUE;
 		while (true) {
 			var rows = correctionRepository.findAfterId(afterId,
-					org.springframework.data.domain.PageRequest.of(0, 500));
+					PageRequest.of(0, 500));
 			if (rows.isEmpty())
-				return java.util.List.copyOf(references);
+				return List.copyOf(references);
 			for (var row : rows) {
-				var detail = com.greenhouse.backend.work.dto.operation.WorkCorrectionDetailResponse.from(row);
+				var detail = WorkCorrectionDetailResponse.from(row);
 				var ids = detail.adjustments()
 					.stream()
-					.map(com.greenhouse.backend.work.dto.operation.WorkCorrectionAdjustmentResponse::orchidGroupId)
+					.map(WorkCorrectionAdjustmentResponse::orchidGroupId)
 					.toList();
 				references.add(new WorkOrchidGroupLedgerRehearsalReport.CorrectionReference(row.getId(),
 						row.getMutationId(), row.getCorrelationId(), !ids.isEmpty(), ids));

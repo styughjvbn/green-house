@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.domain.operation.WorkCommandReceipt;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.dto.operation.WorkOperationRelationKind;
 import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
@@ -13,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -46,7 +48,7 @@ public class WorkOperationRelationQueryService {
 	private List<WorkOperation> creationBatch(WorkOperation root) {
 		List<String> receiptKeys = membershipRepository.findReceiptKeysByOperationId(root.getId());
 		Set<Long> operationIds = new LinkedHashSet<>();
-		(receiptKeys.isEmpty() ? List.<com.greenhouse.backend.work.domain.operation.WorkCommandReceipt>of()
+		(receiptKeys.isEmpty() ? List.<WorkCommandReceipt>of()
 				: receiptRepository.findByReceiptKeyIn(receiptKeys))
 			.forEach(receipt -> {
 				if (receipt.getResultOperationIds() != null) {
@@ -70,7 +72,7 @@ public class WorkOperationRelationQueryService {
 			Set<Long> parentIds = frontier.stream()
 				.map(related::get)
 				.map(WorkOperation::getParentOperation)
-				.filter(java.util.Objects::nonNull)
+				.filter(Objects::nonNull)
 				.map(WorkOperation::getId)
 				.filter(id -> !related.containsKey(id))
 				.collect(Collectors.toCollection(LinkedHashSet::new));
@@ -114,7 +116,7 @@ public class WorkOperationRelationQueryService {
 		Map<Long, WorkOperation> byId = operationRepository.findWithWorkTypeByIdIn(operationIds)
 			.stream()
 			.collect(Collectors.toMap(WorkOperation::getId, Function.identity()));
-		return operationIds.stream().map(byId::get).filter(java.util.Objects::nonNull).toList();
+		return operationIds.stream().map(byId::get).filter(Objects::nonNull).toList();
 	}
 
 }

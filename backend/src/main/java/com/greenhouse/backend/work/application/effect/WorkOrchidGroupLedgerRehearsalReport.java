@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.effect;
 
 import java.util.List;
+import java.util.UUID;
 
 public record WorkOrchidGroupLedgerRehearsalReport(List<Long> targetOrchidGroupIds, List<Long> effectOrchidGroupIds,
 		List<Long> invalidExecutionIds, List<Long> incompleteMutationLinkEffectIds,
@@ -19,7 +20,7 @@ public record WorkOrchidGroupLedgerRehearsalReport(List<Long> targetOrchidGroupI
 		this(targetOrchidGroupIds, effectOrchidGroupIds, invalidExecutionIds, incompleteMutationLinkEffectIds,
 				List.of());
 	}
-	public record CorrectionReference(Long id, Long mutationId, java.util.UUID correlationId, boolean changesGroups,
+	public record CorrectionReference(Long id, Long mutationId, UUID correlationId, boolean changesGroups,
 			List<Long> orchidGroupIds) {
 	}
 }

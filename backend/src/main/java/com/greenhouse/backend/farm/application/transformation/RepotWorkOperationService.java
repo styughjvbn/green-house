@@ -14,6 +14,7 @@ import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,7 +79,7 @@ public class RepotWorkOperationService {
 			.orElseThrow(() -> new NotFoundException("원본 난 묶음을 찾을 수 없습니다."));
 		var groupsById = orchidGroupRepository.findDetailsByIds(resultIds)
 			.stream()
-			.collect(java.util.stream.Collectors.toMap(group -> group.getId(), group -> group));
+			.collect(Collectors.toMap(group -> group.getId(), group -> group));
 		var results = resultIds.stream()
 			.filter(groupsById::containsKey)
 			.map(id -> OrchidGroupResponse.from(groupsById.get(id), businessDate))

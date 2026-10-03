@@ -9,6 +9,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -80,7 +81,7 @@ class ModuleBoundaryInventoryTest {
 				boolean readsSystemTime = owner.startsWith("java.time.") && target.getName().equals("now")
 						&& target.getRawParameterTypes()
 							.stream()
-							.noneMatch(type -> type.isEquivalentTo(java.time.Clock.class));
+							.noneMatch(type -> type.isEquivalentTo(Clock.class));
 				boolean constructsSystemClock = owner.equals("java.time.Clock") && target.getName().startsWith("system")
 						&& !origin.getName().equals(BASE_PACKAGE + "common.config.TimeConfig");
 				if (readsSystemTime || constructsSystemClock

@@ -16,6 +16,7 @@ import com.greenhouse.backend.work.application.effect.StructureChangeLineageQuer
 import java.time.Clock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +49,7 @@ public class OrchidGroupLineageService {
 		}
 		var transformationViews = structureChangeLineageQueryService.findByOrchidGroupId(orchidGroupId);
 		var transformationGroupIds = transformationViews.stream()
-			.flatMap(view -> java.util.stream.Stream.concat(view.sources().stream(), view.results().stream()))
+			.flatMap(view -> Stream.concat(view.sources().stream(), view.results().stream()))
 			.map(group -> group.orchidGroupId())
 			.collect(Collectors.toSet());
 		var groupsById = orchidGroupRepository.findDetailsByIds(transformationGroupIds)

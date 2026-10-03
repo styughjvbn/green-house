@@ -2,7 +2,6 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
 import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
 import com.greenhouse.backend.work.application.target.WorkTargetResolver;

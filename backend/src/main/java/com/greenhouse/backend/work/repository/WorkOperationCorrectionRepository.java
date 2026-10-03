@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.repository;
 import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
 import java.util.Collection;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,7 +21,7 @@ public interface WorkOperationCorrectionRepository extends JpaRepository<WorkOpe
 	List<Count> countByOriginalIds(Collection<Long> ids);
 
 	@Query("select c from WorkOperationCorrection c where c.id > :afterId order by c.id")
-	List<WorkOperationCorrection> findAfterId(Long afterId, org.springframework.data.domain.Pageable pageable);
+	List<WorkOperationCorrection> findAfterId(Long afterId, Pageable pageable);
 
 	interface Count {
 

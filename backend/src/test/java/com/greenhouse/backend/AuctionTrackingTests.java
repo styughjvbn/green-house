@@ -27,6 +27,8 @@ import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -64,9 +66,9 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
 	void tracksFailedThenSoldAuctionsWithPagination() throws Exception {
 		var lot = createLot(LocalDate.of(2026, 6, 1), "태성", "카틀레야 A", "특", 100);
 		addResult(lot, LocalDate.of(2026, 6, 3), 1, 100, 0, "유찰", AuctionAttemptStatus.FAILED);
-		lot.applyResult(0, 0, true, false, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
+		lot.applyResult(0, 0, true, false, LocalDateTime.of(2026, 9, 8, 1, 2));
 		addResult(lot, LocalDate.of(2026, 6, 6), 2, 100, 10_000, null, AuctionAttemptStatus.SOLD);
-		lot.applyResult(100, 0, false, false, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
+		lot.applyResult(100, 0, false, false, LocalDateTime.of(2026, 9, 8, 1, 2));
 		lotRepository.flush();
 
 		var response = trackingService.getLots(null, null, null, null, null, null, null, null, null, null, 0, 20);
@@ -91,7 +93,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
 	@Test
 	void confirmsReturnAndAdjustsQuantitiesWithHistory() {
 		var lot = createLot(LocalDate.of(2026, 6, 1), "양재", "심비디움 A", "A", 50);
-		lot.applyResult(0, 50, false, true, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
+		lot.applyResult(0, 50, false, true, LocalDateTime.of(2026, 9, 8, 1, 2));
 		lotRepository.flush();
 
 		var partial = trackingService.confirmReturn(lot.getId(),
@@ -115,7 +117,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
 	@Test
 	void confirmsReturnFromReauctionWaiting() {
 		var lot = createLot(LocalDate.of(2026, 6, 1), "수원", "카틀레야 B", "A", 30);
-		lot.applyResult(0, 0, true, false, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
+		lot.applyResult(0, 0, true, false, LocalDateTime.of(2026, 9, 8, 1, 2));
 		lotRepository.flush();
 
 		var returned = trackingService.confirmReturn(lot.getId(),
@@ -370,7 +372,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
 
 		var soldResponse = trackingService.addResult(soldLot.getId(),
 				new RecordAuctionResultCommand(LocalDate.of(2026, 7, 3), null, AuctionAttemptStatus.SOLD, null, "수동 입력",
-						java.util.List.of(
+						List.of(
 								new AuctionResultLineInput("특", 60, 12000, null, AuctionInspectionStatus.NORMAL),
 								new AuctionResultLineInput("특", 40, 11500, null, AuctionInspectionStatus.NORMAL))));
 		assertThat(soldResponse.currentStatus()).isEqualTo(AuctionLotStatus.SOLD);
@@ -379,7 +381,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
 
 		var partialResponse = trackingService.addResult(partialLot.getId(), new RecordAuctionResultCommand(
 				LocalDate.of(2026, 7, 4), 1, AuctionAttemptStatus.PARTIALLY_SOLD, "잔량 유찰", null,
-				java.util.List.of(new AuctionResultLineInput("A", 30, 9000, null, AuctionInspectionStatus.NORMAL))));
+				List.of(new AuctionResultLineInput("A", 30, 9000, null, AuctionInspectionStatus.NORMAL))));
 		assertThat(partialResponse.currentStatus()).isEqualTo(AuctionLotStatus.PARTIALLY_SOLD);
 		assertThat(partialResponse.waitingQuantity()).isEqualTo(50);
 		assertThat(partialResponse.attempts().getFirst().attemptStatus())

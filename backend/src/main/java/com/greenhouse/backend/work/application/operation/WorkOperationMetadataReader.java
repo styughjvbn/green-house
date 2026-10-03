@@ -1,8 +1,11 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,15 +17,15 @@ public class WorkOperationMetadataReader {
 
 	private final WorkOperationRepository workOperationRepository;
 
-	private final com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository correctionRepository;
+	private final WorkOperationCorrectionRepository correctionRepository;
 
-	public java.util.Map<Long, WorkOperationMetadata> findOriginalsByCorrectionMutationIds(
+	public Map<Long, WorkOperationMetadata> findOriginalsByCorrectionMutationIds(
 			Collection<Long> mutationIds) {
 		if (mutationIds.isEmpty())
-			return java.util.Map.of();
+			return Map.of();
 		return correctionRepository.findByMutationIdIn(mutationIds)
 			.stream()
-			.collect(java.util.stream.Collectors.toMap(correction -> correction.getMutationId(), correction -> {
+			.collect(Collectors.toMap(correction -> correction.getMutationId(), correction -> {
 				var operation = correction.getOriginalWorkOperation();
 				return new WorkOperationMetadata(operation.getId(), operation.getWorkType().getCode(),
 						operation.getWorkType().getName(), operation.getTitle());

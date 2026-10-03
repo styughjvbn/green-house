@@ -12,6 +12,7 @@ import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
+import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
@@ -85,7 +86,7 @@ class SalesOrchidGroupSnapshotIntegrationTest {
 				BigDecimal.ONE, BigDecimal.TEN);
 		group.assignVariety(variety);
 		group = orchidGroupRepository.save(group);
-		com.greenhouse.backend.farm.support.FarmTestFixtures.baseline(entityManager, group);
+		FarmTestFixtures.baseline(entityManager, group);
 		BusinessPartner partner = partnerRepository.save(new BusinessPartner("스냅샷 거래처",
 				salesType == SalesType.DIRECT ? PartnerType.WHOLESALE : PartnerType.AUCTION_HOUSE, null, null, null,
 				null));

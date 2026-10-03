@@ -28,6 +28,7 @@ import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -130,7 +131,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		assertThat(targetExecutionRepository.findByTargetWorkOperationIdOrderByIdAsc(operationId)).singleElement()
 			.satisfies(execution -> assertThat(execution.getStatus().name()).isEqualTo("COMPLETED"));
 		assertThat(effectOrchidGroupRepository.findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
-				operationId, com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType.RESULT))
+				operationId, WorkEffectOrchidGroupRelationType.RESULT))
 			.hasSize(1);
 	}
 
@@ -825,7 +826,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 						"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("VOIDED"));
-		assertThat(inboundRecordRepository.findByIdIn(java.util.Set.of(inboundRecord.getId(), secondInbound.getId())))
+		assertThat(inboundRecordRepository.findByIdIn(Set.of(inboundRecord.getId(), secondInbound.getId())))
 			.allSatisfy(record -> {
 				assertThat(record.getStatus()).isEqualTo(InboundStatus.POTTING_PENDING);
 				assertThat(record.isEditable()).isTrue();

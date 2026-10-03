@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -67,7 +68,7 @@ public class VarietyResponseAssembler {
 			.sum();
 		LocalDate recentWorkDate = latestWorkDates.values()
 			.stream()
-			.filter(java.util.Objects::nonNull)
+			.filter(Objects::nonNull)
 			.max(Comparator.naturalOrder())
 			.orElse(null);
 		return VarietyResponse.from(variety, orchidGroups.size(), totalQuantity, saleableQuantity, latestInboundDate,

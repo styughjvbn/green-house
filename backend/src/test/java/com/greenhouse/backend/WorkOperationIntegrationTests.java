@@ -28,6 +28,7 @@ import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -186,8 +187,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data[*].title", hasItem("테스트 난 · 분갈이")))
 			.andExpect(jsonPath("$.data[*].title", hasItem("다른 품종 · 분갈이")));
 
-		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isEqualTo(2);
-		org.assertj.core.api.Assertions.assertThat(workOperationTargetRepository.count()).isEqualTo(2);
+		Assertions.assertThat(workOperationRepository.count()).isEqualTo(2);
+		Assertions.assertThat(workOperationTargetRepository.count()).isEqualTo(2);
 	}
 
 	@Test
@@ -217,8 +218,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data.targets[0].resultDetails.remainingQuantity").value(70));
 
 		OrchidGroup partiallyDiscarded = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
-		org.assertj.core.api.Assertions.assertThat(partiallyDiscarded.getQuantity()).isEqualTo(70);
-		org.assertj.core.api.Assertions.assertThat(partiallyDiscarded.getStatus()).isEqualTo("정상");
+		Assertions.assertThat(partiallyDiscarded.getQuantity()).isEqualTo(70);
+		Assertions.assertThat(partiallyDiscarded.getStatus()).isEqualTo("정상");
 
 		mockMvc
 			.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", partialOperationId, partialTargetId)
@@ -236,8 +237,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"));
 
 		OrchidGroup afterDuplicate = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
-		org.assertj.core.api.Assertions.assertThat(afterDuplicate.getQuantity()).isEqualTo(70);
-		org.assertj.core.api.Assertions
+		Assertions.assertThat(afterDuplicate.getQuantity()).isEqualTo(70);
+		Assertions
 			.assertThat(
 					workAppliedEffectRepository.countByWorkOperationIdAndTargetId(partialOperationId, partialTargetId))
 			.isEqualTo(1);
@@ -264,8 +265,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data.targets[0].resultDetails.status").value("폐기"));
 
 		OrchidGroup fullyDiscarded = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
-		org.assertj.core.api.Assertions.assertThat(fullyDiscarded.getQuantity()).isZero();
-		org.assertj.core.api.Assertions.assertThat(fullyDiscarded.getStatus()).isEqualTo("폐기");
+		Assertions.assertThat(fullyDiscarded.getQuantity()).isZero();
+		Assertions.assertThat(fullyDiscarded.getStatus()).isEqualTo("폐기");
 	}
 
 	@Test
@@ -298,8 +299,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data[0].targets[0].resultDetails.remainingQuantity").value(75));
 
 		OrchidGroup updated = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
-		org.assertj.core.api.Assertions.assertThat(updated.getQuantity()).isEqualTo(75);
-		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isEqualTo(1);
+		Assertions.assertThat(updated.getQuantity()).isEqualTo(75);
+		Assertions.assertThat(workOperationRepository.count()).isEqualTo(1);
 
 		Long operationId = workOperationRepository.findAll().getFirst().getId();
 		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
@@ -333,8 +334,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data.status").value("VOIDED"));
 
 		OrchidGroup restored = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
-		org.assertj.core.api.Assertions.assertThat(restored.getQuantity()).isEqualTo(100);
-		org.assertj.core.api.Assertions.assertThat(restored.getStatus()).isEqualTo("정상");
+		Assertions.assertThat(restored.getQuantity()).isEqualTo(100);
+		Assertions.assertThat(restored.getStatus()).isEqualTo("정상");
 	}
 
 	@Test
@@ -374,7 +375,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data[*].status", everyItem(is("COMPLETED"))))
 			.andExpect(jsonPath("$.data[*].targets", everyItem(hasSize(1))));
 
-		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isEqualTo(2);
+		Assertions.assertThat(workOperationRepository.count()).isEqualTo(2);
 	}
 
 	private Long createDiscardOperation(String title) throws Exception {
@@ -427,7 +428,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
 			.andExpect(jsonPath("$.data.targets[0].resultDetails.identityPreserved").value(true));
-		org.assertj.core.api.Assertions
+		Assertions
 			.assertThat(orchidGroupRepository.findById(targetGroup.getId()).orElseThrow().getBedZone().getId())
 			.isEqualTo(destinationZone.getId());
 
@@ -507,18 +508,18 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("COMPLETED"))
 			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
-		org.assertj.core.api.Assertions.assertThat(
+		Assertions.assertThat(
 				TimeConfig
 					.toFarmTime(workTargetExecutionRepository.findByTargetWorkOperationIdOrderByIdAsc(operationId)
 						.getFirst()
 						.getCompletedAt())
 					.toLocalDate())
-			.isEqualTo(java.time.LocalDate.of(2026, 7, 15));
-		org.assertj.core.api.Assertions
+			.isEqualTo(LocalDate.of(2026, 7, 15));
+		Assertions
 			.assertThat(
 					TimeConfig.toFarmTime(workOperationRepository.findById(operationId).orElseThrow().getActualEndAt())
 						.toLocalDate())
-			.isEqualTo(java.time.LocalDate.of(2026, 7, 15));
+			.isEqualTo(LocalDate.of(2026, 7, 15));
 
 		mockMvc
 			.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
@@ -531,7 +532,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 						"""))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"));
-		org.assertj.core.api.Assertions
+		Assertions
 			.assertThat(workAppliedEffectRepository.countByWorkOperationIdAndTargetId(operationId, targetId))
 			.isEqualTo(1);
 
@@ -593,7 +594,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.content("{}"))
 			.andExpect(status().isNotFound());
 
-		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isZero();
+		Assertions.assertThat(workOperationRepository.count()).isZero();
 	}
 
 	@Test
@@ -737,7 +738,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data.targets[?(@.executionStatus == 'COMPLETED')]", hasSize(1)))
 			.andExpect(jsonPath("$.data.targets[?(@.executionStatus == 'CANCELED')]", hasSize(1)));
 
-		org.assertj.core.api.Assertions
+		Assertions
 			.assertThat(workAppliedEffectRepository.countByWorkOperationIdAndTargetId(operationId, completedTargetId))
 			.isEqualTo(1);
 	}

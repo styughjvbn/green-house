@@ -44,7 +44,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
 		var target = context.target();
 		if (command
-			.payload() instanceof com.greenhouse.backend.work.application.effect.StructureChangeCommand request) {
+			.payload() instanceof StructureChangeCommand request) {
 			return structureChangeExecutor.execute(context, request, command.placementExclusionOrchidGroupIds());
 		}
 		if (target != null) {

@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -101,7 +103,7 @@ class ModularArchitectureTests {
 	@Test
 	void declaredModuleDependenciesAreAcyclic() {
 		for (String module : MODULES) {
-			assertThat(reaches(module, module, new java.util.HashSet<>()))
+			assertThat(reaches(module, module, new HashSet<>()))
 				.as("Cyclic module dependency starting at %s", module)
 				.isFalse();
 		}
@@ -145,8 +147,8 @@ class ModularArchitectureTests {
 				var imports = Files.readAllLines(source).stream().filter(line -> line.startsWith("import ")).toList();
 				var ordered = imports.stream()
 					.distinct()
-					.sorted(java.util.Comparator.comparing((String value) -> !value.startsWith("import static "))
-						.thenComparing(java.util.Comparator.naturalOrder()))
+					.sorted(Comparator.comparing((String value) -> !value.startsWith("import static "))
+						.thenComparing(Comparator.naturalOrder()))
 					.toList();
 				assertThat(imports).as("Static imports first, then alphabetical imports: %s", source)
 					.isEqualTo(ordered);

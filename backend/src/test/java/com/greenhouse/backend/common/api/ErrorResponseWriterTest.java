@@ -2,6 +2,7 @@ package com.greenhouse.backend.common.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
 import tools.jackson.databind.json.JsonMapper;
@@ -20,7 +21,7 @@ class ErrorResponseWriterTest {
 		assertThat(response.getCharacterEncoding()).isEqualTo("UTF-8");
 		assertThat(response.getContentType()).startsWith("application/json");
 		assertThat(mapper.readTree(response.getContentAsString()))
-			.isEqualTo(mapper.valueToTree(ErrorResponse.of("FORBIDDEN", message, java.util.List.of())));
+			.isEqualTo(mapper.valueToTree(ErrorResponse.of("FORBIDDEN", message, List.of())));
 	}
 
 }

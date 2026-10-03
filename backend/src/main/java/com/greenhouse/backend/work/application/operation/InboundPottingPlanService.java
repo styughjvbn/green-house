@@ -1,6 +1,5 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
@@ -16,6 +15,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,7 +71,7 @@ public class InboundPottingPlanService {
 			idsByVariety.computeIfAbsent(key, ignored -> new ArrayList<>()).add(record.id());
 		}
 		Map<Long, InboundPottingPlanTarget> recordsById = records.stream()
-			.collect(java.util.stream.Collectors.toMap(InboundPottingPlanTarget::id, record -> record));
+			.collect(Collectors.toMap(InboundPottingPlanTarget::id, record -> record));
 		List<Long> operationIds = idsByVariety.entrySet().stream().map(entry -> {
 			var groupedRequest = new InboundPottingPlanCreateRequest(planRequest.title(),
 					planRequest.plannedStartDate(), planRequest.plannedEndDate(), entry.getValue(),

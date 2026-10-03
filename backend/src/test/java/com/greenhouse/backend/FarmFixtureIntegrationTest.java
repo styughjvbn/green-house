@@ -7,6 +7,7 @@ import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import jakarta.persistence.EntityManager;
@@ -51,7 +52,7 @@ abstract class FarmFixtureIntegrationTest extends AbstractBackendIntegrationTest
 					index + 1, BigDecimal.valueOf(index * 7), BigDecimal.valueOf((index + 1) * 7));
 			group.assignVariety(variety);
 			fixtureEntityManager.persist(group);
-			com.greenhouse.backend.farm.support.FarmTestFixtures.baseline(fixtureEntityManager, group);
+			FarmTestFixtures.baseline(fixtureEntityManager, group);
 			fixtureEntityManager
 				.persist(new Material("M-FIX-" + index, "자재", "자재 " + index, null, null, null, null, null, true));
 		}

@@ -22,6 +22,7 @@ import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -111,8 +112,8 @@ public class VarietyService {
 		var connectedGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(varietyId);
 		UUID correlationId = UUID.randomUUID();
 		var changedGroups = connectedGroups.stream()
-			.filter(group -> !java.util.Objects.equals(group.getGenus(), variety.getGenus())
-					|| !java.util.Objects.equals(group.getVarietyName(), variety.getName()))
+			.filter(group -> !Objects.equals(group.getGenus(), variety.getGenus())
+					|| !Objects.equals(group.getVarietyName(), variety.getName()))
 			.toList();
 		changedGroups
 			.forEach(

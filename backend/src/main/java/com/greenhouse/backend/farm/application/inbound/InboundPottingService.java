@@ -7,10 +7,10 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingRequest;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,7 +51,7 @@ public class InboundPottingService {
 		List<Long> groupIds = mutation.entries().stream().map(entry -> entry.orchidGroupId()).toList();
 		var groupsById = orchidGroupRepository.findAllById(groupIds)
 			.stream()
-			.collect(java.util.stream.Collectors.toMap(OrchidGroup::getId, group -> group));
+			.collect(Collectors.toMap(OrchidGroup::getId, group -> group));
 		createdGroups = groupIds.stream().map(groupsById::get).toList();
 		var mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 

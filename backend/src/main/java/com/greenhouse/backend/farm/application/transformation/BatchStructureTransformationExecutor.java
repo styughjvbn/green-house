@@ -21,12 +21,14 @@ import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -119,7 +121,7 @@ public class BatchStructureTransformationExecutor {
 				lineage.linkMutation(mutationLink.mutationId());
 			}
 		}
-		var resultRows = java.util.stream.IntStream.range(0, results.size())
+		var resultRows = IntStream.range(0, results.size())
 			.mapToObj(index -> new WorkEffectResults.ResultGroup(resultIds.get(index), results.get(index).getQuantity(),
 					plannedResults.get(index).purpose()))
 			.toList();
@@ -204,7 +206,7 @@ public class BatchStructureTransformationExecutor {
 			Set<Long> placementExclusionOrchidGroupIds) {
 		List<TransformOrchidGroupMutationSource> mutationSources = request.sources()
 			.stream()
-			.sorted(java.util.Comparator.comparing(StructureChangeSourceInput::sourceOrchidGroupId))
+			.sorted(Comparator.comparing(StructureChangeSourceInput::sourceOrchidGroupId))
 			.filter(source -> transformedBySourceId.get(source.sourceOrchidGroupId()) > 0)
 			.map(source -> new TransformOrchidGroupMutationSource(source.sourceOrchidGroupId(),
 					transformedBySourceId.get(source.sourceOrchidGroupId()), source.releasedStartPosition(),

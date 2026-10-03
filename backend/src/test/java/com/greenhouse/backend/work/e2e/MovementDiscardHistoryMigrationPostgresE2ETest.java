@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
@@ -159,7 +160,7 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	private Map<String, Object> withoutStatus(Map<String, Object> original) {
-		var preserved = new java.util.HashMap<>(original);
+		var preserved = new HashMap<>(original);
 		preserved.remove("status");
 		return preserved;
 	}

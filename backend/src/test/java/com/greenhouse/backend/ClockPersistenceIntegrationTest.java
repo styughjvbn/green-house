@@ -19,6 +19,7 @@ import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -67,7 +68,7 @@ class ClockPersistenceIntegrationTest extends AbstractBackendIntegrationTest {
 		when(clock.instant()).thenReturn(Instant.parse("2041-12-31T15:00:00Z"));
 		assertThat(queries.getOrchidGroups(layout.house().getId(), null, null, null, null).getFirst().ageYear())
 			.isEqualTo(2);
-		layout.bed().updatePositionUnits(java.math.BigDecimal.valueOf(65), "칸");
+		layout.bed().updatePositionUnits(BigDecimal.valueOf(65), "칸");
 		entityManager.flush();
 		assertThat(layout.bed().getUpdatedAt()).isEqualTo(TimeConfig.utcNow(clock));
 		assertThat(layout.bed().getCreatedAt()).isEqualTo(LocalDateTime.of(2040, 12, 31, 15, 0));

@@ -1,17 +1,32 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.farm.application.collection.OrchidGroupCollectionService;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionCreateRequest;
+import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberAddRequest;
+import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberResponse;
 import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -27,10 +42,10 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
 	InboundPottingPlanService plans;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService groupCommands;
+	OrchidGroupCommandService groupCommands;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.collection.OrchidGroupCollectionService collections;
+	OrchidGroupCollectionService collections;
 
 	@org.springframework.boot.test.web.server.LocalServerPort
 	int auditPort;
@@ -68,11 +83,11 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
 	void concurrentPottingUndoCreatesOneCompensationAndRejectsChangedReason() throws Exception {
 		long inbound = inbound();
 		execute(inbound, "concurrent-potting");
-		try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+		try (var executor = Executors.newFixedThreadPool(2)) {
 			var first = executor.submit(() -> voidPotting(inbound));
 			var second = executor.submit(() -> voidPotting(inbound));
-			assertThat(first.get(20, java.util.concurrent.TimeUnit.SECONDS).status()).isEqualTo(200);
-			assertThat(second.get(20, java.util.concurrent.TimeUnit.SECONDS).status()).isEqualTo(200);
+			assertThat(first.get(20, TimeUnit.SECONDS).status()).isEqualTo(200);
+			assertThat(second.get(20, TimeUnit.SECONDS).status()).isEqualTo(200);
 		}
 		assertThat(jdbc.queryForObject(
 				"select count(*) from orchid_group_mutations where mutation_type = 'COMPENSATION'", Long.class))
@@ -90,7 +105,7 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
 		var plan = plans
 			.create(new InboundPottingPlanCreateRequest("병렬 포트", date, date, List.of(first, sibling), "audit", null));
 		try (var connection = dataSource.getConnection();
-				var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+				var executor = Executors.newFixedThreadPool(2)) {
 			connection.setAutoCommit(false);
 			try (var statement = connection
 				.prepareStatement("select id from inbound_records where id = ? for update")) {
@@ -102,7 +117,7 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
 			try {
 				var one = executor.submit(() -> executeAt(first, "sibling-one", 12, 14));
 				var two = executor.submit(() -> executeAt(sibling, "sibling-two", 15, 17));
-				long until = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(10);
+				long until = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
 				while (jdbc.queryForObject(
 						"select count(*) from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'",
 						Integer.class) < 2) {
@@ -111,8 +126,8 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
 					Thread.sleep(25);
 				}
 				connection.commit();
-				assertThat(one.get(20, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(plan.id());
-				assertThat(two.get(20, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(plan.id());
+				assertThat(one.get(20, TimeUnit.SECONDS)).isEqualTo(plan.id());
+				assertThat(two.get(20, TimeUnit.SECONDS)).isEqualTo(plan.id());
 			}
 			finally {
 				connection.rollback();
@@ -174,16 +189,16 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
 	void ordinaryGroupPatchCannotAssignCreationCanceled() throws Exception {
 		long group = jdbc.queryForObject("select min(id) from orchid_groups where quantity = 60", Long.class);
 		long variety = jdbc.queryForObject("select variety_id from orchid_groups where id = ?", Long.class, group);
-		assertThat(org.assertj.core.api.Assertions.catchThrowable(() -> groupCommands.delete(group)))
-			.isInstanceOf(com.greenhouse.backend.common.exception.ConflictException.class);
-		var request = java.net.http.HttpRequest
-			.newBuilder(java.net.URI.create("http://localhost:" + auditPort + "/api/orchid-groups/" + group))
+		assertThat(Assertions.catchThrowable(() -> groupCommands.delete(group)))
+			.isInstanceOf(ConflictException.class);
+		var request = HttpRequest
+			.newBuilder(URI.create("http://localhost:" + auditPort + "/api/orchid-groups/" + group))
 			.header("Content-Type", "application/json")
-			.method("PATCH", java.net.http.HttpRequest.BodyPublishers.ofString("{\"varietyId\":" + variety
+			.method("PATCH", HttpRequest.BodyPublishers.ofString("{\"varietyId\":" + variety
 					+ ",\"quantity\":60,\"potSize\":\"4치\",\"ageYear\":3,\"status\":\"생성 취소\",\"startPosition\":6,\"endPosition\":8}"))
 			.build();
-		var response = java.net.http.HttpClient.newHttpClient()
-			.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+		var response = HttpClient.newHttpClient()
+			.send(request, HttpResponse.BodyHandlers.ofString());
 		assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
 		assertThat(jdbc.queryForObject("select quantity from orchid_groups where id = ?", Integer.class, group))
 			.isEqualTo(60);
@@ -204,11 +219,11 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
 		long pottingGroup = jdbc.queryForObject("select max(id) from orchid_groups where inbound_record_id = ?",
 				Long.class, inbound);
 		var collection = collections
-			.create(new com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionCreateRequest("소속 보존", null,
+			.create(new OrchidGroupCollectionCreateRequest("소속 보존", null,
 					null, "audit"));
 		collections.addMembers(collection.id(),
-				new com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberAddRequest(
-						java.util.Set.of(structureGroup, pottingGroup), "audit"));
+				new OrchidGroupCollectionMemberAddRequest(
+						Set.of(structureGroup, pottingGroup), "audit"));
 		assertThat(post("/api/work-operations/" + original + "/cancel",
 				"{\"idempotencyKey\":\"collection-structure-undo\",\"reason\":\"audit\"}")
 			.status()).isEqualTo(200);
@@ -222,7 +237,7 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
 				Boolean.class, collection.id(), pottingGroup))
 			.isFalse();
 		assertThat(collections.get(collection.id()).members())
-			.extracting(com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberResponse::orchidGroupId)
+			.extracting(OrchidGroupCollectionMemberResponse::orchidGroupId)
 			.containsExactlyInAnyOrder(structureGroup, pottingGroup);
 		assertThat(reconciliation.reconcile().ready()).isTrue();
 	}

@@ -1,7 +1,5 @@
 package com.greenhouse.backend.work.application.effect;
 
-import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
-import com.greenhouse.backend.work.application.effect.StructureChangeSourceInput;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;

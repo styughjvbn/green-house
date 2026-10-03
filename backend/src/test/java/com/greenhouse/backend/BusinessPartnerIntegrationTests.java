@@ -12,6 +12,7 @@ import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import jakarta.persistence.EntityManager;
+import java.util.List;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -107,7 +108,7 @@ class BusinessPartnerIntegrationTests extends AbstractBackendIntegrationTest {
 		assertThat(partnerService.getPartners(" ALPHA ", PartnerType.RETAIL)).hasSize(1);
 		assertThat(partnerService.getPartners("100%", null)).hasSize(1);
 		assertThat(partnerService.getPartners("옵션 전용 메모", null)).isEmpty();
-		for (String keyword : java.util.List.of("옵션 대표", "010-1234", "옵션 주소", "옵션 전용 메모")) {
+		for (String keyword : List.of("옵션 대표", "010-1234", "옵션 주소", "옵션 전용 메모")) {
 			assertThat(partnerService.getOptions(keyword, null, true, 0, 10).totalElements()).isEqualTo(2);
 		}
 	}

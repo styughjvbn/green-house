@@ -32,6 +32,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
@@ -130,7 +131,7 @@ class CoreQueryRegressionTest {
 			attempt.addResultLine(new AuctionResultLine(LocalDate.of(2030, 2, 2), "특", 10, 1_000, 10_000, null,
 					AuctionInspectionStatus.NORMAL));
 			lot.addAttempt(attempt);
-			lot.applyResult(10, 0, false, false, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
+			lot.applyResult(10, 0, false, false, LocalDateTime.of(2026, 9, 8, 1, 2));
 			shipment.addLot(lot);
 		}
 		auctionShipmentRepository.save(shipment);
@@ -226,7 +227,7 @@ class CoreQueryRegressionTest {
 	void shipmentOptionsFillTheLimitAfterSkippingUsedCandidatePages() {
 		var house = partnerRepository
 			.save(new BusinessPartner("선택지 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
-		var available = new java.util.ArrayList<Long>();
+		var available = new ArrayList<Long>();
 		var date = LocalDate.of(2042, 1, 1);
 		for (int index = 0; index < 420; index++) {
 			var shipment = new AuctionShipment(date, house.getId(), house.getPartnerType());

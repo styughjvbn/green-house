@@ -3,8 +3,8 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.auction.application.AuctionShipmentCreator.LotDraft;
 import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
+import com.greenhouse.backend.auction.application.AuctionShipmentCreator.LotDraft;
 import com.greenhouse.backend.auction.domain.AuctionAttempt;
 import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
 import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
@@ -38,6 +38,7 @@ import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.settlement.domain.PaymentEventType;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.domain.SettlementUnit;
+import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsResponse;
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
 import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
@@ -58,6 +59,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -338,7 +340,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		var date = LocalDate.of(2040, 1, 2);
 		var drafts = List.of(new LotDraft(20L, "난", "호접란", "A", 3));
 		assertThatThrownBy(() -> shipmentCreator.create(date, house.getId(), drafts))
-			.isInstanceOf(org.springframework.transaction.IllegalTransactionStateException.class);
+			.isInstanceOf(IllegalTransactionStateException.class);
 		long before = shipmentRepository.count();
 		assertThatThrownBy(() -> transaction().executeWithoutResult(status -> {
 			shipmentCreator.create(date, house.getId(), drafts);
@@ -375,7 +377,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		lot.addAttempt(attempt);
 		shipment.addLot(lot);
 		shipmentRepository.saveAndFlush(shipment);
-		List<com.greenhouse.backend.settlement.dto.AuctionSettlementResponse> created = concurrently(
+		List<AuctionSettlementResponse> created = concurrently(
 				List.of(() -> settlementService.rebuild(house.getId(), date),
 						() -> settlementService.rebuild(house.getId(), date)));
 		assertThat(created).extracting(value -> value.id()).containsOnly(created.getFirst().id());

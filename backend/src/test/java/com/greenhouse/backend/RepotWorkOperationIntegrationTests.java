@@ -30,6 +30,7 @@ import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -167,7 +168,7 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 		OrchidGroupCollection collection = collectionRepository
 			.save(new OrchidGroupCollection("우량주", null, null, "테스터"));
 		memberRepository.save(new OrchidGroupCollectionMember(collection.getId(), source.getId(), "테스터",
-				java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
+				LocalDateTime.of(2026, 9, 8, 1, 2)));
 
 		mockMvc
 			.perform(post("/api/work-operations/repot").contentType(MediaType.APPLICATION_JSON)

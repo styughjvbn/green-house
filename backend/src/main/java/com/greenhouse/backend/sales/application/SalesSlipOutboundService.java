@@ -1,7 +1,7 @@
 package com.greenhouse.backend.sales.application;
 
-import com.greenhouse.backend.auction.application.AuctionShipmentCreator.LotDraft;
 import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
+import com.greenhouse.backend.auction.application.AuctionShipmentCreator.LotDraft;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;

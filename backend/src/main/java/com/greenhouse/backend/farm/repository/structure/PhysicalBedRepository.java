@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.repository.structure;
 
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -20,7 +21,7 @@ public interface PhysicalBedRepository extends JpaRepository<PhysicalBed, Long> 
 			where b.id in :bedIds
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc
 			""")
-	List<PhysicalBed> findAllWithZonesByIdIn(@Param("bedIds") java.util.Collection<Long> bedIds);
+	List<PhysicalBed> findAllWithZonesByIdIn(@Param("bedIds") Collection<Long> bedIds);
 
 	@Query("""
 			select distinct b from PhysicalBed b

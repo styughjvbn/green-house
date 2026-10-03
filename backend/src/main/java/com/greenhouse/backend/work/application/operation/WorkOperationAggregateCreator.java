@@ -10,7 +10,9 @@ import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -31,15 +33,14 @@ public class WorkOperationAggregateCreator {
 	public WorkOperation createForOrchidGroups(WorkOperation operation, List<ResolvedWorkTarget> resolvedTargets,
 			WorkTargetInclusionSource inclusionSource, Long inclusionSourceId) {
 		workTargetResolver
-				.lockAndValidateActive(resolvedTargets.stream().map(ResolvedWorkTarget::orchidGroupId).toList());
+			.lockAndValidateActive(resolvedTargets.stream().map(ResolvedWorkTarget::orchidGroupId).toList());
 		operationRepository.save(operation);
 		var includedAt = support.now();
 		List<WorkOperationTarget> targets = targetRepository.saveAll(resolvedTargets.stream()
-				.map(group -> new WorkOperationTarget(operation, group.orchidGroupId(), inclusionSource,
-						inclusionSourceId,
-						group.varietyId(), group.varietyName(), group.ageYear(), group.potSizeCode(), group.potSize(),
-						group.quantity(), group.location(), includedAt))
-				.toList());
+			.map(group -> new WorkOperationTarget(operation, group.orchidGroupId(), inclusionSource, inclusionSourceId,
+					group.varietyId(), group.varietyName(), group.ageYear(), group.potSizeCode(), group.potSize(),
+					group.quantity(), group.location(), includedAt))
+			.toList());
 		executionRepository.saveAll(targets.stream().map(WorkTargetExecution::new).toList());
 		return operation;
 	}
@@ -48,16 +49,16 @@ public class WorkOperationAggregateCreator {
 		operationRepository.save(operation);
 		var includedAt = support.now();
 		List<WorkOperationTarget> targets = targetRepository.saveAll(records.stream()
-				.map(record -> WorkOperationTarget.inboundRecord(operation, record.id(), record.varietyId(),
-						record.varietyName(), record.currentQuantity(0), record.potSize(), inboundLocation(record),
-						includedAt))
-				.toList());
+			.map(record -> WorkOperationTarget.inboundRecord(operation, record.id(), record.varietyId(),
+					record.varietyName(), record.currentQuantity(0), record.potSize(), inboundLocation(record),
+					includedAt))
+			.toList());
 		executionRepository.saveAll(targets.stream().map(WorkTargetExecution::new).toList());
 		return operation;
 	}
 
-	private java.util.Map<String, Object> inboundLocation(InboundPottingPlanTarget inbound) {
-		java.util.Map<String, Object> location = new java.util.LinkedHashMap<>();
+	private Map<String, Object> inboundLocation(InboundPottingPlanTarget inbound) {
+		Map<String, Object> location = new LinkedHashMap<>();
 		location.put("tempLocation", inbound.tempLocation());
 		location.put("pottingDueDate", inbound.pottingDueDate());
 		return location;

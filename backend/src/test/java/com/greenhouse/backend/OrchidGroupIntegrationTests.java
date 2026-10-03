@@ -8,7 +8,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
+import com.jayway.jsonpath.JsonPath;
+import java.time.Clock;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -124,10 +127,10 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 			.andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber())
 			.andReturn();
 
-		Number inboundRecordIdValue = com.jayway.jsonpath.JsonPath.read(createResult.getResponse().getContentAsString(),
+		Number inboundRecordIdValue = JsonPath.read(createResult.getResponse().getContentAsString(),
 				"$.data.id");
 		Long inboundRecordId = inboundRecordIdValue.longValue();
-		Number createdOrchidGroupIdValue = com.jayway.jsonpath.JsonPath
+		Number createdOrchidGroupIdValue = JsonPath
 			.read(createResult.getResponse().getContentAsString(), "$.data.createdOrchidGroups[0].id");
 		Long createdOrchidGroupId = createdOrchidGroupIdValue.longValue();
 
@@ -174,13 +177,13 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 			.andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber())
 			.andReturn();
 
-		Number createdOrchidGroupIdValue = com.jayway.jsonpath.JsonPath
+		Number createdOrchidGroupIdValue = JsonPath
 			.read(createResult.getResponse().getContentAsString(), "$.data.createdOrchidGroups[0].id");
 		Long createdOrchidGroupId = createdOrchidGroupIdValue.longValue();
 
 		assertThat(OrchidGroupResponse
 			.from(orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow(),
-					com.greenhouse.backend.common.config.TimeConfig.farmToday(java.time.Clock.systemUTC()))
+					TimeConfig.farmToday(Clock.systemUTC()))
 			.ageYear()).isEqualTo(3);
 	}
 
@@ -267,7 +270,7 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 			.andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber())
 			.andReturn();
 
-		Number createdOrchidGroupIdValue = com.jayway.jsonpath.JsonPath
+		Number createdOrchidGroupIdValue = JsonPath
 			.read(createResult.getResponse().getContentAsString(), "$.data.createdOrchidGroups[0].id");
 		Long createdOrchidGroupId = createdOrchidGroupIdValue.longValue();
 		var created = orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow();

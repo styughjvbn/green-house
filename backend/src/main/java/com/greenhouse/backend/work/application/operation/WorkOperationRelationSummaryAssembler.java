@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -62,7 +63,7 @@ class WorkOperationRelationSummaryAssembler {
 			List<Long> inboundIds = targets.getOrDefault(operation.getId(), List.of())
 				.stream()
 				.map(WorkOperationTarget::getInboundRecordId)
-				.filter(java.util.Objects::nonNull)
+				.filter(Objects::nonNull)
 				.distinct()
 				.toList();
 			int linkedCount = linkedCounts.getOrDefault(operation.getId(), 0);

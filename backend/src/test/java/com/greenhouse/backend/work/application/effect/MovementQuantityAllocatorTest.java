@@ -2,13 +2,11 @@ package com.greenhouse.backend.work.application.effect;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
-import com.greenhouse.backend.work.application.effect.StructureChangeResultInput;
-import com.greenhouse.backend.work.application.effect.StructureChangeSourceInput;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class MovementQuantityAllocatorTest {
@@ -22,7 +20,7 @@ class MovementQuantityAllocatorTest {
 				List.of(result(10L, 250, "0", "25"), result(11L, 50, "25", "30")));
 
 		assertThat(MovementQuantityAllocator.allocateMovedBySource(request))
-			.containsExactly(java.util.Map.entry(1L, 100), java.util.Map.entry(2L, 100), java.util.Map.entry(3L, 100));
+			.containsExactly(Map.entry(1L, 100), Map.entry(2L, 100), Map.entry(3L, 100));
 	}
 
 	@Test
@@ -33,9 +31,9 @@ class MovementQuantityAllocatorTest {
 				List.of(result(10L, 450, "0", "45")));
 
 		assertThat(MovementQuantityAllocator.allocateDiscardBySource(request))
-			.containsExactly(java.util.Map.entry(1L, 20), java.util.Map.entry(2L, 30));
+			.containsExactly(Map.entry(1L, 20), Map.entry(2L, 30));
 		assertThat(MovementQuantityAllocator.allocateMovedBySource(request))
-			.containsExactly(java.util.Map.entry(1L, 180), java.util.Map.entry(2L, 270));
+			.containsExactly(Map.entry(1L, 180), Map.entry(2L, 270));
 	}
 
 	@Test
@@ -47,7 +45,7 @@ class MovementQuantityAllocatorTest {
 				List.of(result(10L, 2, "0", "2")));
 
 		assertThat(MovementQuantityAllocator.allocateDiscardBySource(request))
-			.containsExactly(java.util.Map.entry(1L, 1), java.util.Map.entry(2L, 0), java.util.Map.entry(3L, 0));
+			.containsExactly(Map.entry(1L, 1), Map.entry(2L, 0), Map.entry(3L, 0));
 	}
 
 	private StructureChangeResultInput result(Long bedZoneId, int quantity, String startPosition, String endPosition) {

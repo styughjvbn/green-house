@@ -18,7 +18,6 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSou
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;

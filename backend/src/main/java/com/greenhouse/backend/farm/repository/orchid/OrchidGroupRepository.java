@@ -3,6 +3,10 @@ package com.greenhouse.backend.farm.repository.orchid;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import jakarta.persistence.LockModeType;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -24,9 +28,9 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			order by inbound.id, g.id
 			""")
 	List<OrchidGroup> findInboundResultDetailsByInboundRecordIdIn(
-			@Param("inboundRecordIds") java.util.Collection<Long> inboundRecordIds);
+			@Param("inboundRecordIds") Collection<Long> inboundRecordIds);
 
-	long countByIdInAndInboundRecordIsNotNull(java.util.Collection<Long> orchidGroupIds);
+	long countByIdInAndInboundRecordIsNotNull(Collection<Long> orchidGroupIds);
 
 	@Query("""
 			select count(g) from OrchidGroup g
@@ -34,8 +38,8 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and g.inboundRecord is not null
 			  and g.inboundRecord.id not in :allowedInboundRecordIds
 			""")
-	long countInboundReferencesOutside(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds,
-			@Param("allowedInboundRecordIds") java.util.Collection<Long> allowedInboundRecordIds);
+	long countInboundReferencesOutside(@Param("orchidGroupIds") Collection<Long> orchidGroupIds,
+			@Param("allowedInboundRecordIds") Collection<Long> allowedInboundRecordIds);
 
 	boolean existsByInboundRecordIdAndQuantityGreaterThan(Long inboundRecordId, Integer quantity);
 
@@ -65,9 +69,9 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 		Long getBedZoneId();
 
-		java.math.BigDecimal getStartPosition();
+		BigDecimal getStartPosition();
 
-		java.math.BigDecimal getEndPosition();
+		BigDecimal getEndPosition();
 
 		Long getVarietyId();
 
@@ -87,9 +91,9 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 		Long getInboundRecordId();
 
-		java.time.LocalDate getInboundDate();
+		LocalDate getInboundDate();
 
-		java.time.LocalDateTime getCreatedAt();
+		LocalDateTime getCreatedAt();
 
 	}
 
@@ -103,8 +107,8 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			order by saleableQuantity desc, g.varietyName asc
 			""")
 	List<VarietyInventory> summarizeInventory(
-			@Param("unavailableStatuses") java.util.Collection<String> unavailableStatuses,
-			@Param("warningStatuses") java.util.Collection<String> warningStatuses);
+			@Param("unavailableStatuses") Collection<String> unavailableStatuses,
+			@Param("warningStatuses") Collection<String> warningStatuses);
 
 	interface VarietyInventory {
 
@@ -121,7 +125,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select g from OrchidGroup g where g.id in :orchidGroupIds order by g.id")
-	List<OrchidGroup> findAllForUpdateByIdIn(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+	List<OrchidGroup> findAllForUpdateByIdIn(@Param("orchidGroupIds") Collection<Long> orchidGroupIds);
 
 	boolean existsByVarietyName(String varietyName);
 
@@ -137,7 +141,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			order by g.bedZone.id
 			""")
 	List<OrchidGroupZoneMaxSortOrderRow> findMaxSortOrdersByBedZoneIdIn(
-			@Param("bedZoneIds") java.util.Collection<Long> bedZoneIds);
+			@Param("bedZoneIds") Collection<Long> bedZoneIds);
 
 	@Query("""
 			select g from OrchidGroup g
@@ -175,7 +179,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			where g.status in :warningStatuses
 			  and g.quantity > 0
 			""")
-	long countWarningStatus(@Param("warningStatuses") java.util.Collection<String> warningStatuses);
+	long countWarningStatus(@Param("warningStatuses") Collection<String> warningStatuses);
 
 	@Query("""
 			select count(g) from OrchidGroup g
@@ -184,7 +188,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			where b.house.id = :houseId and g.status in :warningStatuses and g.quantity > 0
 			""")
 	long countWarningStatusByHouseId(@Param("houseId") Long houseId,
-			@Param("warningStatuses") java.util.Collection<String> warningStatuses);
+			@Param("warningStatuses") Collection<String> warningStatuses);
 
 	@Query("""
 			select g from OrchidGroup g
@@ -206,7 +210,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and g.quantity > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> findByVarietyIdInOrderByLocation(@Param("varietyIds") java.util.Collection<Long> varietyIds);
+	List<OrchidGroup> findByVarietyIdInOrderByLocation(@Param("varietyIds") Collection<Long> varietyIds);
 
 	@Query("""
 			select g from OrchidGroup g
@@ -220,7 +224,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
 	List<OrchidGroup> findByPhysicalBedIdInOrderByLocation(
-			@Param("physicalBedIds") java.util.Collection<Long> physicalBedIds);
+			@Param("physicalBedIds") Collection<Long> physicalBedIds);
 
 	boolean existsByVarietyId(Long varietyId);
 
@@ -228,7 +232,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 	List<OrchidGroup> findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(Long bedZoneId, Integer quantity);
 
-	List<OrchidGroup> findByBedZoneIdInAndQuantityGreaterThan(java.util.Collection<Long> bedZoneIds, Integer quantity);
+	List<OrchidGroup> findByBedZoneIdInAndQuantityGreaterThan(Collection<Long> bedZoneIds, Integer quantity);
 
 	@Query("""
 			select g from OrchidGroup g
@@ -299,7 +303,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and g.quantity > 0
 			  and g.status not in ('종료', '폐기', '판매 완료', '생성 취소')
 			""")
-	List<OrchidGroup> findActiveWorkTargetsByIds(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+	List<OrchidGroup> findActiveWorkTargetsByIds(@Param("orchidGroupIds") Collection<Long> orchidGroupIds);
 
 	@Query("""
 			select g from OrchidGroup g
@@ -310,7 +314,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			left join fetch g.inboundRecord
 			where g.id in :orchidGroupIds
 			""")
-	List<OrchidGroup> findDetailsByIds(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+	List<OrchidGroup> findDetailsByIds(@Param("orchidGroupIds") Collection<Long> orchidGroupIds);
 
 	@Query("""
 			select new com.greenhouse.backend.farm.repository.orchid.OrchidGroupNameRow(g.id, g.varietyName)
@@ -318,7 +322,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			where g.id in :orchidGroupIds
 			order by g.id asc
 			""")
-	List<OrchidGroupNameRow> findNameRowsByIdIn(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+	List<OrchidGroupNameRow> findNameRowsByIdIn(@Param("orchidGroupIds") Collection<Long> orchidGroupIds);
 
 	@Query("""
 			select g from OrchidGroup g

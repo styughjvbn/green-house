@@ -11,6 +11,7 @@ import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -128,7 +129,7 @@ public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepos
 		return matches;
 	}
 
-	private Number number(Tuple tuple, com.querydsl.core.types.Expression<? extends Number> expression) {
+	private Number number(Tuple tuple, Expression<? extends Number> expression) {
 		if (tuple == null) {
 			return 0;
 		}

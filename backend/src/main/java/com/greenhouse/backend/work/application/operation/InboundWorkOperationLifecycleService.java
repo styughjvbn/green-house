@@ -9,8 +9,10 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationReques
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,15 +38,15 @@ public class InboundWorkOperationLifecycleService {
 	}
 
 	@Transactional(readOnly = true)
-	public java.util.Set<Long> findInboundIdsWithUndoablePotting(java.util.Collection<Long> inboundIds) {
+	public Set<Long> findInboundIdsWithUndoablePotting(Collection<Long> inboundIds) {
 		if (inboundIds.isEmpty())
-			return java.util.Set.of();
-		return java.util.Set.copyOf(workTargetExecutionRepository.findInboundIdsWithAppliedOperation(inboundIds,
+			return Set.of();
+		return Set.copyOf(workTargetExecutionRepository.findInboundIdsWithAppliedOperation(inboundIds,
 				WorkTypeDefinition.POTTING.name(), pottingUndoStatuses()));
 	}
 
-	private java.util.Set<WorkOperationStatus> pottingUndoStatuses() {
-		return java.util.Set.of(WorkOperationStatus.COMPLETED, WorkOperationStatus.IN_PROGRESS,
+	private Set<WorkOperationStatus> pottingUndoStatuses() {
+		return Set.of(WorkOperationStatus.COMPLETED, WorkOperationStatus.IN_PROGRESS,
 				WorkOperationStatus.PAUSED);
 	}
 
@@ -96,7 +98,7 @@ public class InboundWorkOperationLifecycleService {
 
 	private WorkOperation findSingleCompletedOperation(Long inboundRecordId, WorkTypeDefinition definition) {
 		var statuses = definition == WorkTypeDefinition.POTTING ? pottingUndoStatuses()
-				: java.util.Set.of(WorkOperationStatus.COMPLETED);
+				: Set.of(WorkOperationStatus.COMPLETED);
 		List<WorkOperation> operations = workTargetExecutionRepository
 			.findAppliedOperationIdsForInbound(inboundRecordId, definition.name(), statuses)
 			.stream()

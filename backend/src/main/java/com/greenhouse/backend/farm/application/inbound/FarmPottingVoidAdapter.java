@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -60,7 +61,7 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 	public Inspection inspectForUpdate(Long workOperationId, List<Effect> effects) {
 		var ids = effects.stream()
 			.map(Effect::inboundRecordId)
-			.filter(java.util.Objects::nonNull)
+			.filter(Objects::nonNull)
 			.distinct()
 			.sorted()
 			.toList();
@@ -72,7 +73,7 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 			String reason, boolean reopenInboundRecords) {
 		List<Long> inboundIds = effects.stream()
 			.map(Effect::inboundRecordId)
-			.filter(java.util.Objects::nonNull)
+			.filter(Objects::nonNull)
 			.distinct()
 			.sorted()
 			.toList();

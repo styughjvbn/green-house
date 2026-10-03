@@ -22,9 +22,11 @@ import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
@@ -59,9 +61,9 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
 		OrchidGroupCollection collection = collectionRepository
 			.save(new OrchidGroupCollection("작업 후보", null, "농약", "테스터"));
 		collectionMemberRepository.save(new OrchidGroupCollectionMember(collection.getId(), first.getId(), "테스터",
-				java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
+				LocalDateTime.of(2026, 9, 8, 1, 2)));
 		collectionMemberRepository.save(new OrchidGroupCollectionMember(collection.getId(), third.getId(), "테스터",
-				java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
+				LocalDateTime.of(2026, 9, 8, 1, 2)));
 
 		String derivedKey = variety.getId() + ":2:POT_3_5";
 		preview("""
@@ -151,7 +153,7 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
 			.andExpect(jsonPath("$.data.status").value("COMPLETED"));
 	}
 
-	private org.springframework.test.web.servlet.ResultActions preview(String content) throws Exception {
+	private ResultActions preview(String content) throws Exception {
 		return mockMvc.perform(
 				post("/api/work-operations/target-preview").contentType(MediaType.APPLICATION_JSON).content(content));
 	}

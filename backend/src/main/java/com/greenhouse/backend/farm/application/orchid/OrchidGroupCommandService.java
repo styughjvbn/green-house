@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -133,16 +134,16 @@ public class OrchidGroupCommandService {
 
 	private boolean hasSameDetails(OrchidGroup group, OrchidGroupMutationDetails details) {
 		return group.getVariety() != null && group.getVariety().getId().equals(details.varietyId())
-				&& java.util.Objects.equals(group.getQuantity(), details.quantity())
-				&& java.util.Objects.equals(group.getPotSize(), details.potSize())
-				&& java.util.Objects.equals(group.getAgeYear(), details.ageYear())
-				&& java.util.Objects.equals(group.getStatus(), details.status())
-				&& java.util.Objects.equals(group.getPlacementType(), details.placementType())
-				&& java.util.Objects.equals(group.getTrayCount(), details.trayCount())
-				&& java.util.Objects.equals(group.getSplitPlacementAllowed(), details.splitPlacementAllowed())
+				&& Objects.equals(group.getQuantity(), details.quantity())
+				&& Objects.equals(group.getPotSize(), details.potSize())
+				&& Objects.equals(group.getAgeYear(), details.ageYear())
+				&& Objects.equals(group.getStatus(), details.status())
+				&& Objects.equals(group.getPlacementType(), details.placementType())
+				&& Objects.equals(group.getTrayCount(), details.trayCount())
+				&& Objects.equals(group.getSplitPlacementAllowed(), details.splitPlacementAllowed())
 				&& equalPosition(group.getStartPosition(), details.startPosition())
 				&& equalPosition(group.getEndPosition(), details.endPosition())
-				&& java.util.Objects.equals(group.getMemo(), details.memo());
+				&& Objects.equals(group.getMemo(), details.memo());
 	}
 
 	private boolean equalPosition(BigDecimal currentValue, BigDecimal requestValue) {

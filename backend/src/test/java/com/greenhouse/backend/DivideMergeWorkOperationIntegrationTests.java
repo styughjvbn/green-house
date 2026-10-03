@@ -24,6 +24,9 @@ import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -150,7 +153,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		OrchidGroup second = createSource(anotherVariety, 20, "1", "2");
 		String sourceIds = first.getId() + "," + second.getId();
 
-		for (WorkType workType : java.util.List.of(repotType, divideType, mergeType)) {
+		for (WorkType workType : List.of(repotType, divideType, mergeType)) {
 			mockMvc.perform(post("/api/work-operations").contentType(MediaType.APPLICATION_JSON).content("""
 					{
 					  "workTypeId": %d,
@@ -661,9 +664,9 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 	}
 
 	private Long createPlan(WorkType workType, Long... sourceIds) throws Exception {
-		String ids = java.util.Arrays.stream(sourceIds)
+		String ids = Arrays.stream(sourceIds)
 			.map(String::valueOf)
-			.collect(java.util.stream.Collectors.joining(","));
+			.collect(Collectors.joining(","));
 		var result = mockMvc.perform(post("/api/work-operations").contentType(MediaType.APPLICATION_JSON).content("""
 				{
 				  "workTypeId": %d,

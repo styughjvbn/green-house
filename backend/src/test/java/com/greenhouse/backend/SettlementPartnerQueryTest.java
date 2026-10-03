@@ -34,6 +34,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -154,8 +155,8 @@ class SettlementPartnerQueryTest {
 		Long firstResultId = firstResult.getId();
 		// A later change to a source must not rewrite an already recorded settlement
 		// amount.
-		org.springframework.test.util.ReflectionTestUtils.setField(firstResult, "amount", 9_000);
-		org.springframework.test.util.ReflectionTestUtils.setField(firstResult, "unitPrice", 9_000);
+		ReflectionTestUtils.setField(firstResult, "amount", 9_000);
+		ReflectionTestUtils.setField(firstResult, "unitPrice", 9_000);
 		var additional = new AuctionResultLine(date, "A", 1, 2_000, 2_000, null, AuctionInspectionStatus.NORMAL);
 		attempt.addResultLine(additional);
 		entityManager.persist(additional);

@@ -78,9 +78,9 @@ public class WorkOperationProgressService {
 		LocalDateTime canceledAt = support.now();
 		operation.stop(canceledAt);
 		executions.stream()
-				.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
-				.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.SKIPPED)
-				.forEach(execution -> execution.cancel(canceledAt));
+			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
+			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.SKIPPED)
+			.forEach(execution -> execution.cancel(canceledAt));
 		closeInboundPottingPlans(operation, executions);
 		return queryService.get(operationId);
 	}
@@ -107,9 +107,8 @@ public class WorkOperationProgressService {
 		if (execution.isEffectApplied()) {
 			String effectKey = executionKey == null ? "TARGET:" + targetId : "POTTING:" + executionKey;
 			var existing = appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey)
-					.orElseThrow(
-							() -> new ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE",
-									"완료된 대상은 원래 실행 API로 재요청해야 합니다."));
+				.orElseThrow(
+						() -> new ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE", "완료된 대상은 원래 실행 API로 재요청해야 합니다."));
 			var completedAt = request.completedDate() == null ? existing.getAppliedAt()
 					: support.completionTime(request.completedDate());
 			effectStore.validateReplay(existing,
@@ -145,7 +144,7 @@ public class WorkOperationProgressService {
 			return;
 		}
 		List<WorkTargetExecution> executions = executionRepository
-				.findByTargetWorkOperationIdOrderByIdAsc(operation.getId());
+			.findByTargetWorkOperationIdOrderByIdAsc(operation.getId());
 		if (!executions.isEmpty() && executions.stream().allMatch(WorkTargetExecution::isTerminalForCompletion)) {
 			operation.complete(completedAt);
 		}
@@ -157,9 +156,9 @@ public class WorkOperationProgressService {
 			return;
 		}
 		InboundPottingPlanTarget current = inboundPottingPlanGateway.findCurrent(List.of(target.getInboundRecordId()))
-				.stream()
-				.findFirst()
-				.orElseThrow(() -> new NotFoundException("포트 작업 대상 입고 기록을 찾을 수 없습니다."));
+			.stream()
+			.findFirst()
+			.orElseThrow(() -> new NotFoundException("포트 작업 대상 입고 기록을 찾을 수 없습니다."));
 		target.refreshInboundSnapshot(current.varietyId(), current.varietyName(),
 				current.currentQuantity(target.getQuantitySnapshot()), current.potSize(), inboundLocation(current));
 	}
@@ -176,12 +175,12 @@ public class WorkOperationProgressService {
 			return;
 		}
 		List<Long> inboundRecordIds = executions.stream()
-				.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
-				.map(WorkTargetExecution::getTarget)
-				.filter(target -> target.getTargetReferenceType() == WorkTargetReferenceType.INBOUND_RECORD)
-				.map(WorkOperationTarget::getInboundRecordId)
-				.distinct()
-				.toList();
+			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
+			.map(WorkTargetExecution::getTarget)
+			.filter(target -> target.getTargetReferenceType() == WorkTargetReferenceType.INBOUND_RECORD)
+			.map(WorkOperationTarget::getInboundRecordId)
+			.distinct()
+			.toList();
 		if (!inboundRecordIds.isEmpty()) {
 			inboundPottingPlanGateway.closePottingPlan(inboundRecordIds);
 		}
@@ -193,12 +192,12 @@ public class WorkOperationProgressService {
 
 	private WorkTargetExecution findExecution(Long operationId, Long targetId) {
 		return executionRepository.findByTargetIdAndTargetWorkOperationId(targetId, operationId)
-				.orElseThrow(() -> new NotFoundException("작업 대상을 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("작업 대상을 찾을 수 없습니다."));
 	}
 
 	private WorkTargetExecution findExecutionForUpdate(Long operationId, Long targetId) {
 		return executionRepository.findForUpdateByTargetIdAndTargetWorkOperationId(targetId, operationId)
-				.orElseThrow(() -> new NotFoundException("작업 대상을 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("작업 대상을 찾을 수 없습니다."));
 	}
 
 	private void validateOperationInProgress(Long operationId) {

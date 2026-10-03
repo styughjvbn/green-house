@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
@@ -33,6 +32,8 @@ import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import jakarta.persistence.EntityManager;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -43,8 +44,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -298,7 +297,7 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(line.path("creationSnapshot").path("reservedQuantity").asInt()).isZero();
 		assertThat(line.path("outboundSnapshot").isNull()).isTrue();
 		var search = get("/api/sales/orchid-groups/search?status="
-				+ java.net.URLEncoder.encode("정상", java.nio.charset.StandardCharsets.UTF_8));
+				+ URLEncoder.encode("정상", StandardCharsets.UTF_8));
 		assertThat(search.status()).isEqualTo(200);
 		assertThat(search.data()).hasSize(1);
 		assertThat(search.data().get(0).path("id").asLong()).isEqualTo(groupId);

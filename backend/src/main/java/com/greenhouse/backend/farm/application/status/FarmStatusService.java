@@ -24,6 +24,8 @@ import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
 import java.time.Clock;
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -182,7 +184,7 @@ public class FarmStatusService {
 		}
 		return orchidGroupRepository.findByPhysicalBedIdInOrderByLocation(physicalBedIds)
 			.stream()
-			.collect(Collectors.groupingBy(group -> group.getBedZone().getId(), java.util.LinkedHashMap::new,
+			.collect(Collectors.groupingBy(group -> group.getBedZone().getId(), LinkedHashMap::new,
 					Collectors.toList()));
 	}
 
@@ -210,7 +212,7 @@ public class FarmStatusService {
 	}
 
 	private FarmStatusMapOrchidGroupResponse mapGroup(OrchidGroupRepository.MapRow row,
-			java.time.LocalDate businessDate) {
+			LocalDate businessDate) {
 		var referenceDate = row.getInboundRecordId() != null ? row.getInboundDate()
 				: row.getCreatedAt() == null ? null : TimeConfig.toFarmTime(row.getCreatedAt()).toLocalDate();
 		return new FarmStatusMapOrchidGroupResponse(row.getOrchidGroupId(), row.getHouseId(), row.getPhysicalBedId(),

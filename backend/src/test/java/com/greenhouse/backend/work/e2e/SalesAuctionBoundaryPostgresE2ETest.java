@@ -9,6 +9,12 @@ import com.greenhouse.backend.auction.application.AuctionTrackingService;
 import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
+import com.greenhouse.backend.audit.application.AuditEvent;
+import com.greenhouse.backend.audit.application.AuditEvent.Identity;
+import com.greenhouse.backend.audit.application.AuditEvent.Target;
+import com.greenhouse.backend.audit.application.AuditRecorder;
+import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
@@ -17,13 +23,17 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import jakarta.persistence.EntityManagerFactory;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Tag("work-e2e")
@@ -50,13 +60,13 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
 	TransactionTemplate transactions;
 
 	@Autowired
-	com.greenhouse.backend.audit.application.AuditRecorder auditRecorder;
+	AuditRecorder auditRecorder;
 
 	@Autowired
 	JdbcTemplate jdbc;
 
 	@Autowired
-	jakarta.persistence.EntityManagerFactory entityManagerFactory;
+	EntityManagerFactory entityManagerFactory;
 
 	private long slipId;
 
@@ -138,7 +148,7 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
 
 	@Test
 	void dashboardReadsFiveAggregatesWithoutLoadingEntities() throws Exception {
-		var stats = entityManagerFactory.unwrap(org.hibernate.SessionFactory.class).getStatistics();
+		var stats = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
 		stats.clear();
 		var response = get("/api/dashboard/summary");
 		assertThat(response.status()).isEqualTo(200);
@@ -152,14 +162,14 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
 
 	@Test
 	void cliAuditRequiresCallerTransactionAndRollsBackWithIt() {
-		var event = new com.greenhouse.backend.audit.application.AuditEvent(
-				new com.greenhouse.backend.audit.application.AuditEvent.Identity("cli-user", null, null, "job-1"),
-				com.greenhouse.backend.audit.domain.AuditAction.UPDATED,
-				com.greenhouse.backend.audit.domain.AuditSource.VARIETY_MANAGEMENT,
-				new com.greenhouse.backend.audit.application.AuditEvent.Target("CLI_TEST", 1L), List.of("quantity"),
-				java.util.Map.of("quantity", 1), java.util.Map.of("quantity", 2), null);
+		var event = new AuditEvent(
+				new Identity("cli-user", null, null, "job-1"),
+				AuditAction.UPDATED,
+				AuditSource.VARIETY_MANAGEMENT,
+				new Target("CLI_TEST", 1L), List.of("quantity"),
+				Map.of("quantity", 1), Map.of("quantity", 2), null);
 		assertThatThrownBy(() -> auditRecorder.record(event))
-			.isInstanceOf(org.springframework.transaction.IllegalTransactionStateException.class);
+			.isInstanceOf(IllegalTransactionStateException.class);
 		Long id = transactions.execute(tx -> auditRecorder.record(event));
 		assertThat(jdbc.queryForObject("SELECT actor_id FROM audit_events WHERE id = ?", String.class, id))
 			.isEqualTo("cli-user");

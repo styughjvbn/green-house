@@ -18,6 +18,7 @@ import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehea
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -158,10 +160,10 @@ public class OrchidGroupLedgerReconciliationService {
 			.findAllById(workReport.corrections()
 				.stream()
 				.map(reference -> reference.mutationId())
-				.filter(java.util.Objects::nonNull)
+				.filter(Objects::nonNull)
 				.toList())
 			.stream()
-			.collect(java.util.stream.Collectors.toMap(mutation -> mutation.getId(), mutation -> mutation));
+			.collect(Collectors.toMap(mutation -> mutation.getId(), mutation -> mutation));
 		for (var reference : workReport.corrections()) {
 			reference.orchidGroupIds()
 				.stream()
@@ -169,12 +171,12 @@ public class OrchidGroupLedgerReconciliationService {
 				.forEach(id -> issues.add(issue("DANGLING_WORK_CORRECTION_GROUP", "WORK", reference.id().toString(),
 						"보정 내역이 존재하지 않는 난 묶음을 참조합니다.")));
 			var mutation = correctionMutations.get(reference.mutationId());
-			boolean valid = reference.changesGroups() ? mutation != null && java.util.Objects.equals(mutation
+			boolean valid = reference.changesGroups() ? mutation != null && Objects.equals(mutation
 				.getCorrelationId(), reference.correlationId()) && mutation
-					.getSourceDomain() == com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain.WORK
-					&& java.util.Set.of(
-							com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType.CORRECTION,
-							com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType.CANCEL_CREATION)
+					.getSourceDomain() == OrchidGroupMutationSourceDomain.WORK
+					&& Set.of(
+							OrchidGroupMutationType.CORRECTION,
+							OrchidGroupMutationType.CANCEL_CREATION)
 						.contains(mutation.getMutationType())
 					&& mutation.getSourceType().equals("WORK_CORRECTION")
 					&& mutation.getSourceReferenceId().equals(reference.id().toString())
@@ -443,7 +445,7 @@ public class OrchidGroupLedgerReconciliationService {
 		return new OrchidGroupLedgerReconciliationIssue(code, domain, referenceId, message);
 	}
 
-	private record BaselineFingerprintPayload(UUID cutoverKey, java.time.LocalDate effectiveBusinessDate,
+	private record BaselineFingerprintPayload(UUID cutoverKey, LocalDate effectiveBusinessDate,
 			List<BaselineFingerprintEntry> groups) {
 	}
 

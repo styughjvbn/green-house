@@ -13,6 +13,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,7 +57,7 @@ public class DerivedOrchidGroupService {
 		List<OrchidGroupResponse> members = findCandidates(key.varietyId(), key.potSizeCode(), houseId, status, keyword)
 			.stream()
 			.map(group -> OrchidGroupResponse.from(group, businessDate))
-			.filter(member -> java.util.Objects.equals(member.ageYear(), key.ageYear()))
+			.filter(member -> Objects.equals(member.ageYear(), key.ageYear()))
 			.toList();
 		if (members.isEmpty()) {
 			throw new NotFoundException("현재 조건에 해당하는 자동 그룹을 찾을 수 없습니다.");
