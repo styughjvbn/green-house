@@ -117,6 +117,9 @@ public class OrchidGroup extends BaseEntity {
 	public void updateDetails(String genus, String varietyName, Integer quantity, String potSize, Integer ageYear,
 			String status, String placementType, Integer trayCount, Boolean splitPlacementAllowed,
 			BigDecimal startPosition, BigDecimal endPosition, String memo) {
+		if (OrchidGroupStatusPolicy.CREATION_CANCELED.equals(this.status)) {
+			throw new IllegalArgumentException("생성 취소된 난 묶음은 수정할 수 없습니다.");
+		}
 		validateQuantityInvariant(quantity);
 		this.genus = genus;
 		this.varietyName = varietyName;

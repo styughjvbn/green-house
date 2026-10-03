@@ -4,6 +4,7 @@ import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGrou
 import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationCommandNormalizer.normalizeText;
 import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationCommandNormalizer.requireText;
 
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import java.math.BigDecimal;
 
@@ -26,6 +27,9 @@ public record OrchidGroupMutationDetails(Long varietyId, Integer quantity, Strin
 		}
 		potSize = PotSizeCode.fromInput(potSize).getDisplayValue();
 		status = requireText(status, "난 묶음 상태");
+		if (OrchidGroupStatusPolicy.CREATION_CANCELED.equals(status)) {
+			throw new IllegalArgumentException("생성 취소는 전용 취소 경로에서만 처리할 수 있습니다.");
+		}
 		placementType = normalizeText(placementType);
 		splitPlacementAllowed = Boolean.TRUE.equals(splitPlacementAllowed);
 		startPosition = normalizeNumber(startPosition);
