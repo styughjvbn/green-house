@@ -72,4 +72,23 @@ abstract class AbstractBackendIntegrationTest {
 		});
 	}
 
+	protected org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder movementRecord(Long groupId,
+			Long zoneId, int start, int end) throws Exception {
+		var group = orchidGroupRepository.findById(groupId);
+		int quantity = group.map(OrchidGroup::getQuantity).orElse(1);
+		long typeId = workTypeRepository.findByCode("MOVEMENT").orElseThrow().getId();
+		return org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+			.post("/api/work-operations/structure-change-records/batch")
+			.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+			.content("""
+					{"records":[{"operation":{"workTypeId":%d,"title":"자리 이동","plannedStartDate":"2026-07-16",
+					 "sourceScopeType":"MANUAL_SELECTION","sourceOrchidGroupIds":[%d]},
+					 "execution":{"idempotencyKey":"%s","completedDate":"2026-07-16","worker":"테스터",
+					 "sources":[{"sourceOrchidGroupId":%d,"inputQuantity":%d}],
+					 "results":[{"bedZoneId":%d,"quantity":%d,"attributeSourceOrchidGroupId":%d,
+					 "purpose":"NORMAL","startPosition":%d,"endPosition":%d}]}}]}
+					""".formatted(typeId, groupId, java.util.UUID.randomUUID(), groupId, quantity, zoneId, quantity,
+					groupId, start, end));
+	}
+
 }

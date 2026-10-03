@@ -2,14 +2,13 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupMovementService;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
+import com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest;
+import com.greenhouse.backend.support.MovementTestSupport;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
@@ -25,6 +24,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
+@org.springframework.context.annotation.Import(MovementTestSupport.class)
 @ActiveProfiles("test")
 @Transactional
 class BedPlacementTests {
@@ -42,7 +42,7 @@ class BedPlacementTests {
 	OrchidGroupCommandService commandService;
 
 	@Autowired
-	OrchidGroupMovementService movementService;
+	MovementTestSupport movementService;
 
 	@Autowired
 	EntityManager entityManager;
@@ -75,7 +75,7 @@ class BedPlacementTests {
 	@Test
 	void movesWithDirectPositionRange() {
 		var moved = movementService.move(groupId,
-				new OrchidGroupMoveRequest(targetZoneId, BigDecimal.ZERO, BigDecimal.valueOf(8), null, "직접 배치"));
+				new MoveTestRequest(targetZoneId, BigDecimal.ZERO, BigDecimal.valueOf(8), null, "직접 배치"));
 
 		assertThat(moved.bedZoneId()).isEqualTo(targetZoneId);
 		assertThat(moved.startPosition()).isEqualTo(BigDecimal.ZERO.setScale(2));
@@ -85,7 +85,7 @@ class BedPlacementTests {
 	@Test
 	void rejectsInvalidPositionRange() {
 		assertThatThrownBy(() -> movementService.move(groupId,
-				new OrchidGroupMoveRequest(targetZoneId, BigDecimal.valueOf(10), BigDecimal.valueOf(8), null, null)))
+				new MoveTestRequest(targetZoneId, BigDecimal.valueOf(10), BigDecimal.valueOf(8), null, null)))
 			.isInstanceOf(IllegalArgumentException.class);
 	}
 
@@ -94,7 +94,7 @@ class BedPlacementTests {
 		long before = workOperationRepository.count();
 
 		movementService.move(groupId,
-				new OrchidGroupMoveRequest(targetZoneId, BigDecimal.ZERO, BigDecimal.valueOf(8), "관리자", "이동"));
+				new MoveTestRequest(targetZoneId, BigDecimal.ZERO, BigDecimal.valueOf(8), "관리자", "이동"));
 
 		assertThat(workOperationRepository.count()).isEqualTo(before + 1);
 	}

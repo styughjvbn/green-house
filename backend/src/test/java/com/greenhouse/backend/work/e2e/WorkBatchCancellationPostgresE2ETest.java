@@ -1,15 +1,14 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupMovementService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest;
+import com.greenhouse.backend.support.MovementTestSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -20,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Tag("work-e2e")
+@org.springframework.context.annotation.Import(MovementTestSupport.class)
 class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
 
 	@Autowired
@@ -29,7 +29,7 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
 	JdbcTemplate jdbc;
 
 	@Autowired
-	OrchidGroupMovementService movement;
+	MovementTestSupport movement;
 
 	@Autowired
 	OrchidGroupRepository groups;
@@ -80,9 +80,9 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
 		Long destination = jdbc.queryForObject("SELECT id FROM bed_zones WHERE id <> ? ORDER BY id LIMIT 1", Long.class,
 				zone);
 		movement.move(sourceIds.get(0),
-				new OrchidGroupMoveRequest(destination, BigDecimal.ZERO, new BigDecimal("5"), "worker", null));
+				new MoveTestRequest(destination, BigDecimal.ZERO, new BigDecimal("5"), "worker", null));
 		movement.move(sourceIds.get(1),
-				new OrchidGroupMoveRequest(destination, new BigDecimal("6"), new BigDecimal("8"), "worker", null));
+				new MoveTestRequest(destination, new BigDecimal("6"), new BigDecimal("8"), "worker", null));
 		Long transformId = plan(scenario.repotWorkTypeId(), sourceIds);
 		assertThat(post("/api/work-operations/" + transformId + "/start", "{}").status()).isEqualTo(200);
 		var execution = post("/api/work-operations/" + transformId + "/structure-change-executions",
@@ -286,8 +286,8 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	private Long moveForHistory(Long id, Long destination, int start, int end) {
-		movement.move(id, new OrchidGroupMoveRequest(destination, BigDecimal.valueOf(start), BigDecimal.valueOf(end),
-				"worker", null));
+		movement.move(id,
+				new MoveTestRequest(destination, BigDecimal.valueOf(start), BigDecimal.valueOf(end), "worker", null));
 		return jdbc.queryForObject("SELECT max(id) FROM work_operations", Long.class);
 	}
 
@@ -345,11 +345,11 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
 		Long destination = jdbc.queryForObject("SELECT id FROM bed_zones WHERE id <> ? ORDER BY id LIMIT 1", Long.class,
 				zone);
 		movement.move(scenario.orchidGroupId(),
-				new OrchidGroupMoveRequest(destination, BigDecimal.ZERO, new BigDecimal("5"), "worker", null));
+				new MoveTestRequest(destination, BigDecimal.ZERO, new BigDecimal("5"), "worker", null));
 		Long second = createGroup(zone, 10, overlap ? 0 : 6, overlap ? 5 : 11);
 		if (moveSecond) {
 			movement.move(second,
-					new OrchidGroupMoveRequest(destination, new BigDecimal("6"), new BigDecimal("11"), "worker", null));
+					new MoveTestRequest(destination, new BigDecimal("6"), new BigDecimal("11"), "worker", null));
 		}
 		sourceIds = List.of(scenario.orchidGroupId(), second);
 		workIds = jdbc.queryForList("SELECT id FROM work_operations ORDER BY id", Long.class);

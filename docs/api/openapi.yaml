@@ -1818,31 +1818,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
-  /api/orchid-groups/{orchidGroupId}/move:
-    patch:
-      tags:
-      - orchid-group-command-controller
-      operationId: move
-      parameters:
-      - name: orchidGroupId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OrchidGroupMoveRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
   /api/orchid-groups/batch:
     patch:
       tags:
@@ -6622,28 +6597,6 @@ components:
       - quantity
       - status
       - varietyId
-    OrchidGroupMoveRequest:
-      type: object
-      properties:
-        toBedZoneId:
-          type: integer
-          format: int64
-        startPosition:
-          type: number
-          minimum: 0.0
-        endPosition:
-          type: number
-          minimum: 0.0
-        worker:
-          type: string
-          maxLength: 100
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-      required:
-      - toBedZoneId
     OrchidGroupBatchUpdateItem:
       type: object
       properties:

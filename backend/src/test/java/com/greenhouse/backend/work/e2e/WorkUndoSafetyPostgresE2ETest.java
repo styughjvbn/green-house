@@ -5,13 +5,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
+@org.springframework.context.annotation.Import(com.greenhouse.backend.support.MovementTestSupport.class)
 class WorkUndoSafetyPostgresE2ETest extends WorkUndoSafetyTestBase {
 
 	@org.springframework.beans.factory.annotation.Autowired
 	org.springframework.transaction.PlatformTransactionManager transactionManager;
 
 	@org.springframework.beans.factory.annotation.Autowired
-	com.greenhouse.backend.farm.application.orchid.OrchidGroupMovementService movement;
+	com.greenhouse.backend.support.MovementTestSupport movement;
 
 	private long original() {
 		return jdbc.queryForObject("select min(id) from work_operations", Long.class);
@@ -149,7 +150,7 @@ class WorkUndoSafetyPostgresE2ETest extends WorkUndoSafetyTestBase {
 					catch (Exception exception) {
 						throw new RuntimeException(exception);
 					}
-					movement.move(group, new com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest(zone,
+					movement.move(group, new com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest(zone,
 							java.math.BigDecimal.valueOf(12), java.math.BigDecimal.valueOf(14), "audit", null));
 				});
 			var undo = pending.get().get(20, TimeUnit.SECONDS);

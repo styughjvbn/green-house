@@ -152,13 +152,6 @@ export type OrchidGroupLineageTransformation = {
   results: OrchidGroupLineageNode[];
 };
 
-export type PreciseMovePayload = {
-  toBedZoneId: number;
-  startPosition?: number | null;
-  endPosition?: number | null;
-  memo: string;
-};
-
 export type WorkRecordSummary = {
   latestRecords: OrchidGroupWorkHistory[];
   latestByType: {

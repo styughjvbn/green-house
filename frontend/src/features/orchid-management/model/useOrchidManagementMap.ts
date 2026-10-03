@@ -6,7 +6,7 @@ import type { House, OrchidGroup } from "@/entities/farm/types";
 import {
   createOrchidGroup,
   deleteOrchidGroup,
-  moveOrchidGroup,
+  recordOrchidGroupMovement,
   updateOrchidGroup,
   updateOrchidGroupsBatch,
 } from "../api/orchidManagementApi";
@@ -16,6 +16,8 @@ import {
   findPhysicalBed,
 } from "../lib/orchidManagementUtils";
 import { useOrchidClipboard } from "./OrchidClipboardContext";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
+import { invalidateWorkAndInboundQueries } from "@/entities/farm/model/farmMutationQueries";
 import { useOrchidManagementHistory } from "./useOrchidManagementHistory";
 import { useOrchidManagementSearch } from "./useOrchidManagementSearch";
 import type {
@@ -36,6 +38,7 @@ export function useOrchidManagementMap(
   initialSearchFilters?: OrchidManagementSearchState,
 ) {
   const queryClient = useQueryClient();
+  const { businessDate } = useRuntimeContext();
   const [selection, setSelection] = useState<OrchidSelection | null>(
     () =>
       createInitialSelections({
@@ -232,6 +235,10 @@ export function useOrchidManagementMap(
       payload;
     const movedToAnotherZone =
       bedZoneId != null && bedZoneId !== selectedOrchidGroup.bedZoneId;
+    if (movedToAnotherZone && (startPosition == null || endPosition == null)) {
+      setErrorMessage("이동할 배치 위치를 지정하세요.");
+      return;
+    }
 
     await runMutation(async () => {
       await updateOrchidGroup(selectedOrchidGroup.id, {
@@ -245,12 +252,16 @@ export function useOrchidManagementMap(
       });
 
       if (movedToAnotherZone) {
-        await moveOrchidGroup(selectedOrchidGroup.id, {
-          toBedZoneId: bedZoneId,
-          startPosition,
-          endPosition,
-          memo: "",
-        });
+        await recordOrchidGroupMovement(
+          selectedOrchidGroup.id,
+          {
+            bedZoneId,
+            startPosition: startPosition!,
+            endPosition: endPosition!,
+          },
+          businessDate,
+        );
+        await invalidateWorkAndInboundQueries(queryClient);
       }
     });
   }

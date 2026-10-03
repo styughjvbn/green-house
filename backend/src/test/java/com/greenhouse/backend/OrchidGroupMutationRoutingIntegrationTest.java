@@ -271,7 +271,7 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 	}
 
 	@Test
-	void routesDirectMovementEffectAndPreservesItsWorkIdentity() {
+	void rejectsTheRemovedDirectMovementExecutionBranch() {
 		Fixture fixture = createFixture(9967, "라우팅 이동");
 		ensureWorkType(WorkTypeDefinition.MOVEMENT.name(), "위치 이동", WorkTypeTemplate.MOVEMENT, 8);
 		var group = orchidGroupCommandService.create(groupRequest(fixture, 8, "0", "1", "정상"));
@@ -280,18 +280,19 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 				LocalDate.of(2026, 8, 20), LocalDate.of(2026, 8, 20), WorkTargetSelection.orchidGroup(group.id()),
 				java.util.Map.of(), "작업자", null, List.of()));
 		workOperationProgressService.start(planned.id());
-		workOperationProgressService.completeTarget(planned.id(), planned.targets().getFirst().id(),
-				new WorkTargetExecutionRequest("작업자", java.util.Map.of("toBedZoneId", fixture.zone().getId(),
-						"startPosition", 2, "endPosition", 3, "memo", "같은 구역 내 이동"), LocalDate.of(2026, 8, 20)));
+		org.assertj.core.api.Assertions
+			.assertThatThrownBy(() -> workOperationProgressService.completeTarget(planned.id(),
+					planned.targets().getFirst().id(),
+					new WorkTargetExecutionRequest("작업자", java.util.Map.of("toBedZoneId", fixture.zone().getId(),
+							"startPosition", 2, "endPosition", 3), LocalDate.of(2026, 8, 20))))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("자리 이동은 구조 변경 실행 또는 즉시 기록으로 처리해야 합니다.");
 
 		OrchidGroup moved = orchidGroupRepository.findById(group.id()).orElseThrow();
-		var effect = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(planned.id()).getFirst();
-		assertThat(moved.getStartPosition()).isEqualByComparingTo("2.00");
-		assertThat(moved.getEndPosition()).isEqualByComparingTo("3.00");
-		assertThat(moved.getStateRevision()).isEqualTo(2L);
-		assertThat(effect.getMutationId()).isNotNull();
-		assertThat(mutationRepository.findById(effect.getMutationId()).orElseThrow().getSourceOperationKey())
-			.isEqualTo("TARGET:" + planned.targets().getFirst().id());
+		assertThat(moved.getStartPosition()).isEqualByComparingTo("0");
+		assertThat(moved.getEndPosition()).isEqualByComparingTo("1");
+		assertThat(moved.getStateRevision()).isEqualTo(1L);
+		assertThat(workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(planned.id())).isEmpty();
 	}
 
 	private Fixture createFixture(int houseNumber, String suffix) {

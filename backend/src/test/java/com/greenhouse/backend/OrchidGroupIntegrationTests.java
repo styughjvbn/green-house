@@ -401,17 +401,9 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 		var createdId = Long
 			.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
 
-		mockMvc
-			.perform(patch("/api/orchid-groups/{orchidGroupId}/move", createdId).contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "toBedZoneId": %d,
-						  "startPosition": 0,
-						  "endPosition": 1,
-						  "worker": "테스터",
-						  "memo": "이동 테스트 메모"
-						}
-						""".formatted(targetZone.getId())))
+		mockMvc.perform(movementRecord(createdId, targetZone.getId(), 0, 1)).andExpect(status().isCreated());
+
+		mockMvc.perform(get("/api/orchid-groups/{id}", createdId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.id").value(createdId))
 			.andExpect(jsonPath("$.data.bedZoneId").value(targetZone.getId()))
@@ -429,15 +421,9 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 
 	@Test
 	void returnsValidationErrorsForInvalidOrchidGroupMove() throws Exception {
-		mockMvc
-			.perform(patch("/api/orchid-groups/{orchidGroupId}/move", 999999).contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "toBedZoneId": 1
-						}
-						"""))
-			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+		mockMvc.perform(movementRecord(999999L, 1L, 0, 1))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 
 		var sampleHouse = houseRepository.findAll()
 			.stream()
@@ -448,20 +434,12 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
 		var sampleGroup = orchidGroupRepository.search(null, "", null, sampleZone.getId(), null).getFirst();
 
-		mockMvc
-			.perform(patch("/api/orchid-groups/{orchidGroupId}/move", sampleGroup.getId())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "toBedZoneId": 999999
-						}
-						"""))
+		mockMvc.perform(movementRecord(sampleGroup.getId(), 999999L, 0, 1))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
 
 		mockMvc
-			.perform(patch("/api/orchid-groups/{orchidGroupId}/move", sampleGroup.getId())
-				.contentType(MediaType.APPLICATION_JSON)
+			.perform(post("/api/work-operations/structure-change-records/batch").contentType(MediaType.APPLICATION_JSON)
 				.content("{}"))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));

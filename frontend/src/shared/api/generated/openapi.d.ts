@@ -959,22 +959,6 @@ export interface paths {
         patch: operations["update_4"];
         trace?: never;
     };
-    "/api/orchid-groups/{orchidGroupId}/move": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["move"];
-        trace?: never;
-    };
     "/api/orchid-groups/batch": {
         parameters: {
             query?: never;
@@ -3229,14 +3213,6 @@ export interface components {
             splitPlacementAllowed?: boolean;
             startPosition?: number;
             endPosition?: number;
-            memo?: string;
-        };
-        OrchidGroupMoveRequest: {
-            /** Format: int64 */
-            toBedZoneId: number;
-            startPosition?: number;
-            endPosition?: number;
-            worker?: string;
             memo?: string;
         };
         OrchidGroupBatchUpdateItem: {
@@ -6523,32 +6499,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["OrchidGroupUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseOrchidGroupResponse"];
-                };
-            };
-        };
-    };
-    move: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                orchidGroupId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OrchidGroupMoveRequest"];
             };
         };
         responses: {

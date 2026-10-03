@@ -414,30 +414,19 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		Long operationId = Long.valueOf(createResult.getResponse()
 			.getContentAsString()
 			.replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
-		Long targetId = workOperationTargetRepository.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
-			.getFirst()
-			.getId();
-
 		mockMvc.perform(post("/api/work-operations/{id}/start", operationId)).andExpect(status().isOk());
 		mockMvc
-			.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
+			.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{
-						  "worker": "이동 담당자",
-						  "resultDetails": {
-						    "toBedZoneId": %d,
-						    "startPosition": 0,
-						    "endPosition": 10,
-						    "worker": "이동 담당자",
-						    "memo": "계획 이동 완료"
-						  }
-						}
-						""".formatted(destinationZone.getId())))
-			.andExpect(status().isOk())
+						{"idempotencyKey":"planned-move","completedDate":"2026-07-16","worker":"이동 담당자",
+						 "sources":[{"sourceOrchidGroupId":%d,"inputQuantity":100}],
+						 "results":[{"bedZoneId":%d,"quantity":100,"attributeSourceOrchidGroupId":%d,
+						 "purpose":"NORMAL","startPosition":0,"endPosition":10}]}
+						""".formatted(targetGroup.getId(), destinationZone.getId(), targetGroup.getId())))
+			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
-			.andExpect(jsonPath("$.data.targets[0].resultDetails.toBedZoneId").value(destinationZone.getId()));
-
+			.andExpect(jsonPath("$.data.targets[0].resultDetails.identityPreserved").value(true));
 		org.assertj.core.api.Assertions
 			.assertThat(orchidGroupRepository.findById(targetGroup.getId()).orElseThrow().getBedZone().getId())
 			.isEqualTo(destinationZone.getId());
@@ -445,7 +434,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.executions", hasSize(1)))
-			.andExpect(jsonPath("$.data.executions[0].resultType").value("MOVE"))
+			.andExpect(jsonPath("$.data.executions[0].resultType").value("MOVEMENT"))
 			.andExpect(jsonPath("$.data.executions[0].sources[0].orchidGroupId").value(targetGroup.getId()))
 			.andExpect(jsonPath("$.data.executions[0].results[0].bedZoneId").value(destinationZone.getId()))
 			.andExpect(jsonPath("$.data.executions[0].results[0].startPosition").value(0))
@@ -556,18 +545,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data.totalElements").value(1))
 			.andExpect(jsonPath("$.data.content[0].workOperationId").value(operationId));
 
-		mockMvc
-			.perform(patch("/api/orchid-groups/{id}/move", targetGroup.getId()).contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "toBedZoneId": %d,
-						  "startPosition": 1,
-						  "endPosition": 10,
-						  "worker": "테스터"
-						}
-						""".formatted(destinationZone.getId())))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.houseNumber").value(5));
+		mockMvc.perform(movementRecord(targetGroup.getId(), destinationZone.getId(), 1, 10))
+			.andExpect(status().isCreated());
 
 		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", targetGroup.getId()))
 			.andExpect(status().isOk())
@@ -608,19 +587,11 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 	}
 
 	@Test
-	void doesNotCreateMovementOperationWhenPlacementIsUnchanged() throws Exception {
+	void removedDirectMoveEndpointDoesNotChangeGroupsOrCreateWork() throws Exception {
 		mockMvc
 			.perform(patch("/api/orchid-groups/{id}/move", targetGroup.getId()).contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "toBedZoneId": %d,
-						  "startPosition": 1.00,
-						  "endPosition": 10.00,
-						  "worker": "테스터"
-						}
-						""".formatted(targetGroup.getBedZone().getId())))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.houseNumber").value(3));
+				.content("{}"))
+			.andExpect(status().isNotFound());
 
 		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isZero();
 	}
