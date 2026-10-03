@@ -24,32 +24,37 @@ import org.hibernate.annotations.CreationTimestamp;
 @Table(name = "work_effect_orchid_groups")
 public class WorkEffectOrchidGroup {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_effect_orchid_groups_id_seq")
-	@SequenceGenerator(name = "work_effect_orchid_groups_id_seq", sequenceName = "work_effect_orchid_groups_id_seq",
-			allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(
+      strategy = GenerationType.SEQUENCE,
+      generator = "work_effect_orchid_groups_id_seq")
+  @SequenceGenerator(
+      name = "work_effect_orchid_groups_id_seq",
+      sequenceName = "work_effect_orchid_groups_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "work_applied_effect_id", nullable = false)
-	private WorkAppliedEffect workAppliedEffect;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "work_applied_effect_id", nullable = false)
+  private WorkAppliedEffect workAppliedEffect;
 
-	@Column(name = "orchid_group_id", nullable = false)
-	private Long orchidGroupId;
+  @Column(name = "orchid_group_id", nullable = false)
+  private Long orchidGroupId;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "relation_type", nullable = false, length = 30)
-	private WorkEffectOrchidGroupRelationType relationType;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "relation_type", nullable = false, length = 30)
+  private WorkEffectOrchidGroupRelationType relationType;
 
-	@CreationTimestamp
-	@Column(name = "created_at", nullable = false, updatable = false)
-	private LocalDateTime createdAt;
+  @CreationTimestamp
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private LocalDateTime createdAt;
 
-	public WorkEffectOrchidGroup(WorkAppliedEffect workAppliedEffect, Long orchidGroupId,
-			WorkEffectOrchidGroupRelationType relationType) {
-		this.workAppliedEffect = workAppliedEffect;
-		this.orchidGroupId = orchidGroupId;
-		this.relationType = relationType;
-	}
-
+  public WorkEffectOrchidGroup(
+      WorkAppliedEffect workAppliedEffect,
+      Long orchidGroupId,
+      WorkEffectOrchidGroupRelationType relationType) {
+    this.workAppliedEffect = workAppliedEffect;
+    this.orchidGroupId = orchidGroupId;
+    this.relationType = relationType;
+  }
 }

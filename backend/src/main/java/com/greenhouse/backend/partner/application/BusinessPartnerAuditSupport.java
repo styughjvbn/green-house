@@ -18,62 +18,75 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class BusinessPartnerAuditSupport {
 
-	private static final List<String> REDACTED_FIELDS = List.of("ownerName", "phone", "address", "memo");
+  private static final List<String> REDACTED_FIELDS =
+      List.of("ownerName", "phone", "address", "memo");
 
-	private final AuditEventWriter auditWriter;
+  private final AuditEventWriter auditWriter;
 
-	public Snapshot snapshot(BusinessPartner partner) {
-		return new Snapshot(partner.getName(), partner.getPartnerType(), partner.getOwnerName(), partner.getPhone(),
-				partner.getAddress(), partner.getMemo(), partner.isActive());
-	}
+  public Snapshot snapshot(BusinessPartner partner) {
+    return new Snapshot(
+        partner.getName(),
+        partner.getPartnerType(),
+        partner.getOwnerName(),
+        partner.getPhone(),
+        partner.getAddress(),
+        partner.getMemo(),
+        partner.isActive());
+  }
 
-	public void recordCreated(BusinessPartner partner) {
-		record(AuditAction.CREATED, partner, null, snapshot(partner));
-	}
+  public void recordCreated(BusinessPartner partner) {
+    record(AuditAction.CREATED, partner, null, snapshot(partner));
+  }
 
-	public void recordUpdated(BusinessPartner partner, Snapshot before) {
-		record(AuditAction.UPDATED, partner, before, snapshot(partner));
-	}
+  public void recordUpdated(BusinessPartner partner, Snapshot before) {
+    record(AuditAction.UPDATED, partner, before, snapshot(partner));
+  }
 
-	private void record(AuditAction action, BusinessPartner partner, Snapshot before, Snapshot after) {
-		List<String> changedFields = changedFields(before, after);
-		List<String> redactedChanges = changedFields.stream().filter(REDACTED_FIELDS::contains).toList();
-		var context = new LinkedHashMap<String, Object>();
-		context.put("redactedFields", redactedChanges);
-		auditWriter.recordChanges(action, AuditSource.PARTNER_MANAGEMENT,
-				new AuditEvent.Target("BUSINESS_PARTNER", partner.getId()), changedFields,
-				before == null ? Map.of() : safeData(before), safeData(after), context);
-	}
+  private void record(
+      AuditAction action, BusinessPartner partner, Snapshot before, Snapshot after) {
+    List<String> changedFields = changedFields(before, after);
+    List<String> redactedChanges =
+        changedFields.stream().filter(REDACTED_FIELDS::contains).toList();
+    var context = new LinkedHashMap<String, Object>();
+    context.put("redactedFields", redactedChanges);
+    auditWriter.recordChanges(
+        action,
+        AuditSource.PARTNER_MANAGEMENT,
+        new AuditEvent.Target("BUSINESS_PARTNER", partner.getId()),
+        changedFields,
+        before == null ? Map.of() : safeData(before),
+        safeData(after),
+        context);
+  }
 
-	private List<String> changedFields(Snapshot before, Snapshot after) {
-		var changed = new ArrayList<String>();
-		if (before == null || !Objects.equals(before.name(), after.name()))
-			changed.add("name");
-		if (before == null || before.partnerType() != after.partnerType())
-			changed.add("partnerType");
-		if (before == null || !Objects.equals(before.ownerName(), after.ownerName()))
-			changed.add("ownerName");
-		if (before == null || !Objects.equals(before.phone(), after.phone()))
-			changed.add("phone");
-		if (before == null || !Objects.equals(before.address(), after.address()))
-			changed.add("address");
-		if (before == null || !Objects.equals(before.memo(), after.memo()))
-			changed.add("memo");
-		if (before == null || before.active() != after.active())
-			changed.add("active");
-		return List.copyOf(changed);
-	}
+  private List<String> changedFields(Snapshot before, Snapshot after) {
+    var changed = new ArrayList<String>();
+    if (before == null || !Objects.equals(before.name(), after.name())) changed.add("name");
+    if (before == null || before.partnerType() != after.partnerType()) changed.add("partnerType");
+    if (before == null || !Objects.equals(before.ownerName(), after.ownerName()))
+      changed.add("ownerName");
+    if (before == null || !Objects.equals(before.phone(), after.phone())) changed.add("phone");
+    if (before == null || !Objects.equals(before.address(), after.address()))
+      changed.add("address");
+    if (before == null || !Objects.equals(before.memo(), after.memo())) changed.add("memo");
+    if (before == null || before.active() != after.active()) changed.add("active");
+    return List.copyOf(changed);
+  }
 
-	private Map<String, Object> safeData(Snapshot snapshot) {
-		var data = new LinkedHashMap<String, Object>();
-		data.put("name", snapshot.name());
-		data.put("partnerType", snapshot.partnerType());
-		data.put("active", snapshot.active());
-		return data;
-	}
+  private Map<String, Object> safeData(Snapshot snapshot) {
+    var data = new LinkedHashMap<String, Object>();
+    data.put("name", snapshot.name());
+    data.put("partnerType", snapshot.partnerType());
+    data.put("active", snapshot.active());
+    return data;
+  }
 
-	public record Snapshot(String name, PartnerType partnerType, String ownerName, String phone, String address,
-			String memo, boolean active) {
-	}
-
+  public record Snapshot(
+      String name,
+      PartnerType partnerType,
+      String ownerName,
+      String phone,
+      String address,
+      String memo,
+      boolean active) {}
 }

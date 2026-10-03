@@ -1,3 +1,4 @@
+-- Consolidated from V30__link_movement_discard_operations.sql: preserve this stage's SQL order.
 ALTER TABLE work_operations
     ADD COLUMN parent_operation_id BIGINT,
     ADD COLUMN relation_type VARCHAR(40);

@@ -8,6 +8,6 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record MergeWorkOperationRequest(@NotEmpty @Size(max = 100) List<@Valid MergeSourceInputRequest> sources,
-		@NotNull @Valid RepotResultOrchidGroupRequest result) {
-}
+public record MergeWorkOperationRequest(
+    @NotEmpty @Size(max = 100) List<@Valid MergeSourceInputRequest> sources,
+    @NotNull @Valid RepotResultOrchidGroupRequest result) {}

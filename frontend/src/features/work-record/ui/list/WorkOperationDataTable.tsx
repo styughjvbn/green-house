@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { WorkCorrectionBadge } from "../common/WorkCorrectionBadge";
 import type { WorkOperationSummary } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
@@ -147,10 +148,10 @@ function RelationBadges({
   onShowRelations: (selection: WorkOperationRelationSelection) => void;
 }) {
   const summary = operation.relationSummary;
-  if (!summary) return null;
+  if (!summary && operation.correctionCount <= 0) return null;
   return (
     <div className="mt-1 flex flex-wrap gap-1">
-      {summary.creationBatchSize > 1 ? (
+      {summary && summary.creationBatchSize > 1 ? (
         <RelationBadge
           active={isActive(
             activeRelation,
@@ -168,7 +169,7 @@ function RelationBadges({
           }
         />
       ) : null}
-      {summary.linkedOperationCount > 0 ? (
+      {summary && summary.linkedOperationCount > 0 ? (
         <RelationBadge
           active={isActive(
             activeRelation,
@@ -186,6 +187,7 @@ function RelationBadges({
           }
         />
       ) : null}
+      <WorkCorrectionBadge count={operation.correctionCount} />
     </div>
   );
 }

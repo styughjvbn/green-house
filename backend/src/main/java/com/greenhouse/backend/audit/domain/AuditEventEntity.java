@@ -22,85 +22,101 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AuditEventEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "audit_events_id_seq")
-	@SequenceGenerator(name = "audit_events_id_seq", sequenceName = "audit_events_id_seq", allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "audit_events_id_seq")
+  @SequenceGenerator(
+      name = "audit_events_id_seq",
+      sequenceName = "audit_events_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@Column(nullable = false)
-	private Instant occurredAt;
+  @Column(nullable = false)
+  private Instant occurredAt;
 
-	private String actorId;
+  private String actorId;
 
-	private String sessionId;
+  private String sessionId;
 
-	private String clientInstanceId;
+  private String clientInstanceId;
 
-	private String requestId;
+  private String requestId;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
-	private AuditAction action;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private AuditAction action;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
-	private AuditSource source;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private AuditSource source;
 
-	@Column(nullable = false)
-	private String entityType;
+  @Column(nullable = false)
+  private String entityType;
 
-	@Column(nullable = false)
-	private Long entityId;
+  @Column(nullable = false)
+  private Long entityId;
 
-	private Long houseId;
+  private Long houseId;
 
-	private Long physicalBedId;
+  private Long physicalBedId;
 
-	private Long zoneId;
+  private Long zoneId;
 
-	private Long varietyId;
+  private Long varietyId;
 
-	/** OrchidGroup 감사 사건을 설명하거나 뒷받침하는 Farm Mutation 식별자. */
-	@Column(name = "mutation_id")
-	private Long mutationId;
+  /** OrchidGroup 감사 사건을 설명하거나 뒷받침하는 Farm Mutation 식별자. */
+  @Column(name = "mutation_id")
+  private Long mutationId;
 
-	@JdbcTypeCode(SqlTypes.ARRAY)
-	@Column(nullable = false)
-	private String[] changedFields;
+  @JdbcTypeCode(SqlTypes.ARRAY)
+  @Column(nullable = false)
+  private String[] changedFields;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(columnDefinition = "jsonb")
-	private Object beforeData;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  private Object beforeData;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(columnDefinition = "jsonb")
-	private Object afterData;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  private Object afterData;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(columnDefinition = "jsonb")
-	private Object contextData;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  private Object contextData;
 
-	public AuditEventEntity(Instant occurredAt, String actorId, String sessionId, String clientInstanceId,
-			String requestId, AuditAction action, AuditSource source, String entityType, Long entityId, Long houseId,
-			Long physicalBedId, Long zoneId, Long varietyId, String[] changedFields, Object beforeData,
-			Object afterData, Object contextData) {
-		this.occurredAt = occurredAt;
-		this.actorId = actorId;
-		this.sessionId = sessionId;
-		this.clientInstanceId = clientInstanceId;
-		this.requestId = requestId;
-		this.action = action;
-		this.source = source;
-		this.entityType = entityType;
-		this.entityId = entityId;
-		this.houseId = houseId;
-		this.physicalBedId = physicalBedId;
-		this.zoneId = zoneId;
-		this.varietyId = varietyId;
-		this.changedFields = changedFields;
-		this.beforeData = beforeData;
-		this.afterData = afterData;
-		this.contextData = contextData;
-	}
-
+  public AuditEventEntity(
+      Instant occurredAt,
+      String actorId,
+      String sessionId,
+      String clientInstanceId,
+      String requestId,
+      AuditAction action,
+      AuditSource source,
+      String entityType,
+      Long entityId,
+      Long houseId,
+      Long physicalBedId,
+      Long zoneId,
+      Long varietyId,
+      String[] changedFields,
+      Object beforeData,
+      Object afterData,
+      Object contextData) {
+    this.occurredAt = occurredAt;
+    this.actorId = actorId;
+    this.sessionId = sessionId;
+    this.clientInstanceId = clientInstanceId;
+    this.requestId = requestId;
+    this.action = action;
+    this.source = source;
+    this.entityType = entityType;
+    this.entityId = entityId;
+    this.houseId = houseId;
+    this.physicalBedId = physicalBedId;
+    this.zoneId = zoneId;
+    this.varietyId = varietyId;
+    this.changedFields = changedFields;
+    this.beforeData = beforeData;
+    this.afterData = afterData;
+    this.contextData = contextData;
+  }
 }

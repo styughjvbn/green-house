@@ -14,78 +14,87 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FarmInboundPottingPlanGateway implements InboundPottingPlanGateway {
 
-	private final InboundRecordRepository inboundRecordRepository;
+  private final InboundRecordRepository inboundRecordRepository;
 
-	@Override
-	public List<InboundPottingPlanTarget> findCandidates() {
-		return inboundRecordRepository
-			.findByInboundTypeAndStatusInOrderByPottingDueDateAscIdAsc(InboundType.FLASK_SEEDLING,
-					List.of(InboundStatus.POTTING_PENDING))
-			.stream()
-			.map(this::toTarget)
-			.toList();
-	}
+  @Override
+  public List<InboundPottingPlanTarget> findCandidates() {
+    return inboundRecordRepository
+        .findByInboundTypeAndStatusInOrderByPottingDueDateAscIdAsc(
+            InboundType.FLASK_SEEDLING, List.of(InboundStatus.POTTING_PENDING))
+        .stream()
+        .map(this::toTarget)
+        .toList();
+  }
 
-	@Override
-	public List<InboundPottingPlanTarget> resolve(List<Long> inboundRecordIds) {
-		List<InboundRecord> records = findRecords(inboundRecordIds);
-		validateResolvedRecords(inboundRecordIds, records);
-		return records.stream().map(this::toTarget).toList();
-	}
+  @Override
+  public List<InboundPottingPlanTarget> resolve(List<Long> inboundRecordIds) {
+    List<InboundRecord> records = findRecords(inboundRecordIds);
+    validateResolvedRecords(inboundRecordIds, records);
+    return records.stream().map(this::toTarget).toList();
+  }
 
-	@Override
-	public List<InboundPottingPlanTarget> resolveForUpdate(List<Long> inboundRecordIds) {
-		List<InboundRecord> records = inboundRecordRepository.findAllForUpdateByIdIn(inboundRecordIds);
-		validateResolvedRecords(inboundRecordIds, records);
-		return records.stream().map(this::toTarget).toList();
-	}
+  @Override
+  public List<InboundPottingPlanTarget> resolveForUpdate(List<Long> inboundRecordIds) {
+    List<InboundRecord> records = inboundRecordRepository.findAllForUpdateByIdIn(inboundRecordIds);
+    validateResolvedRecords(inboundRecordIds, records);
+    return records.stream().map(this::toTarget).toList();
+  }
 
-	@Override
-	public void lockForPottingExecution(List<Long> inboundRecordIds) {
-		List<InboundRecord> records = inboundRecordRepository.findAllForUpdateByIdIn(inboundRecordIds);
-		if (records.size() != inboundRecordIds.size()) {
-			throw new IllegalArgumentException("포트 작업 대상 입고 기록을 찾을 수 없습니다.");
-		}
-	}
+  @Override
+  public void lockForPottingExecution(List<Long> inboundRecordIds) {
+    List<InboundRecord> records = inboundRecordRepository.findAllForUpdateByIdIn(inboundRecordIds);
+    if (records.size() != inboundRecordIds.size()) {
+      throw new IllegalArgumentException("포트 작업 대상 입고 기록을 찾을 수 없습니다.");
+    }
+  }
 
-	private void validateResolvedRecords(List<Long> inboundRecordIds, List<InboundRecord> records) {
-		if (records.size() != inboundRecordIds.size()) {
-			throw new IllegalArgumentException("선택한 입고 기록 중 찾을 수 없는 항목이 있습니다.");
-		}
-		if (records.stream()
-			.anyMatch(record -> record.getInboundType() != InboundType.FLASK_SEEDLING
-					|| record.getStatus() == InboundStatus.CANCELED || record.hasCreatedOrchidGroups())) {
-			throw new IllegalArgumentException("포트 작업 대기 중인 유리병 모종만 계획할 수 있습니다.");
-		}
-	}
+  private void validateResolvedRecords(List<Long> inboundRecordIds, List<InboundRecord> records) {
+    if (records.size() != inboundRecordIds.size()) {
+      throw new IllegalArgumentException("선택한 입고 기록 중 찾을 수 없는 항목이 있습니다.");
+    }
+    if (records.stream()
+        .anyMatch(
+            record ->
+                record.getInboundType() != InboundType.FLASK_SEEDLING
+                    || record.getStatus() == InboundStatus.CANCELED
+                    || record.hasCreatedOrchidGroups())) {
+      throw new IllegalArgumentException("포트 작업 대기 중인 유리병 모종만 계획할 수 있습니다.");
+    }
+  }
 
-	@Override
-	public List<InboundPottingPlanTarget> findCurrent(List<Long> inboundRecordIds) {
-		return findRecords(inboundRecordIds).stream().map(this::toTarget).toList();
-	}
+  @Override
+  public List<InboundPottingPlanTarget> findCurrent(List<Long> inboundRecordIds) {
+    return findRecords(inboundRecordIds).stream().map(this::toTarget).toList();
+  }
 
-	@Override
-	public void markPottingPlanned(List<Long> inboundRecordIds) {
-		List<InboundRecord> records = findRecords(inboundRecordIds);
-		if (records.size() != inboundRecordIds.size()) {
-			throw new IllegalArgumentException("포트 작업 대상 입고 기록을 찾을 수 없습니다.");
-		}
-		records.forEach(InboundRecord::markPottingPlanned);
-	}
+  @Override
+  public void markPottingPlanned(List<Long> inboundRecordIds) {
+    List<InboundRecord> records = findRecords(inboundRecordIds);
+    if (records.size() != inboundRecordIds.size()) {
+      throw new IllegalArgumentException("포트 작업 대상 입고 기록을 찾을 수 없습니다.");
+    }
+    records.forEach(InboundRecord::markPottingPlanned);
+  }
 
-	@Override
-	public void closePottingPlan(List<Long> inboundRecordIds) {
-		findRecords(inboundRecordIds).forEach(InboundRecord::closePottingPlan);
-	}
+  @Override
+  public void closePottingPlan(List<Long> inboundRecordIds) {
+    findRecords(inboundRecordIds).forEach(InboundRecord::closePottingPlan);
+  }
 
-	private List<InboundRecord> findRecords(List<Long> inboundRecordIds) {
-		return inboundRecordRepository.findByIdIn(inboundRecordIds);
-	}
+  private List<InboundRecord> findRecords(List<Long> inboundRecordIds) {
+    return inboundRecordRepository.findByIdIn(inboundRecordIds);
+  }
 
-	private InboundPottingPlanTarget toTarget(InboundRecord record) {
-		return new InboundPottingPlanTarget(record.getId(), record.getVariety().getId(), record.getVariety().getName(),
-				record.getStatus().name(), record.getEstimatedQuantity(), null, record.getTempLocation(),
-				record.getPottingDueDate(), null);
-	}
-
+  private InboundPottingPlanTarget toTarget(InboundRecord record) {
+    return new InboundPottingPlanTarget(
+        record.getId(),
+        record.getVariety().getId(),
+        record.getVariety().getName(),
+        record.getStatus().name(),
+        record.getEstimatedQuantity(),
+        null,
+        record.getTempLocation(),
+        record.getPottingDueDate(),
+        null);
+  }
 }

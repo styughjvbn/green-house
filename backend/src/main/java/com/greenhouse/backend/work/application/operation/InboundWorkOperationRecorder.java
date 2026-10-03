@@ -4,7 +4,6 @@ import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectStore;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
-import com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
@@ -28,52 +27,75 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class InboundWorkOperationRecorder {
 
-	private final WorkTypeService workTypeService;
+  private final WorkTypeService workTypeService;
 
-	private final WorkOperationRepository workOperationRepository;
+  private final WorkOperationRepository workOperationRepository;
 
-	private final WorkOperationTargetRepository workOperationTargetRepository;
+  private final WorkOperationTargetRepository workOperationTargetRepository;
 
-	private final WorkTargetExecutionRepository workTargetExecutionRepository;
+  private final WorkTargetExecutionRepository workTargetExecutionRepository;
 
-	private final WorkEffectStore workEffectStore;
+  private final WorkEffectStore workEffectStore;
 
-	private final WorkOperationSupport support;
+  private final WorkOperationSupport support;
 
-	public void record(RecordInboundWorkCommand request) {
-		record(request, null);
-	}
+  public void record(RecordInboundWorkCommand request) {
+    record(request, null);
+  }
 
-	public void record(RecordInboundWorkCommand request, WorkMutationLink mutationLink) {
-		WorkType workType = workTypeService.getByCode(WorkTypeDefinition.INBOUND.name());
-		if (!workType.isActive()) {
-			throw new IllegalArgumentException("입고 작업 유형이 비활성화되어 있습니다.");
-		}
-		Map<String, Object> details = new LinkedHashMap<>(request.details());
-		if (!request.createdOrchidGroupIds().isEmpty()) {
-			details.put("createdOrchidGroupIds", request.createdOrchidGroupIds());
-		}
-		WorkOperation operation = workOperationRepository.save(new WorkOperation(workType,
-				support.varietyHistoryTitle(request.varietyName(), WorkTypeDefinition.INBOUND), request.workDate(),
-				request.workDate(), WorkSourceScopeType.INBOUND_RECORD_SELECTION, null,
-				Map.of("inboundRecordIds", List.of(request.inboundRecordId())), details,
-				support.actor(request.worker()), normalize(request.memo()), support.now()));
-		WorkOperationTarget target = workOperationTargetRepository.save(WorkOperationTarget.inboundRecord(operation,
-				request.inboundRecordId(), request.varietyId(), request.varietyName(), request.quantity(),
-				request.potSize(), request.locationSnapshot(), support.now()));
-		WorkTargetExecution execution = workTargetExecutionRepository.save(new WorkTargetExecution(target));
-		LocalDateTime executedAt = support.now();
-		String worker = support.actor(request.worker());
-		operation.start(executedAt);
-		workEffectStore.save(operation, target, new WorkEffectCommand(executedAt, worker, details, request),
-				"TARGET:" + target.getId(), List.of(), WorkEffectKind.RECORD_ONLY, new WorkExecutionResult(
-						workType.handlerCode(), details, request.createdOrchidGroupIds(), mutationLink));
-		execution.completeWithEffect(executedAt, worker, details);
-		operation.complete(executedAt);
-	}
+  public void record(RecordInboundWorkCommand request, WorkMutationLink mutationLink) {
+    WorkType workType = workTypeService.getByCode(WorkTypeDefinition.INBOUND.name());
+    if (!workType.isActive()) {
+      throw new IllegalArgumentException("입고 작업 유형이 비활성화되어 있습니다.");
+    }
+    Map<String, Object> details = new LinkedHashMap<>(request.details());
+    if (!request.createdOrchidGroupIds().isEmpty()) {
+      details.put("createdOrchidGroupIds", request.createdOrchidGroupIds());
+    }
+    WorkOperation operation =
+        workOperationRepository.save(
+            new WorkOperation(
+                workType,
+                support.varietyHistoryTitle(request.varietyName(), WorkTypeDefinition.INBOUND),
+                request.workDate(),
+                request.workDate(),
+                WorkSourceScopeType.INBOUND_RECORD_SELECTION,
+                null,
+                Map.of("inboundRecordIds", List.of(request.inboundRecordId())),
+                details,
+                support.actor(request.worker()),
+                normalize(request.memo()),
+                support.now()));
+    WorkOperationTarget target =
+        workOperationTargetRepository.save(
+            WorkOperationTarget.inboundRecord(
+                operation,
+                request.inboundRecordId(),
+                request.varietyId(),
+                request.varietyName(),
+                request.quantity(),
+                request.potSize(),
+                request.locationSnapshot(),
+                support.now()));
+    WorkTargetExecution execution =
+        workTargetExecutionRepository.save(new WorkTargetExecution(target));
+    LocalDateTime executedAt = support.now();
+    String worker = support.actor(request.worker());
+    operation.start(executedAt);
+    workEffectStore.save(
+        operation,
+        target,
+        new WorkEffectCommand(executedAt, worker, details, request),
+        "TARGET:" + target.getId(),
+        List.of(),
+        WorkEffectKind.RECORD_ONLY,
+        new WorkExecutionResult(
+            workType.handlerCode(), details, request.createdOrchidGroupIds(), mutationLink));
+    execution.completeWithEffect(executedAt, worker, details);
+    operation.complete(executedAt);
+  }
 
-	private String normalize(String value) {
-		return value == null || value.isBlank() ? null : value.trim();
-	}
-
+  private String normalize(String value) {
+    return value == null || value.isBlank() ? null : value.trim();
+  }
 }

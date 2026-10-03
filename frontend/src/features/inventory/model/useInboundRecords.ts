@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { House } from "@/entities/farm/types";
+import { invalidateWorkAndInboundQueries } from "@/entities/farm/model/farmMutationQueries";
 import { createEmptyPage } from "@/shared/api/page";
 import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import {
@@ -67,9 +68,7 @@ export function useInboundRecords({
   });
 
   async function invalidate() {
-    await queryClient.invalidateQueries({
-      queryKey: inventoryQueryKeys.inbound.all,
-    });
+    await invalidateWorkAndInboundQueries(queryClient);
   }
 
   async function invalidateRelatedInventory() {

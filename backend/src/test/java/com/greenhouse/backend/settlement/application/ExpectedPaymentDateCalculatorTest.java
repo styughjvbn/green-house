@@ -25,72 +25,81 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ExpectedPaymentDateCalculatorTest {
 
-	private static final LocalDate FRIDAY = LocalDate.of(2026, 7, 3);
+  private static final LocalDate FRIDAY = LocalDate.of(2026, 7, 3);
 
-	@Mock
-	PartnerSettlementSettingsRepository settingsRepository;
+  @Mock PartnerSettlementSettingsRepository settingsRepository;
 
-	private ExpectedPaymentDateCalculator calculator;
+  private ExpectedPaymentDateCalculator calculator;
 
-	@BeforeEach
-	void setUp() {
-		calculator = new ExpectedPaymentDateCalculator(settingsRepository);
-	}
+  @BeforeEach
+  void setUp() {
+    calculator = new ExpectedPaymentDateCalculator(settingsRepository);
+  }
 
-	@Test
-	void usesTheBaseDateWhenSettingsDoNotExist() {
-		when(settingsRepository.findByPartnerId(1L)).thenReturn(Optional.empty());
-		assertThat(calculator.calculate(1L, FRIDAY)).isEqualTo(FRIDAY);
-	}
+  @Test
+  void usesTheBaseDateWhenSettingsDoNotExist() {
+    when(settingsRepository.findByPartnerId(1L)).thenReturn(Optional.empty());
+    assertThat(calculator.calculate(1L, FRIDAY)).isEqualTo(FRIDAY);
+  }
 
-	@Test
-	void calendarDaysIncludeWeekends() {
-		when(settingsRepository.findByPartnerId(1L))
-			.thenReturn(Optional.of(settings(1L, 2, PaymentDayMode.CALENDAR_DAY)));
-		assertThat(calculator.calculate(1L, FRIDAY)).isEqualTo(LocalDate.of(2026, 7, 5));
-	}
+  @Test
+  void calendarDaysIncludeWeekends() {
+    when(settingsRepository.findByPartnerId(1L))
+        .thenReturn(Optional.of(settings(1L, 2, PaymentDayMode.CALENDAR_DAY)));
+    assertThat(calculator.calculate(1L, FRIDAY)).isEqualTo(LocalDate.of(2026, 7, 5));
+  }
 
-	@Test
-	void businessDaysSkipWeekendsAcrossSeveralWeeks() {
-		when(settingsRepository.findByPartnerId(1L))
-			.thenReturn(Optional.of(settings(1L, 6, PaymentDayMode.BUSINESS_DAY)));
-		assertThat(calculator.calculate(1L, FRIDAY)).isEqualTo(LocalDate.of(2026, 7, 13));
-	}
+  @Test
+  void businessDaysSkipWeekendsAcrossSeveralWeeks() {
+    when(settingsRepository.findByPartnerId(1L))
+        .thenReturn(Optional.of(settings(1L, 6, PaymentDayMode.BUSINESS_DAY)));
+    assertThat(calculator.calculate(1L, FRIDAY)).isEqualTo(LocalDate.of(2026, 7, 13));
+  }
 
-	@Test
-	void zeroDelayKeepsTheBaseDateEvenOnAWeekend() {
-		when(settingsRepository.findByPartnerId(1L))
-			.thenReturn(Optional.of(settings(1L, 0, PaymentDayMode.BUSINESS_DAY)));
-		assertThat(calculator.calculate(1L, FRIDAY.plusDays(1))).isEqualTo(FRIDAY.plusDays(1));
-	}
+  @Test
+  void zeroDelayKeepsTheBaseDateEvenOnAWeekend() {
+    when(settingsRepository.findByPartnerId(1L))
+        .thenReturn(Optional.of(settings(1L, 0, PaymentDayMode.BUSINESS_DAY)));
+    assertThat(calculator.calculate(1L, FRIDAY.plusDays(1))).isEqualTo(FRIDAY.plusDays(1));
+  }
 
-	@Test
-	void loadsSettingsOnceForAllPartnersAndDates() {
-		var friday = new PaymentDateTarget(1L, FRIDAY);
-		var saturday = new PaymentDateTarget(1L, FRIDAY.plusDays(1));
-		var withoutSettings = new PaymentDateTarget(2L, FRIDAY);
-		when(settingsRepository.findByPartnerIdIn(Set.of(1L, 2L)))
-			.thenReturn(List.of(settings(1L, 2, PaymentDayMode.BUSINESS_DAY)));
+  @Test
+  void loadsSettingsOnceForAllPartnersAndDates() {
+    var friday = new PaymentDateTarget(1L, FRIDAY);
+    var saturday = new PaymentDateTarget(1L, FRIDAY.plusDays(1));
+    var withoutSettings = new PaymentDateTarget(2L, FRIDAY);
+    when(settingsRepository.findByPartnerIdIn(Set.of(1L, 2L)))
+        .thenReturn(List.of(settings(1L, 2, PaymentDayMode.BUSINESS_DAY)));
 
-		assertThat(calculator.calculateAll(List.of(friday, saturday, withoutSettings)))
-			.containsEntry(friday, LocalDate.of(2026, 7, 7))
-			.containsEntry(saturday, LocalDate.of(2026, 7, 7))
-			.containsEntry(withoutSettings, FRIDAY)
-			.hasSize(3);
-		verify(settingsRepository).findByPartnerIdIn(Set.of(1L, 2L));
-		verifyNoMoreInteractions(settingsRepository);
-	}
+    assertThat(calculator.calculateAll(List.of(friday, saturday, withoutSettings)))
+        .containsEntry(friday, LocalDate.of(2026, 7, 7))
+        .containsEntry(saturday, LocalDate.of(2026, 7, 7))
+        .containsEntry(withoutSettings, FRIDAY)
+        .hasSize(3);
+    verify(settingsRepository).findByPartnerIdIn(Set.of(1L, 2L));
+    verifyNoMoreInteractions(settingsRepository);
+  }
 
-	@Test
-	void doesNotQueryForEmptyTargets() {
-		assertThat(calculator.calculateAll(List.of())).isEmpty();
-		verifyNoInteractions(settingsRepository);
-	}
+  @Test
+  void doesNotQueryForEmptyTargets() {
+    assertThat(calculator.calculateAll(List.of())).isEmpty();
+    verifyNoInteractions(settingsRepository);
+  }
 
-	private PartnerSettlementSettings settings(Long partnerId, int delay, PaymentDayMode mode) {
-		var settings = new PartnerSettlementSettings(partnerId, PartnerType.WHOLESALE);
-		settings.update(SettlementUnit.SALES_SLIP, delay, mode, false, false, 0L, List.of(), false, false, null, null);
-		return settings;
-	}
-
+  private PartnerSettlementSettings settings(Long partnerId, int delay, PaymentDayMode mode) {
+    var settings = new PartnerSettlementSettings(partnerId, PartnerType.WHOLESALE);
+    settings.update(
+        SettlementUnit.SALES_SLIP,
+        delay,
+        mode,
+        false,
+        false,
+        0L,
+        List.of(),
+        false,
+        false,
+        null,
+        null);
+    return settings;
+  }
 }

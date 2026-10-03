@@ -25,6 +25,8 @@ npm run api:types
 
 기본 생성 과정은 `openApiRun` Gradle task와 테스트 프로필의 메모리 H2 DB를 사용하며 로컬 PostgreSQL에 의존하지 않는다. `AUTH_ENABLED=false`로 임시 백엔드를 실행한다. 분할 스크립트는 모든 operation이 controller tag 기준으로 정확히 하나의 slice에 포함되는지 검사하며, 새 controller tag의 매핑이 없으면 실패한다.
 
+전체 명세와 slice를 저장할 때 `properties` 키는 이름순으로 정렬한다. Springdoc 실행 환경에 따라 필드 탐색 순서가 달라도 동일한 생성 결과를 유지하며, 배열 순서와 필드 타입·제약조건은 변경하지 않는다. `api-contract` CI는 생성 순서 회귀 테스트와 명세·TypeScript 재생성 후 drift 검사를 수행한다.
+
 프론트는 생성된 schema 중 API enum과 capability 타입을 사용한다. 전체 API client는 생성하지 않는다. `npm run check`는 `openapi.yaml`과 `shared/api/generated/openapi.d.ts`의 drift를 검사한다.
 
 ## 2. 주요 그룹
@@ -34,7 +36,7 @@ npm run api:types
 | `auth.openapi.yaml` | 로그인, 로그아웃, 현재 사용자, 농장 업무일자·시간대 조회 |
 | `farm-structure.openapi.yaml` | 하우스, 물리 배드, 논리 구역, 난 묶음 조회 |
 | `farm-status.openapi.yaml` | 농장 현황 맵, 선택 범위 조회, 대시보드 요약 |
-| `orchid-command.openapi.yaml` | 난 묶음 생성, 분갈이 작업, 수정, 이동, 배치 |
+| `orchid-command.openapi.yaml` | 난 묶음 생성, 분갈이 작업, 수정, 배치 |
 | `orchid-mutation.openapi.yaml` | 난 묶음 Mutation 원장의 헤더, Entry 전후 상태와 관계 조회 |
 | `inventory.openapi.yaml` | 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성/수정/포트작업/취소, 목록 페이지네이션 |
 | `orchid-collection.openapi.yaml` | 난 묶음 사용자 그룹과 소속 관리 |
@@ -192,7 +194,7 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 
 입고 수정은 난 묶음 생성·배치 완료 전에만 허용한다. `InboundRecordResponse.editable`은 서버가 판정한 수정 가능 여부이며, 화면은 상태 조합을 다시 추론하지 않고 이 값을 사용한다. 취소된 입고는 물리 삭제하지 않으며, 상태 조건이 없는 전체 목록에도 포함한다. `status=CANCELED`를 지정하면 취소 이력만 조회한다.
 
-입고 화면의 취소 동작은 `InboundRecordResponse.availableActions`를 기준으로 표시한다. `VOID_POTTING`은 `POST /api/inbound-records/{inboundRecordId}/potting-void`로 포트 작업의 생성 Mutation을 보상하고 유리병 모종 입고를 `POTTING_PENDING`으로 되돌린다. `CANCEL`은 기존 입고 취소 API를 사용하며, 즉시 배치 입고는 입고 생성 Mutation을 보상하고, 배치 완료 유리병 모종은 포트 작업을 먼저 보상한 뒤 입고를 `CANCELED`로 전환한다. 같은 포트 작업에 여러 입고가 포함되면 포트 작업 보상은 작업 전체에 적용된다. 생성 결과에 후속 작업·판매·다른 외부 참조가 있으면 취소하지 않는다.
+입고 화면의 취소 동작은 `InboundRecordResponse.availableActions`를 기준으로 표시한다. `VOID_POTTING`은 `POST /api/inbound-records/{inboundRecordId}/potting-void`로 포트 작업의 생성 Mutation을 보상하고 유리병 모종 입고를 `POTTING_PENDING`으로 되돌린다. `CANCEL`은 기존 입고 취소 API를 사용하며, 즉시 배치 입고는 입고 생성 Mutation을 보상하고, 배치 완료 유리병 모종은 포트 작업을 먼저 보상한 뒤 입고를 `CANCELED`로 전환한다. 같은 포트 작업에 여러 입고가 포함되면 일부 대상만 실행된 상태에서도 보상은 작업 전체에 적용되며 미실행 대상도 닫는다. 포트 취소의 같은 멱등 키·사유 재요청은 다시 실행하지 않으며, 이후 새로 실행한 포트 작업에도 영향을 주지 않는다. 같은 키의 사유 변경은 `409`로 거부한다. 생성 결과에 후속 작업·판매·다른 외부 참조가 있으면 취소하지 않는다.
 
 즉시 배치 입고의 난 묶음 속성은 입고 최상위 필드가 아닌 `placement`에 전달한다. 입고 응답의 `createdOrchidGroups`는 `OrchidGroup.inboundRecord`로 연결된 결과를 반환하며, 실제 수량·화분·년생·배치 위치는 이 결과를 기준으로 확인한다. 유리병 모종의 `pottingDate`는 입고 컬럼이 아니라 결과 난 묶음 생성 Mutation의 `effectiveBusinessDate`에서 파생하며, 생성 이력이 `BASELINE`만 있는 과거 묶음은 날짜를 추정하지 않는다.
 
@@ -202,4 +204,4 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 
 폐기는 대상별 완료 요청의 `resultDetails.discardQuantity`만큼 현재 가용 수량에서 차감한다. 일부 폐기는 기존 상태와 잔여 수량을 유지하고, 전량 폐기는 수량 0과 `폐기` 상태로 전환한다. 입력한 폐기 수량과 관계없이 해당 난 묶음의 폐기 처리는 한 번의 대상 실행으로 완료된다.
 
-완료된 구조 변경 작업의 보정은 `POST/GET /api/work-operations/{workOperationId}/corrections`로 실행·조회한다. 생성 요청의 `workDate`는 원본 작업일 보정값으로 사용하며 날짜만 변경하는 보정도 허용한다. `orchidGroupAdjustments`에는 원본 작업이 만든 결과 난 묶음만 지정할 수 있다. `cancelResultCreation=true`는 결과 난 묶음 하나를 수량 0과 `생성 취소` 상태로 전환하며 수량·상태 또는 작업일 보정과 한 요청에 섞을 수 없다. 작업일 전후 값은 응답의 `effectDetails.beforeWorkDate`, `effectDetails.afterWorkDate`, 수량·상태 전후 값은 `effectDetails.adjustments`에서 확인한다. 후속 운영 데이터가 연결된 결과와 예약 수량을 침해하는 변경은 거부한다.
+완료된 구조 변경 작업의 보정은 `POST/GET /api/work-operations/{workOperationId}/corrections`로 실행·조회한다. 생성 요청의 `workDate`는 원본 작업일 보정값으로 사용하며 날짜만 변경하는 보정도 허용한다. `orchidGroupAdjustments`에는 원본 작업이 만든 결과 난 묶음만 지정할 수 있다. `cancelResultCreation=true`는 결과 난 묶음 하나를 수량 0과 `생성 취소` 상태로 전환하며 수량·상태 또는 작업일 보정과 한 요청에 섞을 수 없다. 보정은 원본 작업의 감사 이벤트로 반환하며 독립 작업을 생성하지 않는다. 상세와 보정 조회는 같은 정형 이벤트 계약을 사용한다. 날짜만 보정할 때는 난 묶음 조정 목록을 비울 수 있다. 작업 목록·캘린더의 보정 유무 조건은 실제 서버 페이지 조회에 적용한다. 후속 운영 데이터가 연결된 결과와 예약 수량을 침해하는 변경은 거부한다.

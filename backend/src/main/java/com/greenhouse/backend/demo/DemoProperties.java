@@ -7,6 +7,10 @@ import org.springframework.validation.annotation.Validated;
 
 @Validated
 @ConfigurationProperties(prefix = "app.demo")
-public record DemoProperties(boolean enabled, @NotBlank String username, @Min(1) int requestLimitPerMinute,
-		@Min(1) int mutationLimitPerMinute, @Min(1) int mutationLimitPerDay, @Min(1) long maxRequestBytes) {
-}
+public record DemoProperties(
+    boolean enabled,
+    @NotBlank String username,
+    @Min(1) int requestLimitPerMinute,
+    @Min(1) int mutationLimitPerMinute,
+    @Min(1) int mutationLimitPerDay,
+    @Min(1) long maxRequestBytes) {}

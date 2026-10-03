@@ -16,34 +16,36 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class InboundPottingExecutor implements WorkEffectHandler {
 
-	private final InboundPottingService inboundPottingService;
+  private final InboundPottingService inboundPottingService;
 
-	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-	@Override
-	public String supports() {
-		return "POTTING";
-	}
+  @Override
+  public String supports() {
+    return "POTTING";
+  }
 
-	@Override
-	public WorkEffectKind effectKind() {
-		return WorkEffectKind.STRUCTURE_CHANGE;
-	}
+  @Override
+  public WorkEffectKind effectKind() {
+    return WorkEffectKind.STRUCTURE_CHANGE;
+  }
 
-	@Override
-	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
-		var target = context.target();
-		if (target == null || target.referenceType() != WorkTargetReferenceType.INBOUND_RECORD) {
-			throw new IllegalArgumentException("포트 작업에는 입고 기록 대상이 필요합니다.");
-		}
-		InboundRecordPottingRequest request = objectMapper.convertValue(command.resultDetails(),
-				InboundRecordPottingRequest.class);
-		var result = inboundPottingService.potting(target.inboundRecordId(), request, context.operationId(),
-				command.effectKey());
-		var details = new WorkEffectResults.Potted(target.inboundRecordId(), result.createdOrchidGroupIds(),
-				result.actualQuantity())
-			.toMap();
-		return new WorkExecutionResult("POTTING", details, result.createdOrchidGroupIds(), result.mutationLink());
-	}
-
+  @Override
+  public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
+    var target = context.target();
+    if (target == null || target.referenceType() != WorkTargetReferenceType.INBOUND_RECORD) {
+      throw new IllegalArgumentException("포트 작업에는 입고 기록 대상이 필요합니다.");
+    }
+    InboundRecordPottingRequest request =
+        objectMapper.convertValue(command.resultDetails(), InboundRecordPottingRequest.class);
+    var result =
+        inboundPottingService.potting(
+            target.inboundRecordId(), request, context.operationId(), command.effectKey());
+    var details =
+        new WorkEffectResults.Potted(
+                target.inboundRecordId(), result.createdOrchidGroupIds(), result.actualQuantity())
+            .toMap();
+    return new WorkExecutionResult(
+        "POTTING", details, result.createdOrchidGroupIds(), result.mutationLink());
+  }
 }

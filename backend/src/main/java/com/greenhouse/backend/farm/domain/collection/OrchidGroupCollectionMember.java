@@ -18,39 +18,42 @@ import lombok.NoArgsConstructor;
 @Table(name = "orchid_group_collection_members")
 public class OrchidGroupCollectionMember {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orchid_group_collection_members_id_seq")
-	@SequenceGenerator(name = "orchid_group_collection_members_id_seq",
-			sequenceName = "orchid_group_collection_members_id_seq", allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(
+      strategy = GenerationType.SEQUENCE,
+      generator = "orchid_group_collection_members_id_seq")
+  @SequenceGenerator(
+      name = "orchid_group_collection_members_id_seq",
+      sequenceName = "orchid_group_collection_members_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@Column(name = "collection_id", nullable = false)
-	private Long collectionId;
+  @Column(name = "collection_id", nullable = false)
+  private Long collectionId;
 
-	@Column(name = "orchid_group_id", nullable = false)
-	private Long orchidGroupId;
+  @Column(name = "orchid_group_id", nullable = false)
+  private Long orchidGroupId;
 
-	@Column(name = "joined_at", nullable = false)
-	private LocalDateTime joinedAt;
+  @Column(name = "joined_at", nullable = false)
+  private LocalDateTime joinedAt;
 
-	@Column(name = "removed_at")
-	private LocalDateTime removedAt;
+  @Column(name = "removed_at")
+  private LocalDateTime removedAt;
 
-	@Column(name = "created_by", length = 100)
-	private String createdBy;
+  @Column(name = "created_by", length = 100)
+  private String createdBy;
 
-	public OrchidGroupCollectionMember(Long collectionId, Long orchidGroupId, String createdBy,
-			LocalDateTime joinedAt) {
-		this.collectionId = collectionId;
-		this.orchidGroupId = orchidGroupId;
-		this.createdBy = createdBy;
-		this.joinedAt = joinedAt;
-	}
+  public OrchidGroupCollectionMember(
+      Long collectionId, Long orchidGroupId, String createdBy, LocalDateTime joinedAt) {
+    this.collectionId = collectionId;
+    this.orchidGroupId = orchidGroupId;
+    this.createdBy = createdBy;
+    this.joinedAt = joinedAt;
+  }
 
-	public void remove(LocalDateTime removedAt) {
-		if (this.removedAt == null) {
-			this.removedAt = removedAt;
-		}
-	}
-
+  public void remove(LocalDateTime removedAt) {
+    if (this.removedAt == null) {
+      this.removedAt = removedAt;
+    }
+  }
 }

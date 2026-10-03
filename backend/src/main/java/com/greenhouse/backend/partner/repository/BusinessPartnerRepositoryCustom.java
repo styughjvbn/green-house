@@ -9,11 +9,14 @@ import org.springframework.data.domain.Pageable;
 
 public interface BusinessPartnerRepositoryCustom {
 
-	List<Long> findMatchingIds(PartnerTextMatch match, String value, long afterId, int limit);
+  List<Long> findMatchingIds(PartnerTextMatch match, String value, long afterId, int limit);
 
-	List<BusinessPartner> findActiveByName(String keyword, PartnerType partnerType, int limit);
+  List<BusinessPartner> findActiveByName(String keyword, PartnerType partnerType, int limit);
 
-	Page<BusinessPartner> searchPage(String keyword, PartnerType partnerType, Boolean active, Boolean auctionHouse,
-			Pageable pageable);
-
+  Page<BusinessPartner> searchPage(
+      String keyword,
+      PartnerType partnerType,
+      Boolean active,
+      Boolean auctionHouse,
+      Pageable pageable);
 }

@@ -14,17 +14,47 @@ import org.springframework.data.domain.Pageable;
 
 public interface WorkOperationRepositoryCustom {
 
-	Optional<WorkOperation> findWithWorkTypeById(Long id);
+  Optional<WorkOperation> findWithWorkTypeById(Long id);
 
-	List<WorkOperation> findWithWorkTypeByIdIn(Collection<Long> ids);
+  List<WorkOperation> findWithWorkTypeByIdIn(Collection<Long> ids);
 
-	Optional<WorkOperation> findByRequestKey(String requestKey);
+  Optional<WorkOperation> findByRequestKey(String requestKey);
 
-	Page<WorkOperation> search(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
-			WorkOperationSearchView view, LocalDateTime todayStartedAt, WorkSourceScopeType sourceScopeType,
-			Long sourceScopeId, String keyword, Pageable pageable);
+  Page<WorkOperation> search(
+      LocalDate fromDate,
+      LocalDate toDate,
+      WorkOperationStatus status,
+      WorkOperationSearchView view,
+      LocalDateTime todayStartedAt,
+      WorkSourceScopeType sourceScopeType,
+      Long sourceScopeId,
+      String keyword,
+      Pageable pageable);
 
-	List<WorkOperation> searchAll(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
-			WorkOperationSearchView view, LocalDateTime todayStartedAt);
+  Page<WorkOperation> search(
+      LocalDate fromDate,
+      LocalDate toDate,
+      WorkOperationStatus status,
+      WorkOperationSearchView view,
+      LocalDateTime todayStartedAt,
+      WorkSourceScopeType sourceScopeType,
+      Long sourceScopeId,
+      String keyword,
+      Boolean hasCorrections,
+      Pageable pageable);
 
+  List<WorkOperation> searchAll(
+      LocalDate fromDate,
+      LocalDate toDate,
+      WorkOperationStatus status,
+      WorkOperationSearchView view,
+      LocalDateTime todayStartedAt,
+      Boolean hasCorrections);
+
+  List<WorkOperation> searchAll(
+      LocalDate fromDate,
+      LocalDate toDate,
+      WorkOperationStatus status,
+      WorkOperationSearchView view,
+      LocalDateTime todayStartedAt);
 }

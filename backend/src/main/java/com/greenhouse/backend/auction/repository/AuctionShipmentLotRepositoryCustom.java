@@ -7,8 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface AuctionShipmentLotRepositoryCustom {
 
-	Page<AuctionShipmentLot> search(AuctionLotSearchCriteria criteria, Pageable pageable);
+  Page<AuctionShipmentLot> search(AuctionLotSearchCriteria criteria, Pageable pageable);
 
-	AuctionTrackingSummaryProjection summarize();
-
+  AuctionTrackingSummaryProjection summarize();
 }

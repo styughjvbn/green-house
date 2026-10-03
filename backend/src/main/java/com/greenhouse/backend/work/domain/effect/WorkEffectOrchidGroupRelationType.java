@@ -1,7 +1,6 @@
 package com.greenhouse.backend.work.domain.effect;
 
 public enum WorkEffectOrchidGroupRelationType {
-
-	SOURCE, RESULT
-
+  SOURCE,
+  RESULT
 }

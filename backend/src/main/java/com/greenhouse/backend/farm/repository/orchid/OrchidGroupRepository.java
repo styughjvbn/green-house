@@ -3,6 +3,10 @@ package com.greenhouse.backend.farm.repository.orchid;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import jakarta.persistence.LockModeType;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -13,7 +17,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
 
-	@Query("""
+  @Query(
+      """
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
@@ -23,25 +28,28 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and g.quantity > 0
 			order by inbound.id, g.id
 			""")
-	List<OrchidGroup> findInboundResultDetailsByInboundRecordIdIn(
-			@Param("inboundRecordIds") java.util.Collection<Long> inboundRecordIds);
+  List<OrchidGroup> findInboundResultDetailsByInboundRecordIdIn(
+      @Param("inboundRecordIds") Collection<Long> inboundRecordIds);
 
-	long countByIdInAndInboundRecordIsNotNull(java.util.Collection<Long> orchidGroupIds);
+  long countByIdInAndInboundRecordIsNotNull(Collection<Long> orchidGroupIds);
 
-	@Query("""
+  @Query(
+      """
 			select count(g) from OrchidGroup g
 			where g.id in :orchidGroupIds
 			  and g.inboundRecord is not null
 			  and g.inboundRecord.id not in :allowedInboundRecordIds
 			""")
-	long countInboundReferencesOutside(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds,
-			@Param("allowedInboundRecordIds") java.util.Collection<Long> allowedInboundRecordIds);
+  long countInboundReferencesOutside(
+      @Param("orchidGroupIds") Collection<Long> orchidGroupIds,
+      @Param("allowedInboundRecordIds") Collection<Long> allowedInboundRecordIds);
 
-	boolean existsByInboundRecordIdAndQuantityGreaterThan(Long inboundRecordId, Integer quantity);
+  boolean existsByInboundRecordIdAndQuantityGreaterThan(Long inboundRecordId, Integer quantity);
 
-	boolean existsByStateRevisionIsNull();
+  boolean existsByStateRevisionIsNull();
 
-	@Query("""
+  @Query(
+      """
 			select g.id as orchidGroupId, h.id as houseId, b.id as physicalBedId, z.id as bedZoneId,
 			       g.startPosition as startPosition, g.endPosition as endPosition,
 			       v.id as varietyId, v.color as varietyColor, coalesce(v.name, g.varietyName) as varietyName,
@@ -53,47 +61,47 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			where g.quantity > 0
 			order by h.number, b.displayOrder, z.sortOrder, g.sortOrder
 			""")
-	List<MapRow> findMapRows();
+  List<MapRow> findMapRows();
 
-	interface MapRow {
+  interface MapRow {
 
-		Long getOrchidGroupId();
+    Long getOrchidGroupId();
 
-		Long getHouseId();
+    Long getHouseId();
 
-		Long getPhysicalBedId();
+    Long getPhysicalBedId();
 
-		Long getBedZoneId();
+    Long getBedZoneId();
 
-		java.math.BigDecimal getStartPosition();
+    BigDecimal getStartPosition();
 
-		java.math.BigDecimal getEndPosition();
+    BigDecimal getEndPosition();
 
-		Long getVarietyId();
+    Long getVarietyId();
 
-		String getVarietyColor();
+    String getVarietyColor();
 
-		String getVarietyName();
+    String getVarietyName();
 
-		Integer getQuantity();
+    Integer getQuantity();
 
-		String getStatus();
+    String getStatus();
 
-		Integer getAgeYear();
+    Integer getAgeYear();
 
-		String getPotSize();
+    String getPotSize();
 
-		Integer getSortOrder();
+    Integer getSortOrder();
 
-		Long getInboundRecordId();
+    Long getInboundRecordId();
 
-		java.time.LocalDate getInboundDate();
+    LocalDate getInboundDate();
 
-		java.time.LocalDateTime getCreatedAt();
+    LocalDateTime getCreatedAt();
+  }
 
-	}
-
-	@Query("""
+  @Query(
+      """
 			select g.varietyName as varietyName,
 			       sum(case when g.status not in :unavailableStatuses then g.quantity - g.reservedQuantity else 0 end) as saleableQuantity,
 			       sum(case when g.status in :warningStatuses then 1 else 0 end) as warningGroupCount
@@ -102,33 +110,34 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			group by g.varietyName
 			order by saleableQuantity desc, g.varietyName asc
 			""")
-	List<VarietyInventory> summarizeInventory(
-			@Param("unavailableStatuses") java.util.Collection<String> unavailableStatuses,
-			@Param("warningStatuses") java.util.Collection<String> warningStatuses);
+  List<VarietyInventory> summarizeInventory(
+      @Param("unavailableStatuses") Collection<String> unavailableStatuses,
+      @Param("warningStatuses") Collection<String> warningStatuses);
 
-	interface VarietyInventory {
+  interface VarietyInventory {
 
-		String getVarietyName();
+    String getVarietyName();
 
-		long getSaleableQuantity();
+    long getSaleableQuantity();
 
-		long getWarningGroupCount();
+    long getWarningGroupCount();
+  }
 
-	}
+  @Query("select g.id from OrchidGroup g where g.id > :afterId order by g.id")
+  List<Long> findIdsAfter(@Param("afterId") Long afterId, Pageable pageable);
 
-	@Query("select g.id from OrchidGroup g where g.id > :afterId order by g.id")
-	List<Long> findIdsAfter(@Param("afterId") Long afterId, Pageable pageable);
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select g from OrchidGroup g where g.id in :orchidGroupIds order by g.id")
+  List<OrchidGroup> findAllForUpdateByIdIn(
+      @Param("orchidGroupIds") Collection<Long> orchidGroupIds);
 
-	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select g from OrchidGroup g where g.id in :orchidGroupIds order by g.id")
-	List<OrchidGroup> findAllForUpdateByIdIn(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+  boolean existsByVarietyName(String varietyName);
 
-	boolean existsByVarietyName(String varietyName);
+  @Query("select coalesce(max(g.sortOrder), 0) from OrchidGroup g where g.bedZone.id = :bedZoneId")
+  int findMaxSortOrderByBedZoneId(@Param("bedZoneId") Long bedZoneId);
 
-	@Query("select coalesce(max(g.sortOrder), 0) from OrchidGroup g where g.bedZone.id = :bedZoneId")
-	int findMaxSortOrderByBedZoneId(@Param("bedZoneId") Long bedZoneId);
-
-	@Query("""
+  @Query(
+      """
 			select new com.greenhouse.backend.farm.repository.orchid.OrchidGroupZoneMaxSortOrderRow(
 				g.bedZone.id, max(g.sortOrder))
 			from OrchidGroup g
@@ -136,10 +145,11 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			group by g.bedZone.id
 			order by g.bedZone.id
 			""")
-	List<OrchidGroupZoneMaxSortOrderRow> findMaxSortOrdersByBedZoneIdIn(
-			@Param("bedZoneIds") java.util.Collection<Long> bedZoneIds);
+  List<OrchidGroupZoneMaxSortOrderRow> findMaxSortOrdersByBedZoneIdIn(
+      @Param("bedZoneIds") Collection<Long> bedZoneIds);
 
-	@Query("""
+  @Query(
+      """
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
@@ -157,36 +167,43 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			    and g.quantity > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> search(@Param("houseId") Long houseId, @Param("keyword") String keyword,
-			@Param("physicalBedId") Long physicalBedId, @Param("bedZoneId") Long bedZoneId,
-			@Param("status") String status);
+  List<OrchidGroup> search(
+      @Param("houseId") Long houseId,
+      @Param("keyword") String keyword,
+      @Param("physicalBedId") Long physicalBedId,
+      @Param("bedZoneId") Long bedZoneId,
+      @Param("status") String status);
 
-	@Query("""
+  @Query(
+      """
 			select count(g) from OrchidGroup g
 			join g.bedZone z
 			join z.physicalBed b
 			where b.house.id = :houseId
 			  and g.quantity > 0
 			""")
-	long countByHouseId(@Param("houseId") Long houseId);
+  long countByHouseId(@Param("houseId") Long houseId);
 
-	@Query("""
+  @Query(
+      """
 			select count(g) from OrchidGroup g
 			where g.status in :warningStatuses
 			  and g.quantity > 0
 			""")
-	long countWarningStatus(@Param("warningStatuses") java.util.Collection<String> warningStatuses);
+  long countWarningStatus(@Param("warningStatuses") Collection<String> warningStatuses);
 
-	@Query("""
+  @Query(
+      """
 			select count(g) from OrchidGroup g
 			join g.bedZone z
 			join z.physicalBed b
 			where b.house.id = :houseId and g.status in :warningStatuses and g.quantity > 0
 			""")
-	long countWarningStatusByHouseId(@Param("houseId") Long houseId,
-			@Param("warningStatuses") java.util.Collection<String> warningStatuses);
+  long countWarningStatusByHouseId(
+      @Param("houseId") Long houseId, @Param("warningStatuses") Collection<String> warningStatuses);
 
-	@Query("""
+  @Query(
+      """
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
@@ -195,9 +212,10 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and g.quantity > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> findByVarietyIdOrderByLocation(@Param("varietyId") Long varietyId);
+  List<OrchidGroup> findByVarietyIdOrderByLocation(@Param("varietyId") Long varietyId);
 
-	@Query("""
+  @Query(
+      """
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
@@ -206,9 +224,11 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and g.quantity > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> findByVarietyIdInOrderByLocation(@Param("varietyIds") java.util.Collection<Long> varietyIds);
+  List<OrchidGroup> findByVarietyIdInOrderByLocation(
+      @Param("varietyIds") Collection<Long> varietyIds);
 
-	@Query("""
+  @Query(
+      """
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
@@ -219,16 +239,21 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and g.quantity > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> findByPhysicalBedIdInOrderByLocation(
-			@Param("physicalBedIds") java.util.Collection<Long> physicalBedIds);
+  List<OrchidGroup> findByPhysicalBedIdInOrderByLocation(
+      @Param("physicalBedIds") Collection<Long> physicalBedIds);
 
-	boolean existsByVarietyId(Long varietyId);
+  boolean existsByVarietyId(Long varietyId);
 
-	List<OrchidGroup> findByVarietyIsNull();
+  List<OrchidGroup> findByVarietyIsNull();
 
-	List<OrchidGroup> findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(Long bedZoneId, Integer quantity);
+  List<OrchidGroup> findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+      Long bedZoneId, Integer quantity);
 
-	@Query("""
+  List<OrchidGroup> findByBedZoneIdInAndQuantityGreaterThan(
+      Collection<Long> bedZoneIds, Integer quantity);
+
+  @Query(
+      """
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
@@ -243,10 +268,13 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and (g.quantity - g.reservedQuantity) > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> searchSellable(@Param("keyword") String keyword, @Param("varietyId") Long varietyId,
-			@Param("status") String status);
+  List<OrchidGroup> searchSellable(
+      @Param("keyword") String keyword,
+      @Param("varietyId") Long varietyId,
+      @Param("status") String status);
 
-	@Query("""
+  @Query(
+      """
 			select g from OrchidGroup g
 			left join fetch g.variety
 			left join fetch g.bedZone z
@@ -254,9 +282,10 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			left join fetch b.house
 			where g.id = :orchidGroupId
 			""")
-	Optional<OrchidGroup> findDetailById(@Param("orchidGroupId") Long orchidGroupId);
+  Optional<OrchidGroup> findDetailById(@Param("orchidGroupId") Long orchidGroupId);
 
-	@Query("""
+  @Query(
+      """
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
@@ -268,9 +297,10 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and g.status not in ('종료', '폐기', '판매 완료', '생성 취소')
 			order by b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> findActiveWorkTargetsByHouseId(@Param("houseId") Long houseId);
+  List<OrchidGroup> findActiveWorkTargetsByHouseId(@Param("houseId") Long houseId);
 
-	@Query("""
+  @Query(
+      """
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
@@ -283,10 +313,11 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and g.status not in ('종료', '폐기', '판매 완료', '생성 취소')
 			order by b.house.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> findActiveWorkTargets(@Param("physicalBedId") Long physicalBedId,
-			@Param("bedZoneId") Long bedZoneId);
+  List<OrchidGroup> findActiveWorkTargets(
+      @Param("physicalBedId") Long physicalBedId, @Param("bedZoneId") Long bedZoneId);
 
-	@Query("""
+  @Query(
+      """
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
@@ -297,9 +328,11 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and g.quantity > 0
 			  and g.status not in ('종료', '폐기', '판매 완료', '생성 취소')
 			""")
-	List<OrchidGroup> findActiveWorkTargetsByIds(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+  List<OrchidGroup> findActiveWorkTargetsByIds(
+      @Param("orchidGroupIds") Collection<Long> orchidGroupIds);
 
-	@Query("""
+  @Query(
+      """
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
@@ -308,17 +341,20 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			left join fetch g.inboundRecord
 			where g.id in :orchidGroupIds
 			""")
-	List<OrchidGroup> findDetailsByIds(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+  List<OrchidGroup> findDetailsByIds(@Param("orchidGroupIds") Collection<Long> orchidGroupIds);
 
-	@Query("""
+  @Query(
+      """
 			select new com.greenhouse.backend.farm.repository.orchid.OrchidGroupNameRow(g.id, g.varietyName)
 			from OrchidGroup g
 			where g.id in :orchidGroupIds
 			order by g.id asc
 			""")
-	List<OrchidGroupNameRow> findNameRowsByIdIn(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+  List<OrchidGroupNameRow> findNameRowsByIdIn(
+      @Param("orchidGroupIds") Collection<Long> orchidGroupIds);
 
-	@Query("""
+  @Query(
+      """
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
@@ -338,8 +374,10 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			order by v.name asc, g.ageYear asc, g.potSizeCode asc,
 			         h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> findDerivedGroupCandidates(@Param("varietyId") Long varietyId,
-			@Param("potSizeCode") PotSizeCode potSizeCode, @Param("houseId") Long houseId,
-			@Param("status") String status, @Param("keyword") String keyword);
-
+  List<OrchidGroup> findDerivedGroupCandidates(
+      @Param("varietyId") Long varietyId,
+      @Param("potSizeCode") PotSizeCode potSizeCode,
+      @Param("houseId") Long houseId,
+      @Param("status") String status,
+      @Param("keyword") String keyword);
 }

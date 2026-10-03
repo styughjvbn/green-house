@@ -119,3 +119,33 @@ test("stopped work remains a valid status filter", () => {
 
   assert.equal(state.filters.status, "STOPPED");
 });
+
+test("removed correction filters are ignored and stripped from old URLs", () => {
+  const params = {
+    scope: "ALL",
+    view: "LIST",
+    status: "CORRECTED",
+    hasCorrections: "true",
+  };
+  const state = readWorkRecordUrlState(
+    createServerSearchParamReader(params),
+    "2026-07",
+  );
+  assert.equal(state.filters.status, "");
+  assert.equal("hasCorrections" in state.filters, false);
+  assert.equal(needsWorkRecordUrlNormalization(params, state), true);
+  const normalized = createNormalizedWorkRecordSearchParams(params, state);
+  assert.equal(normalized.has("status"), false);
+  assert.equal(normalized.has("hasCorrections"), false);
+});
+
+test("filter updates remove stale correction conditions without changing other filters", () => {
+  const params = new URLSearchParams({
+    hasCorrections: "false",
+    status: "COMPLETED",
+  });
+  const state = readWorkRecordUrlState(params, "2026-07");
+  writeWorkListFilterParams(params, state.filters);
+  assert.equal(params.has("hasCorrections"), false);
+  assert.equal(params.get("status"), "COMPLETED");
+});

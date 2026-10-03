@@ -25,42 +25,45 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class MaterialController {
 
-	private final MaterialService materialService;
+  private final MaterialService materialService;
 
-	@GetMapping
-	public ApiResponse<PageResponse<MaterialResponse>> getMaterials(@RequestParam(required = false) String keyword,
-			@RequestParam(required = false) String category, @RequestParam(required = false) String manufacturer,
-			@RequestParam(required = false) Boolean active, @RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "10") int size) {
-		return ApiResponse.ok(materialService.getMaterials(keyword, category, manufacturer, active, page, size));
-	}
+  @GetMapping
+  public ApiResponse<PageResponse<MaterialResponse>> getMaterials(
+      @RequestParam(required = false) String keyword,
+      @RequestParam(required = false) String category,
+      @RequestParam(required = false) String manufacturer,
+      @RequestParam(required = false) Boolean active,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+    return ApiResponse.ok(
+        materialService.getMaterials(keyword, category, manufacturer, active, page, size));
+  }
 
-	@GetMapping("/{materialId}")
-	public ApiResponse<MaterialResponse> getMaterial(@PathVariable Long materialId) {
-		return ApiResponse.ok(materialService.getMaterial(materialId));
-	}
+  @GetMapping("/{materialId}")
+  public ApiResponse<MaterialResponse> getMaterial(@PathVariable Long materialId) {
+    return ApiResponse.ok(materialService.getMaterial(materialId));
+  }
 
-	@PostMapping
-	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<MaterialResponse> create(@Valid @RequestBody MaterialCreateRequest request) {
-		return ApiResponse.ok(materialService.create(request));
-	}
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<MaterialResponse> create(@Valid @RequestBody MaterialCreateRequest request) {
+    return ApiResponse.ok(materialService.create(request));
+  }
 
-	@PatchMapping("/{materialId}")
-	public ApiResponse<MaterialResponse> update(@PathVariable Long materialId,
-			@Valid @RequestBody MaterialUpdateRequest request) {
-		return ApiResponse.ok(materialService.update(materialId, request));
-	}
+  @PatchMapping("/{materialId}")
+  public ApiResponse<MaterialResponse> update(
+      @PathVariable Long materialId, @Valid @RequestBody MaterialUpdateRequest request) {
+    return ApiResponse.ok(materialService.update(materialId, request));
+  }
 
-	@PatchMapping("/{materialId}/deactivate")
-	public ApiResponse<MaterialResponse> deactivate(@PathVariable Long materialId) {
-		return ApiResponse.ok(materialService.deactivate(materialId));
-	}
+  @PatchMapping("/{materialId}/deactivate")
+  public ApiResponse<MaterialResponse> deactivate(@PathVariable Long materialId) {
+    return ApiResponse.ok(materialService.deactivate(materialId));
+  }
 
-	@DeleteMapping("/{materialId}")
-	public ApiResponse<Void> delete(@PathVariable Long materialId) {
-		materialService.delete(materialId);
-		return ApiResponse.ok(null);
-	}
-
+  @DeleteMapping("/{materialId}")
+  public ApiResponse<Void> delete(@PathVariable Long materialId) {
+    materialService.delete(materialId);
+    return ApiResponse.ok(null);
+  }
 }

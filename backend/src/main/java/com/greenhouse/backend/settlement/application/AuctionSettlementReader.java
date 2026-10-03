@@ -15,26 +15,24 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuctionSettlementReader {
 
-	private final AuctionSettlementRepository auctionSettlementRepository;
+  private final AuctionSettlementRepository auctionSettlementRepository;
 
-	private final AuctionDataReader auctionReader;
+  private final AuctionDataReader auctionReader;
 
-	public boolean existsByAuctionShipmentId(Long shipmentId) {
-		return !findSettledAuctionShipmentIds(List.of(shipmentId)).isEmpty();
-	}
+  public boolean existsByAuctionShipmentId(Long shipmentId) {
+    return !findSettledAuctionShipmentIds(List.of(shipmentId)).isEmpty();
+  }
 
-	public Set<Long> findSettledAuctionShipmentIds(Collection<Long> shipmentIds) {
-		if (shipmentIds.isEmpty()) {
-			return Set.of();
-		}
-		var shipmentByLotId = auctionReader.getLotShipmentIds(shipmentIds);
-		if (shipmentByLotId.isEmpty()) {
-			return Set.of();
-		}
-		return auctionSettlementRepository.findSettledLotIds(shipmentByLotId.keySet())
-			.stream()
-			.map(shipmentByLotId::get)
-			.collect(Collectors.toUnmodifiableSet());
-	}
-
+  public Set<Long> findSettledAuctionShipmentIds(Collection<Long> shipmentIds) {
+    if (shipmentIds.isEmpty()) {
+      return Set.of();
+    }
+    var shipmentByLotId = auctionReader.getLotShipmentIds(shipmentIds);
+    if (shipmentByLotId.isEmpty()) {
+      return Set.of();
+    }
+    return auctionSettlementRepository.findSettledLotIds(shipmentByLotId.keySet()).stream()
+        .map(shipmentByLotId::get)
+        .collect(Collectors.toUnmodifiableSet());
+  }
 }

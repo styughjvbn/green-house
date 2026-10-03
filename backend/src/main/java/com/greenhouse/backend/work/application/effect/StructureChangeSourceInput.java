@@ -7,7 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 @Schema(name = "StructureChangeSourceRequest")
-public record StructureChangeSourceInput(@NotNull Long sourceOrchidGroupId, @NotNull @Min(1) Integer inputQuantity,
-		@DecimalMin(value = "0.0") BigDecimal releasedStartPosition,
-		@DecimalMin(value = "0.0", inclusive = false) BigDecimal releasedEndPosition) {
-}
+public record StructureChangeSourceInput(
+    @NotNull Long sourceOrchidGroupId,
+    @NotNull @Min(1) Integer inputQuantity,
+    @DecimalMin(value = "0.0") BigDecimal releasedStartPosition,
+    @DecimalMin(value = "0.0", inclusive = false) BigDecimal releasedEndPosition) {}

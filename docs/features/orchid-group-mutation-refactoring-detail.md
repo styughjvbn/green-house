@@ -157,6 +157,11 @@ correction operation의 lazy loading도 함께 계측한다. 단순히 effect �
 
 백엔드 18차에서 기존 보정 작업 ID 일괄 조회로 전환했다. PostgreSQL HTTP 상세 조회에서 보정 0건은 SQL 4회, 1·10·50건은 SQL 5회이며 보정 작업의 lazy loading도 포함한 수치다. 효과 누락·null 결과는 기존처럼 빈 보정 상세로 처리한다. Work 요청 멱등성 보강은 별도 후속이다.
 
+2026-10-02 후속 변경: 보정은 원본 작업의 감사 이벤트로 전환했다. 별도 작업·효과 조회 없이
+변경 전후 값을 읽으며, PostgreSQL 상세 조회는 보정 0·1·10·50건 모두 SQL 4회다.
+접수 기록을 분리해 병렬 중복 요청과 취소 후 재요청을 검증했다. 현재 정책은
+[작업 실행·이력 문서](work-operation-and-orchid-collection.md)를 따른다.
+
 ### F8. importer와 상시 대사의 수명·검증·조회 책임이 한 패키지에 혼재 — P1/P2
 
 근거: [StateChainMigrationService](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupStateChainMigrationService.java), [LedgerReconciliationService](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupLedgerReconciliationService.java).

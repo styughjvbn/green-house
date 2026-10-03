@@ -11,9 +11,16 @@ import java.math.BigDecimal;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(name = "StructureChangeResultRequest")
-public record StructureChangeResultInput(@NotNull Long bedZoneId, @NotNull @Min(1) Integer quantity,
-		Long attributeSourceOrchidGroupId, @Size(max = 50) String potSize, @Min(0) Integer ageYear,
-		@NotNull StructureChangeResultPurpose purpose, @Size(max = 50) String placementType, @Min(0) Integer trayCount,
-		Boolean splitPlacementAllowed, @NotNull @DecimalMin(value = "0.0") BigDecimal startPosition,
-		@NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal endPosition, @Size(max = 1000) String memo) {
-}
+public record StructureChangeResultInput(
+    @NotNull Long bedZoneId,
+    @NotNull @Min(1) Integer quantity,
+    Long attributeSourceOrchidGroupId,
+    @Size(max = 50) String potSize,
+    @Min(0) Integer ageYear,
+    @NotNull StructureChangeResultPurpose purpose,
+    @Size(max = 50) String placementType,
+    @Min(0) Integer trayCount,
+    Boolean splitPlacementAllowed,
+    @NotNull @DecimalMin(value = "0.0") BigDecimal startPosition,
+    @NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal endPosition,
+    @Size(max = 1000) String memo) {}

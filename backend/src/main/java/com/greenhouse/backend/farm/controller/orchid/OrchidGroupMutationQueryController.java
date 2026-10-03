@@ -22,23 +22,26 @@ import org.springframework.web.bind.annotation.RestController;
 @ConditionalOnProperty(name = "app.environment", havingValue = "dev")
 public class OrchidGroupMutationQueryController {
 
-	private final OrchidGroupMutationQueryService queryService;
+  private final OrchidGroupMutationQueryService queryService;
 
-	private final OrchidGroupMutationGraphQueryService graphQueryService;
+  private final OrchidGroupMutationGraphQueryService graphQueryService;
 
-	@GetMapping
-	public ApiResponse<PageResponse<OrchidGroupMutationResponse>> getMutations(
-			@RequestParam(required = false) Long orchidGroupId,
-			@RequestParam(required = false) OrchidGroupMutationType mutationType,
-			@RequestParam(required = false) OrchidGroupMutationSourceDomain sourceDomain,
-			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-		return ApiResponse.ok(queryService.getMutations(orchidGroupId, mutationType, sourceDomain, page, size));
-	}
+  @GetMapping
+  public ApiResponse<PageResponse<OrchidGroupMutationResponse>> getMutations(
+      @RequestParam(required = false) Long orchidGroupId,
+      @RequestParam(required = false) OrchidGroupMutationType mutationType,
+      @RequestParam(required = false) OrchidGroupMutationSourceDomain sourceDomain,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return ApiResponse.ok(
+        queryService.getMutations(orchidGroupId, mutationType, sourceDomain, page, size));
+  }
 
-	@GetMapping("/graph/{orchidGroupId}")
-	public ApiResponse<OrchidGroupMutationGraphResponse> getMutationGraph(@PathVariable Long orchidGroupId,
-			@RequestParam(defaultValue = "2") int depth, @RequestParam(defaultValue = "120") int maxNodes) {
-		return ApiResponse.ok(graphQueryService.getGraph(orchidGroupId, depth, maxNodes));
-	}
-
+  @GetMapping("/graph/{orchidGroupId}")
+  public ApiResponse<OrchidGroupMutationGraphResponse> getMutationGraph(
+      @PathVariable Long orchidGroupId,
+      @RequestParam(defaultValue = "2") int depth,
+      @RequestParam(defaultValue = "120") int maxNodes) {
+    return ApiResponse.ok(graphQueryService.getGraph(orchidGroupId, depth, maxNodes));
+  }
 }

@@ -50,9 +50,8 @@ export function OperationResult({
   const completed = operation.status === "COMPLETED";
   const canceled = operation.status === "CANCELED";
   const stopped = operation.status === "STOPPED";
-  const corrected = operation.status === "CORRECTED";
   const voided = operation.status === "VOIDED";
-  const terminal = completed || stopped || canceled || corrected || voided;
+  const terminal = completed || stopped || canceled || voided;
   const executionKind = getWorkExecutionKind(operation.workTypeWorkflow);
   const structureChange =
     executionKind === "STRUCTURE_CHANGE" || executionKind === "MOVEMENT";
@@ -141,7 +140,7 @@ export function OperationResult({
               ? ` ~ ${operation.plannedEndDate}`
               : ""} · {operationStatusLabel(operation.status)}
             {operation.actualEndAt
-              ? ` · ${completed || corrected ? "완료" : "종료"} ${operation.actualEndAt.slice(0, 10)}`
+              ? ` · ${completed ? "완료" : "종료"} ${operation.actualEndAt.slice(0, 10)}`
               : ""}
           </p>
         </div>
@@ -149,7 +148,7 @@ export function OperationResult({
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
-                completed || corrected
+                completed
                   ? "bg-[#e7f6eb] text-[#10783a]"
                   : "bg-[#f2eeee] text-[#765f5a]"
               }`}
@@ -158,11 +157,9 @@ export function OperationResult({
                 ? "종료됨"
                 : voided
                   ? "취소됨"
-                  : corrected
-                    ? "보정됨"
-                    : completed
-                      ? "완료됨"
-                      : "취소됨"}
+                  : completed
+                    ? "완료됨"
+                    : "취소됨"}
             </span>
             {operation.availableActions.includes("CANCEL") ? (
               <StatusAction

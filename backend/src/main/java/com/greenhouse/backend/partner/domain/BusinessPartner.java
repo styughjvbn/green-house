@@ -20,52 +20,63 @@ import lombok.NoArgsConstructor;
 @Table(name = "business_partners")
 public class BusinessPartner extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "business_partners_id_seq")
-	@SequenceGenerator(name = "business_partners_id_seq", sequenceName = "business_partners_id_seq",
-			allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "business_partners_id_seq")
+  @SequenceGenerator(
+      name = "business_partners_id_seq",
+      sequenceName = "business_partners_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@Column(nullable = false)
-	private String name;
+  @Column(nullable = false)
+  private String name;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "partner_type", nullable = false)
-	private PartnerType partnerType;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "partner_type", nullable = false)
+  private PartnerType partnerType;
 
-	@Column(name = "owner_name")
-	private String ownerName;
+  @Column(name = "owner_name")
+  private String ownerName;
 
-	private String phone;
+  private String phone;
 
-	@Column(columnDefinition = "text")
-	private String address;
+  @Column(columnDefinition = "text")
+  private String address;
 
-	@Column(columnDefinition = "text")
-	private String memo;
+  @Column(columnDefinition = "text")
+  private String memo;
 
-	@Column(name = "is_active", nullable = false)
-	private boolean active;
+  @Column(name = "is_active", nullable = false)
+  private boolean active;
 
-	public BusinessPartner(String name, PartnerType partnerType, String ownerName, String phone, String address,
-			String memo) {
-		this.name = name;
-		this.partnerType = partnerType;
-		this.ownerName = ownerName;
-		this.phone = phone;
-		this.address = address;
-		this.memo = memo;
-		this.active = true;
-	}
+  public BusinessPartner(
+      String name,
+      PartnerType partnerType,
+      String ownerName,
+      String phone,
+      String address,
+      String memo) {
+    this.name = name;
+    this.partnerType = partnerType;
+    this.ownerName = ownerName;
+    this.phone = phone;
+    this.address = address;
+    this.memo = memo;
+    this.active = true;
+  }
 
-	public void update(String name, PartnerType partnerType, String ownerName, String phone, String address,
-			String memo) {
-		this.name = name;
-		this.partnerType = partnerType;
-		this.ownerName = ownerName;
-		this.phone = phone;
-		this.address = address;
-		this.memo = memo;
-	}
-
+  public void update(
+      String name,
+      PartnerType partnerType,
+      String ownerName,
+      String phone,
+      String address,
+      String memo) {
+    this.name = name;
+    this.partnerType = partnerType;
+    this.ownerName = ownerName;
+    this.phone = phone;
+    this.address = address;
+    this.memo = memo;
+  }
 }

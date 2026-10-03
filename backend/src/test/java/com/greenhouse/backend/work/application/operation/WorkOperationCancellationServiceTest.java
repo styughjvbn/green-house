@@ -20,7 +20,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,65 +29,68 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class WorkOperationCancellationServiceTest {
 
-	private static final LocalDateTime NOW = LocalDateTime.of(2026, 10, 2, 9, 0);
+  private static final LocalDateTime NOW = LocalDateTime.of(2026, 10, 2, 9, 0);
 
-	@Mock
-	private WorkOperationRepository operationRepository;
+  @Mock private WorkOperationRepository operationRepository;
 
-	@Mock
-	private WorkAppliedEffectRepository effectRepository;
+  @Mock private WorkAppliedEffectRepository effectRepository;
 
-	@Mock
-	private WorkTargetExecutionRepository executionRepository;
+  @Mock private WorkTargetExecutionRepository executionRepository;
 
-	@Mock
-	private WorkOperationTargetRepository targetRepository;
+  @Mock private WorkOperationTargetRepository targetRepository;
 
-	@Mock
-	private StructureChangeVoidPort structureChangeVoidPort;
+  @Mock private StructureChangeVoidPort structureChangeVoidPort;
 
-	@Mock
-	private PottingVoidPort pottingVoidPort;
+  @Mock private PottingVoidPort pottingVoidPort;
 
-	@Mock
-	private InboundPottingPlanGateway inboundPottingPlanGateway;
+  @Mock private InboundPottingPlanGateway inboundPottingPlanGateway;
 
-	@Mock
-	private WorkOperationQueryService queryService;
+  @Mock private WorkOperationQueryService queryService;
 
-	@Mock
-	private WorkOperationSupport support;
+  @Mock private WorkOperationSupport support;
 
-	@InjectMocks
-	private WorkOperationVoidService service;
+  @Mock private WorkOperationLockService operationLocks;
 
-	@Mock
-	private WorkAppliedEffect effect;
+  @InjectMocks private WorkOperationVoidService service;
 
-	@Mock
-	private WorkOperationView response;
+  @Mock private WorkAppliedEffect effect;
 
-	@Test
-	void cancelsACompletedRecordOnlyWorkWithoutMutationCompensation() {
-		WorkType type = new WorkType("PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 1);
-		WorkOperation operation = new WorkOperation(type, "농약 기록", LocalDate.from(NOW), null,
-				WorkSourceScopeType.ORCHID_GROUP, 1L, Map.of(), Map.of(), null, null, NOW.minusMinutes(1));
-		operation.complete(NOW.minusSeconds(1));
+  @Mock private WorkOperationView response;
 
-		when(operationRepository.findWithWorkTypeById(1L)).thenReturn(Optional.of(operation));
-		when(effectRepository.findByWorkOperationIdOrderByIdAsc(1L)).thenReturn(List.of(effect));
-		when(effect.getMutationId()).thenReturn(null);
-		when(executionRepository.findByTargetWorkOperationIdOrderByIdAsc(1L)).thenReturn(List.of());
-		when(support.normalizeRequired("cancel-record")).thenReturn("cancel-record");
-		when(support.normalizeRequired("오등록")).thenReturn("오등록");
-		when(support.now()).thenReturn(NOW);
-		when(queryService.get(1L)).thenReturn(response);
+  @Test
+  void cancelsACompletedRecordOnlyWorkWithoutMutationCompensation() {
+    WorkType type =
+        new WorkType("PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 1);
+    WorkOperation operation =
+        new WorkOperation(
+            type,
+            "농약 기록",
+            LocalDate.from(NOW),
+            null,
+            WorkSourceScopeType.ORCHID_GROUP,
+            1L,
+            Map.of(),
+            Map.of(),
+            null,
+            null,
+            NOW.minusMinutes(1));
+    operation.complete(NOW.minusSeconds(1));
 
-		assertThat(service.cancelOperation(1L, new WorkOperationCancellationRequest("cancel-record", "오등록")))
-			.isSameAs(response);
-		assertThat(operation.getStatus()).isEqualTo(WorkOperationStatus.CANCELED);
-		assertThat(operation.getVoidReason()).isEqualTo("오등록");
-		verify(effect).cancel(NOW);
-	}
+    when(operationLocks.lock(1L)).thenReturn(operation);
+    when(effectRepository.findByWorkOperationIdOrderByIdAsc(1L)).thenReturn(List.of(effect));
+    when(effect.getMutationId()).thenReturn(null);
+    when(executionRepository.findByTargetWorkOperationIdOrderByIdAsc(1L)).thenReturn(List.of());
+    when(support.normalizeRequired("cancel-record")).thenReturn("cancel-record");
+    when(support.normalizeRequired("오등록")).thenReturn("오등록");
+    when(support.now()).thenReturn(NOW);
+    when(queryService.get(1L)).thenReturn(response);
 
+    assertThat(
+            service.cancelOperation(
+                1L, new WorkOperationCancellationRequest("cancel-record", "오등록")))
+        .isSameAs(response);
+    assertThat(operation.getStatus()).isEqualTo(WorkOperationStatus.CANCELED);
+    assertThat(operation.getVoidReason()).isEqualTo("오등록");
+    verify(effect).cancel(NOW);
+  }
 }

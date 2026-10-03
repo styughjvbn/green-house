@@ -14,15 +14,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class WorkCommandReceiptMembershipId implements Serializable {
 
-	@Column(name = "receipt_key", length = 255)
-	private String receiptKey;
+  @Column(name = "receipt_key", length = 255)
+  private String receiptKey;
 
-	@Column(name = "operation_id")
-	private Long operationId;
+  @Column(name = "operation_id")
+  private Long operationId;
 
-	public WorkCommandReceiptMembershipId(String receiptKey, Long operationId) {
-		this.receiptKey = receiptKey;
-		this.operationId = operationId;
-	}
-
+  public WorkCommandReceiptMembershipId(String receiptKey, Long operationId) {
+    this.receiptKey = receiptKey;
+    this.operationId = operationId;
+  }
 }

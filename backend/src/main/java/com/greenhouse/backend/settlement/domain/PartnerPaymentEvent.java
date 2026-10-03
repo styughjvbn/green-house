@@ -27,125 +27,171 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "partner_payment_events",
-		indexes = { @Index(name = "idx_partner_payment_partner_date", columnList = "partner_id,event_date"),
-				@Index(name = "idx_partner_payment_target", columnList = "target_type,target_id") })
+@Table(
+    name = "partner_payment_events",
+    indexes = {
+      @Index(name = "idx_partner_payment_partner_date", columnList = "partner_id,event_date"),
+      @Index(name = "idx_partner_payment_target", columnList = "target_type,target_id")
+    })
 public class PartnerPaymentEvent extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "partner_payment_events_id_seq")
-	@SequenceGenerator(name = "partner_payment_events_id_seq", sequenceName = "partner_payment_events_id_seq",
-			allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "partner_payment_events_id_seq")
+  @SequenceGenerator(
+      name = "partner_payment_events_id_seq",
+      sequenceName = "partner_payment_events_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@Column(name = "partner_id", nullable = false)
-	private Long partnerId;
+  @Column(name = "partner_id", nullable = false)
+  private Long partnerId;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "event_type", nullable = false)
-	private PaymentEventType eventType;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "event_type", nullable = false)
+  private PaymentEventType eventType;
 
-	@Column(name = "event_date", nullable = false)
-	private LocalDate eventDate;
+  @Column(name = "event_date", nullable = false)
+  private LocalDate eventDate;
 
-	@Column(name = "event_time")
-	private LocalTime eventTime;
+  @Column(name = "event_time")
+  private LocalTime eventTime;
 
-	@Column(nullable = false)
-	private Long amount;
+  @Column(nullable = false)
+  private Long amount;
 
-	@Column(name = "unapplied_amount", nullable = false)
-	private Long unappliedAmount;
+  @Column(name = "unapplied_amount", nullable = false)
+  private Long unappliedAmount;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "target_type")
-	private PaymentTargetType targetType;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "target_type")
+  private PaymentTargetType targetType;
 
-	@Column(name = "target_id")
-	private Long targetId;
+  @Column(name = "target_id")
+  private Long targetId;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "parent_event_id")
-	private PartnerPaymentEvent parentEvent;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "parent_event_id")
+  private PartnerPaymentEvent parentEvent;
 
-	@Column(name = "payment_method")
-	private String paymentMethod;
+  @Column(name = "payment_method")
+  private String paymentMethod;
 
-	@Column(name = "depositor_name")
-	private String depositorName;
+  @Column(name = "depositor_name")
+  private String depositorName;
 
-	@Column(columnDefinition = "text")
-	private String description;
+  @Column(columnDefinition = "text")
+  private String description;
 
-	@Column(name = "external_uid", unique = true)
-	private String externalUid;
+  @Column(name = "external_uid", unique = true)
+  private String externalUid;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
-	private PaymentEventStatus status;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private PaymentEventStatus status;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "raw_payload", columnDefinition = "jsonb")
-	private Map<String, Object> rawPayload;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "raw_payload", columnDefinition = "jsonb")
+  private Map<String, Object> rawPayload;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "match_payload", columnDefinition = "jsonb")
-	private Map<String, Object> matchPayload;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "match_payload", columnDefinition = "jsonb")
+  private Map<String, Object> matchPayload;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "allocation_payload", columnDefinition = "jsonb")
-	private Map<String, Object> allocationPayload;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "allocation_payload", columnDefinition = "jsonb")
+  private Map<String, Object> allocationPayload;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "balance_snapshot_json", columnDefinition = "jsonb")
-	private Map<String, Object> balanceSnapshotJson;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "balance_snapshot_json", columnDefinition = "jsonb")
+  private Map<String, Object> balanceSnapshotJson;
 
-	@Column(columnDefinition = "text")
-	private String memo;
+  @Column(columnDefinition = "text")
+  private String memo;
 
-	@Column(name = "created_by")
-	private String createdBy;
+  @Column(name = "created_by")
+  private String createdBy;
 
-	private PartnerPaymentEvent(Long partnerId, PaymentEventType eventType, LocalDate eventDate, Long amount,
-			PaymentTargetType targetType, Long targetId, PartnerPaymentEvent parentEvent, String paymentMethod,
-			String depositorName, String description, String externalUid, PaymentEventStatus status, String memo,
-			String createdBy) {
-		this.partnerId = partnerId;
-		this.eventType = eventType;
-		this.eventDate = eventDate;
-		this.amount = amount;
-		this.unappliedAmount = 0L;
-		this.targetType = targetType;
-		this.targetId = targetId;
-		this.parentEvent = parentEvent;
-		this.paymentMethod = paymentMethod;
-		this.depositorName = depositorName;
-		this.description = description;
-		this.externalUid = externalUid;
-		this.status = status;
-		this.memo = memo;
-		this.createdBy = createdBy;
-	}
+  private PartnerPaymentEvent(
+      Long partnerId,
+      PaymentEventType eventType,
+      LocalDate eventDate,
+      Long amount,
+      PaymentTargetType targetType,
+      Long targetId,
+      PartnerPaymentEvent parentEvent,
+      String paymentMethod,
+      String depositorName,
+      String description,
+      String externalUid,
+      PaymentEventStatus status,
+      String memo,
+      String createdBy) {
+    this.partnerId = partnerId;
+    this.eventType = eventType;
+    this.eventDate = eventDate;
+    this.amount = amount;
+    this.unappliedAmount = 0L;
+    this.targetType = targetType;
+    this.targetId = targetId;
+    this.parentEvent = parentEvent;
+    this.paymentMethod = paymentMethod;
+    this.depositorName = depositorName;
+    this.description = description;
+    this.externalUid = externalUid;
+    this.status = status;
+    this.memo = memo;
+    this.createdBy = createdBy;
+  }
 
-	public static PartnerPaymentEvent received(Long partnerId, LocalDate eventDate, Long amount,
-			PaymentTargetType targetType, Long targetId, String paymentMethod, String depositorName, String externalUid,
-			String memo, String createdBy) {
-		return new PartnerPaymentEvent(partnerId, PaymentEventType.PAYMENT_RECEIVED, eventDate, amount, targetType,
-				targetId, null, paymentMethod, depositorName, "수동 입금 확인", externalUid, PaymentEventStatus.FULLY_APPLIED,
-				memo, createdBy);
-	}
+  public static PartnerPaymentEvent received(
+      Long partnerId,
+      LocalDate eventDate,
+      Long amount,
+      PaymentTargetType targetType,
+      Long targetId,
+      String paymentMethod,
+      String depositorName,
+      String externalUid,
+      String memo,
+      String createdBy) {
+    return new PartnerPaymentEvent(
+        partnerId,
+        PaymentEventType.PAYMENT_RECEIVED,
+        eventDate,
+        amount,
+        targetType,
+        targetId,
+        null,
+        paymentMethod,
+        depositorName,
+        "수동 입금 확인",
+        externalUid,
+        PaymentEventStatus.FULLY_APPLIED,
+        memo,
+        createdBy);
+  }
 
-	public static PartnerPaymentEvent manualMatch(PartnerPaymentEvent receivedEvent) {
-		return new PartnerPaymentEvent(receivedEvent.partnerId, PaymentEventType.MANUAL_MATCH_CONFIRMED,
-				receivedEvent.eventDate, receivedEvent.amount, receivedEvent.targetType, receivedEvent.targetId,
-				receivedEvent, receivedEvent.paymentMethod, receivedEvent.depositorName, "수동 입금 연결", null,
-				PaymentEventStatus.CONFIRMED, receivedEvent.memo, receivedEvent.createdBy);
-	}
+  public static PartnerPaymentEvent manualMatch(PartnerPaymentEvent receivedEvent) {
+    return new PartnerPaymentEvent(
+        receivedEvent.partnerId,
+        PaymentEventType.MANUAL_MATCH_CONFIRMED,
+        receivedEvent.eventDate,
+        receivedEvent.amount,
+        receivedEvent.targetType,
+        receivedEvent.targetId,
+        receivedEvent,
+        receivedEvent.paymentMethod,
+        receivedEvent.depositorName,
+        "수동 입금 연결",
+        null,
+        PaymentEventStatus.CONFIRMED,
+        receivedEvent.memo,
+        receivedEvent.createdBy);
+  }
 
-	public void validateReplay(Long amount, LocalDate eventDate) {
-		if (!Objects.equals(this.amount, amount) || !Objects.equals(this.eventDate, eventDate)) {
-			throw new IllegalArgumentException("같은 입금 멱등 키를 다른 금액 또는 입금일에 재사용할 수 없습니다.");
-		}
-	}
-
+  public void validateReplay(Long amount, LocalDate eventDate) {
+    if (!Objects.equals(this.amount, amount) || !Objects.equals(this.eventDate, eventDate)) {
+      throw new IllegalArgumentException("같은 입금 멱등 키를 다른 금액 또는 입금일에 재사용할 수 없습니다.");
+    }
+  }
 }

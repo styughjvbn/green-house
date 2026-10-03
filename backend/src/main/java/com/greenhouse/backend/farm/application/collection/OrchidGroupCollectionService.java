@@ -32,183 +32,232 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrchidGroupCollectionService {
 
-	private final Clock clock;
+  private final Clock clock;
 
-	private final OrchidGroupCollectionRepository collectionRepository;
+  private final OrchidGroupCollectionRepository collectionRepository;
 
-	private final OrchidGroupCollectionMemberRepository memberRepository;
+  private final OrchidGroupCollectionMemberRepository memberRepository;
 
-	private final OrchidGroupRepository orchidGroupRepository;
+  private final OrchidGroupRepository orchidGroupRepository;
 
-	private final RequestActorProvider requestActorProvider;
+  private final RequestActorProvider requestActorProvider;
 
-	private final OrchidGroupCollectionAuditSupport auditSupport;
+  private final OrchidGroupCollectionAuditSupport auditSupport;
 
-	@Transactional(readOnly = true)
-	public List<OrchidGroupCollectionResponse> getCollections(boolean includeArchived) {
-		List<OrchidGroupCollection> collections = includeArchived ? collectionRepository.findAllByOrderByUpdatedAtDesc()
-				: collectionRepository.findByStatusOrderByUpdatedAtDesc(OrchidGroupCollectionStatus.ACTIVE);
-		return toResponses(collections);
-	}
+  @Transactional(readOnly = true)
+  public List<OrchidGroupCollectionResponse> getCollections(boolean includeArchived) {
+    List<OrchidGroupCollection> collections =
+        includeArchived
+            ? collectionRepository.findAllByOrderByUpdatedAtDesc()
+            : collectionRepository.findByStatusOrderByUpdatedAtDesc(
+                OrchidGroupCollectionStatus.ACTIVE);
+    return toResponses(collections);
+  }
 
-	public OrchidGroupCollectionResponse create(OrchidGroupCollectionCreateRequest request) {
-		OrchidGroupCollection collection = collectionRepository
-			.save(new OrchidGroupCollection(normalizeRequired(request.name()), normalize(request.description()),
-					normalize(request.purpose()), requestActorProvider.resolve(request.createdBy())));
-		auditSupport.record(AuditAction.CREATED, collection, null, auditSupport.snapshot(collection, List.of()),
-				Map.of());
-		return toResponse(collection);
-	}
+  public OrchidGroupCollectionResponse create(OrchidGroupCollectionCreateRequest request) {
+    OrchidGroupCollection collection =
+        collectionRepository.save(
+            new OrchidGroupCollection(
+                normalizeRequired(request.name()),
+                normalize(request.description()),
+                normalize(request.purpose()),
+                requestActorProvider.resolve(request.createdBy())));
+    auditSupport.record(
+        AuditAction.CREATED,
+        collection,
+        null,
+        auditSupport.snapshot(collection, List.of()),
+        Map.of());
+    return toResponse(collection);
+  }
 
-	@Transactional(readOnly = true)
-	public OrchidGroupCollectionResponse get(Long collectionId) {
-		return toResponse(findCollection(collectionId));
-	}
+  @Transactional(readOnly = true)
+  public OrchidGroupCollectionResponse get(Long collectionId) {
+    return toResponse(findCollection(collectionId));
+  }
 
-	public OrchidGroupCollectionResponse update(Long collectionId, OrchidGroupCollectionUpdateRequest request) {
-		OrchidGroupCollection collection = findCollection(collectionId);
-		List<Long> memberIds = activeMemberIds(collectionId);
-		Map<String, Object> before = auditSupport.snapshot(collection, memberIds);
-		collection.update(normalizeRequired(request.name()), normalize(request.description()),
-				normalize(request.purpose()));
-		auditSupport.record(AuditAction.UPDATED, collection, before, auditSupport.snapshot(collection, memberIds),
-				Map.of());
-		return toResponse(collection);
-	}
+  public OrchidGroupCollectionResponse update(
+      Long collectionId, OrchidGroupCollectionUpdateRequest request) {
+    OrchidGroupCollection collection = findCollection(collectionId);
+    List<Long> memberIds = activeMemberIds(collectionId);
+    Map<String, Object> before = auditSupport.snapshot(collection, memberIds);
+    collection.update(
+        normalizeRequired(request.name()),
+        normalize(request.description()),
+        normalize(request.purpose()));
+    auditSupport.record(
+        AuditAction.UPDATED,
+        collection,
+        before,
+        auditSupport.snapshot(collection, memberIds),
+        Map.of());
+    return toResponse(collection);
+  }
 
-	public OrchidGroupCollectionResponse archive(Long collectionId) {
-		OrchidGroupCollection collection = findCollection(collectionId);
-		List<Long> memberIds = activeMemberIds(collectionId);
-		Map<String, Object> before = auditSupport.snapshot(collection, memberIds);
-		collection.archive();
-		auditSupport.record(AuditAction.DEACTIVATED, collection, before, auditSupport.snapshot(collection, memberIds),
-				Map.of());
-		return toResponse(collection);
-	}
+  public OrchidGroupCollectionResponse archive(Long collectionId) {
+    OrchidGroupCollection collection = findCollection(collectionId);
+    List<Long> memberIds = activeMemberIds(collectionId);
+    Map<String, Object> before = auditSupport.snapshot(collection, memberIds);
+    collection.archive();
+    auditSupport.record(
+        AuditAction.DEACTIVATED,
+        collection,
+        before,
+        auditSupport.snapshot(collection, memberIds),
+        Map.of());
+    return toResponse(collection);
+  }
 
-	public OrchidGroupCollectionResponse addMembers(Long collectionId, OrchidGroupCollectionMemberAddRequest request) {
-		var joinedAt = TimeConfig.utcNow(clock);
-		OrchidGroupCollection collection = findEditableCollection(collectionId);
-		List<Long> beforeMemberIds = activeMemberIds(collectionId);
-		Map<String, Object> before = auditSupport.snapshot(collection, beforeMemberIds);
-		Set<Long> requestedIds = request.orchidGroupIds();
-		List<OrchidGroup> groups = orchidGroupRepository.findDetailsByIds(requestedIds);
-		Set<Long> foundIds = groups.stream().map(OrchidGroup::getId).collect(Collectors.toSet());
-		if (!foundIds.containsAll(requestedIds)) {
-			throw new NotFoundException("추가할 난 묶음 중 찾을 수 없는 대상이 있습니다.");
-		}
+  public OrchidGroupCollectionResponse addMembers(
+      Long collectionId, OrchidGroupCollectionMemberAddRequest request) {
+    var joinedAt = TimeConfig.utcNow(clock);
+    OrchidGroupCollection collection = findEditableCollection(collectionId);
+    List<Long> beforeMemberIds = activeMemberIds(collectionId);
+    Map<String, Object> before = auditSupport.snapshot(collection, beforeMemberIds);
+    Set<Long> requestedIds = request.orchidGroupIds();
+    List<OrchidGroup> groups = orchidGroupRepository.findDetailsByIds(requestedIds);
+    Set<Long> foundIds = groups.stream().map(OrchidGroup::getId).collect(Collectors.toSet());
+    if (!foundIds.containsAll(requestedIds)) {
+      throw new NotFoundException("추가할 난 묶음 중 찾을 수 없는 대상이 있습니다.");
+    }
 
-		Set<Long> existingIds = memberRepository
-			.findByCollectionIdAndOrchidGroupIdInAndRemovedAtIsNull(collectionId, requestedIds)
-			.stream()
-			.map(OrchidGroupCollectionMember::getOrchidGroupId)
-			.collect(Collectors.toSet());
-		List<OrchidGroupCollectionMember> additions = requestedIds.stream()
-			.filter(id -> !existingIds.contains(id))
-			.map(id -> new OrchidGroupCollectionMember(collectionId, id,
-					requestActorProvider.resolve(request.createdBy()), joinedAt))
-			.toList();
-		memberRepository.saveAll(additions);
-		List<Long> addedIds = additions.stream().map(OrchidGroupCollectionMember::getOrchidGroupId).sorted().toList();
-		var context = new LinkedHashMap<String, Object>();
-		context.put("membershipChange", "ADDED");
-		context.put("orchidGroupIds", addedIds);
-		auditSupport.record(AuditAction.UPDATED, collection, before,
-				auditSupport.snapshot(collection, activeMemberIds(collectionId)), context);
-		return toResponse(collection);
-	}
+    Set<Long> existingIds =
+        memberRepository
+            .findByCollectionIdAndOrchidGroupIdInAndRemovedAtIsNull(collectionId, requestedIds)
+            .stream()
+            .map(OrchidGroupCollectionMember::getOrchidGroupId)
+            .collect(Collectors.toSet());
+    List<OrchidGroupCollectionMember> additions =
+        requestedIds.stream()
+            .filter(id -> !existingIds.contains(id))
+            .map(
+                id ->
+                    new OrchidGroupCollectionMember(
+                        collectionId,
+                        id,
+                        requestActorProvider.resolve(request.createdBy()),
+                        joinedAt))
+            .toList();
+    memberRepository.saveAll(additions);
+    List<Long> addedIds =
+        additions.stream().map(OrchidGroupCollectionMember::getOrchidGroupId).sorted().toList();
+    var context = new LinkedHashMap<String, Object>();
+    context.put("membershipChange", "ADDED");
+    context.put("orchidGroupIds", addedIds);
+    auditSupport.record(
+        AuditAction.UPDATED,
+        collection,
+        before,
+        auditSupport.snapshot(collection, activeMemberIds(collectionId)),
+        context);
+    return toResponse(collection);
+  }
 
-	public OrchidGroupCollectionResponse removeMember(Long collectionId, Long orchidGroupId) {
-		OrchidGroupCollection collection = findEditableCollection(collectionId);
-		Map<String, Object> before = auditSupport.snapshot(collection, activeMemberIds(collectionId));
-		OrchidGroupCollectionMember member = memberRepository
-			.findByCollectionIdAndOrchidGroupIdAndRemovedAtIsNull(collectionId, orchidGroupId)
-			.orElseThrow(() -> new NotFoundException("사용자 그룹 소속을 찾을 수 없습니다."));
-		member.remove(TimeConfig.utcNow(clock));
-		auditSupport.record(AuditAction.UPDATED, collection, before,
-				auditSupport.snapshot(collection, activeMemberIds(collectionId)),
-				Map.of("membershipChange", "REMOVED", "orchidGroupIds", List.of(orchidGroupId)));
-		return toResponse(collection);
-	}
+  public OrchidGroupCollectionResponse removeMember(Long collectionId, Long orchidGroupId) {
+    OrchidGroupCollection collection = findEditableCollection(collectionId);
+    Map<String, Object> before = auditSupport.snapshot(collection, activeMemberIds(collectionId));
+    OrchidGroupCollectionMember member =
+        memberRepository
+            .findByCollectionIdAndOrchidGroupIdAndRemovedAtIsNull(collectionId, orchidGroupId)
+            .orElseThrow(() -> new NotFoundException("사용자 그룹 소속을 찾을 수 없습니다."));
+    member.remove(TimeConfig.utcNow(clock));
+    auditSupport.record(
+        AuditAction.UPDATED,
+        collection,
+        before,
+        auditSupport.snapshot(collection, activeMemberIds(collectionId)),
+        Map.of("membershipChange", "REMOVED", "orchidGroupIds", List.of(orchidGroupId)));
+    return toResponse(collection);
+  }
 
-	@Transactional(readOnly = true)
-	public List<OrchidGroupCollectionResponse> getCollectionsForOrchidGroup(Long orchidGroupId) {
-		if (!orchidGroupRepository.existsById(orchidGroupId)) {
-			throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
-		}
-		Set<Long> collectionIds = memberRepository
-			.findByOrchidGroupIdAndRemovedAtIsNullOrderByJoinedAtAsc(orchidGroupId)
-			.stream()
-			.map(OrchidGroupCollectionMember::getCollectionId)
-			.collect(Collectors.toSet());
-		return toResponses(collectionRepository.findAllById(collectionIds));
-	}
+  @Transactional(readOnly = true)
+  public List<OrchidGroupCollectionResponse> getCollectionsForOrchidGroup(Long orchidGroupId) {
+    if (!orchidGroupRepository.existsById(orchidGroupId)) {
+      throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
+    }
+    Set<Long> collectionIds =
+        memberRepository
+            .findByOrchidGroupIdAndRemovedAtIsNullOrderByJoinedAtAsc(orchidGroupId)
+            .stream()
+            .map(OrchidGroupCollectionMember::getCollectionId)
+            .collect(Collectors.toSet());
+    return toResponses(collectionRepository.findAllById(collectionIds));
+  }
 
-	private OrchidGroupCollectionResponse toResponse(OrchidGroupCollection collection) {
-		return toResponses(List.of(collection)).getFirst();
-	}
+  private OrchidGroupCollectionResponse toResponse(OrchidGroupCollection collection) {
+    return toResponses(List.of(collection)).getFirst();
+  }
 
-	private List<OrchidGroupCollectionResponse> toResponses(List<OrchidGroupCollection> collections) {
-		if (collections.isEmpty())
-			return List.of();
-		List<OrchidGroupCollectionMember> members = memberRepository
-			.findByCollectionIdInAndRemovedAtIsNullOrderByJoinedAtAsc(
-					collections.stream().map(OrchidGroupCollection::getId).toList());
-		Set<Long> groupIds = members.stream()
-			.map(OrchidGroupCollectionMember::getOrchidGroupId)
-			.collect(Collectors.toSet());
-		Map<Long, OrchidGroup> groupsById = groupIds.isEmpty() ? Map.of()
-				: orchidGroupRepository.findDetailsByIds(groupIds)
-					.stream()
-					.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
-		Map<Long, List<OrchidGroupCollectionMember>> membersByCollection = members.stream()
-			.collect(Collectors.groupingBy(OrchidGroupCollectionMember::getCollectionId));
-		return collections.stream()
-			.map(collection -> OrchidGroupCollectionResponse.from(collection,
-					memberResponses(membersByCollection.getOrDefault(collection.getId(), List.of()), groupsById)))
-			.toList();
-	}
+  private List<OrchidGroupCollectionResponse> toResponses(List<OrchidGroupCollection> collections) {
+    if (collections.isEmpty()) return List.of();
+    List<OrchidGroupCollectionMember> members =
+        memberRepository.findByCollectionIdInAndRemovedAtIsNullOrderByJoinedAtAsc(
+            collections.stream().map(OrchidGroupCollection::getId).toList());
+    Set<Long> groupIds =
+        members.stream()
+            .map(OrchidGroupCollectionMember::getOrchidGroupId)
+            .collect(Collectors.toSet());
+    Map<Long, OrchidGroup> groupsById =
+        groupIds.isEmpty()
+            ? Map.of()
+            : orchidGroupRepository.findDetailsByIds(groupIds).stream()
+                .collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
+    Map<Long, List<OrchidGroupCollectionMember>> membersByCollection =
+        members.stream()
+            .collect(Collectors.groupingBy(OrchidGroupCollectionMember::getCollectionId));
+    return collections.stream()
+        .map(
+            collection ->
+                OrchidGroupCollectionResponse.from(
+                    collection,
+                    memberResponses(
+                        membersByCollection.getOrDefault(collection.getId(), List.of()),
+                        groupsById)))
+        .toList();
+  }
 
-	private List<OrchidGroupCollectionMemberResponse> memberResponses(List<OrchidGroupCollectionMember> members,
-			Map<Long, OrchidGroup> groupsById) {
-		return members.stream()
-			.filter(member -> groupsById.containsKey(member.getOrchidGroupId()))
-			.map(member -> OrchidGroupCollectionMemberResponse.from(member, groupsById.get(member.getOrchidGroupId())))
-			.toList();
-	}
+  private List<OrchidGroupCollectionMemberResponse> memberResponses(
+      List<OrchidGroupCollectionMember> members, Map<Long, OrchidGroup> groupsById) {
+    return members.stream()
+        .filter(member -> groupsById.containsKey(member.getOrchidGroupId()))
+        .map(
+            member ->
+                OrchidGroupCollectionMemberResponse.from(
+                    member, groupsById.get(member.getOrchidGroupId())))
+        .toList();
+  }
 
-	private OrchidGroupCollection findCollection(Long collectionId) {
-		return collectionRepository.findById(collectionId)
-			.orElseThrow(() -> new NotFoundException("사용자 그룹을 찾을 수 없습니다."));
-	}
+  private OrchidGroupCollection findCollection(Long collectionId) {
+    return collectionRepository
+        .findById(collectionId)
+        .orElseThrow(() -> new NotFoundException("사용자 그룹을 찾을 수 없습니다."));
+  }
 
-	private OrchidGroupCollection findEditableCollection(Long collectionId) {
-		OrchidGroupCollection collection = findCollection(collectionId);
-		if (collection.isArchived()) {
-			throw new IllegalArgumentException("보관된 사용자 그룹의 소속은 변경할 수 없습니다.");
-		}
-		return collection;
-	}
+  private OrchidGroupCollection findEditableCollection(Long collectionId) {
+    OrchidGroupCollection collection = findCollection(collectionId);
+    if (collection.isArchived()) {
+      throw new IllegalArgumentException("보관된 사용자 그룹의 소속은 변경할 수 없습니다.");
+    }
+    return collection;
+  }
 
-	private List<Long> activeMemberIds(Long collectionId) {
-		return memberRepository.findByCollectionIdAndRemovedAtIsNullOrderByJoinedAtAsc(collectionId)
-			.stream()
-			.map(OrchidGroupCollectionMember::getOrchidGroupId)
-			.toList();
-	}
+  private List<Long> activeMemberIds(Long collectionId) {
+    return memberRepository
+        .findByCollectionIdAndRemovedAtIsNullOrderByJoinedAtAsc(collectionId)
+        .stream()
+        .map(OrchidGroupCollectionMember::getOrchidGroupId)
+        .toList();
+  }
 
-	private String normalize(String value) {
-		if (value == null)
-			return null;
-		String normalized = value.trim();
-		return normalized.isEmpty() ? null : normalized;
-	}
+  private String normalize(String value) {
+    if (value == null) return null;
+    String normalized = value.trim();
+    return normalized.isEmpty() ? null : normalized;
+  }
 
-	private String normalizeRequired(String value) {
-		String normalized = normalize(value);
-		if (normalized == null)
-			throw new IllegalArgumentException("사용자 그룹 이름은 필수입니다.");
-		return normalized;
-	}
-
+  private String normalizeRequired(String value) {
+    String normalized = normalize(value);
+    if (normalized == null) throw new IllegalArgumentException("사용자 그룹 이름은 필수입니다.");
+    return normalized;
+  }
 }

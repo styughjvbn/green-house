@@ -20,61 +20,66 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PartnerBalanceService {
 
-	private final PartnerBalanceSummaryRepository balanceRepository;
+  private final PartnerBalanceSummaryRepository balanceRepository;
 
-	private final PartnerPaymentEventRepository eventRepository;
+  private final PartnerPaymentEventRepository eventRepository;
 
-	private final BusinessPartnerLock partnerLock;
+  private final BusinessPartnerLock partnerLock;
 
-	@Transactional(readOnly = true)
-	public Map<Long, Balance> getNonzeroBalances() {
-		return balanceRepository.findNonzeroBalances()
-			.stream()
-			.collect(Collectors.toUnmodifiableMap(row -> row.getPartnerId(),
-					row -> new Balance(row.getReceivableBalance(), row.getCreditBalance(),
-							row.getUnappliedPaymentAmount())));
-	}
+  @Transactional(readOnly = true)
+  public Map<Long, Balance> getNonzeroBalances() {
+    return balanceRepository.findNonzeroBalances().stream()
+        .collect(
+            Collectors.toUnmodifiableMap(
+                row -> row.getPartnerId(),
+                row ->
+                    new Balance(
+                        row.getReceivableBalance(),
+                        row.getCreditBalance(),
+                        row.getUnappliedPaymentAmount())));
+  }
 
-	public record Balance(long receivableBalance, long creditBalance, long unappliedPaymentAmount) {
+  public record Balance(long receivableBalance, long creditBalance, long unappliedPaymentAmount) {
 
-		public static final Balance ZERO = new Balance(0, 0, 0);
+    public static final Balance ZERO = new Balance(0, 0, 0);
 
-		public boolean hasPositiveBalance() {
-			return receivableBalance > 0 || creditBalance > 0 || unappliedPaymentAmount > 0;
-		}
-	}
+    public boolean hasPositiveBalance() {
+      return receivableBalance > 0 || creditBalance > 0 || unappliedPaymentAmount > 0;
+    }
+  }
 
-	@Transactional(propagation = Propagation.MANDATORY)
-	public void lockPartners(Collection<Long> partnerIds) {
-		partnerLock.lockAll(partnerIds);
-	}
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void lockPartners(Collection<Long> partnerIds) {
+    partnerLock.lockAll(partnerIds);
+  }
 
-	public void updateReceivable(Long partnerId, Long receivableBalance, Long lastPaymentEventId) {
-		partnerLock.lockAll(List.of(partnerId));
-		var summary = findOrCreateForUpdate(partnerId);
-		summary.updateReceivableBalance(receivableBalance, paymentEventReference(lastPaymentEventId));
-		balanceRepository.save(summary);
-	}
+  public void updateReceivable(Long partnerId, Long receivableBalance, Long lastPaymentEventId) {
+    partnerLock.lockAll(List.of(partnerId));
+    var summary = findOrCreateForUpdate(partnerId);
+    summary.updateReceivableBalance(receivableBalance, paymentEventReference(lastPaymentEventId));
+    balanceRepository.save(summary);
+  }
 
-	public void recordActivity(Long partnerId, Long lastPaymentEventId) {
-		partnerLock.lockAll(List.of(partnerId));
-		var summary = findOrCreateForUpdate(partnerId);
-		summary.updateReceivableBalance(summary.getReceivableBalance(), paymentEventReference(lastPaymentEventId));
-		balanceRepository.save(summary);
-	}
+  public void recordActivity(Long partnerId, Long lastPaymentEventId) {
+    partnerLock.lockAll(List.of(partnerId));
+    var summary = findOrCreateForUpdate(partnerId);
+    summary.updateReceivableBalance(
+        summary.getReceivableBalance(), paymentEventReference(lastPaymentEventId));
+    balanceRepository.save(summary);
+  }
 
-	public PartnerBalanceSummaryResponse getBalance(Long partnerId) {
-		var partner = partnerLock.lockAll(List.of(partnerId)).getFirst();
-		return PartnerBalanceSummaryResponse.from(findOrCreateForUpdate(partnerId), partner.name());
-	}
+  public PartnerBalanceSummaryResponse getBalance(Long partnerId) {
+    var partner = partnerLock.lockAll(List.of(partnerId)).getFirst();
+    return PartnerBalanceSummaryResponse.from(findOrCreateForUpdate(partnerId), partner.name());
+  }
 
-	private PartnerBalanceSummary findOrCreateForUpdate(Long partnerId) {
-		return balanceRepository.findForUpdateByPartnerId(partnerId)
-			.orElseGet(() -> balanceRepository.save(new PartnerBalanceSummary(partnerId)));
-	}
+  private PartnerBalanceSummary findOrCreateForUpdate(Long partnerId) {
+    return balanceRepository
+        .findForUpdateByPartnerId(partnerId)
+        .orElseGet(() -> balanceRepository.save(new PartnerBalanceSummary(partnerId)));
+  }
 
-	private PartnerPaymentEvent paymentEventReference(Long eventId) {
-		return eventId == null ? null : eventRepository.getReferenceById(eventId);
-	}
-
+  private PartnerPaymentEvent paymentEventReference(Long eventId) {
+    return eventId == null ? null : eventRepository.getReferenceById(eventId);
+  }
 }

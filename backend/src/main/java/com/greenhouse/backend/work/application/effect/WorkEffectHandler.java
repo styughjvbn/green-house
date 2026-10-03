@@ -4,10 +4,9 @@ import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 
 public interface WorkEffectHandler {
 
-	String supports();
+  String supports();
 
-	WorkEffectKind effectKind();
+  WorkEffectKind effectKind();
 
-	WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command);
-
+  WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command);
 }

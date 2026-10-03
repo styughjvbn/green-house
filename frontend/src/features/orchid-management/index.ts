@@ -10,5 +10,6 @@ export {
   createOrchidGroup,
   updateOrchidGroup,
   deleteOrchidGroup,
-  moveOrchidGroup,
 } from "./api/orchidManagementApi";
+
+export { default as WorkOperationCorrectionForm } from "./ui/components/WorkOperationCorrectionForm";

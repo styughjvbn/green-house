@@ -20,7 +20,7 @@ import BulkOrchidGroupCorrectionPanel from "./components/BulkOrchidGroupCorrecti
 import ContinuousBedMap from "./components/ContinuousBedMap";
 import WorkOperationCorrectionForm from "./components/WorkOperationCorrectionForm";
 import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
-import OrchidGroupReconciliationDialog from "./components/OrchidGroupReconciliationDialog";
+import OrchidGroupStockCountDialog from "./components/OrchidGroupStockCountDialog";
 import SelectedOrchidGroupsInfo from "./components/SelectedOrchidGroupsInfo";
 import SelectedZoneInfo from "./components/SelectedZoneInfo";
 
@@ -273,7 +273,7 @@ export function OrchidManagementMap({
         />
       ) : null}
       {reconciliationGroup ? (
-        <OrchidGroupReconciliationDialog
+        <OrchidGroupStockCountDialog
           orchidGroup={reconciliationGroup}
           onClose={() => setReconciliationGroup(null)}
           onSaved={() => {

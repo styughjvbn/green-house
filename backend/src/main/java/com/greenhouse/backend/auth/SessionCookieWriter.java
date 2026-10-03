@@ -12,21 +12,22 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SessionCookieWriter {
 
-	private final AuthProperties properties;
+  private final AuthProperties properties;
 
-	public void refresh(HttpSession session, HttpServletResponse response) {
-		int maxAgeSeconds = Math.toIntExact(properties.sessionTimeout().toSeconds());
-		session.setMaxInactiveInterval(maxAgeSeconds);
-		write(response, session.getId(), maxAgeSeconds);
-	}
+  public void refresh(HttpSession session, HttpServletResponse response) {
+    int maxAgeSeconds = Math.toIntExact(properties.sessionTimeout().toSeconds());
+    session.setMaxInactiveInterval(maxAgeSeconds);
+    write(response, session.getId(), maxAgeSeconds);
+  }
 
-	public void expire(HttpServletResponse response) {
-		write(response, "", 0);
-	}
+  public void expire(HttpServletResponse response) {
+    write(response, "", 0);
+  }
 
-	private void write(HttpServletResponse response, String sessionId, int maxAgeSeconds) {
-		response.addHeader(HttpHeaders.SET_COOKIE,
-				"JSESSIONID=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Lax".formatted(sessionId, maxAgeSeconds));
-	}
-
+  private void write(HttpServletResponse response, String sessionId, int maxAgeSeconds) {
+    response.addHeader(
+        HttpHeaders.SET_COOKIE,
+        "JSESSIONID=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Lax"
+            .formatted(sessionId, maxAgeSeconds));
+  }
 }

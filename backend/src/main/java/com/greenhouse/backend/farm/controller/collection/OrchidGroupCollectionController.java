@@ -26,52 +26,54 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class OrchidGroupCollectionController {
 
-	private final OrchidGroupCollectionService collectionService;
+  private final OrchidGroupCollectionService collectionService;
 
-	@GetMapping("/orchid-group-collections")
-	public ApiResponse<List<OrchidGroupCollectionResponse>> getCollections(
-			@RequestParam(defaultValue = "false") boolean includeArchived) {
-		return ApiResponse.ok(collectionService.getCollections(includeArchived));
-	}
+  @GetMapping("/orchid-group-collections")
+  public ApiResponse<List<OrchidGroupCollectionResponse>> getCollections(
+      @RequestParam(defaultValue = "false") boolean includeArchived) {
+    return ApiResponse.ok(collectionService.getCollections(includeArchived));
+  }
 
-	@PostMapping("/orchid-group-collections")
-	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<OrchidGroupCollectionResponse> create(
-			@Valid @RequestBody OrchidGroupCollectionCreateRequest request) {
-		return ApiResponse.ok(collectionService.create(request));
-	}
+  @PostMapping("/orchid-group-collections")
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<OrchidGroupCollectionResponse> create(
+      @Valid @RequestBody OrchidGroupCollectionCreateRequest request) {
+    return ApiResponse.ok(collectionService.create(request));
+  }
 
-	@GetMapping("/orchid-group-collections/{collectionId}")
-	public ApiResponse<OrchidGroupCollectionResponse> get(@PathVariable Long collectionId) {
-		return ApiResponse.ok(collectionService.get(collectionId));
-	}
+  @GetMapping("/orchid-group-collections/{collectionId}")
+  public ApiResponse<OrchidGroupCollectionResponse> get(@PathVariable Long collectionId) {
+    return ApiResponse.ok(collectionService.get(collectionId));
+  }
 
-	@PatchMapping("/orchid-group-collections/{collectionId}")
-	public ApiResponse<OrchidGroupCollectionResponse> update(@PathVariable Long collectionId,
-			@Valid @RequestBody OrchidGroupCollectionUpdateRequest request) {
-		return ApiResponse.ok(collectionService.update(collectionId, request));
-	}
+  @PatchMapping("/orchid-group-collections/{collectionId}")
+  public ApiResponse<OrchidGroupCollectionResponse> update(
+      @PathVariable Long collectionId,
+      @Valid @RequestBody OrchidGroupCollectionUpdateRequest request) {
+    return ApiResponse.ok(collectionService.update(collectionId, request));
+  }
 
-	@PostMapping("/orchid-group-collections/{collectionId}/archive")
-	public ApiResponse<OrchidGroupCollectionResponse> archive(@PathVariable Long collectionId) {
-		return ApiResponse.ok(collectionService.archive(collectionId));
-	}
+  @PostMapping("/orchid-group-collections/{collectionId}/archive")
+  public ApiResponse<OrchidGroupCollectionResponse> archive(@PathVariable Long collectionId) {
+    return ApiResponse.ok(collectionService.archive(collectionId));
+  }
 
-	@PostMapping("/orchid-group-collections/{collectionId}/members")
-	public ApiResponse<OrchidGroupCollectionResponse> addMembers(@PathVariable Long collectionId,
-			@Valid @RequestBody OrchidGroupCollectionMemberAddRequest request) {
-		return ApiResponse.ok(collectionService.addMembers(collectionId, request));
-	}
+  @PostMapping("/orchid-group-collections/{collectionId}/members")
+  public ApiResponse<OrchidGroupCollectionResponse> addMembers(
+      @PathVariable Long collectionId,
+      @Valid @RequestBody OrchidGroupCollectionMemberAddRequest request) {
+    return ApiResponse.ok(collectionService.addMembers(collectionId, request));
+  }
 
-	@DeleteMapping("/orchid-group-collections/{collectionId}/members/{orchidGroupId}")
-	public ApiResponse<OrchidGroupCollectionResponse> removeMember(@PathVariable Long collectionId,
-			@PathVariable Long orchidGroupId) {
-		return ApiResponse.ok(collectionService.removeMember(collectionId, orchidGroupId));
-	}
+  @DeleteMapping("/orchid-group-collections/{collectionId}/members/{orchidGroupId}")
+  public ApiResponse<OrchidGroupCollectionResponse> removeMember(
+      @PathVariable Long collectionId, @PathVariable Long orchidGroupId) {
+    return ApiResponse.ok(collectionService.removeMember(collectionId, orchidGroupId));
+  }
 
-	@GetMapping("/orchid-groups/{orchidGroupId}/collections")
-	public ApiResponse<List<OrchidGroupCollectionResponse>> getForOrchidGroup(@PathVariable Long orchidGroupId) {
-		return ApiResponse.ok(collectionService.getCollectionsForOrchidGroup(orchidGroupId));
-	}
-
+  @GetMapping("/orchid-groups/{orchidGroupId}/collections")
+  public ApiResponse<List<OrchidGroupCollectionResponse>> getForOrchidGroup(
+      @PathVariable Long orchidGroupId) {
+    return ApiResponse.ok(collectionService.getCollectionsForOrchidGroup(orchidGroupId));
+  }
 }

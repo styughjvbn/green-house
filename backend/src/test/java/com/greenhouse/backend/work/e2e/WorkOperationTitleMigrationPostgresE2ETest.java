@@ -13,42 +13,56 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 @Tag("work-e2e")
 class WorkOperationTitleMigrationPostgresE2ETest extends WorkE2ETestBase {
 
-	@Test
-	void normalizesManagedHistoryTitlesAndPreservesGenericTitles() {
-		String database = "work_operation_titles_" + UUID.randomUUID().toString().replace("-", "");
-		var admin = new JdbcTemplate(
-				new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
-		admin.execute("CREATE DATABASE " + database);
-		String url = POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database);
-		var dataSource = new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
-		try {
-			Flyway.configure().dataSource(dataSource).target("38").load().migrate();
-			var jdbc = new JdbcTemplate(dataSource);
-			seedOperations(jdbc);
+  @Test
+  void normalizesManagedHistoryTitlesAndPreservesGenericTitles() {
+    String database = "work_operation_titles_" + UUID.randomUUID().toString().replace("-", "");
+    var admin =
+        new JdbcTemplate(
+            new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
+    admin.execute("CREATE DATABASE " + database);
+    String url = POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database);
+    var dataSource =
+        new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
+    try {
+      Flyway.configure().dataSource(dataSource).target("31").load().migrate();
+      var jdbc = new JdbcTemplate(dataSource);
+      seedOperations(jdbc);
 
-			var upgrade = Flyway.configure().dataSource(dataSource).target("39").load();
-			assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
+      var upgrade = Flyway.configure().dataSource(dataSource).target("32").load();
+      assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
 
-			assertThat(jdbc.queryForList("""
+      assertThat(
+              jdbc.queryForList(
+                  """
 					SELECT operation.id, operation.title
 					FROM work_operations operation
 					WHERE operation.id BETWEEN 900 AND 910
 					ORDER BY operation.id
-					""")).extracting(row -> row.get("id"), row -> row.get("title"))
-				.containsExactly(tuple(900L, "청금 · 입고"), tuple(901L, "청금 · 포트 식재"), tuple(902L, "청금 · 자리 이동"),
-						tuple(903L, "청금 · 분갈이"), tuple(904L, "청금 · 분주"), tuple(905L, "청금 · 합식"), tuple(906L, "청금 · 폐기"),
-						tuple(907L, "청금 · 현장 상태 조정"), tuple(908L, "청금 · 자리 이동 후 폐기"), tuple(909L, "청금 · 분갈이 보정"),
-						tuple(910L, "농장 전체 방제"));
-			assertThat(upgrade.migrate().migrationsExecuted).isZero();
-		}
-		finally {
-			admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
-		}
-	}
+					"""))
+          .extracting(row -> row.get("id"), row -> row.get("title"))
+          .containsExactly(
+              tuple(900L, "청금 · 입고"),
+              tuple(901L, "청금 · 포트 식재"),
+              tuple(902L, "청금 · 자리 이동"),
+              tuple(903L, "청금 · 분갈이"),
+              tuple(904L, "청금 · 분주"),
+              tuple(905L, "청금 · 합식"),
+              tuple(906L, "청금 · 폐기"),
+              tuple(907L, "청금 · 현장 상태 조정"),
+              tuple(908L, "청금 · 자리 이동 후 폐기"),
+              tuple(909L, "청금 · 분갈이 보정"),
+              tuple(910L, "농장 전체 방제"));
+      assertThat(upgrade.migrate().migrationsExecuted).isZero();
+    } finally {
+      admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
+    }
+  }
 
-	private void seedOperations(JdbcTemplate jdbc) {
-		jdbc.execute("ALTER TABLE orchid_groups DISABLE TRIGGER USER");
-		jdbc.execute("""
+  private void seedOperations(JdbcTemplate jdbc) {
+    jdbc.execute("ALTER TABLE orchid_groups DISABLE TRIGGER USER");
+    jdbc.execute(
+        """
 				INSERT INTO varieties (id, code, genus, name, sale_enabled, is_active, created_at, updated_at)
 				VALUES (9201, 'VAR-TITLE', '속', '청금', TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 				INSERT INTO orchid_groups (
@@ -59,8 +73,9 @@ class WorkOperationTitleMigrationPostgresE2ETest extends WorkE2ETestBase {
 				    1, '정상', 'POT_3', 0, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 				);
 				""");
-		jdbc.execute("ALTER TABLE orchid_groups ENABLE TRIGGER USER");
-		jdbc.execute("""
+    jdbc.execute("ALTER TABLE orchid_groups ENABLE TRIGGER USER");
+    jdbc.execute(
+        """
 				INSERT INTO work_operations (
 				    id, work_type_id, title, status, planned_start_date, planned_end_date,
 				    source_scope_type, source_condition_snapshot, target_snapshot_at, details,
@@ -99,6 +114,5 @@ class WorkOperationTitleMigrationPostgresE2ETest extends WorkE2ETestBase {
 				    original_work_operation_id, correction_work_operation_id, reason, created_at
 				) VALUES (903, 909, '수량 정정', CURRENT_TIMESTAMP);
 				""");
-	}
-
+  }
 }

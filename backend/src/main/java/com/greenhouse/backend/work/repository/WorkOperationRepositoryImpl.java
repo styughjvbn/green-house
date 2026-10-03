@@ -3,12 +3,14 @@ package com.greenhouse.backend.work.repository;
 import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOperation;
 import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
+import com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,135 +25,245 @@ import org.springframework.data.domain.Pageable;
 @RequiredArgsConstructor
 public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCustom {
 
-	private final JPAQueryFactory queryFactory;
+  private final JPAQueryFactory queryFactory;
 
-	@Override
-	public List<WorkOperation> searchAll(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
-			WorkOperationSearchView view, LocalDateTime todayStartedAt) {
-		return queryFactory.selectFrom(workOperation)
-			.join(workOperation.workType, workType)
-			.fetchJoin()
-			.where(searchConditions(fromDate, toDate, status, view, todayStartedAt, null, null, null))
-			.orderBy(workOperation.plannedStartDate.asc(), workOperation.id.asc())
-			.fetch();
-	}
+  @Override
+  public List<WorkOperation> searchAll(
+      LocalDate fromDate,
+      LocalDate toDate,
+      WorkOperationStatus status,
+      WorkOperationSearchView view,
+      LocalDateTime todayStartedAt) {
 
-	@Override
-	public Optional<WorkOperation> findWithWorkTypeById(Long id) {
-		return Optional.ofNullable(queryFactory.selectFrom(workOperation)
-			.join(workOperation.workType, workType)
-			.fetchJoin()
-			.where(workOperation.id.eq(id))
-			.fetchOne());
-	}
+    return searchAll(fromDate, toDate, status, view, todayStartedAt, null);
+  }
 
-	@Override
-	public List<WorkOperation> findWithWorkTypeByIdIn(Collection<Long> ids) {
-		if (ids.isEmpty()) {
-			return List.of();
-		}
-		return queryFactory.selectFrom(workOperation)
-			.join(workOperation.workType, workType)
-			.fetchJoin()
-			.where(workOperation.id.in(ids))
-			.fetch();
-	}
+  @Override
+  public List<WorkOperation> searchAll(
+      LocalDate fromDate,
+      LocalDate toDate,
+      WorkOperationStatus status,
+      WorkOperationSearchView view,
+      LocalDateTime todayStartedAt,
+      Boolean hasCorrections) {
+    return queryFactory
+        .selectFrom(workOperation)
+        .join(workOperation.workType, workType)
+        .fetchJoin()
+        .where(
+            searchConditions(fromDate, toDate, status, view, todayStartedAt, null, null, null)
+                .and(correctionCondition(hasCorrections)))
+        .orderBy(workOperation.plannedStartDate.asc(), workOperation.id.asc())
+        .fetch();
+  }
 
-	@Override
-	public Optional<WorkOperation> findByRequestKey(String requestKey) {
-		return Optional.ofNullable(queryFactory.selectFrom(workOperation)
-			.join(workOperation.workType, workType)
-			.fetchJoin()
-			.where(workOperation.requestKey.eq(requestKey))
-			.fetchOne());
-	}
+  @Override
+  public Optional<WorkOperation> findWithWorkTypeById(Long id) {
+    return Optional.ofNullable(
+        queryFactory
+            .selectFrom(workOperation)
+            .join(workOperation.workType, workType)
+            .fetchJoin()
+            .where(workOperation.id.eq(id))
+            .fetchOne());
+  }
 
-	@Override
-	public Page<WorkOperation> search(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
-			WorkOperationSearchView view, LocalDateTime todayStartedAt, WorkSourceScopeType sourceScopeType,
-			Long sourceScopeId, String keyword, Pageable pageable) {
-		BooleanBuilder conditions = searchConditions(fromDate, toDate, status, view, todayStartedAt, sourceScopeType,
-				sourceScopeId, keyword);
-		var content = queryFactory.selectFrom(workOperation)
-			.join(workOperation.workType, workType)
-			.fetchJoin()
-			.where(conditions)
-			.orderBy(workOperation.plannedStartDate.desc(), workOperation.id.desc())
-			.offset(pageable.getOffset())
-			.limit(pageable.getPageSize())
-			.fetch();
-		Long total = queryFactory.select(workOperation.count())
-			.from(workOperation)
-			.join(workOperation.workType, workType)
-			.where(conditions)
-			.fetchOne();
-		return new PageImpl<>(content, pageable, total == null ? 0 : total);
-	}
+  @Override
+  public List<WorkOperation> findWithWorkTypeByIdIn(Collection<Long> ids) {
+    if (ids.isEmpty()) {
+      return List.of();
+    }
+    return queryFactory
+        .selectFrom(workOperation)
+        .join(workOperation.workType, workType)
+        .fetchJoin()
+        .where(workOperation.id.in(ids))
+        .fetch();
+  }
 
-	private BooleanBuilder searchConditions(LocalDate fromDate, LocalDate toDate, WorkOperationStatus status,
-			WorkOperationSearchView view, LocalDateTime todayStartedAt, WorkSourceScopeType sourceScopeType,
-			Long sourceScopeId, String keyword) {
-		return new BooleanBuilder().and(statusEq(status))
-			.and(viewCondition(view, todayStartedAt))
-			.and(sourceScopeTypeEq(sourceScopeType))
-			.and(sourceScopeIdEq(sourceScopeId))
-			.and(keywordContains(keyword))
-			.and(periodEndsOnOrAfter(fromDate))
-			.and(periodStartsOnOrBefore(toDate));
-	}
+  @Override
+  public Optional<WorkOperation> findByRequestKey(String requestKey) {
+    return Optional.ofNullable(
+        queryFactory
+            .selectFrom(workOperation)
+            .join(workOperation.workType, workType)
+            .fetchJoin()
+            .where(workOperation.requestKey.eq(requestKey))
+            .fetchOne());
+  }
 
-	private BooleanExpression viewCondition(WorkOperationSearchView view, LocalDateTime todayStartedAt) {
-		if (view == null) {
-			return null;
-		}
+  @Override
+  public Page<WorkOperation> search(
+      LocalDate fromDate,
+      LocalDate toDate,
+      WorkOperationStatus status,
+      WorkOperationSearchView view,
+      LocalDateTime todayStartedAt,
+      WorkSourceScopeType sourceScopeType,
+      Long sourceScopeId,
+      String keyword,
+      Pageable pageable) {
 
-		return switch (view) {
-			case ALL -> null;
-			case MANAGEMENT -> workOperation.status
-				.in(WorkOperationStatus.PLANNED, WorkOperationStatus.IN_PROGRESS, WorkOperationStatus.PAUSED)
-				.or(workOperation.updatedAt.goe(todayStartedAt));
-		};
-	}
+    return search(
+        fromDate,
+        toDate,
+        status,
+        view,
+        todayStartedAt,
+        sourceScopeType,
+        sourceScopeId,
+        keyword,
+        null,
+        pageable);
+  }
 
-	private BooleanExpression statusEq(WorkOperationStatus status) {
-		if (status == null) {
-			return null;
-		}
-		return status == WorkOperationStatus.CANCELED
-				? workOperation.status.in(WorkOperationStatus.CANCELED, WorkOperationStatus.VOIDED)
-				: workOperation.status.eq(status);
-	}
+  @Override
+  public Page<WorkOperation> search(
+      LocalDate fromDate,
+      LocalDate toDate,
+      WorkOperationStatus status,
+      WorkOperationSearchView view,
+      LocalDateTime todayStartedAt,
+      WorkSourceScopeType sourceScopeType,
+      Long sourceScopeId,
+      String keyword,
+      Boolean hasCorrections,
+      Pageable pageable) {
+    BooleanBuilder conditions =
+        searchConditions(
+            fromDate,
+            toDate,
+            status,
+            view,
+            todayStartedAt,
+            sourceScopeType,
+            sourceScopeId,
+            keyword);
+    conditions.and(correctionCondition(hasCorrections));
+    var content =
+        queryFactory
+            .selectFrom(workOperation)
+            .join(workOperation.workType, workType)
+            .fetchJoin()
+            .where(conditions)
+            .orderBy(workOperation.plannedStartDate.desc(), workOperation.id.desc())
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch();
+    Long total =
+        queryFactory
+            .select(workOperation.count())
+            .from(workOperation)
+            .join(workOperation.workType, workType)
+            .where(conditions)
+            .fetchOne();
+    return new PageImpl<>(content, pageable, total == null ? 0 : total);
+  }
 
-	private BooleanExpression sourceScopeTypeEq(WorkSourceScopeType sourceScopeType) {
-		return sourceScopeType == null ? null : workOperation.sourceScopeType.eq(sourceScopeType);
-	}
+  private BooleanBuilder searchConditions(
+      LocalDate fromDate,
+      LocalDate toDate,
+      WorkOperationStatus status,
+      WorkOperationSearchView view,
+      LocalDateTime todayStartedAt,
+      WorkSourceScopeType sourceScopeType,
+      Long sourceScopeId,
+      String keyword) {
+    return new BooleanBuilder()
+        .and(statusEq(status))
+        .and(viewCondition(view, todayStartedAt))
+        .and(sourceScopeTypeEq(sourceScopeType))
+        .and(sourceScopeIdEq(sourceScopeId))
+        .and(keywordContains(keyword))
+        .and(periodEndsOnOrAfter(fromDate))
+        .and(periodStartsOnOrBefore(toDate));
+  }
 
-	private BooleanExpression sourceScopeIdEq(Long sourceScopeId) {
-		return sourceScopeId == null ? null : workOperation.sourceScopeId.eq(sourceScopeId);
-	}
+  private BooleanExpression correctionCondition(Boolean hasCorrections) {
+    if (hasCorrections == null) return null;
+    var correction = QWorkOperationCorrection.workOperationCorrection;
+    var exists =
+        JPAExpressions.selectOne()
+            .from(correction)
+            .where(correction.originalWorkOperation.eq(workOperation))
+            .exists();
+    return hasCorrections ? exists : exists.not();
+  }
 
-	private BooleanExpression keywordContains(String keyword) {
-		if (keyword == null || keyword.isBlank()) {
-			return null;
-		}
-		String normalized = keyword.trim();
-		return workOperation.title.containsIgnoreCase(normalized)
-			.or(workType.name.containsIgnoreCase(normalized))
-			.or(workType.code.containsIgnoreCase(normalized))
-			.or(workOperation.worker.containsIgnoreCase(normalized))
-			.or(workOperation.memo.containsIgnoreCase(normalized));
-	}
+  private BooleanExpression viewCondition(
+      WorkOperationSearchView view, LocalDateTime todayStartedAt) {
+    if (view == null) {
+      return null;
+    }
 
-	private BooleanExpression periodEndsOnOrAfter(LocalDate fromDate) {
-		if (fromDate == null) {
-			return null;
-		}
-		return workOperation.plannedEndDate.goe(fromDate)
-			.or(workOperation.plannedEndDate.isNull().and(workOperation.plannedStartDate.goe(fromDate)));
-	}
+    return switch (view) {
+      case ALL -> null;
+      case MANAGEMENT ->
+          workOperation
+              .status
+              .in(
+                  WorkOperationStatus.PLANNED,
+                  WorkOperationStatus.IN_PROGRESS,
+                  WorkOperationStatus.PAUSED)
+              .or(workOperation.updatedAt.goe(todayStartedAt))
+              .or(
+                  JPAExpressions.selectOne()
+                      .from(QWorkOperationCorrection.workOperationCorrection)
+                      .where(
+                          QWorkOperationCorrection.workOperationCorrection.originalWorkOperation.eq(
+                              workOperation),
+                          QWorkOperationCorrection.workOperationCorrection.createdAt.goe(
+                              todayStartedAt))
+                      .exists());
+    };
+  }
 
-	private BooleanExpression periodStartsOnOrBefore(LocalDate toDate) {
-		return toDate == null ? null : workOperation.plannedStartDate.loe(toDate);
-	}
+  private BooleanExpression statusEq(WorkOperationStatus status) {
+    if (status == null) {
+      return null;
+    }
+    return status == WorkOperationStatus.CANCELED
+        ? workOperation.status.in(WorkOperationStatus.CANCELED, WorkOperationStatus.VOIDED)
+        : workOperation.status.eq(status);
+  }
 
+  private BooleanExpression sourceScopeTypeEq(WorkSourceScopeType sourceScopeType) {
+    return sourceScopeType == null ? null : workOperation.sourceScopeType.eq(sourceScopeType);
+  }
+
+  private BooleanExpression sourceScopeIdEq(Long sourceScopeId) {
+    return sourceScopeId == null ? null : workOperation.sourceScopeId.eq(sourceScopeId);
+  }
+
+  private BooleanExpression keywordContains(String keyword) {
+    if (keyword == null || keyword.isBlank()) {
+      return null;
+    }
+    String normalized = keyword.trim();
+    return workOperation
+        .title
+        .containsIgnoreCase(normalized)
+        .or(workType.name.containsIgnoreCase(normalized))
+        .or(workType.code.containsIgnoreCase(normalized))
+        .or(workOperation.worker.containsIgnoreCase(normalized))
+        .or(workOperation.memo.containsIgnoreCase(normalized));
+  }
+
+  private BooleanExpression periodEndsOnOrAfter(LocalDate fromDate) {
+    if (fromDate == null) {
+      return null;
+    }
+    return workOperation
+        .plannedEndDate
+        .goe(fromDate)
+        .or(
+            workOperation
+                .plannedEndDate
+                .isNull()
+                .and(workOperation.plannedStartDate.goe(fromDate)));
+  }
+
+  private BooleanExpression periodStartsOnOrBefore(LocalDate toDate) {
+    return toDate == null ? null : workOperation.plannedStartDate.loe(toDate);
+  }
 }

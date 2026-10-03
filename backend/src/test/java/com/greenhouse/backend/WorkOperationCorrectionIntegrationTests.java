@@ -28,6 +28,8 @@ import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,191 +37,206 @@ import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
+@org.springframework.test.context.TestPropertySource(
+    properties = "features.work-quantity-correction.enabled=true")
 class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegrationTest {
 
-	@Autowired
-	private WorkOperationCorrectionRepository correctionRepository;
+  @Autowired private WorkOperationCorrectionRepository correctionRepository;
 
-	@Autowired
-	private WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
+  @Autowired private WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
 
-	@Autowired
-	private WorkAppliedEffectRepository appliedEffectRepository;
+  @Autowired private WorkAppliedEffectRepository appliedEffectRepository;
 
-	@Autowired
-	private WorkOperationRepository operationRepository;
+  @Autowired private WorkOperationRepository operationRepository;
 
-	@Autowired
-	private OrchidGroupCommandService orchidGroupCommandService;
+  @Autowired private OrchidGroupCommandService orchidGroupCommandService;
 
-	@Autowired
-	private OrchidGroupMutationRepository mutationRepository;
+  @Autowired private OrchidGroupMutationRepository mutationRepository;
 
-	@Autowired
-	private OrchidGroupMutationRelationRepository mutationRelationRepository;
+  @Autowired private OrchidGroupMutationRelationRepository mutationRelationRepository;
 
-	private BedZone bedZone;
+  private BedZone bedZone;
 
-	private Variety variety;
+  private Variety variety;
 
-	private Long createdGroupId;
+  private Long createdGroupId;
 
-	private WorkType pesticideType;
+  private WorkType pesticideType;
 
-	private WorkType repotType;
+  private WorkType repotType;
 
-	@BeforeEach
-	void setUp() {
-		correctionRepository.deleteAll();
-		effectOrchidGroupRepository.deleteAll();
-		appliedEffectRepository.deleteAll();
-		workCommandReceiptRepository.deleteAll();
-		operationRepository.deleteAll();
-		orchidGroupRepository.deleteAll();
-		varietyRepository.deleteAll();
-		bedZoneRepository.deleteAll();
-		physicalBedRepository.deleteAll();
-		houseRepository.deleteAll();
-		workTypeRepository.deleteAll();
+  @BeforeEach
+  void setUp() {
+    correctionRepository.deleteAll();
+    effectOrchidGroupRepository.deleteAll();
+    appliedEffectRepository.deleteAll();
+    workCommandReceiptRepository.deleteAll();
+    operationRepository.deleteAll();
+    orchidGroupRepository.deleteAll();
+    varietyRepository.deleteAll();
+    bedZoneRepository.deleteAll();
+    physicalBedRepository.deleteAll();
+    houseRepository.deleteAll();
+    workTypeRepository.deleteAll();
 
-		repotType = workTypeRepository
-			.save(new WorkType(WorkTypeDefinition.REPOT.name(), "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
-		workTypeRepository.save(new WorkType(WorkTypeDefinition.CORRECTION.name(), "구조 변경 보정",
-				WorkTypeTemplate.CORRECTION, true, true, true, 2));
-		pesticideType = workTypeRepository
-			.save(new WorkType("PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 3));
-		House house = new House(1, "1동");
-		PhysicalBed bed = new PhysicalBed(1, 1);
-		bed.updatePositionUnits(new BigDecimal("24"), "칸");
-		bedZone = new BedZone("좌측", BedZoneSide.LEFT, 1);
-		bed.addBedZone(bedZone);
-		house.addPhysicalBed(bed);
-		houseRepository.save(house);
-		variety = varietyRepository
-			.save(new Variety("CORRECTION-001", "팔레놉시스", "보정 테스트", null, "3.5치", true, true, null, null));
-	}
+    repotType =
+        workTypeRepository.save(
+            new WorkType(
+                WorkTypeDefinition.REPOT.name(),
+                "분갈이",
+                WorkTypeTemplate.REPOT,
+                true,
+                true,
+                true,
+                1));
+    pesticideType =
+        workTypeRepository.save(
+            new WorkType("PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 3));
+    House house = new House(1, "1동");
+    PhysicalBed bed = new PhysicalBed(1, 1);
+    bed.updatePositionUnits(new BigDecimal("24"), "칸");
+    bedZone = new BedZone("좌측", BedZoneSide.LEFT, 1);
+    bed.addBedZone(bedZone);
+    house.addPhysicalBed(bed);
+    houseRepository.save(house);
+    variety =
+        varietyRepository.save(
+            new Variety("CORRECTION-001", "팔레놉시스", "보정 테스트", null, "3.5치", true, true, null, null));
+  }
 
-	@Test
-	void adjustsAnOriginalResultOnceAndPreservesItsAuditHistory() throws Exception {
-		Long originalId = createRepotOperation();
+  @Test
+  void adjustsAnOriginalResultOnceAndPreservesItsAuditHistory() throws Exception {
+    Long originalId = createRepotOperation();
 
-		mockMvc
-			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
-				.content(correctionRequest("correction-1")))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.originalOperation.status").value("CORRECTED"))
-			.andExpect(jsonPath("$.data.corrections", hasSize(1)))
-			.andExpect(jsonPath("$.data.corrections[0].reason").value("결과 수량 확인 필요"))
-			.andExpect(jsonPath("$.data.corrections[0].correctionOperation.status").value("COMPLETED"))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].beforeQuantity").value(30))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].afterQuantity").value(25));
-		mockMvc
-			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
-				.content(correctionRequest("correction-1")))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.corrections", hasSize(1)));
+    mockMvc
+        .perform(
+            post("/api/work-operations/{id}/corrections", originalId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(correctionRequest("correction-1")))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.originalOperation.status").value("COMPLETED"))
+        .andExpect(jsonPath("$.data.corrections", hasSize(1)))
+        .andExpect(jsonPath("$.data.corrections[0].reason").value("결과 수량 확인 필요"))
+        .andExpect(jsonPath("$.data.corrections[0].adjustments[0].beforeQuantity").value(30))
+        .andExpect(jsonPath("$.data.corrections[0].adjustments[0].afterQuantity").value(25));
+    mockMvc
+        .perform(
+            post("/api/work-operations/{id}/corrections", originalId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(correctionRequest("correction-1")))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.corrections", hasSize(1)));
 
-		mockMvc.perform(get("/api/work-operations/{id}/corrections", originalId))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.corrections", hasSize(1)));
+    mockMvc
+        .perform(get("/api/work-operations/{id}/corrections", originalId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.corrections", hasSize(1)));
 
-		assertThat(correctionRepository.count()).isEqualTo(1);
-		assertThat(operationRepository.count()).isEqualTo(2);
-		assertThat(appliedEffectRepository.count()).isEqualTo(2);
-		assertThat(operationRepository.findWithWorkTypeById(originalId).orElseThrow().getStatus())
-			.isEqualTo(WorkOperationStatus.CORRECTED);
-		var correctedGroup = orchidGroupRepository.findById(createdGroupId).orElseThrow();
-		assertThat(correctedGroup.getQuantity()).isEqualTo(25);
-		assertThat(correctedGroup.getStatus()).isEqualTo("수량 보정");
-		var correctionEffect = appliedEffectRepository.findAll()
-			.stream()
-			.filter(effect -> WorkTypeDefinition.CORRECTION.name().equals(effect.getHandlerCode()))
-			.findFirst()
-			.orElseThrow();
-		assertThat(correctionEffect.getResultDetails()).containsKey("adjustments");
-		Long correctionOperationId = correctionRepository.findAll().getFirst().getCorrectionWorkOperation().getId();
-		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", createdGroupId))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data[?(@.workOperationId == %d)].correctable".formatted(originalId))
-				.value(org.hamcrest.Matchers.hasItem(true)))
-			.andExpect(jsonPath("$.data[?(@.workOperationId == %d)].correctable".formatted(correctionOperationId))
-				.value(org.hamcrest.Matchers.hasItem(false)));
-	}
+    assertThat(correctionRepository.count()).isEqualTo(1);
+    assertThat(operationRepository.count()).isEqualTo(1);
+    assertThat(appliedEffectRepository.count()).isEqualTo(1);
+    assertThat(operationRepository.findWithWorkTypeById(originalId).orElseThrow().getStatus())
+        .isEqualTo(WorkOperationStatus.COMPLETED);
+    var correctedGroup = orchidGroupRepository.findById(createdGroupId).orElseThrow();
+    assertThat(correctedGroup.getQuantity()).isEqualTo(25);
+    assertThat(correctedGroup.getStatus()).isEqualTo("수량 보정");
+    var correctionEffect = correctionRepository.findAll().getFirst();
+    assertThat(correctionEffect.getResultDetails()).containsKey("adjustments");
+    mockMvc
+        .perform(get("/api/orchid-groups/{id}/work-history", createdGroupId))
+        .andExpect(status().isOk())
+        .andExpect(
+            jsonPath("$.data[?(@.workOperationId == %d)].correctable".formatted(originalId))
+                .value(Matchers.hasItem(true)));
+  }
 
-	@Test
-	void rejectsCorrectionOfARecordOnlyCorrectionOperation() throws Exception {
-		Long originalId = createRepotOperation();
-		mockMvc
-			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
-				.content(correctionRequest("correction-original")))
-			.andExpect(status().isCreated());
-		Long correctionOperationId = correctionRepository.findAll().getFirst().getCorrectionWorkOperation().getId();
+  @Test
+  void rejectsReusingAKeyWithDifferentContents() throws Exception {
+    Long originalId = createRepotOperation();
+    mockMvc
+        .perform(
+            post("/api/work-operations/{id}/corrections", originalId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(correctionRequest("same-key")))
+        .andExpect(status().isCreated());
+    mockMvc
+        .perform(
+            post("/api/work-operations/{id}/corrections", originalId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(correctionRequest("same-key").replace("25", "24")))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"));
+    assertThat(correctionRepository.count()).isEqualTo(1);
+  }
 
-		mockMvc
-			.perform(post("/api/work-operations/{id}/corrections", correctionOperationId)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(correctionRequest("correction-invalid")))
-			.andExpect(status().isBadRequest());
-	}
+  @Test
+  void cancelsAnIncorrectlyCreatedResultWithoutRecordingADiscard() throws Exception {
+    Long originalId = createRepotOperation();
+    Long originalMutationId = appliedEffectRepository.findAll().getFirst().getMutationId();
 
-	@Test
-	void cancelsAnIncorrectlyCreatedResultWithoutRecordingADiscard() throws Exception {
-		Long originalId = createRepotOperation();
-		Long originalMutationId = appliedEffectRepository.findAll().getFirst().getMutationId();
+    mockMvc
+        .perform(
+            post("/api/work-operations/{id}/corrections", originalId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(resultCancellationRequest()))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.originalOperation.status").value("COMPLETED"))
+        .andExpect(jsonPath("$.data.corrections[0].adjustments[0].beforeQuantity").value(30))
+        .andExpect(jsonPath("$.data.corrections[0].adjustments[0].afterQuantity").value(0))
+        .andExpect(jsonPath("$.data.corrections[0].adjustments[0].afterStatus").value("생성 취소"));
 
-		mockMvc
-			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
-				.content(resultCancellationRequest()))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.originalOperation.status").value("CORRECTED"))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].beforeQuantity").value(30))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].afterQuantity").value(0))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].afterStatus").value("생성 취소"));
+    OrchidGroup canceled = orchidGroupRepository.findById(createdGroupId).orElseThrow();
+    assertThat(canceled.getQuantity()).isZero();
+    assertThat(canceled.getStatus()).isEqualTo("생성 취소");
+    var correctionEffect = correctionRepository.findAll().getFirst();
+    var cancellationMutation =
+        mutationRepository.findById(correctionEffect.getMutationId()).orElseThrow();
+    assertThat(cancellationMutation.getMutationType())
+        .isEqualTo(OrchidGroupMutationType.CANCEL_CREATION);
+    assertThat(
+            mutationRelationRepository.findByMutationIdOrderByIdAsc(cancellationMutation.getId()))
+        .singleElement()
+        .satisfies(
+            relation -> {
+              assertThat(relation.getRelationType())
+                  .isEqualTo(OrchidGroupMutationRelationType.CORRECTS);
+              assertThat(relation.getRelatedMutation().getId()).isEqualTo(originalMutationId);
+            });
+  }
 
-		OrchidGroup canceled = orchidGroupRepository.findById(createdGroupId).orElseThrow();
-		assertThat(canceled.getQuantity()).isZero();
-		assertThat(canceled.getStatus()).isEqualTo("생성 취소");
-		var correctionEffect = appliedEffectRepository.findAll()
-			.stream()
-			.filter(effect -> WorkTypeDefinition.CORRECTION.name().equals(effect.getHandlerCode()))
-			.findFirst()
-			.orElseThrow();
-		var cancellationMutation = mutationRepository.findById(correctionEffect.getMutationId()).orElseThrow();
-		assertThat(cancellationMutation.getMutationType()).isEqualTo(OrchidGroupMutationType.CANCEL_CREATION);
-		assertThat(mutationRelationRepository.findByMutationIdOrderByIdAsc(cancellationMutation.getId()))
-			.singleElement()
-			.satisfies(relation -> {
-				assertThat(relation.getRelationType()).isEqualTo(OrchidGroupMutationRelationType.CORRECTS);
-				assertThat(relation.getRelatedMutation().getId()).isEqualTo(originalMutationId);
-			});
-	}
+  @Test
+  void correctsOnlyTheOriginalWorkDateAndPreservesItsAuditHistory() throws Exception {
+    Long originalId = createRepotOperation();
 
-	@Test
-	void correctsOnlyTheOriginalWorkDateAndPreservesItsAuditHistory() throws Exception {
-		Long originalId = createRepotOperation();
+    mockMvc
+        .perform(
+            post("/api/work-operations/{id}/corrections", originalId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(dateOnlyCorrectionRequest()))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.originalOperation.plannedStartDate").value("2026-07-14"))
+        .andExpect(jsonPath("$.data.originalOperation.plannedEndDate").value("2026-07-14"))
+        .andExpect(jsonPath("$.data.corrections[0].beforeWorkDate").value("2026-07-15"))
+        .andExpect(jsonPath("$.data.corrections[0].afterWorkDate").value("2026-07-14"))
+        .andExpect(jsonPath("$.data.corrections[0].adjustments", hasSize(0)));
 
-		mockMvc
-			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
-				.content(dateOnlyCorrectionRequest()))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.originalOperation.plannedStartDate").value("2026-07-14"))
-			.andExpect(jsonPath("$.data.originalOperation.plannedEndDate").value("2026-07-14"))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.beforeWorkDate").value("2026-07-15"))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.afterWorkDate").value("2026-07-14"))
-			.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments", hasSize(0)));
+    var original = operationRepository.findWithWorkTypeById(originalId).orElseThrow();
+    assertThat(original.getPlannedStartDate()).isEqualTo(LocalDate.of(2026, 7, 14));
+    assertThat(original.getPlannedEndDate()).isEqualTo(LocalDate.of(2026, 7, 14));
+    var unchangedGroup = orchidGroupRepository.findById(createdGroupId).orElseThrow();
+    assertThat(unchangedGroup.getQuantity()).isEqualTo(30);
+    assertThat(unchangedGroup.getStatus()).isEqualTo("정상");
+  }
 
-		var original = operationRepository.findWithWorkTypeById(originalId).orElseThrow();
-		assertThat(original.getPlannedStartDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 14));
-		assertThat(original.getPlannedEndDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 14));
-		var unchangedGroup = orchidGroupRepository.findById(createdGroupId).orElseThrow();
-		assertThat(unchangedGroup.getQuantity()).isEqualTo(30);
-		assertThat(unchangedGroup.getStatus()).isEqualTo("정상");
-	}
-
-	@Test
-	void rejectsAdjustmentWhenAResultHasDownstreamWork() throws Exception {
-		Long originalId = createRepotOperation();
-		mockMvc.perform(post("/api/work-operations").contentType(MediaType.APPLICATION_JSON).content("""
+  @Test
+  void rejectsAdjustmentWhenAResultHasDownstreamWork() throws Exception {
+    Long originalId = createRepotOperation();
+    mockMvc
+        .perform(
+            post("/api/work-operations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
 				{
 				  "workTypeId": %d,
 				  "title": "후속 농약 작업",
@@ -227,29 +244,49 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				  "sourceScopeType": "MANUAL_SELECTION",
 				  "sourceOrchidGroupIds": [%d]
 				}
-				""".formatted(pesticideType.getId(), createdGroupId))).andExpect(status().isCreated());
+				"""
+                        .formatted(pesticideType.getId(), createdGroupId)))
+        .andExpect(status().isCreated());
 
-		mockMvc
-			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
-				.content(correctionRequest("correction-blocked")))
-			.andExpect(status().isBadRequest());
+    mockMvc
+        .perform(
+            post("/api/work-operations/{id}/corrections", originalId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(correctionRequest("correction-blocked")))
+        .andExpect(status().isBadRequest());
 
-		assertThat(orchidGroupRepository.findById(createdGroupId).orElseThrow().getQuantity()).isEqualTo(30);
-		assertThat(correctionRepository.count()).isZero();
-	}
+    assertThat(orchidGroupRepository.findById(createdGroupId).orElseThrow().getQuantity())
+        .isEqualTo(30);
+    assertThat(correctionRepository.count()).isZero();
+  }
 
-	private Long createRepotOperation() throws Exception {
-		var createdSource = orchidGroupCommandService
-			.create(new OrchidGroupCreateRequest(bedZone.getId(), variety.getId(), 30, "3.5치", 2, "정상", "POT", null,
-					false, new BigDecimal("0"), new BigDecimal("2"), null));
-		OrchidGroup source = orchidGroupRepository.findById(createdSource.id()).orElseThrow();
-		mockMvc
-			.perform(post("/api/work-operations/structure-change-records").contentType(MediaType.APPLICATION_JSON)
-				.content("""
+  private Long createRepotOperation() throws Exception {
+    var createdSource =
+        orchidGroupCommandService.create(
+            new OrchidGroupCreateRequest(
+                bedZone.getId(),
+                variety.getId(),
+                30,
+                "3.5치",
+                2,
+                "정상",
+                "POT",
+                null,
+                false,
+                new BigDecimal("0"),
+                new BigDecimal("2"),
+                null));
+    OrchidGroup source = orchidGroupRepository.findById(createdSource.id()).orElseThrow();
+    mockMvc
+        .perform(
+            post("/api/work-operations/structure-change-records")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
 						{
 						  "operation": {
+						          "title": "보정할 분갈이",
 						    "workTypeId": %d,
-						    "title": "보정할 분갈이",
 						    "plannedStartDate": "2026-07-15",
 						    "plannedEndDate": "2026-07-15",
 						    "sourceScopeType": "MANUAL_SELECTION",
@@ -266,22 +303,23 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 						    }]
 						  }
 						}
-						""".formatted(repotType.getId(), source.getId(), source.getId(), bedZone.getId())))
-			.andExpect(status().isCreated());
-		createdGroupId = orchidGroupRepository.findAll()
-			.stream()
-			.filter(group -> !group.getId().equals(source.getId()))
-			.findFirst()
-			.orElseThrow()
-			.getId();
-		return operationRepository.findAll().getFirst().getId();
-	}
+						"""
+                        .formatted(
+                            repotType.getId(), source.getId(), source.getId(), bedZone.getId())))
+        .andExpect(status().isCreated());
+    createdGroupId =
+        orchidGroupRepository.findAll().stream()
+            .filter(group -> !group.getId().equals(source.getId()))
+            .findFirst()
+            .orElseThrow()
+            .getId();
+    return operationRepository.findAll().getFirst().getId();
+  }
 
-	private String correctionRequest(String idempotencyKey) {
-		return """
+  private String correctionRequest(String idempotencyKey) {
+    return """
 				{
 				  "idempotencyKey": "%s",
-				  "title": "분갈이 결과 보정 확인",
 				  "workDate": "2026-07-15",
 				  "worker": "관리자",
 				  "reason": "결과 수량 확인 필요",
@@ -289,16 +327,18 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				    "orchidGroupId": %d,
 				    "quantity": 25,
 				    "status": "수량 보정"
-				  }]
+				  }],
+				  "quantityCorrections":[{"executionId":%d,"lossQuantity":5,"increaseQuantity":0}]
 				}
-				""".formatted(idempotencyKey, createdGroupId);
-	}
+				"""
+        .formatted(
+            idempotencyKey, createdGroupId, appliedEffectRepository.findAll().getFirst().getId());
+  }
 
-	private String dateOnlyCorrectionRequest() {
-		return """
+  private String dateOnlyCorrectionRequest() {
+    return """
 				{
 				  "idempotencyKey": "correction-date-only",
-				  "title": "분갈이 작업일 보정",
 				  "workDate": "2026-07-14",
 				  "worker": "관리자",
 				  "reason": "작업일 입력 오류",
@@ -308,11 +348,12 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				    "status": "정상"
 				  }]
 				}
-				""".formatted(createdGroupId);
-	}
+				"""
+        .formatted(createdGroupId);
+  }
 
-	private String resultCancellationRequest() {
-		return """
+  private String resultCancellationRequest() {
+    return """
 				{
 				  "idempotencyKey": "correction-cancel-result",
 				  "title": "잘못 생성된 분갈이 결과 취소",
@@ -326,7 +367,7 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				    "status": "정상"
 				  }]
 				}
-				""".formatted(createdGroupId);
-	}
-
+				"""
+        .formatted(createdGroupId);
+  }
 }

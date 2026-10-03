@@ -3,6 +3,8 @@ package com.greenhouse.backend.work.controller;
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.operation.WorkOperationVoidService;
+import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationRequest;
+import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationEligibilityResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationRequest;
 import jakarta.validation.Valid;
@@ -19,29 +21,37 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class WorkOperationVoidController {
 
-	private final WorkOperationVoidService service;
+  private final WorkOperationVoidService service;
 
-	@GetMapping("/{workOperationId}/void-eligibility")
-	public ApiResponse<WorkOperationCancellationEligibilityResponse> eligibility(@PathVariable Long workOperationId) {
-		return ApiResponse.ok(service.eligibility(workOperationId));
-	}
+  @PostMapping("/cancel-batch")
+  public ApiResponse<WorkOperationBatchCancellationResponse> cancelBatch(
+      @Valid @RequestBody WorkOperationBatchCancellationRequest request) {
+    return ApiResponse.ok(service.cancelBatch(request));
+  }
 
-	@GetMapping("/{workOperationId}/cancel-eligibility")
-	public ApiResponse<WorkOperationCancellationEligibilityResponse> cancelEligibility(
-			@PathVariable Long workOperationId) {
-		return ApiResponse.ok(service.eligibility(workOperationId));
-	}
+  @GetMapping("/{workOperationId}/void-eligibility")
+  public ApiResponse<WorkOperationCancellationEligibilityResponse> eligibility(
+      @PathVariable Long workOperationId) {
+    return ApiResponse.ok(service.eligibility(workOperationId));
+  }
 
-	@PostMapping("/{workOperationId}/void")
-	public ApiResponse<WorkOperationView> voidOperation(@PathVariable Long workOperationId,
-			@Valid @RequestBody WorkOperationCancellationRequest request) {
-		return ApiResponse.ok(service.voidOperation(workOperationId, request));
-	}
+  @GetMapping("/{workOperationId}/cancel-eligibility")
+  public ApiResponse<WorkOperationCancellationEligibilityResponse> cancelEligibility(
+      @PathVariable Long workOperationId) {
+    return ApiResponse.ok(service.eligibility(workOperationId));
+  }
 
-	@PostMapping("/{workOperationId}/cancel")
-	public ApiResponse<WorkOperationView> cancelOperation(@PathVariable Long workOperationId,
-			@Valid @RequestBody WorkOperationCancellationRequest request) {
-		return ApiResponse.ok(service.cancelOperation(workOperationId, request));
-	}
+  @PostMapping("/{workOperationId}/void")
+  public ApiResponse<WorkOperationView> voidOperation(
+      @PathVariable Long workOperationId,
+      @Valid @RequestBody WorkOperationCancellationRequest request) {
+    return ApiResponse.ok(service.voidOperation(workOperationId, request));
+  }
 
+  @PostMapping("/{workOperationId}/cancel")
+  public ApiResponse<WorkOperationView> cancelOperation(
+      @PathVariable Long workOperationId,
+      @Valid @RequestBody WorkOperationCancellationRequest request) {
+    return ApiResponse.ok(service.cancelOperation(workOperationId, request));
+  }
 }

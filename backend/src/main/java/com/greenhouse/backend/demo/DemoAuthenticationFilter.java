@@ -16,30 +16,30 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class DemoAuthenticationFilter extends OncePerRequestFilter {
 
-	private static final String DEMO_AUTHORITY = "ROLE_DEMO";
+  private static final String DEMO_AUTHORITY = "ROLE_DEMO";
 
-	private final DemoProperties properties;
+  private final DemoProperties properties;
 
-	@Override
-	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-			throws ServletException, IOException {
-		if (!properties.enabled()) {
-			filterChain.doFilter(request, response);
-			return;
-		}
+  @Override
+  protected void doFilterInternal(
+      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      throws ServletException, IOException {
+    if (!properties.enabled()) {
+      filterChain.doFilter(request, response);
+      return;
+    }
 
-		var authentication = UsernamePasswordAuthenticationToken.authenticated(properties.username(), null,
-				List.of(new SimpleGrantedAuthority(DEMO_AUTHORITY)));
-		SecurityContext context = SecurityContextHolder.createEmptyContext();
-		context.setAuthentication(authentication);
-		SecurityContextHolder.setContext(context);
+    var authentication =
+        UsernamePasswordAuthenticationToken.authenticated(
+            properties.username(), null, List.of(new SimpleGrantedAuthority(DEMO_AUTHORITY)));
+    SecurityContext context = SecurityContextHolder.createEmptyContext();
+    context.setAuthentication(authentication);
+    SecurityContextHolder.setContext(context);
 
-		try {
-			filterChain.doFilter(request, response);
-		}
-		finally {
-			SecurityContextHolder.clearContext();
-		}
-	}
-
+    try {
+      filterChain.doFilter(request, response);
+    } finally {
+      SecurityContextHolder.clearContext();
+    }
+  }
 }

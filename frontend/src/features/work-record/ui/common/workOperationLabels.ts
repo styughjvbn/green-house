@@ -13,7 +13,6 @@ export function operationStatusLabel(status: WorkOperation["status"]) {
     COMPLETED: "완료",
     STOPPED: "종료",
     CANCELED: "취소",
-    CORRECTED: "보정",
     VOIDED: "취소",
   }[status];
 }

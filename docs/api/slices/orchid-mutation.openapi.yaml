@@ -123,12 +123,10 @@ components:
     OrchidGroupMutationEntryResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-        orchidGroupId:
-          type: integer
-          format: int64
+        afterState:
+          $ref: '#/components/schemas/OrchidGroupMutationStateResponse'
+        beforeState:
+          $ref: '#/components/schemas/OrchidGroupMutationStateResponse'
         entryKind:
           type: string
           enum:
@@ -136,31 +134,27 @@ components:
           - CREATE
           - CHANGE
           - DELETE
+        id:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type: integer
+          format: int64
         role:
           type: string
           enum:
           - SOURCE
           - RESULT
           - AFFECTED
-        stateRevisionBefore:
-          type: integer
-          format: int64
         stateRevisionAfter:
           type: integer
           format: int64
-        beforeState:
-          $ref: '#/components/schemas/OrchidGroupMutationStateResponse'
-        afterState:
-          $ref: '#/components/schemas/OrchidGroupMutationStateResponse'
+        stateRevisionBefore:
+          type: integer
+          format: int64
     OrchidGroupMutationGraphEdgeResponse:
       type: object
       properties:
-        id:
-          type: string
-        sourceNodeId:
-          type: string
-        targetNodeId:
-          type: string
         edgeType:
           type: string
           enum:
@@ -173,12 +167,8 @@ components:
           - SOURCE
           - RESULT
           - AFFECTED
-        mutationRelationType:
+        id:
           type: string
-          enum:
-          - CORRECTS
-          - COMPENSATES
-          - SUPERSEDES
         lineageRelationType:
           type: string
           enum:
@@ -189,9 +179,23 @@ components:
           - MOVED_TO
           - POTTED_TO
           - CORRECTED_TO
+        mutationRelationType:
+          type: string
+          enum:
+          - CORRECTS
+          - COMPENSATES
+          - SUPERSEDES
+        sourceNodeId:
+          type: string
+        targetNodeId:
+          type: string
     OrchidGroupMutationGraphLocationResponse:
       type: object
       properties:
+        bedZoneName:
+          type: string
+        endPosition:
+          type: number
         houseNumber:
           type: integer
           format: int32
@@ -205,30 +209,29 @@ components:
           - RIGHT
           - CUSTOM
           - HANGING
-        bedZoneName:
-          type: string
         startPosition:
-          type: number
-        endPosition:
           type: number
     OrchidGroupMutationGraphNodeResponse:
       type: object
       properties:
-        id:
+        effectiveBusinessDate:
           type: string
-        nodeType:
+          format: date
+        entryKind:
           type: string
           enum:
-          - STATE
-          - MUTATION
-        orchidGroupId:
-          type: integer
-          format: int64
-        stateRevision:
-          type: integer
-          format: int64
-        state:
-          $ref: '#/components/schemas/OrchidGroupMutationStateResponse'
+          - BASELINE
+          - CREATE
+          - CHANGE
+          - DELETE
+        entryRole:
+          type: string
+          enum:
+          - SOURCE
+          - RESULT
+          - AFFECTED
+        id:
+          type: string
         location:
           $ref: '#/components/schemas/OrchidGroupMutationGraphLocationResponse'
         mutationId:
@@ -252,6 +255,17 @@ components:
           - COMPENSATION
           - CANCEL_CREATION
           - DELETE
+        nodeType:
+          type: string
+          enum:
+          - STATE
+          - MUTATION
+        occurredAt:
+          type: string
+          format: date-time
+        orchidGroupId:
+          type: integer
+          format: int64
         sourceDomain:
           type: string
           enum:
@@ -260,53 +274,39 @@ components:
           - SALES
           - INBOUND
           - MIGRATION
-        sourceType:
-          type: string
         sourceReferenceId:
           type: string
+        sourceType:
+          type: string
+        state:
+          $ref: '#/components/schemas/OrchidGroupMutationStateResponse'
+        stateRevision:
+          type: integer
+          format: int64
         workOperation:
           $ref: '#/components/schemas/OrchidGroupMutationWorkOperationResponse'
-        effectiveBusinessDate:
-          type: string
-          format: date
-        occurredAt:
-          type: string
-          format: date-time
-        entryKind:
-          type: string
-          enum:
-          - BASELINE
-          - CREATE
-          - CHANGE
-          - DELETE
-        entryRole:
-          type: string
-          enum:
-          - SOURCE
-          - RESULT
-          - AFFECTED
     OrchidGroupMutationGraphResponse:
       type: object
       properties:
-        rootOrchidGroupId:
-          type: integer
-          format: int64
         depth:
           type: integer
           format: int32
-        maxNodes:
-          type: integer
-          format: int32
-        truncated:
-          type: boolean
-        nodes:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupMutationGraphNodeResponse'
         edges:
           type: array
           items:
             $ref: '#/components/schemas/OrchidGroupMutationGraphEdgeResponse'
+        maxNodes:
+          type: integer
+          format: int32
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupMutationGraphNodeResponse'
+        rootOrchidGroupId:
+          type: integer
+          format: int64
+        truncated:
+          type: boolean
     OrchidGroupMutationRelationResponse:
       type: object
       properties:
@@ -328,6 +328,18 @@ components:
     OrchidGroupMutationResponse:
       type: object
       properties:
+        commandFingerprint:
+          type: string
+        correlationId:
+          type: string
+          format: uuid
+        effectiveBusinessDate:
+          type: string
+          format: date
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupMutationEntryResponse'
         id:
           type: integer
           format: int64
@@ -349,6 +361,21 @@ components:
           - COMPENSATION
           - CANCEL_CREATION
           - DELETE
+        occurredAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        recordedAt:
+          type: string
+          format: date-time
+        relations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupMutationRelationResponse'
+        schemaVersion:
+          type: integer
+          format: int32
         sourceDomain:
           type: string
           enum:
@@ -357,85 +384,58 @@ components:
           - SALES
           - INBOUND
           - MIGRATION
-        sourceType:
+        sourceOperationKey:
           type: string
         sourceReferenceId:
           type: string
-        sourceOperationKey:
+        sourceType:
           type: string
-        correlationId:
-          type: string
-          format: uuid
-        commandFingerprint:
-          type: string
-        occurredAt:
-          type: string
-          format: date-time
-        recordedAt:
-          type: string
-          format: date-time
-        effectiveBusinessDate:
-          type: string
-          format: date
-        reason:
-          type: string
-        schemaVersion:
-          type: integer
-          format: int32
         workOperation:
           $ref: '#/components/schemas/OrchidGroupMutationWorkOperationResponse'
-        entries:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupMutationEntryResponse'
-        relations:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupMutationRelationResponse'
     OrchidGroupMutationStateResponse:
       type: object
       properties:
+        ageYear:
+          type: integer
+          format: int32
+        bedZoneId:
+          type: integer
+          format: int64
+        endPosition:
+          type: number
+        genus:
+          type: string
+        inboundRecordId:
+          type: integer
+          format: int64
+        memo:
+          type: string
+        placementType:
+          type: string
+        potSizeCode:
+          type: string
         quantity:
           type: integer
           format: int32
         reservedQuantity:
           type: integer
           format: int32
-        status:
-          type: string
-        bedZoneId:
-          type: integer
-          format: int64
         sortOrder:
-          type: integer
-          format: int32
-        startPosition:
-          type: number
-        endPosition:
-          type: number
-        varietyId:
-          type: integer
-          format: int64
-        genus:
-          type: string
-        varietyName:
-          type: string
-        ageYear:
-          type: integer
-          format: int32
-        potSizeCode:
-          type: string
-        placementType:
-          type: string
-        trayCount:
           type: integer
           format: int32
         splitPlacementAllowed:
           type: boolean
-        inboundRecordId:
+        startPosition:
+          type: number
+        status:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+        varietyId:
           type: integer
           format: int64
-        memo:
+        varietyName:
           type: string
     OrchidGroupMutationWorkOperationResponse:
       type: object
@@ -443,11 +443,11 @@ components:
         id:
           type: integer
           format: int64
-        workTypeCode:
+        title:
           type: string
         workType:
           type: string
-        title:
+        workTypeCode:
           type: string
     PageResponseOrchidGroupMutationResponse:
       type: object

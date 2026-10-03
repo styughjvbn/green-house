@@ -1,10 +1,12 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.FlywayException;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -13,23 +15,28 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 @Tag("work-e2e")
 class MultiVarietyDiscardMigrationPostgresE2ETest extends WorkE2ETestBase {
 
-	@Test
-	void splitsDiscardTargetsEffectsAndMutationsByVariety() {
-		String database = "multi_variety_discard_" + UUID.randomUUID().toString().replace("-", "");
-		var admin = new JdbcTemplate(
-				new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
-		admin.execute("CREATE DATABASE " + database);
-		String url = POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database);
-		var dataSource = new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
-		try {
-			Flyway.configure().dataSource(dataSource).target("37").load().migrate();
-			var jdbc = new JdbcTemplate(dataSource);
-			seedMultiVarietyDiscard(jdbc);
+  @Test
+  void splitsDiscardTargetsEffectsAndMutationsByVariety() {
+    String database = "multi_variety_discard_" + UUID.randomUUID().toString().replace("-", "");
+    var admin =
+        new JdbcTemplate(
+            new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
+    admin.execute("CREATE DATABASE " + database);
+    String url = POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database);
+    var dataSource =
+        new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
+    try {
+      Flyway.configure().dataSource(dataSource).target("30").load().migrate();
+      var jdbc = new JdbcTemplate(dataSource);
+      seedMultiVarietyDiscard(jdbc);
 
-			var upgrade = Flyway.configure().dataSource(dataSource).target("38").load();
-			assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
+      var upgrade = Flyway.configure().dataSource(dataSource).target("31").load();
+      assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
 
-			assertThat(jdbc.queryForList("""
+      assertThat(
+              jdbc.queryForList(
+                  """
 					SELECT operation.title,
 					       count(target.id) AS target_count,
 					       count(DISTINCT target.variety_id_snapshot) AS variety_count
@@ -40,28 +47,46 @@ class MultiVarietyDiscardMigrationPostgresE2ETest extends WorkE2ETestBase {
 					GROUP BY operation.id, operation.title
 					ORDER BY operation.title
 					"""))
-				.extracting(row -> row.get("title"), row -> row.get("target_count"), row -> row.get("variety_count"))
-				.containsExactlyInAnyOrder(tuple("다품종 폐기 - 품종 A", 2L, 1L), tuple("다품종 폐기 - 품종 B", 1L, 1L));
+          .extracting(
+              row -> row.get("title"),
+              row -> row.get("target_count"),
+              row -> row.get("variety_count"))
+          .containsExactlyInAnyOrder(
+              tuple("다품종 폐기 - 품종 A", 2L, 1L), tuple("다품종 폐기 - 품종 B", 1L, 1L));
 
-			assertThat(jdbc.queryForObject("""
+      assertThat(
+              jdbc.queryForObject(
+                  """
 					SELECT count(*)
 					FROM work_applied_effects effect
 					JOIN work_operation_targets target ON target.id = effect.work_operation_target_id
 					WHERE effect.work_operation_id <> target.work_operation_id
-					""", Long.class)).isZero();
-			assertThat(jdbc.queryForObject("""
+					""",
+                  Long.class))
+          .isZero();
+      assertThat(
+              jdbc.queryForObject(
+                  """
 					SELECT count(*)
 					FROM orchid_group_mutations mutation
 					JOIN work_applied_effects effect ON effect.mutation_id = mutation.id
 					WHERE mutation.source_reference_id <> effect.work_operation_id::TEXT
 					   OR mutation.correlation_id <> effect.correlation_id
-					""", Long.class)).isZero();
-			assertThat(jdbc.queryForObject("""
+					""",
+                  Long.class))
+          .isZero();
+      assertThat(
+              jdbc.queryForObject(
+                  """
 					SELECT count(DISTINCT correlation_id)
 					FROM work_applied_effects
 					WHERE id IN (100, 101, 102)
-					""", Integer.class)).isEqualTo(2);
-			assertThat(jdbc.queryForObject("""
+					""",
+                  Integer.class))
+          .isEqualTo(2);
+      assertThat(
+              jdbc.queryForObject(
+                  """
 					SELECT count(*) FROM (
 					    SELECT operation.id
 					    FROM work_operations operation
@@ -75,17 +100,65 @@ class MultiVarietyDiscardMigrationPostgresE2ETest extends WorkE2ETestBase {
 					        'name:' || target.variety_name_snapshot
 					    )) > 1
 					) candidates
-					""", Long.class)).isZero();
-			assertThat(upgrade.migrate().migrationsExecuted).isZero();
-		}
-		finally {
-			admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
-		}
-	}
+					""",
+                  Long.class))
+          .isZero();
+      assertThat(upgrade.migrate().migrationsExecuted).isZero();
+    } finally {
+      admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
+    }
+  }
 
-	private void seedMultiVarietyDiscard(JdbcTemplate jdbc) {
-		jdbc.execute("ALTER TABLE orchid_groups DISABLE TRIGGER USER");
-		jdbc.execute("""
+  @Test
+  void lateStageFailureRollsBackTheEntireHistoricalContext() {
+    String database = "history_rollback_" + UUID.randomUUID().toString().replace("-", "");
+    var admin =
+        new JdbcTemplate(
+            new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
+    admin.execute("CREATE DATABASE " + database);
+    var dataSource =
+        new DriverManagerDataSource(
+            POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database),
+            POSTGRES.getUsername(),
+            POSTGRES.getPassword());
+    try {
+      Flyway.configure().dataSource(dataSource).target("30").load().migrate();
+      var jdbc = new JdbcTemplate(dataSource);
+      seedMultiVarietyDiscard(jdbc);
+      jdbc.update("UPDATE work_operations SET request_key='unsupported' WHERE id=100");
+      var upgrade = Flyway.configure().dataSource(dataSource).target("31").load();
+      assertThatThrownBy(upgrade::migrate)
+          .isInstanceOf(FlywayException.class)
+          .hasMessageContaining("unsupported operation metadata");
+      assertThat(upgrade.info().current().getVersion().getVersion()).isEqualTo("30");
+      assertThat(
+              jdbc.queryForObject(
+                  "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='orchid_group_identity_migrations'",
+                  Long.class))
+          .isZero();
+      assertThat(jdbc.queryForObject("SELECT count(*) FROM work_operations", Long.class))
+          .isEqualTo(1);
+      assertThat(
+              jdbc.queryForObject(
+                  "SELECT count(*) FROM work_operation_targets WHERE work_operation_id=100",
+                  Long.class))
+          .isEqualTo(3);
+      assertThat(
+              jdbc.queryForList(
+                  "SELECT tgenabled::text FROM pg_trigger WHERE tgrelid='orchid_groups'::regclass AND tgname IN ('trg_orchid_group_write_fence','trg_orchid_group_ledger_entry')",
+                  String.class))
+          .containsExactlyInAnyOrder("O", "O");
+      Flyway.configure().dataSource(dataSource).target("30").load().validate();
+    } finally {
+      admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
+    }
+  }
+
+  private void seedMultiVarietyDiscard(JdbcTemplate jdbc) {
+    jdbc.execute("ALTER TABLE orchid_groups DISABLE TRIGGER USER");
+    jdbc.execute(
+        """
 				INSERT INTO varieties (id, code, genus, name, sale_enabled, is_active, created_at, updated_at)
 				VALUES
 				    (9101, 'VAR-DISCARD-A', '속', '품종 A', TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
@@ -101,8 +174,9 @@ class MultiVarietyDiscardMigrationPostgresE2ETest extends WorkE2ETestBase {
 				    (3, (SELECT min(id) FROM bed_zones), 9102, '속', '품종 B', 0, 0, 3, '폐기', 'POT_3', 0, 1,
 				     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 				""");
-		jdbc.execute("ALTER TABLE orchid_groups ENABLE TRIGGER USER");
-		jdbc.execute("""
+    jdbc.execute("ALTER TABLE orchid_groups ENABLE TRIGGER USER");
+    jdbc.execute(
+        """
 				INSERT INTO work_operations (
 				    id, work_type_id, title, status, planned_start_date, planned_end_date,
 				    actual_start_at, actual_end_at, source_scope_type, source_condition_snapshot,
@@ -135,7 +209,8 @@ class MultiVarietyDiscardMigrationPostgresE2ETest extends WorkE2ETestBase {
 				    (102, 102, 'COMPLETED', '{"discardedQuantity":30}'::jsonb, 30, 0,
 				     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 				""");
-		jdbc.execute("""
+    jdbc.execute(
+        """
 				INSERT INTO orchid_group_mutations (
 				    id, mutation_type, source_domain, source_type, source_reference_id, source_operation_key,
 				    correlation_id, command_fingerprint, occurred_at, recorded_at,
@@ -175,6 +250,5 @@ class MultiVarietyDiscardMigrationPostgresE2ETest extends WorkE2ETestBase {
 				     '{"discardQuantity":30}'::jsonb, '{"discardedQuantity":30}'::jsonb,
 				     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 102, '11111111-1111-3111-8111-111111111111');
 				""");
-	}
-
+  }
 }

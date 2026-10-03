@@ -121,22 +121,7 @@ export type WorkExecutionDetail = {
   linkedWorkOperationId: number | null;
 };
 
-export type WorkCorrectionDetail = {
-  id: number;
-  workOperationId: number;
-  title: string;
-  workDate: string;
-  createdAt: string;
-  worker: string | null;
-  reason: string;
-  adjustments: Array<{
-    orchidGroupId: number;
-    beforeQuantity: number;
-    afterQuantity: number;
-    beforeStatus: string;
-    afterStatus: string;
-  }>;
-};
+export type WorkCorrectionDetail = ApiSchemas["WorkCorrectionDetailResponse"];
 
 export type WorkOperationDetail = {
   summary: Pick<

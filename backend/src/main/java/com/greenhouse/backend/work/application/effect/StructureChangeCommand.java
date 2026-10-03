@@ -12,11 +12,14 @@ import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(name = "StructureChangeExecutionRequest")
-public record StructureChangeCommand(@NotBlank @Size(max = 100) String idempotencyKey, @NotNull LocalDate completedDate,
-		@Size(max = 100) String worker, @Size(max = 1000) String memo,
-		@NotEmpty @Size(max = 100) List<@Valid StructureChangeSourceInput> sources,
-		@NotEmpty @Size(max = 100) List<@Valid StructureChangeResultInput> results) {
-	public StructureChangeCommand {
-		idempotencyKey = idempotencyKey == null ? null : idempotencyKey.trim();
-	}
+public record StructureChangeCommand(
+    @NotBlank @Size(max = 100) String idempotencyKey,
+    @NotNull LocalDate completedDate,
+    @Size(max = 100) String worker,
+    @Size(max = 1000) String memo,
+    @NotEmpty @Size(max = 100) List<@Valid StructureChangeSourceInput> sources,
+    @NotEmpty @Size(max = 100) List<@Valid StructureChangeResultInput> results) {
+  public StructureChangeCommand {
+    idempotencyKey = idempotencyKey == null ? null : idempotencyKey.trim();
+  }
 }

@@ -7,15 +7,18 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSou
 import java.time.LocalDate;
 import java.util.List;
 
-public record ConsumeOrchidGroupReservationsMutationCommand(OrchidGroupMutationSource source,
-		List<OrchidGroupQuantityMutationItem> items, LocalDate effectiveBusinessDate,
-		String reason) implements OrchidGroupMutationCommand {
+public record ConsumeOrchidGroupReservationsMutationCommand(
+    OrchidGroupMutationSource source,
+    List<OrchidGroupQuantityMutationItem> items,
+    LocalDate effectiveBusinessDate,
+    String reason)
+    implements OrchidGroupMutationCommand {
 
-	public ConsumeOrchidGroupReservationsMutationCommand {
-		if (source == null || effectiveBusinessDate == null) {
-			throw new IllegalArgumentException("예약 출고 Mutation의 source와 업무일이 필요합니다.");
-		}
-		items = normalizeItems(items, "예약 출고 Mutation");
-		reason = normalizeText(reason);
-	}
+  public ConsumeOrchidGroupReservationsMutationCommand {
+    if (source == null || effectiveBusinessDate == null) {
+      throw new IllegalArgumentException("예약 출고 Mutation의 source와 업무일이 필요합니다.");
+    }
+    items = normalizeItems(items, "예약 출고 Mutation");
+    reason = normalizeText(reason);
+  }
 }

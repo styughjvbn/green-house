@@ -6,8 +6,7 @@ import java.util.Map;
 
 public interface WorkExecutionReferenceGateway {
 
-	Map<Long, String> varietyNames(Collection<Long> orchidGroupIds);
+  Map<Long, String> varietyNames(Collection<Long> orchidGroupIds);
 
-	Map<Long, WorkExecutionLocation> locations(Collection<Long> bedZoneIds);
-
+  Map<Long, WorkExecutionLocation> locations(Collection<Long> bedZoneIds);
 }

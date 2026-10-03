@@ -7,10 +7,10 @@ import org.springframework.data.domain.Pageable;
 
 public interface VarietyRepositoryCustom {
 
-	Page<Variety> search(String keyword, String genus, Boolean saleEnabled, Boolean active, Pageable pageable);
+  Page<Variety> search(
+      String keyword, String genus, Boolean saleEnabled, Boolean active, Pageable pageable);
 
-	List<String> findDistinctGenera();
+  List<String> findDistinctGenera();
 
-	List<VarietyNameProjection> findActiveNames();
-
+  List<VarietyNameProjection> findActiveNames();
 }

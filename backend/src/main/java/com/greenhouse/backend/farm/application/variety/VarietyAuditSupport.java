@@ -14,27 +14,31 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class VarietyAuditSupport {
 
-	private final AuditEventWriter auditWriter;
+  private final AuditEventWriter auditWriter;
 
-	public Map<String, Object> snapshot(Variety variety) {
-		var data = new LinkedHashMap<String, Object>();
-		data.put("code", variety.getCode());
-		data.put("genus", variety.getGenus());
-		data.put("name", variety.getName());
-		data.put("alias", variety.getAlias());
-		data.put("defaultPotSize", variety.getDefaultPotSize());
-		data.put("color", variety.getColor());
-		data.put("saleEnabled", variety.isSaleEnabled());
-		data.put("active", variety.isActive());
-		data.put("description", variety.getDescription());
-		data.put("memo", variety.getMemo());
-		return data;
-	}
+  public Map<String, Object> snapshot(Variety variety) {
+    var data = new LinkedHashMap<String, Object>();
+    data.put("code", variety.getCode());
+    data.put("genus", variety.getGenus());
+    data.put("name", variety.getName());
+    data.put("alias", variety.getAlias());
+    data.put("defaultPotSize", variety.getDefaultPotSize());
+    data.put("color", variety.getColor());
+    data.put("saleEnabled", variety.isSaleEnabled());
+    data.put("active", variety.isActive());
+    data.put("description", variety.getDescription());
+    data.put("memo", variety.getMemo());
+    return data;
+  }
 
-	public Long record(AuditAction action, Variety variety, Map<String, Object> before, Map<String, Object> after) {
-		return auditWriter.record(action, AuditSource.VARIETY_MANAGEMENT,
-				new AuditEvent.Target("VARIETY", variety.getId(), null, null, null, variety.getId()), before, after,
-				Map.of());
-	}
-
+  public Long record(
+      AuditAction action, Variety variety, Map<String, Object> before, Map<String, Object> after) {
+    return auditWriter.record(
+        action,
+        AuditSource.VARIETY_MANAGEMENT,
+        new AuditEvent.Target("VARIETY", variety.getId(), null, null, null, variety.getId()),
+        before,
+        after,
+        Map.of());
+  }
 }

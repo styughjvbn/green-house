@@ -11,17 +11,16 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class PaymentEventReader {
 
-	private final PartnerPaymentEventRepository partnerPaymentEventRepository;
+  private final PartnerPaymentEventRepository partnerPaymentEventRepository;
 
-	public boolean existsByTarget(PaymentTargetType targetType, Long targetId) {
-		return partnerPaymentEventRepository.existsByTargetTypeAndTargetId(targetType, targetId);
-	}
+  public boolean existsByTarget(PaymentTargetType targetType, Long targetId) {
+    return partnerPaymentEventRepository.existsByTargetTypeAndTargetId(targetType, targetId);
+  }
 
-	public Set<Long> findExistingTargetIds(PaymentTargetType targetType, List<Long> targetIds) {
-		if (targetIds.isEmpty()) {
-			return Set.of();
-		}
-		return Set.copyOf(partnerPaymentEventRepository.findExistingTargetIds(targetType, targetIds));
-	}
-
+  public Set<Long> findExistingTargetIds(PaymentTargetType targetType, List<Long> targetIds) {
+    if (targetIds.isEmpty()) {
+      return Set.of();
+    }
+    return Set.copyOf(partnerPaymentEventRepository.findExistingTargetIds(targetType, targetIds));
+  }
 }

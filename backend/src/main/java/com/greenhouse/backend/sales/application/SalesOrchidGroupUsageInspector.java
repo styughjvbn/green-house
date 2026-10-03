@@ -13,21 +13,24 @@ import org.springframework.stereotype.Component;
 @Order(200)
 public class SalesOrchidGroupUsageInspector implements OrchidGroupUsageInspector {
 
-	private final SalesSlipItemAllocationRepository allocationRepository;
+  private final SalesSlipItemAllocationRepository allocationRepository;
 
-	private final SalesInventoryMovementRepository movementRepository;
+  private final SalesInventoryMovementRepository movementRepository;
 
-	public SalesOrchidGroupUsageInspector(SalesSlipItemAllocationRepository allocationRepository,
-			SalesInventoryMovementRepository movementRepository) {
-		this.allocationRepository = allocationRepository;
-		this.movementRepository = movementRepository;
-	}
+  public SalesOrchidGroupUsageInspector(
+      SalesSlipItemAllocationRepository allocationRepository,
+      SalesInventoryMovementRepository movementRepository) {
+    this.allocationRepository = allocationRepository;
+    this.movementRepository = movementRepository;
+  }
 
-	@Override
-	public List<OrchidGroupUsage> inspect(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {
-		long count = allocationRepository.countByOrchidGroupIdIn(orchidGroupIds)
-				+ movementRepository.countByOrchidGroupIdIn(orchidGroupIds);
-		return count == 0 ? List.of() : List.of(new OrchidGroupUsage("SALES", "판매 또는 재고 이동에 연결된 난 묶음이 있습니다.", count));
-	}
-
+  @Override
+  public List<OrchidGroupUsage> inspect(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {
+    long count =
+        allocationRepository.countByOrchidGroupIdIn(orchidGroupIds)
+            + movementRepository.countByOrchidGroupIdIn(orchidGroupIds);
+    return count == 0
+        ? List.of()
+        : List.of(new OrchidGroupUsage("SALES", "판매 또는 재고 이동에 연결된 난 묶음이 있습니다.", count));
+  }
 }

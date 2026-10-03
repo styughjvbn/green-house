@@ -16,21 +16,27 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrchidGroupReconciliationService {
 
-	private final ImmediateWorkExecutionService immediateWorkExecutionService;
+  private final ImmediateWorkExecutionService immediateWorkExecutionService;
 
-	private final OrchidGroupReader orchidGroupReader;
+  private final OrchidGroupReader orchidGroupReader;
 
-	private final WorkOperationSupport workOperationSupport;
+  private final WorkOperationSupport workOperationSupport;
 
-	public WorkOperationView reconcile(Long orchidGroupId, OrchidGroupReconciliationRequest request) {
-		var orchidGroup = orchidGroupReader.findDetailById(orchidGroupId)
-			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
-		return immediateWorkExecutionService.executeForTarget(request.idempotencyKey(),
-				WorkTypeDefinition.RECONCILIATION.name(),
-				workOperationSupport.varietyHistoryTitle(orchidGroup.getVarietyName(),
-						WorkTypeDefinition.RECONCILIATION),
-				request.workDate(), request.worker(), request.memo(), orchidGroupId,
-				Map.of("reason", request.reason().trim()), request);
-	}
-
+  public WorkOperationView reconcile(Long orchidGroupId, OrchidGroupReconciliationRequest request) {
+    var orchidGroup =
+        orchidGroupReader
+            .findDetailById(orchidGroupId)
+            .orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+    return immediateWorkExecutionService.executeForTarget(
+        request.idempotencyKey(),
+        WorkTypeDefinition.RECONCILIATION.name(),
+        workOperationSupport.varietyHistoryTitle(
+            orchidGroup.getVarietyName(), WorkTypeDefinition.RECONCILIATION),
+        request.workDate(),
+        request.worker(),
+        request.memo(),
+        orchidGroupId,
+        Map.of("reason", request.reason().trim()),
+        request);
+  }
 }

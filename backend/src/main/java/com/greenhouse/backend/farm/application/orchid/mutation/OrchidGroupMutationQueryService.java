@@ -25,50 +25,72 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrchidGroupMutationQueryService {
 
-	private final OrchidGroupMutationRepository mutationRepository;
+  private final OrchidGroupMutationRepository mutationRepository;
 
-	private final OrchidGroupMutationEntryRepository entryRepository;
+  private final OrchidGroupMutationEntryRepository entryRepository;
 
-	private final OrchidGroupMutationRelationRepository relationRepository;
+  private final OrchidGroupMutationRelationRepository relationRepository;
 
-	private final OrchidGroupMutationWorkOperationReader workOperationReader;
+  private final OrchidGroupMutationWorkOperationReader workOperationReader;
 
-	public PageResponse<OrchidGroupMutationResponse> getMutations(Long orchidGroupId,
-			OrchidGroupMutationType mutationType, OrchidGroupMutationSourceDomain sourceDomain, int page, int size) {
-		PageRequests.validate(page, size);
-		var mutations = mutationRepository.search(orchidGroupId, mutationType, sourceDomain,
-				PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")));
-		if (mutations.isEmpty()) {
-			return PageResponse.from(
-					mutations.map(mutation -> OrchidGroupMutationResponse.from(mutation, null, List.of(), List.of())));
-		}
+  public PageResponse<OrchidGroupMutationResponse> getMutations(
+      Long orchidGroupId,
+      OrchidGroupMutationType mutationType,
+      OrchidGroupMutationSourceDomain sourceDomain,
+      int page,
+      int size) {
+    PageRequests.validate(page, size);
+    var mutations =
+        mutationRepository.search(
+            orchidGroupId,
+            mutationType,
+            sourceDomain,
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")));
+    if (mutations.isEmpty()) {
+      return PageResponse.from(
+          mutations.map(
+              mutation -> OrchidGroupMutationResponse.from(mutation, null, List.of(), List.of())));
+    }
 
-		List<Long> mutationIds = mutations.stream().map(mutation -> mutation.getId()).toList();
-		Map<Long, List<OrchidGroupMutationEntryResponse>> entriesByMutationId = new LinkedHashMap<>();
-		entryRepository.findByMutationIdInOrderByMutationIdAscIdAsc(mutationIds)
-			.forEach(entry -> entriesByMutationId
-				.computeIfAbsent(entry.getMutation().getId(), ignored -> new ArrayList<>())
-				.add(OrchidGroupMutationEntryResponse.from(entry)));
+    List<Long> mutationIds = mutations.stream().map(mutation -> mutation.getId()).toList();
+    Map<Long, List<OrchidGroupMutationEntryResponse>> entriesByMutationId = new LinkedHashMap<>();
+    entryRepository
+        .findByMutationIdInOrderByMutationIdAscIdAsc(mutationIds)
+        .forEach(
+            entry ->
+                entriesByMutationId
+                    .computeIfAbsent(entry.getMutation().getId(), ignored -> new ArrayList<>())
+                    .add(OrchidGroupMutationEntryResponse.from(entry)));
 
-		Map<Long, List<OrchidGroupMutationRelationResponse>> relationsByMutationId = new LinkedHashMap<>();
-		relationRepository.findConnectedToMutationIds(mutationIds).forEach(relation -> {
-			var response = OrchidGroupMutationRelationResponse.from(relation);
-			addRelation(relationsByMutationId, response.mutationId(), response);
-			if (!response.mutationId().equals(response.relatedMutationId())) {
-				addRelation(relationsByMutationId, response.relatedMutationId(), response);
-			}
-		});
+    Map<Long, List<OrchidGroupMutationRelationResponse>> relationsByMutationId =
+        new LinkedHashMap<>();
+    relationRepository
+        .findConnectedToMutationIds(mutationIds)
+        .forEach(
+            relation -> {
+              var response = OrchidGroupMutationRelationResponse.from(relation);
+              addRelation(relationsByMutationId, response.mutationId(), response);
+              if (!response.mutationId().equals(response.relatedMutationId())) {
+                addRelation(relationsByMutationId, response.relatedMutationId(), response);
+              }
+            });
 
-		var workOperationsByMutationId = workOperationReader.resolveByMutationId(mutations.getContent());
-		return PageResponse.from(mutations.map(
-				mutation -> OrchidGroupMutationResponse.from(mutation, workOperationsByMutationId.get(mutation.getId()),
-						entriesByMutationId.getOrDefault(mutation.getId(), List.of()),
-						relationsByMutationId.getOrDefault(mutation.getId(), List.of()))));
-	}
+    var workOperationsByMutationId =
+        workOperationReader.resolveByMutationId(mutations.getContent());
+    return PageResponse.from(
+        mutations.map(
+            mutation ->
+                OrchidGroupMutationResponse.from(
+                    mutation,
+                    workOperationsByMutationId.get(mutation.getId()),
+                    entriesByMutationId.getOrDefault(mutation.getId(), List.of()),
+                    relationsByMutationId.getOrDefault(mutation.getId(), List.of()))));
+  }
 
-	private void addRelation(Map<Long, List<OrchidGroupMutationRelationResponse>> relationsByMutationId,
-			Long mutationId, OrchidGroupMutationRelationResponse relation) {
-		relationsByMutationId.computeIfAbsent(mutationId, ignored -> new ArrayList<>()).add(relation);
-	}
-
+  private void addRelation(
+      Map<Long, List<OrchidGroupMutationRelationResponse>> relationsByMutationId,
+      Long mutationId,
+      OrchidGroupMutationRelationResponse relation) {
+    relationsByMutationId.computeIfAbsent(mutationId, ignored -> new ArrayList<>()).add(relation);
+  }
 }
