@@ -2,6 +2,19 @@ DO $block$
 DECLARE
   target record;
   match_count bigint;
+  uuid_pattern constant text := '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+  identifier_pattern text;
+  business_date_pattern constant text :=
+    '"(workDate|beforeWorkDate|afterWorkDate|inboundDate|pottingDate|businessDate|' ||
+    'effectiveBusinessDate|plannedStartDate|plannedEndDate|actualStartAt|actualEndAt|' ||
+    'createdAt|updatedAt|recordedAt|appliedAt|canceledAt|voidedAt|occurredAt|' ||
+    'targetSnapshotAt|shipmentDate|auctionDate|saleDate|paymentDate|' ||
+    'work_date|before_work_date|after_work_date|inbound_date|potting_date|business_date|' ||
+    'effective_business_date|planned_start_date|planned_end_date|actual_start_at|actual_end_at|' ||
+    'created_at|updated_at|recorded_at|applied_at|canceled_at|voided_at|occurred_at|' ||
+    'target_snapshot_at|shipment_date|auction_date|sale_date|payment_date)' ||
+    '"[[:space:]]*:[[:space:]]*"[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])' ||
+    '(T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})?)?"';
   pattern constant text :=
     '([[:alnum:]._%+-]+@[[:alnum:].-]+\.[A-Za-z]{2,})' ||
     '|((https?|ftp)://|www\.)' ||
@@ -11,18 +24,33 @@ DECLARE
     '|(\m[0-9]{2,6}[- ][0-9]{2,6}[- ][0-9]{2,8}\M)';
 BEGIN
   FOR target IN
-    SELECT table_name, column_name
+    SELECT table_name, column_name, data_type
     FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name <> 'flyway_schema_history'
       AND data_type IN ('character varying', 'text', 'json', 'jsonb')
   LOOP
-    EXECUTE format(
-      'SELECT count(*) FROM public.%I WHERE replace(%I::text, ''010-0000-0000'', '''') ~* $1',
-      target.table_name, target.column_name
-    )
-    INTO match_count
-    USING pattern;
+    identifier_pattern := CASE
+      WHEN target.column_name IN (
+        'source_reference_id', 'source_operation_key', 'request_key',
+        'receipt_key', 'void_request_key', 'effect_key'
+      ) THEN uuid_pattern
+      ELSE 'a^'
+    END;
+    IF target.data_type IN ('json', 'jsonb') THEN
+      -- A structural business date is not a phone/account number. Only remove
+      -- known date fields; the same digits inside memo/free text remain checked.
+      EXECUTE format(
+        'SELECT count(*) FROM public.%I WHERE replace(regexp_replace(regexp_replace(%I::text, $2, '''', ''g''), $3, '''', ''gi''), ''010-0000-0000'', '''') ~* $1',
+        target.table_name, target.column_name
+      ) INTO match_count USING pattern, business_date_pattern,
+        '"(correlationId|correlation_id)"[[:space:]]*:[[:space:]]*"' || uuid_pattern || '"';
+    ELSE
+      EXECUTE format(
+        'SELECT count(*) FROM public.%I WHERE replace(regexp_replace(%I::text, $2, '''', ''gi''), ''010-0000-0000'', '''') ~* $1',
+        target.table_name, target.column_name
+      ) INTO match_count USING pattern, identifier_pattern;
+    END IF;
 
     IF match_count > 0 THEN
       RAISE EXCEPTION 'Sensitive pattern remains in %.% (% rows)',
@@ -61,6 +89,8 @@ BEGIN
       UNION ALL SELECT worker FROM work_operations
       UNION ALL SELECT worker FROM work_target_executions
       UNION ALL SELECT worker FROM work_applied_effects
+      UNION ALL SELECT worker FROM work_operation_corrections
+      UNION ALL SELECT worker FROM orchid_stock_counts
     ) actors
     WHERE actor IS NOT NULL AND actor !~ '^작업자 [0-9]{3}$'
   ) THEN
@@ -83,6 +113,19 @@ BEGIN
        OR request_id IS NOT NULL
   ) THEN
     RAISE EXCEPTION 'Raw audit request identifiers remain';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM work_operations
+    WHERE void_reason IS NOT NULL AND void_reason <> '데모 취소 사유'
+  ) OR EXISTS (
+    SELECT 1 FROM work_operation_corrections
+    WHERE reason <> '데모 보정 사유' OR memo IS NOT NULL
+  ) OR EXISTS (
+    SELECT 1 FROM orchid_stock_counts
+    WHERE reason <> '데모 실사 사유' OR memo IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'Unsanitized work cancellation, correction, or stock-count text remains';
   END IF;
 
   IF EXISTS (
