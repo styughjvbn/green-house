@@ -2,16 +2,14 @@
 
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateWorkAndInboundQueries } from "@/entities/farm/model/farmMutationQueries";
 import { workRecordQueryKeys } from "./workRecordQueryKeys";
 
 export function useWorkRecordInvalidation() {
   const queryClient = useQueryClient();
 
   const invalidateOperations = useCallback(
-    () =>
-      queryClient.invalidateQueries({
-        queryKey: workRecordQueryKeys.operations.all,
-      }),
+    () => invalidateWorkAndInboundQueries(queryClient),
     [queryClient],
   );
 

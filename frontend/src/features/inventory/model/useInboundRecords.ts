@@ -1,17 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { House } from "@/entities/farm/types";
+import { invalidateWorkAndInboundQueries } from "@/entities/farm/model/farmMutationQueries";
 import { createEmptyPage } from "@/shared/api/page";
 import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import {
   cancelInboundRecord,
   createInboundRecord,
-  deleteInboundRecord,
   getInventoryHouses,
   potInboundRecord,
   updateInboundRecord,
+  voidInboundPotting,
 } from "../api/inventoryApi";
-import type { InventoryRouteState } from "../lib/inventoryRouteState";
+import { createUuid } from "@/shared/lib/id";
+import type { InboundRouteState } from "../lib/inventoryRouteState";
 import {
   createEmptyInboundFilters,
   INBOUND_FILTER_KEYS,
@@ -19,11 +21,11 @@ import {
 } from "../lib/inventoryUrlFilters";
 import {
   inboundPageQueryOptions,
+  inboundRecordQueryOptions,
   varietyLookupQueryOptions,
 } from "./inventoryQueryOptions";
 import { inventoryQueryKeys } from "./inventoryQueryKeys";
 import type {
-  InboundFilterState,
   InboundPottingPayload,
   InboundRecord,
   InboundRecordPayload,
@@ -33,7 +35,7 @@ import type {
 export function useInboundRecords({
   routeState,
 }: {
-  routeState: InventoryRouteState<InboundFilterState>;
+  routeState: InboundRouteState;
 }) {
   const queryClient = useQueryClient();
   const query = useQuery(inboundPageQueryOptions(routeState));
@@ -46,11 +48,17 @@ export function useInboundRecords({
   const pageData =
     query.data ??
     createEmptyPage<InboundRecord>(routeState.size, routeState.page);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(
+    routeState.selectedId,
+  );
+  const selectedInPage =
+    pageData.content.find((item) => item.id === selectedId) ?? null;
+  const selectedQuery = useQuery({
+    ...inboundRecordQueryOptions(selectedId ?? 0),
+    enabled: selectedId != null && selectedInPage == null,
+  });
   const selected =
-    pageData.content.find((item) => item.id === selectedId) ??
-    pageData.content[0] ??
-    null;
+    selectedInPage ?? selectedQuery.data ?? pageData.content[0] ?? null;
   const lookupQuery = useQuery(varietyLookupQueryOptions());
   const [housesEnabled, setHousesEnabled] = useState(false);
   const housesQuery = useQuery<House[]>({
@@ -60,9 +68,7 @@ export function useInboundRecords({
   });
 
   async function invalidate() {
-    await queryClient.invalidateQueries({
-      queryKey: inventoryQueryKeys.inbound.all,
-    });
+    await invalidateWorkAndInboundQueries(queryClient);
   }
 
   async function invalidateRelatedInventory() {
@@ -108,23 +114,32 @@ export function useInboundRecords({
     mutationFn: ({
       inboundRecordId,
       memo,
+      idempotencyKey,
     }: {
       inboundRecordId: number;
       memo?: string;
-    }) => cancelInboundRecord(inboundRecordId, memo),
+      idempotencyKey: string;
+    }) => cancelInboundRecord(inboundRecordId, idempotencyKey, memo),
     onSuccess: async (updated) => {
       setSelectedId(updated.id);
       await invalidate();
     },
   });
-  const deleteMutation = useMutation({
-    mutationFn: deleteInboundRecord,
-    onSuccess: async () => {
-      setSelectedId(null);
-      await invalidate();
+  const voidPottingMutation = useMutation({
+    mutationFn: ({
+      inboundRecordId,
+      reason,
+      idempotencyKey,
+    }: {
+      inboundRecordId: number;
+      reason: string;
+      idempotencyKey: string;
+    }) => voidInboundPotting(inboundRecordId, { idempotencyKey, reason }),
+    onSuccess: async (updated) => {
+      setSelectedId(updated.id);
+      await invalidateRelatedInventory();
     },
   });
-
   return {
     ...listState,
     query,
@@ -149,28 +164,43 @@ export function useInboundRecords({
       await pottingMutation.mutateAsync({ inboundRecordId, payload });
     },
     cancel: async (inboundRecordId: number, memo?: string) => {
-      await cancelMutation.mutateAsync({ inboundRecordId, memo });
+      await cancelMutation.mutateAsync({
+        inboundRecordId,
+        memo,
+        idempotencyKey:
+          `inbound-cancel-${inboundRecordId}-${createUuid()}`.slice(0, 100),
+      });
     },
-    remove: async (inboundRecordId: number) => {
-      await deleteMutation.mutateAsync(inboundRecordId);
+    voidPotting: async (inboundRecordId: number, reason: string) => {
+      await voidPottingMutation.mutateAsync({
+        inboundRecordId,
+        reason,
+        idempotencyKey:
+          `inbound-potting-void-${inboundRecordId}-${createUuid()}`.slice(
+            0,
+            100,
+          ),
+      });
     },
     loading:
       query.isFetching ||
+      selectedQuery.isFetching ||
       createMutation.isPending ||
       updateMutation.isPending ||
       pottingMutation.isPending ||
       cancelMutation.isPending ||
-      deleteMutation.isPending,
+      voidPottingMutation.isPending,
     housesLoading: housesQuery.isFetching,
     housesError: toMessage(housesQuery.error),
     error: toMessage(
       query.error ??
+        selectedQuery.error ??
         lookupQuery.error ??
         createMutation.error ??
         updateMutation.error ??
         pottingMutation.error ??
         cancelMutation.error ??
-        deleteMutation.error,
+        voidPottingMutation.error,
     ),
   };
 }

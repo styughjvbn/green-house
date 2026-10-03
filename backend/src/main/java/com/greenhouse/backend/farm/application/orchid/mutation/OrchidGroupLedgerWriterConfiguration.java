@@ -5,6 +5,4 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties(OrchidGroupLedgerWriterProperties.class)
-public class OrchidGroupLedgerWriterConfiguration {
-
-}
+public class OrchidGroupLedgerWriterConfiguration {}

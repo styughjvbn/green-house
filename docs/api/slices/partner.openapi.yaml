@@ -106,7 +106,7 @@ paths:
     post:
       tags:
       - business-partner-controller
-      operationId: create_7
+      operationId: create_6
       requestBody:
         content:
           application/json:
@@ -278,24 +278,6 @@ components:
     BusinessPartnerCreateRequest:
       type: object
       properties:
-        name:
-          type: string
-          maxLength: 150
-          minLength: 0
-        partnerType:
-          type: string
-          enum:
-          - WHOLESALE
-          - RETAIL
-          - AUCTION_HOUSE
-        ownerName:
-          type: string
-          maxLength: 100
-          minLength: 0
-        phone:
-          type: string
-          maxLength: 50
-          minLength: 0
         address:
           type: string
           maxLength: 1000
@@ -303,6 +285,24 @@ components:
         memo:
           type: string
           maxLength: 1000
+          minLength: 0
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        ownerName:
+          type: string
+          maxLength: 100
+          minLength: 0
+        partnerType:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+        phone:
+          type: string
+          maxLength: 50
           minLength: 0
       required:
       - name
@@ -310,20 +310,28 @@ components:
     BusinessPartnerOptionResponse:
       type: object
       properties:
+        active:
+          type: boolean
         id:
           type: integer
           format: int64
         name:
           type: string
-        active:
-          type: boolean
     BusinessPartnerResponse:
       type: object
       properties:
+        active:
+          type: boolean
+        address:
+          type: string
         id:
           type: integer
           format: int64
+        memo:
+          type: string
         name:
+          type: string
+        ownerName:
           type: string
         partnerType:
           type: string
@@ -331,44 +339,36 @@ components:
           - WHOLESALE
           - RETAIL
           - AUCTION_HOUSE
-        ownerName:
-          type: string
         phone:
           type: string
-        address:
-          type: string
-        memo:
-          type: string
-        active:
-          type: boolean
     BusinessPartnerUpdateRequest:
       type: object
       properties:
+        address:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
         name:
           type: string
           maxLength: 150
           minLength: 0
+        ownerName:
+          type: string
+          maxLength: 100
+          minLength: 0
         partnerType:
           type: string
           enum:
           - WHOLESALE
           - RETAIL
           - AUCTION_HOUSE
-        ownerName:
-          type: string
-          maxLength: 100
-          minLength: 0
         phone:
           type: string
           maxLength: 50
-          minLength: 0
-        address:
-          type: string
-          maxLength: 1000
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
           minLength: 0
       required:
       - name
@@ -414,46 +414,46 @@ components:
     PartnerSettlementSettingsRequest:
       type: object
       properties:
-        settlementUnit:
-          type: string
-          enum:
-          - SALES_SLIP
-          - MONTHLY_BATCH
-          - AUCTION_DATE
-        paymentDelayDays:
-          type: integer
-          format: int32
-          minimum: 0
-        paymentDayMode:
-          type: string
-          enum:
-          - CALENDAR_DAY
-          - BUSINESS_DAY
-        autoMatchEnabled:
-          type: boolean
-        autoSettleEnabled:
+        allowPrepayment:
           type: boolean
         amountTolerance:
           type: integer
           format: int64
           minimum: 0
+        autoMatchEnabled:
+          type: boolean
+        autoSettleEnabled:
+          type: boolean
+        creditAutoApplyEnabled:
+          type: boolean
         depositorAliases:
           type: array
           items:
             type: string
             maxLength: 100
             minLength: 0
-        allowPrepayment:
-          type: boolean
-        creditAutoApplyEnabled:
-          type: boolean
-        ruleJson:
-          type: object
-          additionalProperties: {}
         memo:
           type: string
           maxLength: 1000
           minLength: 0
+        paymentDayMode:
+          type: string
+          enum:
+          - CALENDAR_DAY
+          - BUSINESS_DAY
+        paymentDelayDays:
+          type: integer
+          format: int32
+          minimum: 0
+        ruleJson:
+          type: object
+          additionalProperties: {}
+        settlementUnit:
+          type: string
+          enum:
+          - SALES_SLIP
+          - MONTHLY_BATCH
+          - AUCTION_DATE
       required:
       - amountTolerance
       - depositorAliases
@@ -463,43 +463,43 @@ components:
     PartnerSettlementSettingsResponse:
       type: object
       properties:
+        allowPrepayment:
+          type: boolean
+        amountTolerance:
+          type: integer
+          format: int64
+        autoMatchEnabled:
+          type: boolean
+        autoSettleEnabled:
+          type: boolean
+        creditAutoApplyEnabled:
+          type: boolean
+        depositorAliases:
+          type: array
+          items:
+            type: string
         id:
           type: integer
           format: int64
+        memo:
+          type: string
         partnerId:
           type: integer
           format: int64
+        paymentDayMode:
+          type: string
+          enum:
+          - CALENDAR_DAY
+          - BUSINESS_DAY
+        paymentDelayDays:
+          type: integer
+          format: int32
+        ruleJson:
+          type: object
+          additionalProperties: {}
         settlementUnit:
           type: string
           enum:
           - SALES_SLIP
           - MONTHLY_BATCH
           - AUCTION_DATE
-        paymentDelayDays:
-          type: integer
-          format: int32
-        paymentDayMode:
-          type: string
-          enum:
-          - CALENDAR_DAY
-          - BUSINESS_DAY
-        autoMatchEnabled:
-          type: boolean
-        autoSettleEnabled:
-          type: boolean
-        amountTolerance:
-          type: integer
-          format: int64
-        depositorAliases:
-          type: array
-          items:
-            type: string
-        allowPrepayment:
-          type: boolean
-        creditAutoApplyEnabled:
-          type: boolean
-        ruleJson:
-          type: object
-          additionalProperties: {}
-        memo:
-          type: string

@@ -1,3 +1,4 @@
+import { farmMutationQueryKeys } from "@/entities/farm/model/farmMutationQueries";
 import type {
   InboundFilterState,
   MaterialFilterState,
@@ -20,9 +21,15 @@ export const inventoryQueryKeys = {
       ["inventory", "varieties", "groups", varietyId] as const,
   },
   inbound: {
-    all: ["inventory", "inbound"] as const,
+    all: farmMutationQueryKeys.inboundRecords,
+    record: (inboundRecordId: number) =>
+      [
+        ...farmMutationQueryKeys.inboundRecords,
+        "record",
+        inboundRecordId,
+      ] as const,
     page: (filters: InboundFilterState, page: number, size: number) =>
-      ["inventory", "inbound", filters, page, size] as const,
+      [...farmMutationQueryKeys.inboundRecords, filters, page, size] as const,
   },
   houses: ["inventory", "houses"] as const,
 };

@@ -2,6 +2,9 @@ package com.greenhouse.backend.farm.dto.variety;
 
 import java.time.LocalDate;
 
-public record VarietyConnectedOrchidGroupResponse(Long orchidGroupId, String location, Integer quantity, String status,
-		LocalDate latestWorkDate) {
-}
+public record VarietyConnectedOrchidGroupResponse(
+    Long orchidGroupId,
+    String location,
+    Integer quantity,
+    String status,
+    LocalDate latestWorkDate) {}

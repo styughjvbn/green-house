@@ -101,6 +101,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-operations/{workOperationId}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["voidOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-operations/{workOperationId}/targets/{targetId}/start": {
         parameters: {
             query?: never;
@@ -230,6 +246,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-operations/{workOperationId}/end-remaining": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["endRemaining"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-operations/{workOperationId}/corrections": {
         parameters: {
             query?: never;
@@ -271,23 +303,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["cancel"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/work-operations/{workOperationId}/cancel-created-orchid-groups": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["cancel_1"];
+        post: operations["cancelOperation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -369,22 +385,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["createCompletedRecord"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/work-operations/multi-create": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["create_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -473,6 +473,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-operations/cancel-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-operations/batch": {
         parameters: {
             query?: never;
@@ -498,7 +514,7 @@ export interface paths {
         };
         get: operations["getVarieties"];
         put?: never;
-        post: operations["create_2"];
+        post: operations["create_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -547,7 +563,39 @@ export interface paths {
         };
         get: operations["getOrchidGroups"];
         put?: never;
-        post: operations["create_3"];
+        post: operations["create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orchid-groups/{orchidGroupId}/stock-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stockCountHistory"];
+        put?: never;
+        post: operations["stockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orchid-groups/{orchidGroupId}/reconciliations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reconcile"];
         delete?: never;
         options?: never;
         head?: never;
@@ -563,7 +611,7 @@ export interface paths {
         };
         get: operations["getCollections"];
         put?: never;
-        post: operations["create_4"];
+        post: operations["create_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -611,7 +659,7 @@ export interface paths {
         };
         get: operations["getMaterials"];
         put?: never;
-        post: operations["create_5"];
+        post: operations["create_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -627,7 +675,7 @@ export interface paths {
         };
         get: operations["getInboundRecords"];
         put?: never;
-        post: operations["create_6"];
+        post: operations["create_5"];
         delete?: never;
         options?: never;
         head?: never;
@@ -651,6 +699,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/inbound-records/{inboundRecordId}/potting-void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["voidPotting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/inbound-records/{inboundRecordId}/cancel": {
         parameters: {
             query?: never;
@@ -660,7 +724,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["cancel_2"];
+        post: operations["cancel"];
         delete?: never;
         options?: never;
         head?: never;
@@ -680,7 +744,7 @@ export interface paths {
          */
         get: operations["getPartners"];
         put?: never;
-        post: operations["create_7"];
+        post: operations["create_6"];
         delete?: never;
         options?: never;
         head?: never;
@@ -831,6 +895,22 @@ export interface paths {
         patch: operations["reorderWorkTypes"];
         trace?: never;
     };
+    "/api/work-operations/{workOperationId}/title": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateTitle"];
+        trace?: never;
+    };
     "/api/varieties/{varietyId}": {
         parameters: {
             query?: never;
@@ -886,29 +966,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getOrchidGroup"];
         put?: never;
         post?: never;
         delete: operations["delete_1"];
         options?: never;
         head?: never;
         patch: operations["update_4"];
-        trace?: never;
-    };
-    "/api/orchid-groups/{orchidGroupId}/move": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["move"];
         trace?: never;
     };
     "/api/orchid-groups/batch": {
@@ -985,7 +1049,7 @@ export interface paths {
         get: operations["getInboundRecord"];
         put?: never;
         post?: never;
-        delete: operations["delete_3"];
+        delete?: never;
         options?: never;
         head?: never;
         patch: operations["update_7"];
@@ -1039,6 +1103,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-operations/{workOperationId}/void-eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["eligibility"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-operations/{workOperationId}/repot-results": {
         parameters: {
             query?: never;
@@ -1047,6 +1127,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_4"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-operations/{workOperationId}/relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getRelations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-operations/{workOperationId}/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGraph"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1071,22 +1183,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/work-operations/{workOperationId}/created-orchid-groups": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_5"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/work-operations/{workOperationId}/cancel-eligibility": {
         parameters: {
             query?: never;
@@ -1094,7 +1190,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getCancellationEligibility"];
+        get: operations["cancelEligibility"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1349,6 +1445,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orchid-groups/{orchidGroupId}/stock-count-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stockCountContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orchid-groups/{orchidGroupId}/lineage": {
         parameters: {
             query?: never;
@@ -1405,6 +1517,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orchid-group-mutations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMutations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orchid-group-mutations/graph/{orchidGroupId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMutationGraph"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1874,19 +2018,19 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         SalesSlipCreateRequest: {
-            /** Format: date */
-            saleDate: string;
-            /** @enum {string} */
-            salesType?: "DIRECT" | "AUCTION";
-            /** Format: int64 */
-            partnerId?: number;
             /** Format: int64 */
             auctionShipmentId?: number;
-            paymentStatus?: string;
-            salesStatus?: string;
-            paymentMethod?: string;
-            memo?: string;
             items: components["schemas"]["SalesSlipItemRequest"][];
+            memo?: string;
+            /** Format: int64 */
+            partnerId?: number;
+            paymentMethod?: string;
+            paymentStatus?: string;
+            /** Format: date */
+            saleDate: string;
+            salesStatus?: string;
+            /** @enum {string} */
+            salesType?: "DIRECT" | "AUCTION";
         };
         SalesSlipItemAllocationRequest: {
             /** Format: int64 */
@@ -1895,201 +2039,201 @@ export interface components {
             quantity: number;
         };
         SalesSlipItemRequest: {
-            itemName: string;
+            allocations: components["schemas"]["SalesSlipItemAllocationRequest"][];
             genus?: string;
-            spec?: string;
+            itemName: string;
+            memo?: string;
             /** Format: int32 */
             quantity: number;
+            spec?: string;
             /** Format: int32 */
             unitPrice: number;
-            memo?: string;
-            allocations: components["schemas"]["SalesSlipItemAllocationRequest"][];
         };
         ApiResponseSalesSlipResponse: {
             data?: components["schemas"]["SalesSlipResponse"];
             message?: string;
         };
         BusinessPartnerResponse: {
+            active?: boolean;
+            address?: string;
             /** Format: int64 */
             id?: number;
+            memo?: string;
             name?: string;
+            ownerName?: string;
             /** @enum {string} */
             partnerType?: "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
-            ownerName?: string;
             phone?: string;
-            address?: string;
-            memo?: string;
-            active?: boolean;
         };
         SalesOrchidGroupSnapshotResponse: {
-            /** @enum {string} */
-            snapshotType?: "CREATION" | "OUTBOUND";
+            /** Format: int32 */
+            ageYear?: number;
+            /** Format: int32 */
+            allocatedQuantity?: number;
+            /** Format: int64 */
+            bedZoneId?: number;
+            bedZoneName?: string;
             /** @enum {string} */
             captureSource?: "LIVE" | "MIGRATED_CURRENT_STATE";
             /** Format: date-time */
             capturedAt?: string;
-            /** Format: int64 */
-            orchidGroupId?: number;
-            /** Format: int64 */
-            varietyId?: number;
-            varietyName?: string;
+            endPosition?: number;
             genus?: string;
-            /** Format: int32 */
-            ageYear?: number;
-            potSizeCode?: string;
-            potSize?: string;
-            /** Format: int32 */
-            quantity?: number;
-            /** Format: int32 */
-            reservedQuantity?: number;
-            status?: string;
-            /** Format: int32 */
-            allocatedQuantity?: number;
             /** Format: int64 */
             houseId?: number;
             /** Format: int32 */
             houseNumber?: number;
             /** Format: int64 */
+            orchidGroupId?: number;
+            /** Format: int64 */
             physicalBedId?: number;
             /** Format: int32 */
             physicalBedNumber?: number;
-            /** Format: int64 */
-            bedZoneId?: number;
-            bedZoneName?: string;
+            potSize?: string;
+            potSizeCode?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: int32 */
+            reservedQuantity?: number;
+            /** @enum {string} */
+            snapshotType?: "CREATION" | "OUTBOUND";
             startPosition?: number;
-            endPosition?: number;
+            status?: string;
+            /** Format: int64 */
+            varietyId?: number;
+            varietyName?: string;
         };
         SalesSlipItemAllocationResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            orchidGroupId?: number;
-            varietyName?: string;
             /** Format: int32 */
             allocatedQuantity?: number;
             /** Format: int32 */
             availableQuantity?: number;
-            /** Format: int32 */
-            houseNumber?: number;
-            /** Format: int32 */
-            physicalBedNumber?: number;
             bedZoneName?: string;
             creationSnapshot?: components["schemas"]["SalesOrchidGroupSnapshotResponse"];
+            /** Format: int32 */
+            houseNumber?: number;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            orchidGroupId?: number;
             outboundSnapshot?: components["schemas"]["SalesOrchidGroupSnapshotResponse"];
+            /** Format: int32 */
+            physicalBedNumber?: number;
+            varietyName?: string;
         };
         SalesSlipItemResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            auctionShipmentLotId?: number;
-            itemName?: string;
-            genus?: string;
-            spec?: string;
-            /** Format: int32 */
-            quantity?: number;
-            /** Format: int32 */
-            unitPrice?: number;
+            allocations?: components["schemas"]["SalesSlipItemAllocationResponse"][];
             /** Format: int32 */
             amount?: number;
-            memo?: string;
-            allocations?: components["schemas"]["SalesSlipItemAllocationResponse"][];
-        };
-        SalesSlipResponse: {
+            /** Format: int64 */
+            auctionShipmentLotId?: number;
+            genus?: string;
             /** Format: int64 */
             id?: number;
-            slipNumber?: string;
-            /** Format: date */
-            saleDate?: string;
-            /** @enum {string} */
-            salesType?: "DIRECT" | "AUCTION";
+            itemName?: string;
+            memo?: string;
+            /** Format: int32 */
+            quantity?: number;
+            spec?: string;
+            /** Format: int32 */
+            unitPrice?: number;
+        };
+        SalesSlipResponse: {
+            auctionMarket?: string;
             /** Format: int64 */
             auctionShipmentId?: number;
-            auctionMarket?: string;
-            partner?: components["schemas"]["BusinessPartnerResponse"];
-            /** Format: int32 */
-            totalAmount?: number;
+            availableActions?: ("EDIT" | "COMPLETE" | "CANCEL" | "CONFIRM_PAYMENT")[];
             /** Format: date */
             expectedPaymentDate?: string;
             /** Format: int64 */
+            id?: number;
+            items?: components["schemas"]["SalesSlipItemResponse"][];
+            memo?: string;
+            /** Format: int64 */
             paidAmount?: number;
+            partner?: components["schemas"]["BusinessPartnerResponse"];
+            paymentMethod?: string;
+            paymentStatus?: string;
             /** Format: int64 */
             remainingAmount?: number;
-            paymentStatus?: string;
+            /** Format: date */
+            saleDate?: string;
             salesStatus?: string;
-            paymentMethod?: string;
-            memo?: string;
-            items?: components["schemas"]["SalesSlipItemResponse"][];
-            availableActions?: ("EDIT" | "COMPLETE" | "CANCEL" | "CONFIRM_PAYMENT")[];
+            /** @enum {string} */
+            salesType?: "DIRECT" | "AUCTION";
+            slipNumber?: string;
+            /** Format: int32 */
+            totalAmount?: number;
         };
         BusinessPartnerUpdateRequest: {
-            name: string;
-            /** @enum {string} */
-            partnerType: "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
-            ownerName?: string;
-            phone?: string;
             address?: string;
             memo?: string;
+            name: string;
+            ownerName?: string;
+            /** @enum {string} */
+            partnerType: "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
+            phone?: string;
         };
         ApiResponseBusinessPartnerResponse: {
             data?: components["schemas"]["BusinessPartnerResponse"];
             message?: string;
         };
         PartnerSettlementSettingsRequest: {
-            /** @enum {string} */
-            settlementUnit: "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
-            /** Format: int32 */
-            paymentDelayDays: number;
-            /** @enum {string} */
-            paymentDayMode: "CALENDAR_DAY" | "BUSINESS_DAY";
-            autoMatchEnabled?: boolean;
-            autoSettleEnabled?: boolean;
+            allowPrepayment?: boolean;
             /** Format: int64 */
             amountTolerance: number;
-            depositorAliases: string[];
-            allowPrepayment?: boolean;
+            autoMatchEnabled?: boolean;
+            autoSettleEnabled?: boolean;
             creditAutoApplyEnabled?: boolean;
+            depositorAliases: string[];
+            memo?: string;
+            /** @enum {string} */
+            paymentDayMode: "CALENDAR_DAY" | "BUSINESS_DAY";
+            /** Format: int32 */
+            paymentDelayDays: number;
             ruleJson?: {
                 [key: string]: unknown;
             };
-            memo?: string;
+            /** @enum {string} */
+            settlementUnit: "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
         };
         ApiResponsePartnerSettlementSettingsResponse: {
             data?: components["schemas"]["PartnerSettlementSettingsResponse"];
             message?: string;
         };
         PartnerSettlementSettingsResponse: {
+            allowPrepayment?: boolean;
+            /** Format: int64 */
+            amountTolerance?: number;
+            autoMatchEnabled?: boolean;
+            autoSettleEnabled?: boolean;
+            creditAutoApplyEnabled?: boolean;
+            depositorAliases?: string[];
             /** Format: int64 */
             id?: number;
+            memo?: string;
             /** Format: int64 */
             partnerId?: number;
             /** @enum {string} */
-            settlementUnit?: "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
+            paymentDayMode?: "CALENDAR_DAY" | "BUSINESS_DAY";
             /** Format: int32 */
             paymentDelayDays?: number;
-            /** @enum {string} */
-            paymentDayMode?: "CALENDAR_DAY" | "BUSINESS_DAY";
-            autoMatchEnabled?: boolean;
-            autoSettleEnabled?: boolean;
-            /** Format: int64 */
-            amountTolerance?: number;
-            depositorAliases?: string[];
-            allowPrepayment?: boolean;
-            creditAutoApplyEnabled?: boolean;
             ruleJson?: {
                 [key: string]: unknown;
             };
-            memo?: string;
+            /** @enum {string} */
+            settlementUnit?: "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
         };
         BedZoneCapacityRequest: {
-            placementType: string;
-            potSize?: string;
+            allowed: boolean;
             /** @enum {string} */
             capacityMode: "SPACIOUS" | "STANDARD" | "EXPANDED" | "COMPRESSED" | "TEMPORARY";
             /** Format: int32 */
             capacityValue: number;
-            unitSpan: number;
-            allowed: boolean;
             memo?: string;
+            placementType: string;
+            potSize?: string;
+            unitSpan: number;
         };
         BedZonePlacementProfileRequest: {
             capacities: components["schemas"]["BedZoneCapacityRequest"][];
@@ -2099,78 +2243,78 @@ export interface components {
             message?: string;
         };
         BedZoneCapacityResponse: {
-            /** Format: int64 */
-            id?: number;
-            placementType?: string;
-            potSize?: string;
+            allowed?: boolean;
             /** @enum {string} */
             capacityMode?: "SPACIOUS" | "STANDARD" | "EXPANDED" | "COMPRESSED" | "TEMPORARY";
-            unitSpan?: number;
             /** Format: int32 */
             capacityValue?: number;
-            allowed?: boolean;
+            /** Format: int64 */
+            id?: number;
             memo?: string;
+            placementType?: string;
+            potSize?: string;
+            unitSpan?: number;
         };
         BedZonePlacementProfileResponse: {
             /** Format: int64 */
             bedZoneId?: number;
             bedZoneName?: string;
+            capacities?: components["schemas"]["BedZoneCapacityResponse"][];
             /** Format: int32 */
             houseNumber?: number;
             /** Format: int32 */
             physicalBedNumber?: number;
             positionUnitCount?: number;
             positionUnitLabel?: string;
-            capacities?: components["schemas"]["BedZoneCapacityResponse"][];
         };
         WorkTypeCreateRequest: {
             name: string;
             /** @enum {string} */
-            template: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "MULTI_CREATE" | "CORRECTION";
+            template: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
         };
         ApiResponseWorkTypeResponse: {
             data?: components["schemas"]["WorkTypeResponse"];
             message?: string;
         };
         WorkTypeResponse: {
+            active?: boolean;
+            code?: string;
+            defaultType?: boolean;
             /** Format: int64 */
             id?: number;
-            code?: string;
             name?: string;
-            /** @enum {string} */
-            template?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "MULTI_CREATE" | "CORRECTION";
-            defaultType?: boolean;
-            systemType?: boolean;
-            active?: boolean;
+            registrationModes?: ("RECORD" | "PLAN")[];
+            settingsEditable?: boolean;
             /** Format: int32 */
             sortOrder?: number;
-            settingsEditable?: boolean;
-            registrationModes?: ("RECORD" | "PLAN")[];
-            /** @enum {string} */
-            workflow?: "GENERIC" | "MOVEMENT" | "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
+            systemType?: boolean;
             /** @enum {string} */
             targetSource?: "ORCHID_GROUP" | "INBOUND_RECORD";
+            /** @enum {string} */
+            template?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
+            /** @enum {string} */
+            workflow?: "GENERIC" | "MOVEMENT" | "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
         };
         WorkOperationCreateRequest: {
-            /** Format: int64 */
-            workTypeId: number;
-            title: string;
-            /** Format: date */
-            plannedStartDate: string;
-            /** Format: date */
-            plannedEndDate?: string;
-            /** @enum {string} */
-            sourceScopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
-            /** Format: int64 */
-            sourceScopeId?: number;
-            sourceDerivedGroupKey?: string;
-            sourceOrchidGroupIds?: number[];
             details?: {
                 [key: string]: unknown;
             };
-            worker?: string;
-            memo?: string;
             excludedOrchidGroupIds?: number[];
+            memo?: string;
+            /** Format: date */
+            plannedEndDate?: string;
+            /** Format: date */
+            plannedStartDate: string;
+            sourceDerivedGroupKey?: string;
+            sourceOrchidGroupIds?: number[];
+            /** Format: int64 */
+            sourceScopeId?: number;
+            /** @enum {string} */
+            sourceScopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
+            title: string;
+            /** Format: int64 */
+            workTypeId: number;
+            worker?: string;
         };
         ApiResponseWorkOperationResponse: {
             data?: components["schemas"]["WorkOperationResponse"];
@@ -2178,148 +2322,163 @@ export interface components {
         };
         WorkOperationProgressResponse: {
             /** Format: int32 */
-            total?: number;
+            canceled?: number;
             /** Format: int32 */
-            pending?: number;
+            completed?: number;
+            /** Format: int32 */
+            failed?: number;
             /** Format: int32 */
             inProgress?: number;
             /** Format: int32 */
             partial?: number;
             /** Format: int32 */
-            completed?: number;
+            pending?: number;
+            /** Format: int32 */
+            progressPercent?: number;
             /** Format: int32 */
             skipped?: number;
             /** Format: int32 */
-            canceled?: number;
-            /** Format: int32 */
-            failed?: number;
-            /** Format: int32 */
-            progressPercent?: number;
+            total?: number;
         };
         WorkOperationResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            workTypeId?: number;
-            workTypeCode?: string;
-            workType?: string;
-            /** @enum {string} */
-            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "MULTI_CREATE" | "CORRECTION";
-            /** @enum {string} */
-            workTypeWorkflow?: "GENERIC" | "MOVEMENT" | "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
-            title?: string;
-            /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
-            /** Format: date */
-            plannedStartDate?: string;
-            /** Format: date */
-            plannedEndDate?: string;
-            /** Format: date-time */
-            actualStartAt?: string;
             /** Format: date-time */
             actualEndAt?: string;
-            /** @enum {string} */
-            sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
-            /** Format: int64 */
-            sourceScopeId?: number;
-            sourceConditionSnapshot?: {
-                [key: string]: unknown;
-            };
             /** Format: date-time */
-            targetSnapshotAt?: string;
+            actualStartAt?: string;
+            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "END_REMAINING" | "CANCEL" | "CORRECT")[];
+            /** Format: int64 */
+            correctionCount?: number;
             details?: {
                 [key: string]: unknown;
             };
-            worker?: string;
-            memo?: string;
-            progress?: components["schemas"]["WorkOperationProgressResponse"];
-            targets?: components["schemas"]["WorkOperationTargetResponse"][];
-            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "CANCEL")[];
-        };
-        WorkOperationTargetResponse: {
             /** Format: int64 */
             id?: number;
-            /** @enum {string} */
-            targetReferenceType?: "ORCHID_GROUP" | "INBOUND_RECORD";
+            memo?: string;
             /** Format: int64 */
-            orchidGroupId?: number;
-            /** Format: int64 */
-            inboundRecordId?: number;
+            parentOperationId?: number;
+            /** Format: date */
+            plannedEndDate?: string;
+            /** Format: date */
+            plannedStartDate?: string;
+            progress?: components["schemas"]["WorkOperationProgressResponse"];
             /** @enum {string} */
-            inclusionSource?: "DIRECT" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_ADDITION" | "INBOUND_RECORD" | "LINEAGE";
-            varietyName?: string;
-            /** Format: int32 */
-            quantitySnapshot?: number;
-            /** Format: int32 */
-            ageYearSnapshot?: number;
-            potSizeCodeSnapshot?: string;
-            potSizeSnapshot?: string;
-            locationSnapshot?: {
+            relationType?: "MOVEMENT_DISCARD";
+            sourceConditionSnapshot?: {
                 [key: string]: unknown;
             };
-            /** Format: int32 */
-            processedQuantity?: number;
-            /** Format: int32 */
-            remainingQuantity?: number;
+            /** Format: int64 */
+            sourceScopeId?: number;
             /** @enum {string} */
-            executionStatus?: "PENDING" | "IN_PROGRESS" | "PARTIALLY_COMPLETED" | "COMPLETED" | "SKIPPED" | "CANCELED" | "FAILED";
+            sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
+            /** @enum {string} */
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
             /** Format: date-time */
-            startedAt?: string;
+            targetSnapshotAt?: string;
+            targets?: components["schemas"]["WorkOperationTargetResponse"][];
+            title?: string;
+            /** Format: int64 */
+            voidMutationId?: number;
+            voidReason?: string;
+            /** Format: date-time */
+            voidedAt?: string;
+            workType?: string;
+            workTypeCode?: string;
+            /** Format: int64 */
+            workTypeId?: number;
+            /** @enum {string} */
+            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
+            /** @enum {string} */
+            workTypeWorkflow?: "GENERIC" | "MOVEMENT" | "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
+            worker?: string;
+        };
+        WorkOperationTargetResponse: {
+            /** Format: int32 */
+            ageYearSnapshot?: number;
+            availableActions?: ("START" | "COMPLETE" | "EXECUTE" | "SKIP")[];
             /** Format: date-time */
             completedAt?: string;
             /** Format: date-time */
             effectAppliedAt?: string;
-            worker?: string;
+            /** @enum {string} */
+            executionStatus?: "PENDING" | "IN_PROGRESS" | "PARTIALLY_COMPLETED" | "COMPLETED" | "SKIPPED" | "CANCELED" | "FAILED";
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            inboundRecordId?: number;
+            /** @enum {string} */
+            inclusionSource?: "DIRECT" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_ADDITION" | "INBOUND_RECORD" | "LINEAGE";
+            locationSnapshot?: {
+                [key: string]: unknown;
+            };
+            /** Format: int64 */
+            orchidGroupId?: number;
+            potSizeCodeSnapshot?: string;
+            potSizeSnapshot?: string;
+            /** Format: int32 */
+            processedQuantity?: number;
+            /** Format: int32 */
+            quantitySnapshot?: number;
+            /** Format: int32 */
+            remainingQuantity?: number;
             resultDetails?: {
                 [key: string]: unknown;
             };
             resultOrchidGroupIds?: number[];
-            availableActions?: ("START" | "COMPLETE" | "EXECUTE" | "SKIP")[];
+            /** Format: date-time */
+            startedAt?: string;
+            /** @enum {string} */
+            targetReferenceType?: "ORCHID_GROUP" | "INBOUND_RECORD";
+            varietyName?: string;
+            worker?: string;
+        };
+        WorkOperationCancellationRequest: {
+            idempotencyKey: string;
+            reason: string;
         };
         WorkTargetExecutionRequest: {
-            worker?: string;
+            /** Format: date */
+            completedDate?: string;
             resultDetails?: {
                 [key: string]: unknown;
             };
-            /** Format: date */
-            completedDate?: string;
+            worker?: string;
         };
         StructureChangeExecutionRequest: {
-            idempotencyKey: string;
             /** Format: date */
             completedDate: string;
-            worker?: string;
+            idempotencyKey: string;
             memo?: string;
-            sources: components["schemas"]["StructureChangeSourceRequest"][];
             results: components["schemas"]["StructureChangeResultRequest"][];
+            sources: components["schemas"]["StructureChangeSourceRequest"][];
+            worker?: string;
         };
         StructureChangeResultRequest: {
-            /** Format: int64 */
-            bedZoneId: number;
-            /** Format: int32 */
-            quantity: number;
-            /** Format: int64 */
-            attributeSourceOrchidGroupId?: number;
-            potSize?: string;
             /** Format: int32 */
             ageYear?: number;
-            /** @enum {string} */
-            purpose: "NORMAL" | "DIVIDE_CANDIDATE" | "HELD";
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
-            splitPlacementAllowed?: boolean;
-            startPosition: number;
+            /** Format: int64 */
+            attributeSourceOrchidGroupId?: number;
+            /** Format: int64 */
+            bedZoneId: number;
             endPosition: number;
             memo?: string;
+            placementType?: string;
+            potSize?: string;
+            /** @enum {string} */
+            purpose: "NORMAL" | "DIVIDE_CANDIDATE" | "HELD";
+            /** Format: int32 */
+            quantity: number;
+            splitPlacementAllowed?: boolean;
+            startPosition: number;
+            /** Format: int32 */
+            trayCount?: number;
         };
         StructureChangeSourceRequest: {
-            /** Format: int64 */
-            sourceOrchidGroupId: number;
             /** Format: int32 */
             inputQuantity: number;
-            releasedStartPosition?: number;
             releasedEndPosition?: number;
+            releasedStartPosition?: number;
+            /** Format: int64 */
+            sourceOrchidGroupId: number;
         };
         OrchidGroupCorrectionRequest: {
             /** Format: int64 */
@@ -2329,88 +2488,98 @@ export interface components {
             status: string;
         };
         WorkOperationCorrectionCreateRequest: {
+            cancelResultCreation?: boolean;
             idempotencyKey: string;
-            title: string;
+            memo?: string;
+            orchidGroupAdjustments: components["schemas"]["OrchidGroupCorrectionRequest"][];
+            quantityCorrections?: components["schemas"]["WorkQuantityCorrectionInput"][];
+            reason: string;
             /** Format: date */
             workDate: string;
             worker?: string;
-            memo?: string;
-            reason: string;
-            orchidGroupAdjustments: components["schemas"]["OrchidGroupCorrectionRequest"][];
+        };
+        WorkQuantityCorrectionInput: {
+            /** Format: int64 */
+            executionId: number;
+            /** Format: int32 */
+            increaseQuantity: number;
+            /** Format: int32 */
+            lossQuantity: number;
+            sourceInputQuantities?: {
+                [key: string]: number;
+            };
         };
         ApiResponseWorkOperationCorrectionsResponse: {
             data?: components["schemas"]["WorkOperationCorrectionsResponse"];
             message?: string;
         };
-        WorkOperationCorrectionItemResponse: {
+        WorkCorrectionAdjustmentResponse: {
+            /** Format: int32 */
+            afterQuantity?: number;
+            afterStatus?: string;
+            /** Format: int32 */
+            beforeQuantity?: number;
+            beforeStatus?: string;
             /** Format: int64 */
-            id?: number;
-            reason?: string;
+            orchidGroupId?: number;
+        };
+        WorkCorrectionDetailResponse: {
+            adjustments?: components["schemas"]["WorkCorrectionAdjustmentResponse"][];
+            /** Format: date */
+            afterWorkDate?: string;
+            /** Format: date */
+            beforeWorkDate?: string;
             /** Format: date-time */
             createdAt?: string;
-            correctionOperation?: components["schemas"]["WorkOperationResponse"];
-            effectDetails?: {
-                [key: string]: unknown;
-            };
+            /** Format: int64 */
+            id?: number;
+            memo?: string;
+            quantityBalances?: components["schemas"]["WorkQuantityBalanceChange"][];
+            reason?: string;
+            worker?: string;
         };
         WorkOperationCorrectionsResponse: {
+            corrections?: components["schemas"]["WorkCorrectionDetailResponse"][];
             originalOperation?: components["schemas"]["WorkOperationResponse"];
-            corrections?: components["schemas"]["WorkOperationCorrectionItemResponse"][];
+            quantityBalances?: components["schemas"]["WorkQuantityBalance"][];
+            quantityCorrectionEnabled?: boolean;
+        };
+        WorkQuantityBalance: {
+            /** Format: int64 */
+            executionId?: number;
+            increaseAllowed?: boolean;
+            /** Format: int32 */
+            increaseQuantity?: number;
+            inputEditable?: boolean;
+            /** Format: int32 */
+            inputQuantity?: number;
+            lossEditable?: boolean;
+            /** Format: int32 */
+            lossQuantity?: number;
+            resultQuantities?: {
+                [key: string]: number;
+            };
+            /** Format: int32 */
+            resultQuantity?: number;
+            sourceInputQuantities?: {
+                [key: string]: number;
+            };
+        };
+        WorkQuantityBalanceChange: {
+            after?: components["schemas"]["WorkQuantityBalance"];
+            before?: components["schemas"]["WorkQuantityBalance"];
         };
         WorkOperationCompleteRequest: {
             /** Format: date */
             completedDate?: string;
         };
-        ApiResponseMultiCreateWorkOperationResponse: {
-            data?: components["schemas"]["MultiCreateWorkOperationResponse"];
-            message?: string;
-        };
-        MultiCreateWorkOperationResponse: {
-            operation?: components["schemas"]["WorkOperationResponse"];
-            createdOrchidGroups?: components["schemas"]["OrchidGroupResponse"][];
-        };
-        OrchidGroupResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            bedZoneId?: number;
-            /** Format: int64 */
-            varietyId?: number;
-            varietyColor?: string;
-            genus?: string;
-            varietyName?: string;
-            /** Format: int32 */
-            quantity?: number;
-            potSize?: string;
-            /** @enum {string} */
-            potSizeCode?: "UNSPECIFIED" | "UNMAPPED" | "POT_2" | "POT_2_5" | "POT_3" | "POT_3_5" | "POT_4" | "POT_4_5" | "POT_5" | "POT_6" | "HANGING" | "ETC";
-            /** Format: int32 */
-            ageYear?: number;
-            status?: string;
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
-            splitPlacementAllowed?: boolean;
-            startPosition?: number;
-            endPosition?: number;
-            /** Format: int32 */
-            sortOrder?: number;
-            memo?: string;
-            /** Format: int64 */
-            houseId?: number;
-            /** Format: int32 */
-            houseNumber?: number;
-            /** Format: int32 */
-            physicalBedNumber?: number;
-            bedZoneName?: string;
-        };
         WorkTargetPreviewRequest: {
-            /** @enum {string} */
-            sourceScopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
-            /** Format: int64 */
-            sourceScopeId?: number;
             sourceDerivedGroupKey?: string;
             sourceOrchidGroupIds?: number[];
+            /** Format: int64 */
+            sourceScopeId?: number;
+            /** @enum {string} */
+            sourceScopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
         };
         ApiResponseWorkTargetPreviewResponse: {
             data?: components["schemas"]["WorkTargetPreviewResponse"];
@@ -2419,13 +2588,13 @@ export interface components {
         WorkTargetPreviewResponse: {
             /** Format: int32 */
             orchidGroupCount?: number;
+            targets?: components["schemas"]["WorkOperationTargetResponse"][];
             /** Format: int32 */
             totalQuantity?: number;
-            targets?: components["schemas"]["WorkOperationTargetResponse"][];
         };
         StructureChangeRecordCreateRequest: {
-            operation: components["schemas"]["WorkOperationCreateRequest"];
             execution: components["schemas"]["StructureChangeExecutionRequest"];
+            operation: components["schemas"]["WorkOperationCreateRequest"];
         };
         StructureChangeRecordBatchCreateRequest: {
             records: components["schemas"]["StructureChangeRecordCreateRequest"][];
@@ -2435,257 +2604,346 @@ export interface components {
             message?: string;
         };
         RepotResultOrchidGroupRequest: {
-            /** Format: int64 */
-            bedZoneId: number;
-            /** Format: int32 */
-            quantity: number;
-            potSize?: string;
             /** Format: int32 */
             ageYear?: number;
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
-            splitPlacementAllowed?: boolean;
-            startPosition: number;
+            /** Format: int64 */
+            bedZoneId: number;
             endPosition: number;
             memo?: string;
+            placementType?: string;
+            potSize?: string;
+            /** Format: int32 */
+            quantity: number;
+            splitPlacementAllowed?: boolean;
+            startPosition: number;
+            /** Format: int32 */
+            trayCount?: number;
         };
         RepotWorkOperationRequest: {
             idempotencyKey: string;
+            inheritCollectionIds?: number[];
+            /** Format: int32 */
+            inputQuantity: number;
+            memo?: string;
+            results: components["schemas"]["RepotResultOrchidGroupRequest"][];
+            /** Format: int64 */
+            sourceOrchidGroupId: number;
             title: string;
             /** Format: date */
             workDate: string;
             worker?: string;
-            memo?: string;
-            /** Format: int64 */
-            sourceOrchidGroupId: number;
-            /** Format: int32 */
-            inputQuantity: number;
-            results: components["schemas"]["RepotResultOrchidGroupRequest"][];
-            inheritCollectionIds?: number[];
         };
         ApiResponseRepotWorkOperationResponse: {
             data?: components["schemas"]["RepotWorkOperationResponse"];
             message?: string;
         };
+        OrchidGroupResponse: {
+            /** Format: int32 */
+            ageYear?: number;
+            /** Format: int64 */
+            bedZoneId?: number;
+            bedZoneName?: string;
+            endPosition?: number;
+            genus?: string;
+            /** Format: int64 */
+            houseId?: number;
+            /** Format: int32 */
+            houseNumber?: number;
+            /** Format: int64 */
+            id?: number;
+            memo?: string;
+            /** Format: int32 */
+            physicalBedNumber?: number;
+            placementType?: string;
+            potSize?: string;
+            /** @enum {string} */
+            potSizeCode?: "UNSPECIFIED" | "UNMAPPED" | "POT_2" | "POT_2_5" | "POT_3" | "POT_3_5" | "POT_4" | "POT_4_5" | "POT_5" | "POT_6" | "HANGING" | "ETC";
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: int32 */
+            sortOrder?: number;
+            splitPlacementAllowed?: boolean;
+            startPosition?: number;
+            status?: string;
+            /** Format: int32 */
+            trayCount?: number;
+            varietyColor?: string;
+            /** Format: int64 */
+            varietyId?: number;
+            varietyName?: string;
+        };
         RepotWorkOperationResponse: {
-            operation?: components["schemas"]["WorkOperationResponse"];
-            sourceOrchidGroup?: components["schemas"]["OrchidGroupResponse"];
-            resultOrchidGroups?: components["schemas"]["OrchidGroupResponse"][];
+            /** Format: int32 */
+            increaseQuantity?: number;
             /** Format: int32 */
             inputQuantity?: number;
             /** Format: int32 */
             lossQuantity?: number;
-            /** Format: int32 */
-            increaseQuantity?: number;
-        };
-        MultiCreateOrchidGroupRowRequest: {
-            orchidGroup: components["schemas"]["OrchidGroupCreateRequest"];
-            collectionIds?: number[];
-        };
-        MultiCreateWorkOperationRequest: {
-            idempotencyKey: string;
-            title: string;
-            /** Format: date */
-            workDate: string;
-            worker?: string;
-            memo?: string;
-            rows: components["schemas"]["MultiCreateOrchidGroupRowRequest"][];
-        };
-        OrchidGroupCreateRequest: {
-            /** Format: int64 */
-            bedZoneId: number;
-            /** Format: int64 */
-            varietyId: number;
-            /** Format: int32 */
-            quantity: number;
-            potSize?: string;
-            /** Format: int32 */
-            ageYear?: number;
-            status: string;
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
-            splitPlacementAllowed?: boolean;
-            startPosition?: number;
-            endPosition?: number;
-            memo?: string;
+            operation?: components["schemas"]["WorkOperationResponse"];
+            resultOrchidGroups?: components["schemas"]["OrchidGroupResponse"][];
+            sourceOrchidGroup?: components["schemas"]["OrchidGroupResponse"];
         };
         InboundPottingExecutionRequest: {
             idempotencyKey: string;
             /** Format: int64 */
             inboundRecordId: number;
+            memo?: string;
             /** Format: date */
             pottingDate: string;
             results: components["schemas"]["InboundPottingResultRequest"][];
-            growthStage?: string;
             worker?: string;
-            memo?: string;
         };
         InboundPottingPlanCreateRequest: {
-            title: string;
-            /** Format: date */
-            plannedStartDate: string;
+            inboundRecordIds: number[];
+            memo?: string;
             /** Format: date */
             plannedEndDate?: string;
-            inboundRecordIds: number[];
+            /** Format: date */
+            plannedStartDate: string;
+            title: string;
             worker?: string;
-            memo?: string;
         };
         InboundPottingRecordCreateRequest: {
-            plan: components["schemas"]["InboundPottingPlanCreateRequest"];
             executions: components["schemas"]["InboundPottingExecutionRequest"][];
+            plan: components["schemas"]["InboundPottingPlanCreateRequest"];
         };
         InboundPottingResultRequest: {
-            /** Format: int64 */
-            bedZoneId: number;
-            /** Format: int32 */
-            quantity: number;
-            potSize?: string;
             /** Format: int32 */
             ageYear?: number;
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
-            splitPlacementAllowed?: boolean;
-            startPosition: number;
+            /** Format: int64 */
+            bedZoneId: number;
             endPosition: number;
             memo?: string;
+            placementType?: string;
+            potSize?: string;
+            /** Format: int32 */
+            quantity: number;
+            splitPlacementAllowed?: boolean;
+            startPosition: number;
+            /** Format: int32 */
+            trayCount?: number;
         };
         InboundPottingPlanBatchCreateRequest: {
             plan: components["schemas"]["InboundPottingPlanCreateRequest"];
         };
         DiscardRecordCreateRequest: {
-            operation: components["schemas"]["WorkOperationCreateRequest"];
             /** Format: date */
             completedDate: string;
-            worker?: string;
+            operation: components["schemas"]["WorkOperationCreateRequest"];
             results: components["schemas"]["DiscardRecordResultRequest"][];
+            worker?: string;
         };
         DiscardRecordResultRequest: {
-            /** Format: int64 */
-            orchidGroupId: number;
             /** Format: int32 */
             discardQuantity: number;
+            /** Format: int64 */
+            orchidGroupId: number;
             reason?: string;
+        };
+        WorkOperationBatchCancellationRequest: {
+            creationCancellationOrchidGroupIds?: number[];
+            idempotencyKey: string;
+            reason: string;
+            workOperationIds: number[];
+        };
+        ApiResponseWorkOperationBatchCancellationResponse: {
+            data?: components["schemas"]["WorkOperationBatchCancellationResponse"];
+            message?: string;
+        };
+        WorkOperationBatchCancellationResponse: {
+            canceledWorkOperationIds?: number[];
+            /** Format: int64 */
+            compensationMutationId?: number;
+            creationCanceledOrchidGroupIds?: number[];
         };
         WorkOperationBatchCreateRequest: {
             operation: components["schemas"]["WorkOperationCreateRequest"];
         };
         VarietyCreateRequest: {
-            genus: string;
-            name: string;
             alias?: string;
-            defaultPotSize?: string;
             color?: string;
-            saleEnabled?: boolean;
+            defaultPotSize?: string;
             description?: string;
+            genus: string;
             memo?: string;
+            name: string;
+            saleEnabled?: boolean;
         };
         ApiResponseVarietyResponse: {
             data?: components["schemas"]["VarietyResponse"];
             message?: string;
         };
         VarietyResponse: {
-            /** Format: int64 */
-            id?: number;
-            code?: string;
-            genus?: string;
-            name?: string;
-            alias?: string;
-            defaultPotSize?: string;
-            color?: string;
-            saleEnabled?: boolean;
             active?: boolean;
-            description?: string;
-            memo?: string;
+            alias?: string;
+            code?: string;
+            color?: string;
             /** Format: int64 */
             connectedGroupCount?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            defaultPotSize?: string;
+            description?: string;
+            genus?: string;
             /** Format: int64 */
-            totalQuantity?: number;
-            /** Format: int64 */
-            saleableQuantity?: number;
+            id?: number;
+            memo?: string;
+            name?: string;
             /** Format: date */
             recentInboundDate?: string;
             /** Format: date */
             recentWorkDate?: string;
-            /** Format: date-time */
-            createdAt?: string;
+            saleEnabled?: boolean;
+            /** Format: int64 */
+            saleableQuantity?: number;
+            /** Format: int64 */
+            totalQuantity?: number;
             /** Format: date-time */
             updatedAt?: string;
         };
         ManualPaymentRequest: {
             /** Format: int64 */
             amount: number;
+            depositorName?: string;
+            idempotencyKey: string;
+            memo?: string;
             /** Format: date */
             paymentDate: string;
-            idempotencyKey: string;
             paymentMethod?: string;
-            depositorName?: string;
             worker?: string;
+        };
+        OrchidGroupCreateRequest: {
+            /** Format: int32 */
+            ageYear?: number;
+            /** Format: int64 */
+            bedZoneId: number;
+            endPosition?: number;
             memo?: string;
+            placementType?: string;
+            potSize?: string;
+            /** Format: int32 */
+            quantity: number;
+            splitPlacementAllowed?: boolean;
+            startPosition?: number;
+            status: string;
+            /** Format: int32 */
+            trayCount?: number;
+            /** Format: int64 */
+            varietyId: number;
         };
         ApiResponseOrchidGroupResponse: {
             data?: components["schemas"]["OrchidGroupResponse"];
             message?: string;
         };
+        OrchidStockCountRequest: {
+            /** Format: int32 */
+            actualQuantity: number;
+            /** Format: date */
+            countedDate: string;
+            /** Format: int64 */
+            expectedRevision: number;
+            idempotencyKey: string;
+            memo?: string;
+            reason: string;
+            worker?: string;
+        };
+        ApiResponseOrchidStockCountResponse: {
+            data?: components["schemas"]["OrchidStockCountResponse"];
+            message?: string;
+        };
+        OrchidStockCountResponse: {
+            /** Format: int32 */
+            actualQuantity?: number;
+            /** Format: int32 */
+            beforeQuantity?: number;
+            /** Format: date */
+            countedDate?: string;
+            /** Format: int32 */
+            difference?: number;
+            idempotencyKey?: string;
+            memo?: string;
+            /** Format: int64 */
+            mutationId?: number;
+            /** Format: int64 */
+            orchidGroupId?: number;
+            reason?: string;
+            /** Format: date-time */
+            recordedAt?: string;
+            worker?: string;
+        };
+        OrchidGroupReconciliationRequest: {
+            /** Format: int64 */
+            actualBedZoneId: number;
+            actualEndPosition: number;
+            /** Format: int32 */
+            actualQuantity: number;
+            actualStartPosition: number;
+            actualStatus: string;
+            idempotencyKey: string;
+            memo?: string;
+            reason: string;
+            title: string;
+            /** Format: date */
+            workDate: string;
+            worker?: string;
+        };
         OrchidGroupCollectionCreateRequest: {
-            name: string;
-            description?: string;
-            purpose?: string;
             createdBy?: string;
+            description?: string;
+            name: string;
+            purpose?: string;
         };
         ApiResponseOrchidGroupCollectionResponse: {
             data?: components["schemas"]["OrchidGroupCollectionResponse"];
             message?: string;
         };
         OrchidGroupCollectionMemberResponse: {
+            /** Format: int32 */
+            ageYear?: number;
+            bedZoneName?: string;
+            /** Format: int32 */
+            houseNumber?: number;
+            /** Format: date-time */
+            joinedAt?: string;
             /** Format: int64 */
             membershipId?: number;
             /** Format: int64 */
             orchidGroupId?: number;
-            varietyName?: string;
+            /** Format: int32 */
+            physicalBedNumber?: number;
+            potSize?: string;
             /** Format: int32 */
             quantity?: number;
             status?: string;
-            potSize?: string;
-            /** Format: int32 */
-            ageYear?: number;
-            /** Format: int32 */
-            houseNumber?: number;
-            /** Format: int32 */
-            physicalBedNumber?: number;
-            bedZoneName?: string;
-            /** Format: date-time */
-            joinedAt?: string;
+            varietyName?: string;
         };
         OrchidGroupCollectionResponse: {
+            /** Format: date-time */
+            createdAt?: string;
+            createdBy?: string;
+            description?: string;
             /** Format: int64 */
             id?: number;
+            members?: components["schemas"]["OrchidGroupCollectionMemberResponse"][];
             name?: string;
-            description?: string;
+            /** Format: int32 */
+            orchidGroupCount?: number;
             purpose?: string;
             /** @enum {string} */
             status?: "ACTIVE" | "ARCHIVED";
             /** Format: int32 */
-            orchidGroupCount?: number;
-            /** Format: int32 */
             totalQuantity?: number;
-            createdBy?: string;
-            /** Format: date-time */
-            createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
-            members?: components["schemas"]["OrchidGroupCollectionMemberResponse"][];
         };
         OrchidGroupCollectionMemberAddRequest: {
-            orchidGroupIds: number[];
             createdBy?: string;
+            orchidGroupIds: number[];
         };
         MaterialCreateRequest: {
             category: string;
-            name: string;
             manufacturer?: string;
+            name: string;
             specification?: string;
             stockQuantity?: string;
             storageLocation?: string;
@@ -2696,143 +2954,149 @@ export interface components {
             message?: string;
         };
         MaterialResponse: {
+            active?: boolean;
+            category?: string;
+            code?: string;
+            /** Format: date-time */
+            createdAt?: string;
             /** Format: int64 */
             id?: number;
-            code?: string;
-            category?: string;
-            name?: string;
             manufacturer?: string;
+            name?: string;
             specification?: string;
             stockQuantity?: string;
             storageLocation?: string;
-            usage?: string;
-            active?: boolean;
-            /** Format: date-time */
-            createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+            usage?: string;
         };
         InboundNewVarietyRequest: {
-            genus: string;
-            name: string;
             defaultPotSize?: string;
+            genus: string;
             memo?: string;
+            name: string;
+        };
+        InboundPlacementInput: {
+            /** Format: int32 */
+            ageYear?: number;
+            /** Format: int64 */
+            bedZoneId: number;
+            endPosition?: number;
+            placementType?: string;
+            potSize?: string;
+            /** Format: int32 */
+            quantity: number;
+            startPosition?: number;
+            /** Format: int32 */
+            trayCount?: number;
         };
         InboundRecordCreateRequest: {
+            /** Format: int32 */
+            estimatedQuantity?: number;
             /** Format: date */
             inboundDate: string;
             /** @enum {string} */
             inboundType: "FLASK_SEEDLING" | "POTTED_SEEDLING" | "PRODUCT_POT" | "SAMPLE" | "ETC";
-            /** Format: int64 */
-            varietyId?: number;
+            memo?: string;
             newVariety?: components["schemas"]["InboundNewVarietyRequest"];
-            /** Format: int32 */
-            bottleCount?: number;
-            /** Format: int32 */
-            estimatedQuantity?: number;
-            /** Format: int32 */
-            actualQuantity?: number;
-            tempLocation?: string;
+            placement?: components["schemas"]["InboundPlacementInput"];
             /** Format: date */
             pottingDueDate?: string;
-            potSize?: string;
-            /** Format: int32 */
-            ageYear?: number;
-            growthStage?: string;
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
+            tempLocation?: string;
             /** Format: int64 */
-            bedZoneId?: number;
-            startPosition?: number;
-            endPosition?: number;
-            /** @enum {string} */
-            status?: "TEMP_STORED" | "POTTING_PENDING" | "POTTING_IN_PROGRESS" | "POTTED" | "PLACED" | "CANCELED";
+            varietyId?: number;
             worker?: string;
-            memo?: string;
         };
         ApiResponseInboundRecordResponse: {
             data?: components["schemas"]["InboundRecordResponse"];
             message?: string;
         };
+        InboundOrchidGroupResponse: {
+            /** Format: int32 */
+            ageYear?: number;
+            /** Format: int64 */
+            bedZoneId?: number;
+            endPosition?: number;
+            /** Format: int64 */
+            id?: number;
+            location?: string;
+            placementType?: string;
+            potSize?: string;
+            /** Format: int32 */
+            quantity?: number;
+            startPosition?: number;
+            status?: string;
+            /** Format: int32 */
+            trayCount?: number;
+        };
         InboundRecordResponse: {
+            availableActions?: ("CANCEL" | "VOID_POTTING")[];
+            /** Format: date-time */
+            createdAt?: string;
+            createdOrchidGroups?: components["schemas"]["InboundOrchidGroupResponse"][];
+            editable?: boolean;
+            /** Format: int32 */
+            estimatedQuantity?: number;
+            genus?: string;
             /** Format: int64 */
             id?: number;
             /** Format: date */
             inboundDate?: string;
             inboundType?: string;
-            /** Format: int64 */
-            varietyId?: number;
-            genus?: string;
-            varietyName?: string;
-            status?: string;
-            /** Format: int32 */
-            bottleCount?: number;
-            /** Format: int32 */
-            estimatedQuantity?: number;
-            /** Format: int32 */
-            actualQuantity?: number;
-            tempLocation?: string;
-            /** Format: date */
-            pottingDueDate?: string;
+            memo?: string;
             /** Format: date */
             pottingDate?: string;
-            potSize?: string;
-            /** Format: int32 */
-            ageYear?: number;
-            growthStage?: string;
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
-            /** Format: int64 */
-            bedZoneId?: number;
-            currentLocation?: string;
-            /** Format: int64 */
-            createdOrchidGroupId?: number;
-            createdOrchidGroupIds?: number[];
-            worker?: string;
-            memo?: string;
-            /** Format: date-time */
-            createdAt?: string;
+            /** Format: date */
+            pottingDueDate?: string;
+            status?: string;
+            tempLocation?: string;
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int64 */
+            varietyId?: number;
+            varietyName?: string;
+            worker?: string;
         };
         InboundRecordPottingRequest: {
+            memo?: string;
             /** Format: date */
             pottingDate: string;
             results: components["schemas"]["RepotResultOrchidGroupRequest"][];
-            growthStage?: string;
             worker?: string;
-            memo?: string;
+        };
+        InboundRecordPottingVoidRequest: {
+            idempotencyKey: string;
+            reason: string;
         };
         InboundRecordCancelRequest: {
+            idempotencyKey?: string;
             memo?: string;
         };
         BusinessPartnerCreateRequest: {
-            name: string;
-            /** @enum {string} */
-            partnerType: "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
-            ownerName?: string;
-            phone?: string;
             address?: string;
             memo?: string;
+            name: string;
+            ownerName?: string;
+            /** @enum {string} */
+            partnerType: "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
+            phone?: string;
         };
         ApiResponseVoid: {
             data?: unknown;
             message?: string;
         };
         LoginRequest: {
-            username: string;
             password: string;
+            username: string;
         };
         ApiResponseAuthenticatedUserResponse: {
             data?: components["schemas"]["AuthenticatedUserResponse"];
             message?: string;
         };
         AuthenticatedUserResponse: {
-            username?: string;
             /** @enum {string} */
             role?: "ADMIN" | "WORKER" | "DEMO";
+            username?: string;
         };
         ApiResponseAuctionSettlementResponse: {
             data?: components["schemas"]["AuctionSettlementResponse"];
@@ -2840,73 +3104,73 @@ export interface components {
         };
         AuctionSettlementLineResponse: {
             /** Format: int64 */
-            id?: number;
+            amount?: number;
             /** Format: int64 */
             auctionResultLineId?: number;
             /** Format: int64 */
             auctionShipmentLotId?: number;
-            /** Format: date */
-            shipmentDate?: string;
-            varietyName?: string;
-            shipmentGrade?: string;
-            /** Format: int32 */
-            quantity?: number;
-            /** Format: int32 */
-            unitPrice?: number;
-            /** Format: int64 */
-            amount?: number;
-            /** @enum {string} */
-            status?: "UNPAID" | "PAID" | "PARTIALLY_PAID" | "EXCLUDED" | "REVIEW_REQUIRED";
-        };
-        AuctionSettlementResponse: {
             /** Format: int64 */
             id?: number;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: date */
+            shipmentDate?: string;
+            shipmentGrade?: string;
+            /** @enum {string} */
+            status?: "UNPAID" | "PAID" | "PARTIALLY_PAID" | "EXCLUDED" | "REVIEW_REQUIRED";
+            /** Format: int32 */
+            unitPrice?: number;
+            varietyName?: string;
+        };
+        AuctionSettlementResponse: {
+            /** Format: date */
+            auctionDate?: string;
             /** Format: int64 */
             auctionHouseId?: number;
             auctionHouseName?: string;
-            /** Format: date */
-            auctionDate?: string;
             /** Format: date-time */
-            resultReceivedAt?: string;
-            /** Format: date */
-            expectedPaymentDate?: string;
-            /** Format: int64 */
-            grossAmount?: number;
-            /** Format: int64 */
-            feeAmount?: number;
+            confirmedAt?: string;
+            confirmedBy?: string;
             /** Format: int64 */
             deductionAmount?: number;
             /** Format: int64 */
             expectedDepositAmount?: number;
+            /** Format: date */
+            expectedPaymentDate?: string;
+            /** Format: int64 */
+            feeAmount?: number;
+            /** Format: int64 */
+            grossAmount?: number;
+            /** Format: int64 */
+            id?: number;
+            lines?: components["schemas"]["AuctionSettlementLineResponse"][];
+            memo?: string;
             /** Format: int64 */
             paidAmount?: number;
             /** Format: int64 */
             remainingAmount?: number;
+            /** Format: date-time */
+            resultReceivedAt?: string;
             /** @enum {string} */
             status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-            memo?: string;
-            /** Format: date-time */
-            confirmedAt?: string;
-            confirmedBy?: string;
-            lines?: components["schemas"]["AuctionSettlementLineResponse"][];
         };
         AuctionLotResultLineRequest: {
             auctionGrade?: string;
+            /** @enum {string} */
+            inspectionStatus?: "NORMAL" | "AUTO_MATCHED" | "CORRECTED_MATCH" | "MANUAL_REVIEW" | "MATCH_FAILED" | "QUANTITY_MISMATCH" | "RETURN_INFERRED" | "SOURCE_ERROR";
+            note?: string;
             /** Format: int32 */
             quantity: number;
             /** Format: int32 */
             unitPrice: number;
-            note?: string;
-            /** @enum {string} */
-            inspectionStatus?: "NORMAL" | "AUTO_MATCHED" | "CORRECTED_MATCH" | "MANUAL_REVIEW" | "MATCH_FAILED" | "QUANTITY_MISMATCH" | "RETURN_INFERRED" | "SOURCE_ERROR";
         };
         AuctionLotResultRequest: {
-            /** Format: date */
-            auctionDate: string;
             /** Format: int32 */
             attemptNo?: number;
             /** @enum {string} */
             attemptStatus: "SOLD" | "FAILED" | "PARTIALLY_SOLD" | "RETURN_INFERRED";
+            /** Format: date */
+            auctionDate: string;
             failedReason?: string;
             memo?: string;
             resultLines?: components["schemas"]["AuctionLotResultLineRequest"][];
@@ -2916,107 +3180,107 @@ export interface components {
             message?: string;
         };
         AuctionAttemptResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: date */
-            auctionDate?: string;
             /** Format: int32 */
             attemptNo?: number;
             /** @enum {string} */
             attemptStatus?: "SOLD" | "FAILED" | "PARTIALLY_SOLD" | "RETURN_INFERRED";
+            /** Format: date */
+            auctionDate?: string;
             failedReason?: string;
+            /** Format: int64 */
+            id?: number;
             memo?: string;
             resultLines?: components["schemas"]["AuctionResultLineResponse"][];
         };
         AuctionLotResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: date */
-            shipmentDate?: string;
+            attempts?: components["schemas"]["AuctionAttemptResponse"][];
             auctionMarket?: string;
-            itemName?: string;
-            varietyName?: string;
-            shipmentGrade?: string;
             /** Format: int32 */
             boxes?: number;
+            /** @enum {string} */
+            currentStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
             /** Format: int32 */
-            shippedQuantity?: number;
-            /** Format: int32 */
-            soldQuantity?: number;
-            /** Format: int32 */
-            waitingQuantity?: number;
-            /** Format: int32 */
-            returnedQuantity?: number;
+            failedCount?: number;
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            inspectionStatus?: "NORMAL" | "AUTO_MATCHED" | "CORRECTED_MATCH" | "MANUAL_REVIEW" | "MATCH_FAILED" | "QUANTITY_MISMATCH" | "RETURN_INFERRED" | "SOURCE_ERROR";
+            itemName?: string;
+            /** Format: date */
+            latestAuctionDate?: string;
+            memo?: string;
             /** Format: int32 */
             returnConfirmableQuantity?: number;
             /** Format: date */
             returnConfirmedDate?: string;
-            /** @enum {string} */
-            currentStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-            /** Format: date */
-            latestAuctionDate?: string;
             /** Format: int32 */
-            failedCount?: number;
+            returnedQuantity?: number;
+            /** Format: date */
+            shipmentDate?: string;
+            shipmentGrade?: string;
+            /** Format: int32 */
+            shippedQuantity?: number;
+            /** Format: int32 */
+            soldQuantity?: number;
+            statusHistory?: components["schemas"]["AuctionStatusHistoryResponse"][];
             /** Format: int32 */
             totalAmount?: number;
-            /** @enum {string} */
-            inspectionStatus?: "NORMAL" | "AUTO_MATCHED" | "CORRECTED_MATCH" | "MANUAL_REVIEW" | "MATCH_FAILED" | "QUANTITY_MISMATCH" | "RETURN_INFERRED" | "SOURCE_ERROR";
-            memo?: string;
-            attempts?: components["schemas"]["AuctionAttemptResponse"][];
-            statusHistory?: components["schemas"]["AuctionStatusHistoryResponse"][];
+            varietyName?: string;
+            /** Format: int32 */
+            waitingQuantity?: number;
         };
         AuctionResultLineResponse: {
-            /** Format: int64 */
-            id?: number;
+            /** Format: int32 */
+            amount?: number;
             /** Format: date */
             auctionDate?: string;
             auctionGrade?: string;
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            inspectionStatus?: "NORMAL" | "AUTO_MATCHED" | "CORRECTED_MATCH" | "MANUAL_REVIEW" | "MATCH_FAILED" | "QUANTITY_MISMATCH" | "RETURN_INFERRED" | "SOURCE_ERROR";
+            note?: string;
             /** Format: int32 */
             quantity?: number;
             /** Format: int32 */
             unitPrice?: number;
-            /** Format: int32 */
-            amount?: number;
-            note?: string;
-            /** @enum {string} */
-            inspectionStatus?: "NORMAL" | "AUTO_MATCHED" | "CORRECTED_MATCH" | "MANUAL_REVIEW" | "MATCH_FAILED" | "QUANTITY_MISMATCH" | "RETURN_INFERRED" | "SOURCE_ERROR";
         };
         AuctionStatusHistoryResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** @enum {string} */
-            previousStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-            /** @enum {string} */
-            newStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
             /** Format: date-time */
             changedAt?: string;
+            /** Format: int64 */
+            id?: number;
+            memo?: string;
+            /** @enum {string} */
+            newStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            /** @enum {string} */
+            previousStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
             reason?: string;
             worker?: string;
-            memo?: string;
         };
         AuctionLotReturnRequest: {
-            /** Format: int32 */
-            returnedQuantity?: number;
+            memo?: string;
             /** Format: date */
             returnDate: string;
+            /** Format: int32 */
+            returnedQuantity?: number;
             worker?: string;
-            memo?: string;
         };
         AuctionLotAdjustmentRequest: {
+            memo?: string;
+            /** Format: int32 */
+            returnedQuantity: number;
             /** Format: int32 */
             soldQuantity: number;
             /** Format: int32 */
             waitingQuantity: number;
-            /** Format: int32 */
-            returnedQuantity: number;
             worker?: string;
-            memo?: string;
         };
         WorkTypeUpdateRequest: {
+            active?: boolean;
             name: string;
             /** @enum {string} */
-            template: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "MULTI_CREATE" | "CORRECTION";
-            active?: boolean;
+            template: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
         };
         WorkTypeReorderRequest: {
             orderedIds: number[];
@@ -3025,44 +3289,39 @@ export interface components {
             data?: components["schemas"]["WorkTypeResponse"][];
             message?: string;
         };
+        WorkOperationTitleUpdateRequest: {
+            title: string;
+        };
         VarietyUpdateRequest: {
-            genus: string;
-            name: string;
             alias?: string;
-            defaultPotSize?: string;
             color?: string;
-            saleEnabled?: boolean;
+            defaultPotSize?: string;
             description?: string;
+            genus: string;
             memo?: string;
+            name: string;
+            saleEnabled?: boolean;
         };
         SalesSlipStatusUpdateRequest: {
-            salesStatus: string;
             memo?: string;
+            salesStatus: string;
         };
         OrchidGroupUpdateRequest: {
-            /** Format: int64 */
-            varietyId: number;
-            /** Format: int32 */
-            quantity: number;
-            potSize?: string;
             /** Format: int32 */
             ageYear?: number;
-            status: string;
+            endPosition?: number;
+            memo?: string;
             placementType?: string;
+            potSize?: string;
             /** Format: int32 */
-            trayCount?: number;
+            quantity: number;
             splitPlacementAllowed?: boolean;
             startPosition?: number;
-            endPosition?: number;
-            memo?: string;
-        };
-        OrchidGroupMoveRequest: {
+            status: string;
+            /** Format: int32 */
+            trayCount?: number;
             /** Format: int64 */
-            toBedZoneId: number;
-            startPosition?: number;
-            endPosition?: number;
-            worker?: string;
-            memo?: string;
+            varietyId: number;
         };
         OrchidGroupBatchUpdateItem: {
             /** Format: int64 */
@@ -3077,54 +3336,43 @@ export interface components {
             message?: string;
         };
         OrchidGroupCollectionUpdateRequest: {
-            name: string;
             description?: string;
+            name: string;
             purpose?: string;
         };
         MaterialUpdateRequest: {
             category: string;
-            name: string;
             manufacturer?: string;
+            name: string;
             specification?: string;
             stockQuantity?: string;
             storageLocation?: string;
             usage?: string;
         };
         InboundRecordUpdateRequest: {
-            /** Format: date */
-            inboundDate: string;
-            /** Format: int32 */
-            bottleCount?: number;
             /** Format: int32 */
             estimatedQuantity?: number;
-            /** Format: int32 */
-            actualQuantity?: number;
-            tempLocation?: string;
+            /** Format: date */
+            inboundDate: string;
+            memo?: string;
             /** Format: date */
             pottingDueDate?: string;
-            potSize?: string;
-            /** Format: int32 */
-            ageYear?: number;
-            growthStage?: string;
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
+            tempLocation?: string;
             worker?: string;
-            memo?: string;
         };
         AuctionLotStatusRequest: {
+            memo?: string;
+            reason: string;
             /** @enum {string} */
             status: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-            reason: string;
             worker?: string;
-            memo?: string;
         };
         ApiResponseWorkTypeMetadataResponse: {
             data?: components["schemas"]["WorkTypeMetadataResponse"];
             message?: string;
         };
         WorkTypeMetadataResponse: {
-            customTypeTemplates?: ("PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "MULTI_CREATE" | "CORRECTION")[];
+            customTypeTemplates?: ("PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION")[];
         };
         ApiResponsePageResponseWorkOperationSummaryResponse: {
             data?: components["schemas"]["PageResponseWorkOperationSummaryResponse"];
@@ -3141,143 +3389,259 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        WorkOperationRelationSummaryResponse: {
+            /** Format: int32 */
+            creationBatchSize?: number;
+            hasLinkedOperations?: boolean;
+            inboundRecordIds?: number[];
+            /** Format: int32 */
+            linkedOperationCount?: number;
+            /** @enum {string} */
+            originType?: "INBOUND" | "WORK_MANAGEMENT" | "SYSTEM";
+        };
         WorkOperationSummaryResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            workTypeId?: number;
-            workTypeCode?: string;
-            workType?: string;
-            /** @enum {string} */
-            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "MULTI_CREATE" | "CORRECTION";
-            /** @enum {string} */
-            workTypeWorkflow?: "GENERIC" | "MOVEMENT" | "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
-            title?: string;
-            /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
-            /** Format: date */
-            plannedStartDate?: string;
-            /** Format: date */
-            plannedEndDate?: string;
-            /** Format: date-time */
-            actualStartAt?: string;
             /** Format: date-time */
             actualEndAt?: string;
-            /** @enum {string} */
-            sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
-            /** Format: int64 */
-            sourceScopeId?: number;
-            sourceConditionSnapshot?: {
-                [key: string]: unknown;
-            };
             /** Format: date-time */
-            targetSnapshotAt?: string;
+            actualStartAt?: string;
+            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "END_REMAINING" | "CANCEL" | "CORRECT")[];
+            /** Format: int64 */
+            correctionCount?: number;
             details?: {
                 [key: string]: unknown;
             };
-            worker?: string;
+            /** Format: int64 */
+            id?: number;
             memo?: string;
+            /** Format: date */
+            plannedEndDate?: string;
+            /** Format: date */
+            plannedStartDate?: string;
             progress?: components["schemas"]["WorkOperationProgressResponse"];
-            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "CANCEL")[];
+            relationSummary?: components["schemas"]["WorkOperationRelationSummaryResponse"];
+            sourceConditionSnapshot?: {
+                [key: string]: unknown;
+            };
+            /** Format: int64 */
+            sourceScopeId?: number;
+            /** @enum {string} */
+            sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
+            /** @enum {string} */
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
+            /** Format: date-time */
+            targetSnapshotAt?: string;
+            title?: string;
+            /** Format: int64 */
+            voidMutationId?: number;
+            voidReason?: string;
+            /** Format: date-time */
+            voidedAt?: string;
+            workType?: string;
+            workTypeCode?: string;
+            /** Format: int64 */
+            workTypeId?: number;
+            /** @enum {string} */
+            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
+            /** @enum {string} */
+            workTypeWorkflow?: "GENERIC" | "MOVEMENT" | "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
+            worker?: string;
+        };
+        AffectedOperation: {
+            primary?: boolean;
+            title?: string;
+            /** Format: date */
+            workDate?: string;
+            /** Format: int64 */
+            workOperationId?: number;
+            workTypeName?: string;
+        };
+        AffectedOrchidGroup: {
+            /** @enum {string} */
+            impactType?: "RECORD_CANCELED" | "RESTORED" | "CREATION_CANCELED";
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** Format: int32 */
+            quantity?: number;
+            varietyName?: string;
+        };
+        ApiResponseWorkOperationCancellationEligibilityResponse: {
+            data?: components["schemas"]["WorkOperationCancellationEligibilityResponse"];
+            message?: string;
+        };
+        Blocker: {
+            code?: string;
+            /** Format: int64 */
+            count?: number;
+            message?: string;
+        };
+        WorkOperationCancellationEligibilityResponse: {
+            affectedOperations?: components["schemas"]["AffectedOperation"][];
+            affectedOrchidGroups?: components["schemas"]["AffectedOrchidGroup"][];
+            blockers?: components["schemas"]["Blocker"][];
+            cancellable?: boolean;
+            /** Format: int64 */
+            workOperationId?: number;
+        };
+        ApiResponseListWorkOperationSummaryResponse: {
+            data?: components["schemas"]["WorkOperationSummaryResponse"][];
+            message?: string;
+        };
+        ApiResponseWorkOperationGraphResponse: {
+            data?: components["schemas"]["WorkOperationGraphResponse"];
+            message?: string;
+        };
+        WorkOperationGraphEdgeResponse: {
+            /** @enum {string} */
+            edgeType?: "ORIGINATED" | "SAME_COMMAND" | "PRECEDES" | "EFFECT" | "STATE_INPUT" | "STATE_OUTPUT" | "MUTATION_RELATION";
+            id?: string;
+            relationType?: string;
+            sourceNodeId?: string;
+            targetNodeId?: string;
+        };
+        WorkOperationGraphNodeResponse: {
+            /** Format: int32 */
+            creationBatchSize?: number;
+            /** Format: date */
+            effectiveBusinessDate?: string;
+            id?: string;
+            /** Format: int64 */
+            mutationId?: number;
+            mutationType?: string;
+            /** @enum {string} */
+            nodeType?: "ORIGIN" | "CREATION_BATCH" | "WORK_OPERATION" | "MUTATION" | "STATE" | "JUNCTION";
+            /** Format: date-time */
+            occurredAt?: string;
+            /** Format: int64 */
+            orchidGroupId?: number;
+            orchidGroupIds?: number[];
+            /** Format: int64 */
+            originReferenceId?: number;
+            /** @enum {string} */
+            originType?: "INBOUND" | "WORK_MANAGEMENT" | "SYSTEM";
+            selected?: boolean;
+            state?: components["schemas"]["WorkOperationGraphStateResponse"];
+            /** Format: int64 */
+            stateRevision?: number;
+            status?: string;
+            title?: string;
+            varietyNames?: string[];
+            /** Format: date */
+            workDate?: string;
+            /** Format: int64 */
+            workOperationId?: number;
+            workType?: string;
+            workTypeCode?: string;
+        };
+        WorkOperationGraphResponse: {
+            /** Format: int32 */
+            depth?: number;
+            /** @enum {string} */
+            detail?: "WORK" | "MUTATION" | "LINEAGE";
+            edges?: components["schemas"]["WorkOperationGraphEdgeResponse"][];
+            /** Format: int32 */
+            maxNodes?: number;
+            nodes?: components["schemas"]["WorkOperationGraphNodeResponse"][];
+            /** Format: int64 */
+            rootWorkOperationId?: number;
+            truncated?: boolean;
+        };
+        WorkOperationGraphStateResponse: {
+            /** Format: int32 */
+            ageYear?: number;
+            /** Format: int64 */
+            bedZoneId?: number;
+            bedZoneName?: string;
+            endPosition?: number;
+            genus?: string;
+            /** Format: int32 */
+            houseNumber?: number;
+            /** Format: int32 */
+            physicalBedNumber?: number;
+            potSizeCode?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: int32 */
+            reservedQuantity?: number;
+            startPosition?: number;
+            status?: string;
+            /** Format: int64 */
+            varietyId?: number;
+            varietyName?: string;
         };
         ApiResponseWorkOperationDetailResponse: {
             data?: components["schemas"]["WorkOperationDetailResponse"];
             message?: string;
         };
-        WorkCorrectionAdjustmentResponse: {
-            /** Format: int64 */
-            orchidGroupId?: number;
-            /** Format: int32 */
-            beforeQuantity?: number;
-            /** Format: int32 */
-            afterQuantity?: number;
-            beforeStatus?: string;
-            afterStatus?: string;
-        };
-        WorkCorrectionDetailResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            workOperationId?: number;
-            title?: string;
-            /** Format: date */
-            workDate?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            worker?: string;
-            reason?: string;
-            adjustments?: components["schemas"]["WorkCorrectionAdjustmentResponse"][];
-        };
         WorkExecutionDetailResponse: {
-            /** Format: int64 */
-            id?: number;
-            executionKey?: string;
-            resultType?: string;
+            /** Format: int32 */
+            actualQuantity?: number;
             /** Format: date-time */
             appliedAt?: string;
             /** Format: date-time */
             canceledAt?: string;
-            worker?: string;
+            executionKey?: string;
             /** Format: int64 */
-            targetId?: number;
+            id?: number;
             /** Format: int64 */
             inboundRecordId?: number;
-            sources?: components["schemas"]["WorkExecutionSourceResponse"][];
-            results?: components["schemas"]["WorkExecutionResultResponse"][];
-            /** Format: int32 */
-            lossQuantity?: number;
             /** Format: int32 */
             increaseQuantity?: number;
-            /** Format: int32 */
-            actualQuantity?: number;
-            reason?: string;
             /** Format: int64 */
             linkedWorkOperationId?: number;
+            /** Format: int32 */
+            lossQuantity?: number;
+            reason?: string;
+            resultType?: string;
+            results?: components["schemas"]["WorkExecutionResultResponse"][];
+            sources?: components["schemas"]["WorkExecutionSourceResponse"][];
+            /** Format: int64 */
+            targetId?: number;
+            worker?: string;
         };
         WorkExecutionLocationResponse: {
+            bedZoneName?: string;
             /** Format: int32 */
             houseNumber?: number;
             /** Format: int32 */
             physicalBedNumber?: number;
-            bedZoneName?: string;
         };
         WorkExecutionResultResponse: {
-            /** Format: int64 */
-            orchidGroupId?: number;
-            /** Format: int32 */
-            quantity?: number;
-            purpose?: string;
-            /** Format: int64 */
-            bedZoneId?: number;
-            startPosition?: number;
-            endPosition?: number;
-            potSize?: string;
             /** Format: int32 */
             ageYear?: number;
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
-            memo?: string;
-            varietyName?: string;
+            /** Format: int64 */
+            bedZoneId?: number;
+            endPosition?: number;
             location?: components["schemas"]["WorkExecutionLocationResponse"];
-        };
-        WorkExecutionSourceResponse: {
+            memo?: string;
             /** Format: int64 */
             orchidGroupId?: number;
+            placementType?: string;
+            potSize?: string;
+            purpose?: string;
             /** Format: int32 */
-            inputQuantity?: number;
+            quantity?: number;
+            startPosition?: number;
             /** Format: int32 */
-            beforeQuantity?: number;
+            trayCount?: number;
+            varietyName?: string;
+        };
+        WorkExecutionSourceResponse: {
             /** Format: int32 */
             afterQuantity?: number;
-            /** Format: int32 */
-            remainingQuantity?: number;
-            beforeStatus?: string;
             afterStatus?: string;
+            /** Format: int32 */
+            beforeQuantity?: number;
+            beforeStatus?: string;
             /** Format: int64 */
             fromBedZoneId?: number;
-            releasedStartPosition?: number;
+            /** Format: int32 */
+            inputQuantity?: number;
+            /** Format: int64 */
+            orchidGroupId?: number;
             releasedEndPosition?: number;
+            releasedStartPosition?: number;
+            /** Format: int32 */
+            remainingQuantity?: number;
         };
         WorkOperationDetailFieldResponse: {
             key?: string;
@@ -3285,101 +3649,81 @@ export interface components {
             value?: string;
         };
         WorkOperationDetailResponse: {
-            summary?: components["schemas"]["WorkOperationDetailSummaryResponse"];
-            fields?: components["schemas"]["WorkOperationDetailFieldResponse"][];
-            executions?: components["schemas"]["WorkExecutionDetailResponse"][];
             corrections?: components["schemas"]["WorkCorrectionDetailResponse"][];
+            executions?: components["schemas"]["WorkExecutionDetailResponse"][];
+            fields?: components["schemas"]["WorkOperationDetailFieldResponse"][];
+            summary?: components["schemas"]["WorkOperationDetailSummaryResponse"];
         };
         WorkOperationDetailSummaryResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            workTypeId?: number;
-            workTypeCode?: string;
-            workType?: string;
-            title?: string;
-            /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
-            /** Format: date */
-            plannedStartDate?: string;
-            /** Format: date */
-            plannedEndDate?: string;
-            /** Format: date-time */
-            actualStartAt?: string;
             /** Format: date-time */
             actualEndAt?: string;
-            worker?: string;
+            /** Format: date-time */
+            actualStartAt?: string;
+            /** Format: int64 */
+            id?: number;
             memo?: string;
-        };
-        ApiResponseMultiCreateCancellationEligibilityResponse: {
-            data?: components["schemas"]["MultiCreateCancellationEligibilityResponse"];
-            message?: string;
-        };
-        Blocker: {
-            code?: string;
-            message?: string;
+            /** Format: date */
+            plannedEndDate?: string;
+            /** Format: date */
+            plannedStartDate?: string;
+            /** @enum {string} */
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
+            title?: string;
+            workType?: string;
+            workTypeCode?: string;
             /** Format: int64 */
-            count?: number;
-        };
-        MultiCreateCancellationEligibilityResponse: {
-            /** Format: int64 */
-            workOperationId?: number;
-            cancelable?: boolean;
-            createdOrchidGroupIds?: number[];
-            blockers?: components["schemas"]["Blocker"][];
+            workTypeId?: number;
+            worker?: string;
         };
         ApiResponseListInboundPottingCandidateResponse: {
             data?: components["schemas"]["InboundPottingCandidateResponse"][];
             message?: string;
         };
         InboundPottingCandidateResponse: {
+            /** Format: int32 */
+            actualQuantity?: number;
+            /** Format: int32 */
+            estimatedQuantity?: number;
             /** Format: int64 */
             id?: number;
+            potSize?: string;
+            /** Format: date */
+            pottingDueDate?: string;
+            status?: string;
+            tempLocation?: string;
             /** Format: int64 */
             varietyId?: number;
             varietyName?: string;
-            status?: string;
-            /** Format: int32 */
-            estimatedQuantity?: number;
-            /** Format: int32 */
-            actualQuantity?: number;
-            tempLocation?: string;
-            /** Format: date */
-            pottingDueDate?: string;
-            potSize?: string;
-        };
-        ApiResponseListWorkOperationSummaryResponse: {
-            data?: components["schemas"]["WorkOperationSummaryResponse"][];
-            message?: string;
         };
         ApiResponsePageResponseOrchidGroupWorkHistoryResponse: {
             data?: components["schemas"]["PageResponseOrchidGroupWorkHistoryResponse"];
             message?: string;
         };
         OrchidGroupWorkHistoryResponse: {
-            sourceKind?: string;
-            /** Format: int64 */
-            workOperationId?: number;
-            /** Format: int64 */
-            workTypeId?: number;
-            workType?: string;
-            title?: string;
-            /** Format: date */
-            workDate?: string;
-            status?: string;
-            propagated?: boolean;
-            /** @enum {string} */
-            sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
-            /** Format: int64 */
-            sourceScopeId?: number;
-            locationSnapshot?: {
-                [key: string]: unknown;
-            };
+            correctable?: boolean;
             currentLocation?: {
                 [key: string]: unknown;
             };
-            worker?: string;
+            locationSnapshot?: {
+                [key: string]: unknown;
+            };
             memo?: string;
+            propagated?: boolean;
+            sourceKind?: string;
+            /** Format: int64 */
+            sourceScopeId?: number;
+            /** @enum {string} */
+            sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
+            status?: string;
+            title?: string;
+            /** Format: date */
+            workDate?: string;
+            /** Format: int64 */
+            workOperationId?: number;
+            workType?: string;
+            /** Format: int64 */
+            workTypeId?: number;
+            worker?: string;
         };
         PageResponseOrchidGroupWorkHistoryResponse: {
             content?: components["schemas"]["OrchidGroupWorkHistoryResponse"][];
@@ -3412,14 +3756,14 @@ export interface components {
             message?: string;
         };
         VarietyConnectedOrchidGroupResponse: {
+            /** Format: date */
+            latestWorkDate?: string;
+            location?: string;
             /** Format: int64 */
             orchidGroupId?: number;
-            location?: string;
             /** Format: int32 */
             quantity?: number;
             status?: string;
-            /** Format: date */
-            latestWorkDate?: string;
         };
         ApiResponseVarietyGeneraResponse: {
             data?: components["schemas"]["VarietyGeneraResponse"];
@@ -3430,9 +3774,9 @@ export interface components {
             varieties?: components["schemas"]["VarietyNameResponse"][];
         };
         VarietyNameResponse: {
+            genus?: string;
             /** Format: int64 */
             id?: number;
-            genus?: string;
             name?: string;
         };
         ApiResponseListSalesOrchidGroupSearchResponse: {
@@ -3440,27 +3784,27 @@ export interface components {
             message?: string;
         };
         SalesOrchidGroupSearchResponse: {
+            /** Format: int32 */
+            ageYear?: number;
+            /** Format: int32 */
+            availableQuantity?: number;
+            bedZoneName?: string;
+            genus?: string;
+            /** Format: int32 */
+            houseNumber?: number;
             /** Format: int64 */
             id?: number;
-            /** Format: int64 */
-            varietyId?: number;
-            varietyName?: string;
-            genus?: string;
-            status?: string;
+            /** Format: int32 */
+            physicalBedNumber?: number;
+            potSize?: string;
             /** Format: int32 */
             quantity?: number;
             /** Format: int32 */
             reservedQuantity?: number;
-            /** Format: int32 */
-            availableQuantity?: number;
-            potSize?: string;
-            /** Format: int32 */
-            ageYear?: number;
-            /** Format: int32 */
-            houseNumber?: number;
-            /** Format: int32 */
-            physicalBedNumber?: number;
-            bedZoneName?: string;
+            status?: string;
+            /** Format: int64 */
+            varietyId?: number;
+            varietyName?: string;
         };
         ApiResponseListSalesSlipResponse: {
             data?: components["schemas"]["SalesSlipResponse"][];
@@ -3482,29 +3826,29 @@ export interface components {
             totalPages?: number;
         };
         SalesSlipListItemResponse: {
-            /** Format: int64 */
-            id?: number;
-            slipNumber?: string;
-            /** Format: date */
-            saleDate?: string;
-            /** @enum {string} */
-            salesType?: "DIRECT" | "AUCTION";
+            auctionMarket?: string;
             /** Format: int64 */
             auctionShipmentId?: number;
-            auctionMarket?: string;
-            partner?: components["schemas"]["BusinessPartnerResponse"];
-            /** Format: int32 */
-            totalAmount?: number;
             /** Format: date */
             expectedPaymentDate?: string;
             /** Format: int64 */
+            id?: number;
+            memo?: string;
+            /** Format: int64 */
             paidAmount?: number;
+            partner?: components["schemas"]["BusinessPartnerResponse"];
+            paymentMethod?: string;
+            paymentStatus?: string;
             /** Format: int64 */
             remainingAmount?: number;
-            paymentStatus?: string;
+            /** Format: date */
+            saleDate?: string;
             salesStatus?: string;
-            paymentMethod?: string;
-            memo?: string;
+            /** @enum {string} */
+            salesType?: "DIRECT" | "AUCTION";
+            slipNumber?: string;
+            /** Format: int32 */
+            totalAmount?: number;
         };
         ApiResponseListAuctionShipmentOptionResponse: {
             data?: components["schemas"]["AuctionShipmentOptionResponse"][];
@@ -3512,72 +3856,72 @@ export interface components {
         };
         AuctionShipmentOptionResponse: {
             /** Format: int64 */
-            id?: number;
-            /** Format: date */
-            shipmentDate?: string;
-            /** Format: int64 */
             auctionHouseId?: number;
             auctionMarket?: string;
+            /** Format: int64 */
+            id?: number;
             lots?: components["schemas"]["Lot"][];
+            /** Format: date */
+            shipmentDate?: string;
         };
         Lot: {
             /** Format: int64 */
             id?: number;
             itemName?: string;
-            varietyName?: string;
             shipmentGrade?: string;
             /** Format: int32 */
             shippedQuantity?: number;
+            varietyName?: string;
         };
         ApiResponseListPhysicalBedResponse: {
             data?: components["schemas"]["PhysicalBedResponse"][];
             message?: string;
         };
         BedZoneResponse: {
+            active?: boolean;
+            /** Format: int64 */
+            houseId?: number;
+            /** Format: int32 */
+            houseNumber?: number;
             /** Format: int64 */
             id?: number;
+            memo?: string;
+            name?: string;
+            orchidGroups?: components["schemas"]["OrchidGroupResponse"][];
             /** Format: int64 */
             physicalBedId?: number;
             /** Format: int32 */
             physicalBedNumber?: number;
-            /** Format: int64 */
-            houseId?: number;
-            /** Format: int32 */
-            houseNumber?: number;
-            name?: string;
             /** @enum {string} */
             side?: "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
-            /** @enum {string} */
-            zoneType?: "DEFAULT" | "CUSTOM" | "HANGING" | "TRAY" | "GRID";
             /** Format: int32 */
             sortOrder?: number;
-            active?: boolean;
-            memo?: string;
-            orchidGroups?: components["schemas"]["OrchidGroupResponse"][];
+            /** @enum {string} */
+            zoneType?: "DEFAULT" | "CUSTOM" | "HANGING" | "TRAY" | "GRID";
         };
         PhysicalBedResponse: {
-            /** Format: int64 */
-            id?: number;
+            bedZones?: components["schemas"]["BedZoneResponse"][];
+            /** Format: int32 */
+            displayOrder?: number;
             /** Format: int64 */
             houseId?: number;
             /** Format: int32 */
             houseNumber?: number;
-            /** Format: int32 */
-            number?: number;
-            /** Format: int32 */
-            displayOrder?: number;
+            /** Format: int64 */
+            id?: number;
             /** Format: int32 */
             lengthCm?: number;
+            memo?: string;
+            /** Format: int32 */
+            number?: number;
+            positionUnitCount?: number;
+            positionUnitLabel?: string;
+            /** Format: int32 */
+            supportIntervalCm?: number;
             /** Format: int32 */
             widthCm?: number;
             /** Format: int32 */
             wireCount?: number;
-            /** Format: int32 */
-            supportIntervalCm?: number;
-            positionUnitCount?: number;
-            positionUnitLabel?: string;
-            memo?: string;
-            bedZones?: components["schemas"]["BedZoneResponse"][];
         };
         ApiResponsePhysicalBedResponse: {
             data?: components["schemas"]["PhysicalBedResponse"];
@@ -3589,31 +3933,31 @@ export interface components {
         };
         PartnerPaymentEventResponse: {
             /** Format: int64 */
+            amount?: number;
+            createdBy?: string;
+            depositorName?: string;
+            description?: string;
+            /** Format: date */
+            eventDate?: string;
+            /** @enum {string} */
+            eventType?: "PAYMENT_RECEIVED" | "PAYMENT_ALLOCATED" | "PREPAYMENT_RECEIVED" | "CREDIT_APPLIED" | "CREDIT_REFUND" | "AUTO_MATCH_CANDIDATE" | "AUTO_MATCH_CONFIRMED" | "MANUAL_MATCH_CONFIRMED" | "MATCH_REJECTED" | "PAYMENT_UNLINKED" | "ADJUSTMENT";
+            /** Format: int64 */
             id?: number;
+            memo?: string;
+            /** Format: int64 */
+            parentEventId?: number;
             /** Format: int64 */
             partnerId?: number;
             partnerName?: string;
+            paymentMethod?: string;
             /** @enum {string} */
-            eventType?: "PAYMENT_RECEIVED" | "PAYMENT_ALLOCATED" | "PREPAYMENT_RECEIVED" | "CREDIT_APPLIED" | "CREDIT_REFUND" | "AUTO_MATCH_CANDIDATE" | "AUTO_MATCH_CONFIRMED" | "MANUAL_MATCH_CONFIRMED" | "MATCH_REJECTED" | "PAYMENT_UNLINKED" | "ADJUSTMENT";
-            /** Format: date */
-            eventDate?: string;
+            status?: "UNAPPLIED" | "PARTIALLY_APPLIED" | "FULLY_APPLIED" | "CANDIDATE" | "CONFIRMED" | "REJECTED" | "CANCELLED";
             /** Format: int64 */
-            amount?: number;
-            /** Format: int64 */
-            unappliedAmount?: number;
+            targetId?: number;
             /** @enum {string} */
             targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
             /** Format: int64 */
-            targetId?: number;
-            /** Format: int64 */
-            parentEventId?: number;
-            paymentMethod?: string;
-            depositorName?: string;
-            description?: string;
-            /** @enum {string} */
-            status?: "UNAPPLIED" | "PARTIALLY_APPLIED" | "FULLY_APPLIED" | "CANDIDATE" | "CONFIRMED" | "REJECTED" | "CANCELLED";
-            memo?: string;
-            createdBy?: string;
+            unappliedAmount?: number;
         };
         ApiResponsePageResponsePartnerPaymentEventResponse: {
             data?: components["schemas"]["PageResponsePartnerPaymentEventResponse"];
@@ -3634,57 +3978,110 @@ export interface components {
             data?: components["schemas"]["OrchidGroupWorkHistoryResponse"][];
             message?: string;
         };
+        ApiResponsePageOrchidStockCountResponse: {
+            data?: components["schemas"]["PageOrchidStockCountResponse"];
+            message?: string;
+        };
+        PageOrchidStockCountResponse: {
+            content?: components["schemas"]["OrchidStockCountResponse"][];
+            empty?: boolean;
+            first?: boolean;
+            last?: boolean;
+            /** Format: int32 */
+            number?: number;
+            /** Format: int32 */
+            numberOfElements?: number;
+            pageable?: components["schemas"]["PageableObject"];
+            /** Format: int32 */
+            size?: number;
+            sort?: components["schemas"]["SortObject"];
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PageableObject: {
+            /** Format: int64 */
+            offset?: number;
+            /** Format: int32 */
+            pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            paged?: boolean;
+            sort?: components["schemas"]["SortObject"];
+            unpaged?: boolean;
+        };
+        SortObject: {
+            empty?: boolean;
+            sorted?: boolean;
+            unsorted?: boolean;
+        };
+        ApiResponseOrchidStockCountContext: {
+            data?: components["schemas"]["OrchidStockCountContext"];
+            message?: string;
+        };
+        OrchidStockCountContext: {
+            adjustable?: boolean;
+            /** Format: date */
+            businessDate?: string;
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: int64 */
+            stateRevision?: number;
+        };
         ApiResponseOrchidGroupLineageResponse: {
             data?: components["schemas"]["OrchidGroupLineageResponse"];
             message?: string;
         };
         OrchidGroupLineageItemResponse: {
+            /** Format: date-time */
+            createdAt?: string;
             /** Format: int64 */
             id?: number;
             /** @enum {string} */
             relationType?: "CREATED_FROM_INBOUND" | "REPOTTED_TO" | "SPLIT_TO" | "MERGED_TO" | "MOVED_TO" | "POTTED_TO" | "CORRECTED_TO";
-            /** Format: int64 */
-            workOperationId?: number;
-            /** Format: int32 */
-            sourceQuantity?: number;
+            resultOrchidGroup?: components["schemas"]["OrchidGroupResponse"];
             /** Format: int32 */
             resultQuantity?: number;
-            /** Format: date-time */
-            createdAt?: string;
             sourceOrchidGroup?: components["schemas"]["OrchidGroupResponse"];
-            resultOrchidGroup?: components["schemas"]["OrchidGroupResponse"];
+            /** Format: int32 */
+            sourceQuantity?: number;
+            /** Format: int64 */
+            workOperationId?: number;
         };
         OrchidGroupLineageNodeResponse: {
+            orchidGroup?: components["schemas"]["OrchidGroupResponse"];
             /** Format: int32 */
             quantity?: number;
-            orchidGroup?: components["schemas"]["OrchidGroupResponse"];
         };
         OrchidGroupLineageResponse: {
             /** Format: int64 */
             orchidGroupId?: number;
-            sources?: components["schemas"]["OrchidGroupLineageItemResponse"][];
             results?: components["schemas"]["OrchidGroupLineageItemResponse"][];
+            sources?: components["schemas"]["OrchidGroupLineageItemResponse"][];
             transformations?: components["schemas"]["OrchidGroupLineageTransformationResponse"][];
         };
         OrchidGroupLineageTransformationResponse: {
+            /** Format: date-time */
+            createdAt?: string;
             /** Format: int64 */
             id?: number;
+            /** Format: int32 */
+            increaseQuantity?: number;
+            /** Format: int32 */
+            lossQuantity?: number;
             /** @enum {string} */
             relationType?: "CREATED_FROM_INBOUND" | "REPOTTED_TO" | "SPLIT_TO" | "MERGED_TO" | "MOVED_TO" | "POTTED_TO" | "CORRECTED_TO";
-            /** Format: int64 */
-            workOperationId?: number;
+            results?: components["schemas"]["OrchidGroupLineageNodeResponse"][];
+            sources?: components["schemas"]["OrchidGroupLineageNodeResponse"][];
             /** Format: int32 */
             totalInputQuantity?: number;
             /** Format: int32 */
             totalResultQuantity?: number;
-            /** Format: int32 */
-            lossQuantity?: number;
-            /** Format: int32 */
-            increaseQuantity?: number;
-            /** Format: date-time */
-            createdAt?: string;
-            sources?: components["schemas"]["OrchidGroupLineageNodeResponse"][];
-            results?: components["schemas"]["OrchidGroupLineageNodeResponse"][];
+            /** Format: int64 */
+            workOperationId?: number;
         };
         ApiResponseListOrchidGroupCollectionResponse: {
             data?: components["schemas"]["OrchidGroupCollectionResponse"][];
@@ -3695,22 +4092,190 @@ export interface components {
             message?: string;
         };
         DerivedOrchidGroupResponse: {
+            /** Format: int32 */
+            ageYear?: number;
+            genus?: string;
             groupKey?: string;
+            /** Format: int32 */
+            locationCount?: number;
+            /** Format: int32 */
+            orchidGroupCount?: number;
+            potSize?: string;
+            /** @enum {string} */
+            potSizeCode?: "UNSPECIFIED" | "UNMAPPED" | "POT_2" | "POT_2_5" | "POT_3" | "POT_3_5" | "POT_4" | "POT_4_5" | "POT_5" | "POT_6" | "HANGING" | "ETC";
+            /** Format: int32 */
+            totalQuantity?: number;
             /** Format: int64 */
             varietyId?: number;
             varietyName?: string;
-            genus?: string;
+        };
+        ApiResponsePageResponseOrchidGroupMutationResponse: {
+            data?: components["schemas"]["PageResponseOrchidGroupMutationResponse"];
+            message?: string;
+        };
+        OrchidGroupMutationEntryResponse: {
+            afterState?: components["schemas"]["OrchidGroupMutationStateResponse"];
+            beforeState?: components["schemas"]["OrchidGroupMutationStateResponse"];
+            /** @enum {string} */
+            entryKind?: "BASELINE" | "CREATE" | "CHANGE" | "DELETE";
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** @enum {string} */
+            role?: "SOURCE" | "RESULT" | "AFFECTED";
+            /** Format: int64 */
+            stateRevisionAfter?: number;
+            /** Format: int64 */
+            stateRevisionBefore?: number;
+        };
+        OrchidGroupMutationRelationResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            mutationId?: number;
+            /** Format: int64 */
+            relatedMutationId?: number;
+            /** @enum {string} */
+            relationType?: "CORRECTS" | "COMPENSATES" | "SUPERSEDES";
+        };
+        OrchidGroupMutationResponse: {
+            commandFingerprint?: string;
+            /** Format: uuid */
+            correlationId?: string;
+            /** Format: date */
+            effectiveBusinessDate?: string;
+            entries?: components["schemas"]["OrchidGroupMutationEntryResponse"][];
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            mutationType?: "BASELINE_IMPORT" | "CREATE" | "UPDATE_DETAILS" | "MOVE" | "RESERVE" | "RELEASE_RESERVATION" | "CONSUME_RESERVATION" | "RESTORE_OUTBOUND" | "DISCARD" | "TRANSFORM" | "CORRECTION" | "RECONCILIATION" | "COMPENSATION" | "CANCEL_CREATION" | "DELETE";
+            /** Format: date-time */
+            occurredAt?: string;
+            reason?: string;
+            /** Format: date-time */
+            recordedAt?: string;
+            relations?: components["schemas"]["OrchidGroupMutationRelationResponse"][];
+            /** Format: int32 */
+            schemaVersion?: number;
+            /** @enum {string} */
+            sourceDomain?: "FARM" | "WORK" | "SALES" | "INBOUND" | "MIGRATION";
+            sourceOperationKey?: string;
+            sourceReferenceId?: string;
+            sourceType?: string;
+            workOperation?: components["schemas"]["OrchidGroupMutationWorkOperationResponse"];
+        };
+        OrchidGroupMutationStateResponse: {
             /** Format: int32 */
             ageYear?: number;
+            /** Format: int64 */
+            bedZoneId?: number;
+            endPosition?: number;
+            genus?: string;
+            /** Format: int64 */
+            inboundRecordId?: number;
+            memo?: string;
+            placementType?: string;
+            potSizeCode?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: int32 */
+            reservedQuantity?: number;
+            /** Format: int32 */
+            sortOrder?: number;
+            splitPlacementAllowed?: boolean;
+            startPosition?: number;
+            status?: string;
+            /** Format: int32 */
+            trayCount?: number;
+            /** Format: int64 */
+            varietyId?: number;
+            varietyName?: string;
+        };
+        OrchidGroupMutationWorkOperationResponse: {
+            /** Format: int64 */
+            id?: number;
+            title?: string;
+            workType?: string;
+            workTypeCode?: string;
+        };
+        PageResponseOrchidGroupMutationResponse: {
+            content?: components["schemas"]["OrchidGroupMutationResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        ApiResponseOrchidGroupMutationGraphResponse: {
+            data?: components["schemas"]["OrchidGroupMutationGraphResponse"];
+            message?: string;
+        };
+        OrchidGroupMutationGraphEdgeResponse: {
             /** @enum {string} */
-            potSizeCode?: "UNSPECIFIED" | "UNMAPPED" | "POT_2" | "POT_2_5" | "POT_3" | "POT_3_5" | "POT_4" | "POT_4_5" | "POT_5" | "POT_6" | "HANGING" | "ETC";
-            potSize?: string;
+            edgeType?: "STATE_INPUT" | "STATE_OUTPUT" | "MUTATION_RELATION";
+            /** @enum {string} */
+            entryRole?: "SOURCE" | "RESULT" | "AFFECTED";
+            id?: string;
+            /** @enum {string} */
+            lineageRelationType?: "CREATED_FROM_INBOUND" | "REPOTTED_TO" | "SPLIT_TO" | "MERGED_TO" | "MOVED_TO" | "POTTED_TO" | "CORRECTED_TO";
+            /** @enum {string} */
+            mutationRelationType?: "CORRECTS" | "COMPENSATES" | "SUPERSEDES";
+            sourceNodeId?: string;
+            targetNodeId?: string;
+        };
+        OrchidGroupMutationGraphLocationResponse: {
+            bedZoneName?: string;
+            endPosition?: number;
             /** Format: int32 */
-            orchidGroupCount?: number;
+            houseNumber?: number;
             /** Format: int32 */
-            totalQuantity?: number;
+            physicalBedNumber?: number;
+            /** @enum {string} */
+            side?: "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
+            startPosition?: number;
+        };
+        OrchidGroupMutationGraphNodeResponse: {
+            /** Format: date */
+            effectiveBusinessDate?: string;
+            /** @enum {string} */
+            entryKind?: "BASELINE" | "CREATE" | "CHANGE" | "DELETE";
+            /** @enum {string} */
+            entryRole?: "SOURCE" | "RESULT" | "AFFECTED";
+            id?: string;
+            location?: components["schemas"]["OrchidGroupMutationGraphLocationResponse"];
+            /** Format: int64 */
+            mutationId?: number;
+            /** @enum {string} */
+            mutationType?: "BASELINE_IMPORT" | "CREATE" | "UPDATE_DETAILS" | "MOVE" | "RESERVE" | "RELEASE_RESERVATION" | "CONSUME_RESERVATION" | "RESTORE_OUTBOUND" | "DISCARD" | "TRANSFORM" | "CORRECTION" | "RECONCILIATION" | "COMPENSATION" | "CANCEL_CREATION" | "DELETE";
+            /** @enum {string} */
+            nodeType?: "STATE" | "MUTATION";
+            /** Format: date-time */
+            occurredAt?: string;
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** @enum {string} */
+            sourceDomain?: "FARM" | "WORK" | "SALES" | "INBOUND" | "MIGRATION";
+            sourceReferenceId?: string;
+            sourceType?: string;
+            state?: components["schemas"]["OrchidGroupMutationStateResponse"];
+            /** Format: int64 */
+            stateRevision?: number;
+            workOperation?: components["schemas"]["OrchidGroupMutationWorkOperationResponse"];
+        };
+        OrchidGroupMutationGraphResponse: {
             /** Format: int32 */
-            locationCount?: number;
+            depth?: number;
+            edges?: components["schemas"]["OrchidGroupMutationGraphEdgeResponse"][];
+            /** Format: int32 */
+            maxNodes?: number;
+            nodes?: components["schemas"]["OrchidGroupMutationGraphNodeResponse"][];
+            /** Format: int64 */
+            rootOrchidGroupId?: number;
+            truncated?: boolean;
         };
         ApiResponsePageResponseMaterialResponse: {
             data?: components["schemas"]["PageResponseMaterialResponse"];
@@ -3749,10 +4314,10 @@ export interface components {
         HouseResponse: {
             /** Format: int64 */
             id?: number;
+            memo?: string;
+            name?: string;
             /** Format: int32 */
             number?: number;
-            name?: string;
-            memo?: string;
             physicalBeds?: components["schemas"]["PhysicalBedResponse"][];
         };
         ApiResponseHouseResponse: {
@@ -3764,14 +4329,14 @@ export interface components {
             message?: string;
         };
         FarmStatusZoomResponse: {
-            /** @enum {string} */
-            level?: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE";
+            bedZones?: components["schemas"]["BedZoneResponse"][];
             /** Format: int64 */
             houseId?: number;
             /** Format: int32 */
             houseNumber?: number;
+            /** @enum {string} */
+            level?: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE";
             physicalBeds?: components["schemas"]["PhysicalBedResponse"][];
-            bedZones?: components["schemas"]["BedZoneResponse"][];
         };
         ApiResponseOrchidManagementViewportResponse: {
             data?: components["schemas"]["OrchidManagementViewportResponse"];
@@ -3779,22 +4344,22 @@ export interface components {
         };
         OrchidManagementSummaryResponse: {
             /** Format: int64 */
-            orchidGroupCount?: number;
-            /** Format: int64 */
-            totalQuantity?: number;
-            /** Format: int64 */
             abnormalCount?: number;
             /** Format: int64 */
             bedZoneCount?: number;
+            /** Format: int64 */
+            orchidGroupCount?: number;
+            /** Format: int64 */
+            totalQuantity?: number;
         };
         OrchidManagementViewportResponse: {
-            /** Format: int64 */
-            startBedId?: number;
             /** Format: int32 */
             bedCount?: number;
             beds?: components["schemas"]["PhysicalBedResponse"][];
-            hasPrevious?: boolean;
             hasNext?: boolean;
+            hasPrevious?: boolean;
+            /** Format: int64 */
+            startBedId?: number;
             summary?: components["schemas"]["OrchidManagementSummaryResponse"];
         };
         ApiResponseListOrchidManagementBedOrderResponse: {
@@ -3803,11 +4368,11 @@ export interface components {
         };
         OrchidManagementBedOrderResponse: {
             /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
             houseId?: number;
             /** Format: int32 */
             houseNumber?: number;
+            /** Format: int64 */
+            id?: number;
             /** Format: int32 */
             number?: number;
         };
@@ -3817,105 +4382,105 @@ export interface components {
         };
         FarmStatusOrchidGroupItemResponse: {
             /** Format: int64 */
-            orchidGroupId?: number;
-            varietyName?: string;
+            bedZoneId?: number;
+            bedZoneName?: string;
             genus?: string;
-            /** Format: int32 */
-            quantity?: number;
-            status?: string;
             /** Format: int64 */
             houseId?: number;
             /** Format: int32 */
             houseNumber?: number;
             /** Format: int64 */
+            orchidGroupId?: number;
+            /** Format: int64 */
             physicalBedId?: number;
+            physicalBedName?: string;
             /** Format: int32 */
             physicalBedNumber?: number;
-            physicalBedName?: string;
-            /** Format: int64 */
-            bedZoneId?: number;
-            bedZoneName?: string;
+            /** Format: int32 */
+            quantity?: number;
+            status?: string;
+            varietyName?: string;
         };
         FarmStatusOrchidGroupListResponse: {
-            /** @enum {string} */
-            targetType?: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE";
+            items?: components["schemas"]["FarmStatusOrchidGroupItemResponse"][];
             /** Format: int64 */
             targetId?: number;
             targetName?: string;
-            items?: components["schemas"]["FarmStatusOrchidGroupItemResponse"][];
+            /** @enum {string} */
+            targetType?: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE";
         };
         ApiResponseFarmStatusMapResponse: {
             data?: components["schemas"]["FarmStatusMapResponse"];
             message?: string;
         };
         FarmStatusMapBedZoneResponse: {
+            active?: boolean;
+            /** Format: int64 */
+            houseId?: number;
+            /** Format: int32 */
+            houseNumber?: number;
             /** Format: int64 */
             id?: number;
+            memo?: string;
+            name?: string;
             /** Format: int64 */
             physicalBedId?: number;
             /** Format: int32 */
             physicalBedNumber?: number;
-            /** Format: int64 */
-            houseId?: number;
-            /** Format: int32 */
-            houseNumber?: number;
-            name?: string;
             /** @enum {string} */
             side?: "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
-            /** @enum {string} */
-            zoneType?: "DEFAULT" | "CUSTOM" | "HANGING" | "TRAY" | "GRID";
             /** Format: int32 */
             sortOrder?: number;
-            active?: boolean;
-            memo?: string;
+            /** @enum {string} */
+            zoneType?: "DEFAULT" | "CUSTOM" | "HANGING" | "TRAY" | "GRID";
         };
         FarmStatusMapOrchidGroupResponse: {
+            /** Format: int32 */
+            ageYear?: number;
+            /** Format: int64 */
+            bedZoneId?: number;
+            endPosition?: number;
+            /** Format: int64 */
+            houseId?: number;
             /** Format: int64 */
             orchidGroupId?: number;
             /** Format: int64 */
-            houseId?: number;
-            /** Format: int64 */
             physicalBedId?: number;
-            /** Format: int64 */
-            bedZoneId?: number;
-            startPosition?: number;
-            endPosition?: number;
-            /** Format: int64 */
-            varietyId?: number;
-            varietyColor?: string;
-            varietyName?: string;
-            /** Format: int32 */
-            quantity?: number;
-            status?: string;
-            /** Format: int32 */
-            ageYear?: number;
             potSize?: string;
             /** Format: int32 */
+            quantity?: number;
+            /** Format: int32 */
             sortOrder?: number;
+            startPosition?: number;
+            status?: string;
+            varietyColor?: string;
+            /** Format: int64 */
+            varietyId?: number;
+            varietyName?: string;
         };
         FarmStatusMapPhysicalBedResponse: {
-            /** Format: int64 */
-            id?: number;
+            bedZones?: components["schemas"]["FarmStatusMapBedZoneResponse"][];
+            /** Format: int32 */
+            displayOrder?: number;
             /** Format: int64 */
             houseId?: number;
             /** Format: int32 */
             houseNumber?: number;
-            /** Format: int32 */
-            number?: number;
-            /** Format: int32 */
-            displayOrder?: number;
+            /** Format: int64 */
+            id?: number;
             /** Format: int32 */
             lengthCm?: number;
+            memo?: string;
+            /** Format: int32 */
+            number?: number;
+            positionUnitCount?: number;
+            positionUnitLabel?: string;
+            /** Format: int32 */
+            supportIntervalCm?: number;
             /** Format: int32 */
             widthCm?: number;
             /** Format: int32 */
             wireCount?: number;
-            /** Format: int32 */
-            supportIntervalCm?: number;
-            positionUnitCount?: number;
-            positionUnitLabel?: string;
-            memo?: string;
-            bedZones?: components["schemas"]["FarmStatusMapBedZoneResponse"][];
         };
         FarmStatusMapResponse: {
             houses?: components["schemas"]["HouseStatusSummaryResponse"][];
@@ -3924,17 +4489,17 @@ export interface components {
         HouseStatusSummaryResponse: {
             /** Format: int64 */
             houseId?: number;
+            houseName?: string;
             /** Format: int32 */
             houseNumber?: number;
-            houseName?: string;
+            latestWorkDate?: string;
             /** Format: int64 */
             orchidGroupCount?: number;
-            /** Format: int64 */
-            warningCount?: number;
+            physicalBeds?: components["schemas"]["FarmStatusMapPhysicalBedResponse"][];
             /** Format: int64 */
             repotDueCount?: number;
-            latestWorkDate?: string;
-            physicalBeds?: components["schemas"]["FarmStatusMapPhysicalBedResponse"][];
+            /** Format: int64 */
+            warningCount?: number;
         };
         ApiResponseDashboardSummaryResponse: {
             data?: components["schemas"]["DashboardSummaryResponse"];
@@ -3942,18 +4507,18 @@ export interface components {
         };
         DashboardSummaryResponse: {
             /** Format: int64 */
-            houseCount?: number;
-            /** Format: int64 */
-            physicalBedCount?: number;
-            /** Format: int64 */
             bedZoneCount?: number;
+            /** Format: int64 */
+            houseCount?: number;
+            latestWorkDate?: string;
             /** Format: int64 */
             orchidGroupCount?: number;
             /** Format: int64 */
-            warningCount?: number;
+            physicalBedCount?: number;
             /** Format: int64 */
             repotDueCount?: number;
-            latestWorkDate?: string;
+            /** Format: int64 */
+            warningCount?: number;
         };
         ApiResponseListBusinessPartnerResponse: {
             data?: components["schemas"]["BusinessPartnerResponse"][];
@@ -3964,10 +4529,10 @@ export interface components {
             message?: string;
         };
         BusinessPartnerOptionResponse: {
+            active?: boolean;
             /** Format: int64 */
             id?: number;
             name?: string;
-            active?: boolean;
         };
         ApiResponsePartnerBalanceSummaryResponse: {
             data?: components["schemas"]["PartnerBalanceSummaryResponse"];
@@ -3975,14 +4540,14 @@ export interface components {
         };
         PartnerBalanceSummaryResponse: {
             /** Format: int64 */
+            creditBalance?: number;
+            /** Format: int64 */
             partnerId?: number;
             partnerName?: string;
             /** Format: int64 */
-            creditBalance?: number;
+            receivableBalance?: number;
             /** Format: int64 */
             unappliedPaymentAmount?: number;
-            /** Format: int64 */
-            receivableBalance?: number;
         };
         ApiResponsePageResponseBusinessPartnerResponse: {
             data?: components["schemas"]["PageResponseBusinessPartnerResponse"];
@@ -4039,17 +4604,17 @@ export interface components {
             /** Format: int32 */
             lotCount?: number;
             /** Format: int32 */
-            shippedQuantity?: number;
-            /** Format: int32 */
-            soldQuantity?: number;
-            /** Format: int32 */
-            waitingQuantity?: number;
-            /** Format: int32 */
             returnedQuantity?: number;
             /** Format: int32 */
             reviewRequiredCount?: number;
             /** Format: int32 */
+            shippedQuantity?: number;
+            /** Format: int32 */
+            soldQuantity?: number;
+            /** Format: int32 */
             totalAmount?: number;
+            /** Format: int32 */
+            waitingQuantity?: number;
         };
         ApiResponseListAuctionSettlementResponse: {
             data?: components["schemas"]["AuctionSettlementResponse"][];
@@ -4070,17 +4635,17 @@ export interface components {
             message?: string;
         };
         AuctionSettlementListItemResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            auctionHouseId?: number;
-            auctionHouseName?: string;
             /** Format: date */
             auctionDate?: string;
             /** Format: int64 */
-            grossAmount?: number;
+            auctionHouseId?: number;
+            auctionHouseName?: string;
             /** Format: int64 */
             expectedDepositAmount?: number;
+            /** Format: int64 */
+            grossAmount?: number;
+            /** Format: int64 */
+            id?: number;
             /** Format: int64 */
             remainingAmount?: number;
             /** @enum {string} */
@@ -4114,9 +4679,9 @@ export interface components {
         };
         AnalyticsRankedValueResponse: {
             label?: string;
+            secondary?: string;
             /** Format: int64 */
             value?: number;
-            secondary?: string;
         };
         ApiResponseWorkAnalyticsResponse: {
             data?: components["schemas"]["WorkAnalyticsResponse"];
@@ -4125,52 +4690,52 @@ export interface components {
         WorkAnalyticsItemResponse: {
             /** Format: int64 */
             id?: number;
+            memo?: string;
+            /** @enum {string} */
+            sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
+            /** @enum {string} */
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
+            title?: string;
             /** Format: date */
             workDate?: string;
             workType?: string;
             /** @enum {string} */
-            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "MULTI_CREATE" | "CORRECTION";
-            title?: string;
-            /** @enum {string} */
-            sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
+            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "RECONCILIATION";
             worker?: string;
-            memo?: string;
-            /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
         };
         WorkAnalyticsResponse: {
-            /** Format: int64 */
-            totalCount?: number;
-            /** Format: int64 */
-            movementCount?: number;
-            /** Format: int64 */
-            statusCount?: number;
             /** Format: date */
             latestWorkDate?: string;
-            workTypeCounts?: components["schemas"]["AnalyticsRankedValueResponse"][];
+            /** Format: int64 */
+            movementCount?: number;
             recentRecords?: components["schemas"]["WorkAnalyticsItemResponse"][];
+            /** Format: int64 */
+            statusCount?: number;
+            /** Format: int64 */
+            totalCount?: number;
+            workTypeCounts?: components["schemas"]["AnalyticsRankedValueResponse"][];
         };
         AnalyticsInsightResponse: {
-            tone?: string;
-            text?: string;
-            actionLabel?: string;
             actionHref?: string;
+            actionLabel?: string;
+            text?: string;
+            tone?: string;
         };
         AnalyticsSlipSummaryResponse: {
             /** Format: int64 */
             id?: number;
-            slipNumber?: string;
-            /** Format: date */
-            saleDate?: string;
-            partnerName?: string;
-            /** Format: int32 */
-            totalAmount?: number;
             /** Format: int64 */
             paidAmount?: number;
+            partnerName?: string;
+            paymentStatus?: string;
             /** Format: int64 */
             remainingAmount?: number;
-            paymentStatus?: string;
+            /** Format: date */
+            saleDate?: string;
             salesStatus?: string;
+            slipNumber?: string;
+            /** Format: int32 */
+            totalAmount?: number;
         };
         ApiResponseSalesAnalyticsResponse: {
             data?: components["schemas"]["SalesAnalyticsResponse"];
@@ -4179,29 +4744,29 @@ export interface components {
         SalesAnalyticsResponse: {
             /** Format: int64 */
             currentMonthSales?: number;
+            monthlySales?: components["schemas"]["AnalyticsRankedValueResponse"][];
+            partnerSales?: components["schemas"]["AnalyticsRankedValueResponse"][];
+            paymentBreakdown?: components["schemas"]["AnalyticsRankedValueResponse"][];
             /** Format: int64 */
             previousMonthSales?: number;
             /** Format: int64 */
+            previousMonthShippedQuantity?: number;
+            recentSlips?: components["schemas"]["AnalyticsSlipSummaryResponse"][];
+            /** Format: int64 */
+            saleableQuantity?: number;
+            salesInsights?: components["schemas"]["AnalyticsInsightResponse"][];
+            /** Format: int64 */
             shippedQuantity?: number;
             /** Format: int64 */
-            previousMonthShippedQuantity?: number;
-            /** Format: int64 */
             unpaidAmount?: number;
-            /** Format: int64 */
-            saleableQuantity?: number;
-            monthlySales?: components["schemas"]["AnalyticsRankedValueResponse"][];
-            varietySales?: components["schemas"]["AnalyticsRankedValueResponse"][];
-            varietyInventory?: components["schemas"]["VarietyInventoryAnalyticsResponse"][];
-            partnerSales?: components["schemas"]["AnalyticsRankedValueResponse"][];
-            paymentBreakdown?: components["schemas"]["AnalyticsRankedValueResponse"][];
-            recentSlips?: components["schemas"]["AnalyticsSlipSummaryResponse"][];
             unpaidSlips?: components["schemas"]["AnalyticsSlipSummaryResponse"][];
-            salesInsights?: components["schemas"]["AnalyticsInsightResponse"][];
+            varietyInventory?: components["schemas"]["VarietyInventoryAnalyticsResponse"][];
+            varietySales?: components["schemas"]["AnalyticsRankedValueResponse"][];
         };
         VarietyInventoryAnalyticsResponse: {
-            varietyName?: string;
             /** Format: int64 */
             saleableQuantity?: number;
+            varietyName?: string;
             /** Format: int64 */
             warningGroupCount?: number;
         };
@@ -4210,31 +4775,31 @@ export interface components {
             message?: string;
         };
         PartnerAnalyticsResponse: {
-            partnerStats?: components["schemas"]["PartnerAnalyticsStatResponse"][];
             partnerSales?: components["schemas"]["AnalyticsRankedValueResponse"][];
+            partnerStats?: components["schemas"]["PartnerAnalyticsStatResponse"][];
         };
         PartnerAnalyticsStatResponse: {
+            /** Format: int64 */
+            creditBalance?: number;
+            /** Format: date */
+            latestSaleDate?: string;
+            /** Format: int64 */
+            paidAmount?: number;
             /** Format: int64 */
             partnerId?: number;
             partnerName?: string;
             /** @enum {string} */
             partnerType?: "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
             /** Format: int64 */
+            receivableBalance?: number;
+            /** Format: int64 */
             totalSales?: number;
             /** Format: int64 */
             transactionCount?: number;
             /** Format: int64 */
-            unpaidAmount?: number;
-            /** Format: int64 */
-            paidAmount?: number;
-            /** Format: int64 */
-            receivableBalance?: number;
-            /** Format: int64 */
-            creditBalance?: number;
-            /** Format: int64 */
             unappliedPaymentAmount?: number;
-            /** Format: date */
-            latestSaleDate?: string;
+            /** Format: int64 */
+            unpaidAmount?: number;
         };
     };
     responses: never;
@@ -4466,11 +5031,12 @@ export interface operations {
             query?: {
                 from?: string;
                 to?: string;
-                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
+                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
                 view?: "ALL" | "MANAGEMENT";
                 sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
                 sourceScopeId?: number;
                 keyword?: string;
+                hasCorrections?: boolean;
                 page?: number;
                 size?: number;
             };
@@ -4506,6 +5072,32 @@ export interface operations {
         responses: {
             /** @description Created */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationResponse"];
+                };
+            };
+        };
+    };
+    voidOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workOperationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOperationCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4714,6 +5306,28 @@ export interface operations {
             };
         };
     };
+    endRemaining: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workOperationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationResponse"];
+                };
+            };
+        };
+    };
     getCorrections: {
         parameters: {
             query?: never;
@@ -4788,7 +5402,7 @@ export interface operations {
             };
         };
     };
-    cancel: {
+    cancelOperation: {
         parameters: {
             query?: never;
             header?: never;
@@ -4797,7 +5411,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOperationCancellationRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -4806,28 +5424,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseWorkOperationResponse"];
-                };
-            };
-        };
-    };
-    cancel_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                workOperationId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseMultiCreateWorkOperationResponse"];
                 };
             };
         };
@@ -4952,30 +5548,6 @@ export interface operations {
             };
         };
     };
-    create_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MultiCreateWorkOperationRequest"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseMultiCreateWorkOperationResponse"];
-                };
-            };
-        };
-    };
     createInboundPottingRecord: {
         parameters: {
             query?: never;
@@ -5091,7 +5663,31 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponseWorkOperationResponse"];
+                    "application/json": components["schemas"]["ApiResponseListWorkOperationResponse"];
+                };
+            };
+        };
+    };
+    cancelBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOperationBatchCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationBatchCancellationResponse"];
                 };
             };
         };
@@ -5147,7 +5743,7 @@ export interface operations {
             };
         };
     };
-    create_2: {
+    create_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -5271,7 +5867,7 @@ export interface operations {
             };
         };
     };
-    create_3: {
+    create_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -5291,6 +5887,83 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseOrchidGroupResponse"];
+                };
+            };
+        };
+    };
+    stockCountHistory: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                orchidGroupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageOrchidStockCountResponse"];
+                };
+            };
+        };
+    };
+    stockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orchidGroupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrchidStockCountRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseOrchidStockCountResponse"];
+                };
+            };
+        };
+    };
+    reconcile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orchidGroupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrchidGroupReconciliationRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationResponse"];
                 };
             };
         };
@@ -5317,7 +5990,7 @@ export interface operations {
             };
         };
     };
-    create_4: {
+    create_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -5416,7 +6089,7 @@ export interface operations {
             };
         };
     };
-    create_5: {
+    create_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -5446,7 +6119,7 @@ export interface operations {
                 from?: string;
                 to?: string;
                 inboundType?: "FLASK_SEEDLING" | "POTTED_SEEDLING" | "PRODUCT_POT" | "SAMPLE" | "ETC";
-                status?: "TEMP_STORED" | "POTTING_PENDING" | "POTTING_IN_PROGRESS" | "POTTED" | "PLACED" | "CANCELED";
+                status?: "POTTING_PENDING" | "POTTING_IN_PROGRESS" | "PLACED" | "CANCELED";
                 variety?: string;
                 page?: number;
                 size?: number;
@@ -5468,7 +6141,7 @@ export interface operations {
             };
         };
     };
-    create_6: {
+    create_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -5518,7 +6191,33 @@ export interface operations {
             };
         };
     };
-    cancel_2: {
+    voidPotting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inboundRecordId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboundRecordPottingVoidRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseInboundRecordResponse"];
+                };
+            };
+        };
+    };
+    cancel: {
         parameters: {
             query?: never;
             header?: never;
@@ -5567,7 +6266,7 @@ export interface operations {
             };
         };
     };
-    create_7: {
+    create_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -5812,6 +6511,32 @@ export interface operations {
             };
         };
     };
+    updateTitle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workOperationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOperationTitleUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationResponse"];
+                };
+            };
+        };
+    };
     getVariety: {
         parameters: {
             query?: never;
@@ -5930,6 +6655,28 @@ export interface operations {
             };
         };
     };
+    getOrchidGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orchidGroupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseOrchidGroupResponse"];
+                };
+            };
+        };
+    };
     delete_1: {
         parameters: {
             query?: never;
@@ -5964,32 +6711,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["OrchidGroupUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseOrchidGroupResponse"];
-                };
-            };
-        };
-    };
-    move: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                orchidGroupId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OrchidGroupMoveRequest"];
             };
         };
         responses: {
@@ -6190,28 +6911,6 @@ export interface operations {
             };
         };
     };
-    delete_3: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                inboundRecordId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseVoid"];
-                };
-            };
-        };
-    };
     update_7: {
         parameters: {
             query?: never;
@@ -6306,6 +7005,28 @@ export interface operations {
             };
         };
     };
+    eligibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workOperationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationCancellationEligibilityResponse"];
+                };
+            };
+        };
+    };
     get_4: {
         parameters: {
             query?: never;
@@ -6324,6 +7045,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseRepotWorkOperationResponse"];
+                };
+            };
+        };
+    };
+    getRelations: {
+        parameters: {
+            query: {
+                kind: "CREATION_BATCH" | "LINKED";
+            };
+            header?: never;
+            path: {
+                workOperationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseListWorkOperationSummaryResponse"];
+                };
+            };
+        };
+    };
+    getGraph: {
+        parameters: {
+            query?: {
+                detail?: "WORK" | "MUTATION" | "LINEAGE";
+                depth?: number;
+                maxNodes?: number;
+            };
+            header?: never;
+            path: {
+                workOperationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationGraphResponse"];
                 };
             };
         };
@@ -6350,7 +7121,7 @@ export interface operations {
             };
         };
     };
-    get_5: {
+    cancelEligibility: {
         parameters: {
             query?: never;
             header?: never;
@@ -6367,29 +7138,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponseMultiCreateWorkOperationResponse"];
-                };
-            };
-        };
-    };
-    getCancellationEligibility: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                workOperationId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseMultiCreateCancellationEligibilityResponse"];
+                    "application/json": components["schemas"]["ApiResponseWorkOperationCancellationEligibilityResponse"];
                 };
             };
         };
@@ -6419,8 +7168,9 @@ export interface operations {
             query: {
                 from: string;
                 to: string;
-                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
+                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "VOIDED";
                 view?: "ALL" | "MANAGEMENT";
+                hasCorrections?: boolean;
             };
             header?: never;
             path?: never;
@@ -6741,6 +7491,28 @@ export interface operations {
             };
         };
     };
+    stockCountContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orchidGroupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseOrchidStockCountContext"];
+                };
+            };
+        };
+    };
     getLineage: {
         parameters: {
             query?: never;
@@ -6834,6 +7606,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseListOrchidGroupResponse"];
+                };
+            };
+        };
+    };
+    getMutations: {
+        parameters: {
+            query?: {
+                orchidGroupId?: number;
+                mutationType?: "BASELINE_IMPORT" | "CREATE" | "UPDATE_DETAILS" | "MOVE" | "RESERVE" | "RELEASE_RESERVATION" | "CONSUME_RESERVATION" | "RESTORE_OUTBOUND" | "DISCARD" | "TRANSFORM" | "CORRECTION" | "RECONCILIATION" | "COMPENSATION" | "CANCEL_CREATION" | "DELETE";
+                sourceDomain?: "FARM" | "WORK" | "SALES" | "INBOUND" | "MIGRATION";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponseOrchidGroupMutationResponse"];
+                };
+            };
+        };
+    };
+    getMutationGraph: {
+        parameters: {
+            query?: {
+                depth?: number;
+                maxNodes?: number;
+            };
+            header?: never;
+            path: {
+                orchidGroupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseOrchidGroupMutationGraphResponse"];
                 };
             };
         };

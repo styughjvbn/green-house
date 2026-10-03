@@ -1,5 +1,5 @@
 import type { PaymentTargetType } from "@/entities/farm/types";
-import { queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import {
   getAuctionLots,
   getAuctionSettlement,
@@ -78,6 +78,32 @@ export function businessPartnerOptionQueryOptions(id: number) {
     queryKey: salesQueryKeys.partners.option(id),
     queryFn: ({ signal }) => getBusinessPartnerOption(id, signal),
     staleTime: 30_000,
+  });
+}
+
+export function businessPartnerSearchQueryOptions(
+  keyword = "",
+  auctionHouse?: boolean,
+  active?: boolean,
+) {
+  const normalized = keyword.trim();
+  return infiniteQueryOptions({
+    queryKey: salesQueryKeys.partners.searchOptions(
+      normalized,
+      auctionHouse,
+      active,
+    ),
+    queryFn: ({ pageParam, signal }) =>
+      getBusinessPartnerOptions(
+        normalized,
+        pageParam,
+        auctionHouse,
+        active,
+        signal,
+      ),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.page + 1 < lastPage.totalPages ? lastPage.page + 1 : undefined,
   });
 }
 

@@ -28,106 +28,137 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Test-only input adapters exercise application contracts without adding product import
- * features.
+ * Test-only input adapters exercise application contracts without adding product import features.
  */
 @Tag("work-e2e")
 class InputChannelExtensionPostgresE2ETest extends WorkE2ETestBase {
 
-	@Autowired
-	WorkTestDataSeeder seeder;
+  @Autowired WorkTestDataSeeder seeder;
 
-	@Autowired
-	EntityManager entityManager;
+  @Autowired EntityManager entityManager;
 
-	@Autowired
-	TransactionTemplate transactions;
+  @Autowired TransactionTemplate transactions;
 
-	@Autowired
-	JdbcTemplate jdbc;
+  @Autowired JdbcTemplate jdbc;
 
-	@Autowired
-	SalesSlipCreationService sales;
+  @Autowired SalesSlipCreationService sales;
 
-	@Autowired
-	AuctionTrackingService auctions;
+  @Autowired AuctionTrackingService auctions;
 
-	private long partnerId;
+  private long partnerId;
 
-	private long groupId;
+  private long groupId;
 
-	private long lotId;
+  private long lotId;
 
-	@BeforeEach
-	void fixture() {
-		seeder.reset();
-		jdbc.execute("TRUNCATE TABLE houses, business_partners, sales_slips CONTINUE IDENTITY CASCADE");
-		transactions.executeWithoutResult(tx -> {
-			var farm = new FarmTestFixtures(entityManager);
-			var layout = farm.layout(9010);
-			groupId = farm.orchidGroup(layout.left(), "CHANNEL", 100).getId();
-			var partner = new BusinessPartner("Channel buyer", PartnerType.RETAIL, null, null, null, null);
-			entityManager.persist(partner);
-			partnerId = partner.getId();
-			var market = new BusinessPartner("Channel market", PartnerType.AUCTION_HOUSE, null, null, null, null);
-			entityManager.persist(market);
-			var shipment = new AuctionShipment(LocalDate.of(2045, 1, 2), market.getId(), PartnerType.AUCTION_HOUSE);
-			var lot = new AuctionShipmentLot("난", "CHANNEL", "A", null, 10);
-			shipment.addLot(lot);
-			entityManager.persist(shipment);
-			lotId = lot.getId();
-		});
-	}
+  @BeforeEach
+  void fixture() {
+    seeder.reset();
+    jdbc.execute("TRUNCATE TABLE houses, business_partners, sales_slips CONTINUE IDENTITY CASCADE");
+    transactions.executeWithoutResult(
+        tx -> {
+          var farm = new FarmTestFixtures(entityManager);
+          var layout = farm.layout(9010);
+          groupId = farm.orchidGroup(layout.left(), "CHANNEL", 100).getId();
+          var partner =
+              new BusinessPartner("Channel buyer", PartnerType.RETAIL, null, null, null, null);
+          entityManager.persist(partner);
+          partnerId = partner.getId();
+          var market =
+              new BusinessPartner(
+                  "Channel market", PartnerType.AUCTION_HOUSE, null, null, null, null);
+          entityManager.persist(market);
+          var shipment =
+              new AuctionShipment(
+                  LocalDate.of(2045, 1, 2), market.getId(), PartnerType.AUCTION_HOUSE);
+          var lot = new AuctionShipmentLot("난", "CHANNEL", "A", null, 10);
+          shipment.addLot(lot);
+          entityManager.persist(shipment);
+          lotId = lot.getId();
+        });
+  }
 
-	@Test
-	void csvInputReusesReservationSnapshotsAndCallerRollback() throws Exception {
-		var command = fromCsv("2045-01-02,5,1200");
-		var slip = sales.create(command);
-		assertThat(slip.totalAmount()).isEqualTo(6000);
-		assertThat(jdbc.queryForObject("SELECT quantity FROM orchid_groups WHERE id = ?", Integer.class, groupId))
-			.isEqualTo(100);
-		assertThat(
-				jdbc.queryForObject("SELECT reserved_quantity FROM orchid_groups WHERE id = ?", Integer.class, groupId))
-			.isEqualTo(5);
-		assertThat(slip.items().getFirst().allocations().getFirst().creationSnapshot().quantity()).isEqualTo(100);
-		assertThat(get("/api/sales-slips/" + slip.id() + "/print").data())
-			.isEqualTo(get("/api/sales-slips/" + slip.id()).data());
-		assertThatThrownBy(() -> transactions.executeWithoutResult(tx -> {
-			sales.create(fromCsv("2045-01-02,3,900"));
-			throw new IllegalStateException("import failed after creating a slip");
-		})).isInstanceOf(IllegalStateException.class);
-		assertThat(jdbc.queryForObject("SELECT count(*) FROM sales_slips", Long.class)).isEqualTo(1);
-		assertThat(
-				jdbc.queryForObject("SELECT reserved_quantity FROM orchid_groups WHERE id = ?", Integer.class, groupId))
-			.isEqualTo(5);
-	}
+  @Test
+  void csvInputReusesReservationSnapshotsAndCallerRollback() throws Exception {
+    var command = fromCsv("2045-01-02,5,1200");
+    var slip = sales.create(command);
+    assertThat(slip.totalAmount()).isEqualTo(6000);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT quantity FROM orchid_groups WHERE id = ?", Integer.class, groupId))
+        .isEqualTo(100);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT reserved_quantity FROM orchid_groups WHERE id = ?", Integer.class, groupId))
+        .isEqualTo(5);
+    assertThat(slip.items().getFirst().allocations().getFirst().creationSnapshot().quantity())
+        .isEqualTo(100);
+    assertThat(get("/api/sales-slips/" + slip.id() + "/print").data())
+        .isEqualTo(get("/api/sales-slips/" + slip.id()).data());
+    assertThatThrownBy(
+            () ->
+                transactions.executeWithoutResult(
+                    tx -> {
+                      sales.create(fromCsv("2045-01-02,3,900"));
+                      throw new IllegalStateException("import failed after creating a slip");
+                    }))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM sales_slips", Long.class)).isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT reserved_quantity FROM orchid_groups WHERE id = ?", Integer.class, groupId))
+        .isEqualTo(5);
+  }
 
-	@Test
-	void marketInputUsesTheSameLotRulesAndAtomicResultHistory() {
-		assertThatThrownBy(() -> auctions.addResult(lotId, new MarketRow("2045-01-03", "9", "1200").toCommand()))
-			.isInstanceOf(IllegalArgumentException.class)
-			.hasMessageContaining("전체");
-		assertThat(jdbc.queryForObject("SELECT count(*) FROM auction_attempts", Long.class)).isZero();
-		var result = auctions.addResult(lotId, new MarketRow("2045-01-03", "10", "1200").toCommand());
-		assertThat(result.soldQuantity()).isEqualTo(10);
-		assertThat(jdbc.queryForObject("SELECT sum(amount) FROM auction_result_lines", Long.class)).isEqualTo(12000);
-		assertThat(jdbc.queryForObject("SELECT count(*) FROM auction_lot_status_history", Long.class)).isEqualTo(1);
-	}
+  @Test
+  void marketInputUsesTheSameLotRulesAndAtomicResultHistory() {
+    assertThatThrownBy(
+            () -> auctions.addResult(lotId, new MarketRow("2045-01-03", "9", "1200").toCommand()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("전체");
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM auction_attempts", Long.class)).isZero();
+    var result = auctions.addResult(lotId, new MarketRow("2045-01-03", "10", "1200").toCommand());
+    assertThat(result.soldQuantity()).isEqualTo(10);
+    assertThat(jdbc.queryForObject("SELECT sum(amount) FROM auction_result_lines", Long.class))
+        .isEqualTo(12000);
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM auction_lot_status_history", Long.class))
+        .isEqualTo(1);
+  }
 
-	private SalesSlipCommand fromCsv(String line) {
-		var fields = line.split(",");
-		int quantity = Integer.parseInt(fields[1]);
-		return new SalesSlipCommand(LocalDate.parse(fields[0]), SalesType.DIRECT, partnerId, null, null, null, null,
-				null, List.of(new SalesSlipItemInput("CHANNEL", "난", null, quantity, Integer.parseInt(fields[2]), null,
-						List.of(new SalesSlipAllocationInput(groupId, quantity)))));
-	}
+  private SalesSlipCommand fromCsv(String line) {
+    var fields = line.split(",");
+    int quantity = Integer.parseInt(fields[1]);
+    return new SalesSlipCommand(
+        LocalDate.parse(fields[0]),
+        SalesType.DIRECT,
+        partnerId,
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of(
+            new SalesSlipItemInput(
+                "CHANNEL",
+                "난",
+                null,
+                quantity,
+                Integer.parseInt(fields[2]),
+                null,
+                List.of(new SalesSlipAllocationInput(groupId, quantity)))));
+  }
 
-	private record MarketRow(String date, String quantity, String unitPrice) {
-		RecordAuctionResultCommand toCommand() {
-			return new RecordAuctionResultCommand(LocalDate.parse(date), null, AuctionAttemptStatus.SOLD, null,
-					"import", List.of(new AuctionResultLineInput(null, Integer.parseInt(quantity),
-							Integer.parseInt(unitPrice), null, null)));
-		}
-	}
-
+  private record MarketRow(String date, String quantity, String unitPrice) {
+    RecordAuctionResultCommand toCommand() {
+      return new RecordAuctionResultCommand(
+          LocalDate.parse(date),
+          null,
+          AuctionAttemptStatus.SOLD,
+          null,
+          "import",
+          List.of(
+              new AuctionResultLineInput(
+                  null, Integer.parseInt(quantity), Integer.parseInt(unitPrice), null, null)));
+    }
+  }
 }

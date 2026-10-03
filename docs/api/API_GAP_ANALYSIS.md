@@ -42,7 +42,6 @@
 - `POST /api/orchid-groups`
 - `DELETE /api/orchid-groups/{orchidGroupId}`
 - `PATCH /api/orchid-groups/{orchidGroupId}`
-- `PATCH /api/orchid-groups/{orchidGroupId}/move`
 - `POST /api/work-operations/repot`
 - `GET /api/work-operations/{workOperationId}/repot-results`
 

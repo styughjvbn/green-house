@@ -18,17 +18,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PartnerSettlementSettingsController {
 
-	private final PartnerSettlementSettingsService settingsService;
+  private final PartnerSettlementSettingsService settingsService;
 
-	@GetMapping
-	public ApiResponse<PartnerSettlementSettingsResponse> get(@PathVariable Long partnerId) {
-		return ApiResponse.ok(settingsService.getOrCreate(partnerId));
-	}
+  @GetMapping
+  public ApiResponse<PartnerSettlementSettingsResponse> get(@PathVariable Long partnerId) {
+    return ApiResponse.ok(settingsService.getOrCreate(partnerId));
+  }
 
-	@PutMapping
-	public ApiResponse<PartnerSettlementSettingsResponse> update(@PathVariable Long partnerId,
-			@Valid @RequestBody PartnerSettlementSettingsRequest request) {
-		return ApiResponse.ok(settingsService.update(partnerId, request));
-	}
-
+  @PutMapping
+  public ApiResponse<PartnerSettlementSettingsResponse> update(
+      @PathVariable Long partnerId, @Valid @RequestBody PartnerSettlementSettingsRequest request) {
+    return ApiResponse.ok(settingsService.update(partnerId, request));
+  }
 }

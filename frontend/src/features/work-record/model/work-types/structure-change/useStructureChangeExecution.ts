@@ -471,5 +471,5 @@ function resultRowForOperation(
 }
 
 export function movementDiscardConfirmation(discardQuantity: number) {
-  return `자동 계산된 폐기 수량이 ${discardQuantity.toLocaleString()}분입니다.\n자리 이동을 완료하면 별도의 폐기 작업이 함께 생성됩니다. 계속할까요?`;
+  return `상태가 좋은 난을 먼저 이동하고, 원래 자리에 남은 ${discardQuantity.toLocaleString()}분을 폐기합니다.\n이동과 폐기는 별도 작업 이력으로 함께 저장됩니다. 계속할까요?`;
 }

@@ -33,7 +33,10 @@ green-house/
 - 판매 전표·정산 상세의 입금 이력도 대상·유형·페이지별 Query cache를 사용한다. 이력의 열림·페이지는 URL에 두고 대상 선택이 바뀌면 초기화한다. 입금 성공 후 서버가 반환한 잔액을 다음 입력 기본값으로 사용하고 해당 대상의 이력을 갱신한다. 이력 조회 실패는 입금 결과와 구분해 재조회할 수 있게 한다.
 - 작업 관리는 URL을 조회 범위·보기 방식·필터·페이지의 단일 기준으로 사용한다. 서버 진입 컴포넌트인 `WorkRecordRoutePage`는 현재 목록 또는 캘린더 query만 prefetch해 hydration하고, 작업 유형과 농장 전체 배치 정보는 등록 또는 실행 다이얼로그를 열 때 조회한다. 클라이언트 `WorkRecordPage`는 보기 전환과 등록 다이얼로그의 열림 상태만 관리하고, 등록 다이얼로그가 자체 참조 데이터의 로딩과 오류를 처리한다. 목록과 캘린더는 공통 작업 동작 훅과 상세 패널을 사용한다. 캘린더는 전용 기간 API를 한 번 호출하고, 작업 등록·실행 후 관련 작업 및 농장 query를 무효화한다.
 - 작업 관리는 조회·상태 변경을 `model/operation`, 등록 상태와 대상 계산을 `model/registration`, 작업 유형별 표현 구성을 `model/work-types`로 구분한다. 화면은 `ui/list`, `ui/calendar`, `ui/detail`, `ui/registration`, `ui/work-types`에서 기능별로 구성한다. 대상 출처, 등록 가능 모드, 실행 workflow는 백엔드 capability를 사용하고 `workTypeDefinition.ts`에는 안내 문구 같은 표현 규칙만 둔다.
-- 자리 이동 실행은 같은 품종의 원본 투입 수량을 실행 회차에서 합친 뒤 결과 합계를 차감한다. 별도 폐기 작업에 필요한 원본별 차감은 ID 순서의 결정적인 내부 배분을 사용하며 결과 계보와 직접 연결하지 않는다.
+- 작업·입고 변경 후에는 양쪽 목록·상세와 작업 캘린더·그래프 cache를 함께 무효화한다. 두 feature의 공통 query prefix와 갱신 함수는 `entities/farm/model`에 두고 feature 사이의 내부 import나 순환 의존을 만들지 않는다. 활성 query는 즉시 재조회하고 비활성 query는 다음 진입 시 재조회한다.
+- 작업 상태 action은 `END_REMAINING`과 `CANCEL`을 구분한다. 전자는 적용 효과를 유지하고 미완료 대상만 닫으며, 후자는 기록 전용 효과를 취소하거나 구조 변경 Mutation을 보상한다. 미완료 대상 종료, 효과 취소, Mutation 보상, 전체 작업 상태 변경은 하나의 최상위 application transaction에서 처리한다.
+- 작업 중심 그래프는 Work의 read model을 사용한다. Work가 생성 출처와 실행 의미가 있는 작업 선후 관계를 조립하고 Farm은 Work가 정의한 application port로 Mutation·revision·계보 조각을 제공한다. 작업 상세는 직접 Mutation 효과의 SOURCE/RESULT snapshot을 `투입·잔류·결과` 흐름으로 투영하고 Mutation 노드를 숨기며, 개발용 Mutation 테스트만 원본 기술 그래프와 계보 확장을 제공한다. 동일 Receipt에서 생성됐다는 사실은 그래프 관계로 취급하지 않고 목록 관계 조회에서만 사용한다. Receipt JSON은 멱등 결과의 원본 계약으로 유지하고, 역방향 조회는 그 결과만 정규화한 membership 테이블을 사용한다. 그래프들은 `shared/lib/graph`의 dagre layout을 공유한다.
+- 자리 이동 실행은 명시적인 1:1 전량 위치 변경이면 기존 난 묶음을 일괄 `MOVE`하여 ID를 유지한다. 같은 조건의 과거 `TRANSFORM` 이력은 원본 ID의 상태 체인으로 합치고 후속 참조를 이관하며, 제거 ID 대응은 감사 테이블에 보존한다. 그 외에는 같은 품종의 원본 선별 수량을 실행 회차에서 합쳐 상태가 좋은 수량을 먼저 이동하고, 원래 자리에 남은 수량을 폐기한다. 연관 폐기 작업은 `MOVEMENT_DISCARD` 관계로 이동 작업에 연결하며 총 폐기 수량은 원본별 선별 수량 비율로 배분한다. 정수 나머지는 최대 나머지 방식을 사용하고 나머지가 같으면 난 묶음 ID 오름차순으로 결정한다.
 
 ### Backend
 
@@ -112,7 +115,7 @@ demo
 - 입고 조회, 입고 명령, 포트 실행을 별도 application service로 분리한다.
 - 입고 등록은 application 명령을 직접 받고, 입고 작업 스냅샷과 메모 조립은 전용 factory가 Work application 명령으로 전달한다. 같은 필드를 복사하는 HTTP DTO를 추가하지 않는다.
 - 입고 시 품종 선택·재사용·신규 생성은 품종 application이 소유한다. 기존 속·품종명 정규화와 동일 품종 재사용을 유지하고, 입고·난 묶음·Work 기록은 최상위 입고 트랜잭션에서 함께 반영한다.
-- 입고의 수정·취소·삭제·포트 가능 조건과 수량 선택은 입고 Entity가, 자동·명시 배치 범위 검증은 기존 배치 정책이 소유한다.
+- 입고의 수정·취소·포트 가능 조건과 수량 선택은 입고 Entity가, 자동·명시 배치 범위 검증은 기존 배치 정책이 소유한다. 입고 응답의 `availableActions`가 화면 동작의 기준이다. 즉시 배치 입고 취소와 완료된 포트 작업 취소는 Work에 연결된 생성 Mutation을 같은 트랜잭션에서 보상하며, 취소된 입고도 삭제하지 않고 목록 이력으로 함께 조회한다.
 - 품종 목록의 난 묶음·최근 입고일·최근 작업일은 페이지 단위로 일괄 조회한다.
 - 난 묶음 계보는 `work` 엔티티를 직접 참조하지 않고 `workOperationId` 값으로 연결한다.
 - 난 묶음 취소·보정의 사용 여부 port는 Farm이 소유한다. Sales는 이 port를 구현하고, Farm adapter는 Work의 개수 조회를 Farm blocker로 변환한다. Work가 Farm에 의존하지 않는다. 차단 사유는 기존 입고→판매→작업 순서를 명시적으로 유지한다.
@@ -139,7 +142,7 @@ application|domain|repository|controller|dto/
  ├─ inbound/         입고·포트 실행
  ├─ variety/         품종 기준 정보
  ├─ material/        자재 기준 정보
- └─ transformation/  분갈이·분주·합식·다중 생성·계보
+ └─ transformation/  분갈이·분주·합식·계보
 ```
 
 저장소가 없는 현황 기능처럼 계층에 구현이 필요하지 않은 경우 해당 하위 패키지는 생략한다.
@@ -173,8 +176,13 @@ application|domain|dto/
  ├─ operation/   작업 계획·실행·조회·상태 전이·작업 유형
  ├─ target/      대상 선택·스냅샷·실행 상태·외부 대상 gateway
  ├─ effect/      효과 실행·감사·구조 변경과 입고 포트 계약
- └─ correction/  완료 작업 보정과 보정 대상 조회
+ └─ correction/  완료 작업의 감사 이벤트와 보정 대상 조회
 ```
+
+보정 유스케이스는 Work가 트랜잭션과 감사 이벤트를 소유하고, Work의 application port를 Farm adapter가 구현한다.
+보정 접수는 작업 생성 Receipt와 분리하여 요청 지문과 감사 이벤트 ID를 확정한다. 같은 키는 DB 접수 행으로
+직렬화하며, 다른 키의 동일 원본 보정은 원본 잠금으로 직렬화한다. 목록의 보정 건수는 페이지 ID 기준 일괄 집계한다.
+보정 Mutation의 출처는 감사 이벤트이며, 기술 그래프와 원장 대사에서 원본 작업과 함께 추적한다.
 
 ### partner
 
@@ -278,8 +286,9 @@ Persistence 조회 규칙:
 - Work 효과 handler는 Work가 만든 application 실행 값을 받으며 Work Entity에 접근하지 않는다. 효과 저장과 대상·작업 상태 전이는 Work가 기존 유스케이스 트랜잭션 안에서 처리한다. 대상 위치는 저장된 스냅샷의 값을 복사해 전달한다. 재실행 시 기존 효과를 먼저 조회하고, 새 완료 기록은 대상마다 중복 조회를 추가하지 않는다.
 - Work의 고정 유형 규칙은 순수 domain 정의에 두고 실행 분기와 capability가 함께 사용한다. 코드별 workflow·대상 출처·등록 제한은 `WorkTypeDefinition`, 기본 handler·효과 분류·사용자 정의 허용은 `WorkTypeTemplate`이 소유한다. 활성·시스템 여부는 Entity에서 결합한다. 다른 모듈은 코드 상수를 위해 Work Entity를 참조하지 않는다.
 - 새 Work 유형은 정의와 필요한 handler·구조 변경 strategy를 등록한다. 기존 registry가 애플리케이션 시작 시 필수 구현의 누락을 검사하며, 같은 유형 목록을 계획·기록·실행 서비스에 복제하지 않는다. 기존 코드 우선 handler와 저장된 template의 fallback을 유지하고, 유형의 효과 분류와 실제 실행 결과의 효과 종류를 임의로 합치지 않는다.
-- Work 효과의 고정 결과는 유형별 내부 값에서 기존 JSON으로 변환한다. 저장 필드 유무·null·날짜와 결과 순서를 유지하며, 자유 기록형 결과는 원래 값을 보존한다. 상세의 구형 JSON 해석은 조회 없는 codec에, 필드 라벨·표시는 assembler에 둔다. 상세 service는 참조와 보정 효과를 일괄 조회하며, 보정마다 Repository를 호출하지 않는다. 기존 품종·위치 참조 표시와 저장된 수량·상태 이력의 의미를 임의로 바꾸지 않는다.
+- Work 효과의 고정 결과는 유형별 내부 값에서 기존 JSON으로 변환한다. 저장 필드 유무·null·날짜와 결과 순서를 유지하며, 자유 기록형 결과는 원래 값을 보존한다. 상세의 구형 JSON 해석은 조회 없는 codec에, 필드 라벨·표시는 assembler에 둔다. 상세 service는 참조와 보정 감사 이벤트를 일괄 조회하며, 보정마다 Repository를 호출하지 않는다. 기존 품종·위치 참조 표시와 저장된 수량·상태 이력의 의미를 임의로 바꾸지 않는다.
 - 외부 시스템은 application port 뒤의 adapter로 추가한다. 외부 시스템 DTO와 오류를 domain에 전파하지 않는다.
+- 작업 수량 수지는 Work 소유 실행 스냅샷·정정 감사 이벤트에서 복원하며 현재 Farm Entity를 과거 사실의 근거로 사용하지 않는다. Farm adapter는 결과 잠금 아래 현재 상태·실사·후속 참조를 검증한다. 실사는 Farm 소유 접수/감사 기록 → 난 묶음 → 논리 구역 순으로 잠그고 같은 트랜잭션에서 Mutation과 수량을 확정한다. 두 흐름 모두 최초 실행 스냅샷을 덮어쓰지 않는다.
 
 ```text
 호출 모듈 application → 제공 모듈 application API
@@ -301,6 +310,10 @@ Persistence 조회 규칙:
 - 배치 수용 프로필은 HTTP DTO를 domain 값으로 변환한 뒤 순수 정책에서 정규화·중복·수용량을 검사하고, 전체 검증이 끝나야 기존 규칙을 교체한다. 모드 강도는 enum 선언 순서와 분리하며 검증·응답·감사 정렬이 같은 강도 기준을 사용한다.
 - 네트워크·파일·사용자 대기처럼 실패와 지연을 통제하기 어려운 작업은 DB 트랜잭션 안에서 수행하지 않는다.
 - 여러 행을 잠글 때는 ID 오름차순처럼 잠금 순서를 고정한다. 재고, 잔액, 순번, 상태 변경에는 도메인 검사와 함께 version, 비관적 잠금, UNIQUE/CHECK 또는 원자 갱신 중 필요한 DB 보호를 둔다.
+- 작업 일괄 취소의 최상위 트랜잭션은 Work application에 둔다. 작업 ID 오름차순으로 root 행을 잠근 뒤 Farm port에서 영향 난 묶음을 ID 순으로 잠그고 외부 참조를 재검증한다. 생성 취소로 지정한 원본만 복원 위치 검사를 생략하며 기존 일괄 보상 Engine을 사용한다. 추가 선택이 없는 보상 요청은 기존 요청 지문과 호환된다.
+- 작업 대상 등록은 Farm resolver port에서 대상 난 묶음을 ID 순으로 잠그고 활성 여부를 다시 검증한 뒤 저장한다. 단건 구조 변경·포트 취소도 같은 난 묶음 root 잠금 뒤 외부 참조를 재검증하여, 취소된 결과에 새 계획 작업이 연결되는 경쟁 조건을 막는다. 잠금은 최상위 쓰기 트랜잭션이 끝날 때까지 유지한다.
+- 작업 진행·실행·취소는 연결 입고 ID 오름차순 → 작업 ID 오름차순 → 대상 실행 ID 오름차순 → 난 묶음 순으로 잠근다. 포트 실행은 같은 계획의 형제 입고까지 먼저 일괄 잠그고 계획 변경 여부를 재검증한다. 취소의 Farm 검사는 쓰기용 잠금 조회와 읽기 전용 가능 여부 조회를 분리하여 잠금 전 엔티티를 재사용하지 않는다. 입고의 포트 실행·취소 접수는 기존 Work 접수 저장소를 쓰되 신규 작업 등록 membership을 만들지 않는다. 같은 기존 계획을 처리하는 여러 입고별 접수가 함께 등록 관계를 덮어쓰지 않게 한다.
+- 입고 쓰기 조회는 collection fetch의 후속 잠금에 의존하지 않는다. root 행을 먼저 직접 잠근 뒤 연관 정보를 일괄 로딩한다. 입고 취소·포트 취소는 연결 작업들의 형제 입고까지 기존 Work 잠금 API로 먼저 잠그며, 단순 입고 수정은 root 잠금 안에서 최신 수정 가능 상태를 검증한다. 목록의 포트 취소 action 판정은 Work application의 일괄 조회를 사용한다.
 - Partner 잠금 API는 호출자의 트랜잭션을 필수로 요구하고 거래처 ID 오름차순으로 잠근다. 잠금 획득만 하는 호출이 독립 트랜잭션을 열고 즉시 반환하는 방식은 허용하지 않는다. 잔액 생성·갱신은 거래처 잠금 후 잔액 행 잠금 순서를 유지한다.
 - 판매 예약·해제·출고·복구의 수량 불변식은 Farm Entity가 적용한다. Farm 예약 API는 기존 typed command를 받고 호출자의 트랜잭션을 필수로 요구하며, Engine/Legacy 선택과 실제 재고 변경을 소유한다. Sales는 유스케이스 순서와 배분별 재고 이동·Mutation 연결을 저장한다. Legacy 직접 writer는 Farm 내부로 옮겼으며 제거 gate를 통과하기 전까지 유지한다.
 - 구조 변환은 상태 변경 전에 상속 속성과 결과 목적을 계산하고 Legacy/Engine이 같은 계획과 결과·계보 조립 경로를 사용한다. 각 writer의 기존 입력 정규화는 유지한다. Mutation Engine은 잠금·상태 변경·revision을, 내부 recorder는 header·쓰기 context·Entry·Relation 기록을 담당한다. 새 그룹은 header와 트랜잭션 context 설정 후 저장하며, 잠금 전후의 재실행 확인과 최상위 트랜잭션은 유지한다.
@@ -338,7 +351,7 @@ Persistence 조회 규칙:
 - 정산 초기 재구성은 Auction의 낙찰 결과 ID를 500개씩 순회하고 Settlement가 자기 연결 ID를 대조한다. 미연결 결과만 상세 조회·반영한다. 처리할 새 결과가 없으면 정산 aggregate를 읽거나 수정하지 않는다. 모듈 간 역방향 의존이나 별도 동기화 상태 테이블은 추가하지 않는다.
 - 목록·옵션·분석 조회에는 pagination, 날짜 범위 또는 명시적 최대 건수 중 하나를 둔다. 장기 누적 테이블의 무제한 `findAll`을 API 경로에 사용하지 않는다.
 - 거래처 관리 목록과 선택지는 같은 검색 조건·정렬·페이지 조회를 사용하되 선택지 응답에는 식별자·이름·활성 여부만 전달한다. 현재 선택은 검색 결과와 별도로 단건 조회해 페이지 밖이나 비활성 거래처도 표시한다. 호환 활성 목록은 이름 검색과 기존 응답을 유지하고 500건으로 제한한다.
-- 작업·재고 분석은 Work·Farm의 기존 읽기 application API가 집계 값과 제한된 최근 기록을 제공한다. Analytics는 기간 검증과 HTTP 응답 조립을 담당하며 두 모듈의 Q 타입이나 Repository projection을 참조하지 않는다. 작업의 완료·보정 조건과 재고의 판매 가능·주의 상태는 소유 모듈에서 적용한다.
+- 작업·재고 분석은 Work·Farm의 기존 읽기 application API가 집계 값과 제한된 최근 기록을 제공한다. Analytics는 기간 검증과 HTTP 응답 조립을 담당하며 두 모듈의 Q 타입이나 Repository projection을 참조하지 않는다. 작업의 완료 조건과 재고의 판매 가능·주의 상태는 소유 모듈에서 적용한다.
 - 판매 분석도 Sales의 완료 전표 집계와 최근·미수 전표 값만 소비한다. Partner는 현재 이름·유형을 500개 ID씩 scalar 조회하고, Settlement는 0이 아닌 현재 잔액을 읽기 전용 값으로 제공한다. Analytics는 전표·품목·거래처 Entity를 적재하거나 타 모듈 테이블을 직접 join하지 않는다.
 - 분석의 최상위 application 트랜잭션은 읽기 전용 `REPEATABLE_READ`를 사용한다. 여러 소유 모듈을 조회하는 동안 매출·현재 이름·잔액이 서로 다른 시점으로 섞이지 않게 한다. 쓰기 유스케이스의 트랜잭션·잠금 순서는 바꾸지 않는다.
 - 입금 상태별 판매 분석은 Sales가 저장된 자유 문자열의 호환 분류를 소유하고 분류별 합계만 제공한다. Analytics는 원문 상태를 해석하거나 실제 입금액으로 분류를 다시 만들지 않는다. 이 분류는 기존 보고서의 호환 값이며 입금 가능 여부·원장 상태 판단에 사용하지 않는다. 저장 상태의 표준화는 기존 데이터와 지표 변경을 함께 검토할 별도 정책 작업이다.
@@ -454,11 +467,12 @@ src/
 
 #### 테스트와 변경 완료 기준
 
+- 구현 반복 중에는 변경 코드와 직접 관련된 단위·통합 테스트만 실행한다. 작은 표현 수정마다 전체 `npm run check`나 브라우저 E2E를 반복하지 않는다.
 - URL parser·writer, 날짜·payload 변환, selection coordinator처럼 React와 분리 가능한 규칙은 pure function unit test로 검증한다.
 - 서버 capability와 상태 전이는 백엔드 단위·통합 테스트를 기준으로 검증한다. 프론트 테스트에서 같은 전이 규칙을 다시 구현하지 않는다.
 - mutation과 cache 갱신, back/forward, dialog focus, 지도 연속 선택처럼 경계를 넘는 흐름은 회귀 위험에 따라 integration 또는 E2E 테스트를 추가한다.
 - API contract 변경은 Controller·DTO·테스트 수정 후 OpenAPI와 생성 타입을 갱신한다.
-- 프론트 변경 완료 전 `cd frontend && npm run check`를 실행한다. 실행하지 못한 검증과 기존 경고는 결과에 남긴다.
+- 기능 단위 변경 완료 전 `cd frontend && npm run check`를 한 번 실행한다. 실행하지 못한 검증과 기존 경고는 결과에 남긴다.
 
 ## 6. 데이터 보존 원칙
 
@@ -478,6 +492,14 @@ src/
 ## 7. 백엔드 리팩터링 검증
 
 전체 백엔드 검증은 기본 검사·패키징과 실제 PostgreSQL 회귀·벤치마크로 나눈다. Gradle 작업 이름에는 `work`가 남아 있지만 여러 도메인을 포함하며 브라우저 E2E와는 별도다.
+
+로컬 검증은 다음 단계로 실행한다.
+
+1. 구현 반복: `./gradlew test --tests '변경과 직접 관련된 테스트'`
+2. 기능 단위 완료: `./gradlew test`
+3. PostgreSQL 경계 변경: 관련 기능이 모인 체크포인트에서 `./gradlew workE2eTest`
+
+`workE2eTest`는 PostgreSQL 전용 SQL·Flyway·constraint, 트랜잭션 경계, 멱등 처리, lock·동시성, 수량·금액·정산 변경에 사용한다. 문서·포맷·import·표현 전용 UI 수정에는 실행하지 않는다. CI는 아래 전체 검증을 계속 수행한다.
 
 ```bash
 cd backend
@@ -500,12 +522,14 @@ cd backend
   지정한 경우에만 상한 초과로 실패한다.
 - 전후 비교가 필요하면 각 대상 커밋에서 `clean workE2eTest workBenchmark`를 실행하고 생성된
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
-- `FarmQueryPostgresE2ETest`는 다이 1·10·50개와 다이별 복수 구역에서 전체 구조·맵 SQL 3회, 다이·구역 목록 SQL 2회와 맵의 난 묶음·품종 Entity 로딩 0건을 검증한다. Work 상세는 보정 1·10·50건에서 SQL 5회로 고정한다.
+- `FarmQueryPostgresE2ETest`는 다이 1·10·50개와 다이별 복수 구역에서 전체 구조·맵 SQL 3회, 다이·구역 목록 SQL 2회와 맵의 난 묶음·품종 Entity 로딩 0건을 검증한다. Work 정형 상세는 보정 0·1·10·50건에서 SQL 4회로 고정한다.
 - 거래처 검색 경계를 거치는 판매 검색은 1·10·50행에서 SQL 4회, 품종과 경매장 이름에 걸친 경매 문구 검색은 7회다. 각각 기존 3회·5회에서 scalar 검색이 추가된 값이며 행별 반복 조회는 없다. 검색 없는 경매 페이지의 기존 5회 상한은 유지한다.
 - `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 5회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
 - 사용자 그룹 목록은 1·10·50개에서 SQL 3회, 난 묶음별 소속 그룹 조회는 5회 이내인지 검증한다. 보관·탈퇴 제외와 소속 순서도 함께 확인한다.
 - CI의 기본 job은 `check`와 `bootJar`, `backend-postgres` job은 Docker 확인 후 `workE2eTest`와 `workBenchmark -PworkBenchmarkEnforce=true`를 각각 실행한다. Docker가 없으면 PostgreSQL 검사는 실패하며 조용히 건너뛰지 않는다. 검사별 결과는 Actions Summary에 기록하고 테스트·벤치마크 보고서는 14일간 artifact로 보관한다. 기본 architecture 검사도 테스트 비활성화와 모듈 내부·직접 시간 조회 예외의 재도입을 막는다.
-- 백엔드의 편집 기준은 `backend/.editorconfig`를 따른다. Java는 [Spring Java Format](https://github.com/spring-io/spring-javaformat)의 `./gradlew format`으로 적용하고 `checkFormat`으로 검사한다. `check`는 검사만 수행한다. import는 static 먼저, 각 그룹 내 사전순으로 정렬하며 중복과 순서를 architecture 테스트로 검사한다. 기능 변경과 전체 포맷 적용은 별도 커밋으로 나눈다.
+- Java의 최종 포맷 기준은 Spotless의 [Google Java Format](https://github.com/diffplug/spotless/blob/main/plugin-gradle/README.md#google-java-format)이다. `backend`에서 `./gradlew format`으로 적용하고 `./gradlew spotlessCheck`로 검사한다. CI의 `check`에도 `spotlessCheck`가 연결되며 검사 중 소스를 수정하지 않는다. Spring Java Format, Eclipse formatter XML, `formatAll`은 사용하지 않는다.
+- `backend/.editorconfig`는 Java 블록 들여쓰기를 2 spaces로 정의한다. Kotlin Gradle 스크립트는 기존 tab 4, YAML은 2 spaces를 유지하며 Google Java Format의 적용 대상은 Java 소스뿐이다. FQCN 축약 → import 정렬 → 미사용 import 제거 → Google Java Format 순으로 적용한다. import는 static 먼저, 각 그룹에서 세미콜론을 제외한 이름의 사전순으로 정렬한다.
+- VS Code의 Java 저장 포맷은 [Spotless Gradle 확장](https://github.com/badsyntax/vscode-spotless-gradle)으로 같은 Gradle 설정을 사용한다. `.vscode/extensions.json`의 Spotless Gradle·Gradle for Java 권장 확장을 설치하고 창을 다시 로드한다. `.vscode/settings.json`은 Red Hat Java 포맷을 끄고 Java 기본 포맷터와 저장 포맷을 Spotless로 지정하며, 중첩 Gradle 프로젝트 `backend`를 탐색 대상으로 둔다. 별도의 Eclipse XML이나 Google formatter 설정은 유지하지 않는다. 기능 변경과 전체 포맷 적용은 별도 커밋으로 나눈다.
 
 ## 8. 프론트엔드 맵 성능 E2E
 

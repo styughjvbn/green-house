@@ -14,17 +14,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class SalesSlipNumberRepositoryTest {
 
-	@Autowired
-	SalesSlipNumberRepository repository;
+  @Autowired SalesSlipNumberRepository repository;
 
-	@Test
-	void incrementsEachSaleDateIndependently() {
-		LocalDate firstDate = LocalDate.of(2030, 1, 2);
-		LocalDate secondDate = LocalDate.of(2030, 1, 3);
+  @Test
+  void incrementsEachSaleDateIndependently() {
+    LocalDate firstDate = LocalDate.of(2030, 1, 2);
+    LocalDate secondDate = LocalDate.of(2030, 1, 3);
 
-		assertThat(repository.nextDailySequence(firstDate)).isEqualTo(1L);
-		assertThat(repository.nextDailySequence(firstDate)).isEqualTo(2L);
-		assertThat(repository.nextDailySequence(secondDate)).isEqualTo(1L);
-	}
-
+    assertThat(repository.nextDailySequence(firstDate)).isEqualTo(1L);
+    assertThat(repository.nextDailySequence(firstDate)).isEqualTo(2L);
+    assertThat(repository.nextDailySequence(secondDate)).isEqualTo(1L);
+  }
 }

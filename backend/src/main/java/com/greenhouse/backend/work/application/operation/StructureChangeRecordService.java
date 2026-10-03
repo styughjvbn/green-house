@@ -1,11 +1,11 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -20,115 +20,146 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class StructureChangeRecordService {
 
-	private final WorkOperationPlanService planService;
+  private final WorkOperationPlanService planService;
 
-	private final WorkOperationProgressService progressService;
+  private final WorkOperationProgressService progressService;
 
-	private final StructureChangeExecutionService structureChangeExecutionService;
+  private final StructureChangeExecutionService structureChangeExecutionService;
 
-	private final InboundPottingOperationService inboundPottingOperationService;
+  private final InboundPottingOperationService inboundPottingOperationService;
 
-	private final WorkOperationQueryService queryService;
+  private final WorkOperationQueryService queryService;
 
-	private final DiscardRecordService discardRecordService;
+  private final DiscardRecordService discardRecordService;
 
-	private final WorkCommandReceipts receipts;
+  private final WorkCommandReceipts receipts;
 
-	private final WorkRequestFingerprint fingerprints;
+  private final WorkRequestFingerprint fingerprints;
 
-	/**
-	 * @deprecated Use
-	 * {@link #createStructureChangeRecords(StructureChangeRecordBatchCreateRequest)}.
-	 */
-	@Deprecated(since = "2026-08", forRemoval = false)
-	public WorkOperationView createStructureChangeRecord(StructureChangeRecordCreateRequest request) {
-		var ids = receipts.execute("STRUCTURE_RECORD", request.execution().idempotencyKey(), request,
-				() -> List.of(createStructureChangeRecord(request, Set.of()).id()));
-		return queryService.get(ids.getFirst());
-	}
+  /**
+   * @deprecated Use {@link #createStructureChangeRecords(StructureChangeRecordBatchCreateRequest)}.
+   */
+  @Deprecated(since = "2026-08", forRemoval = false)
+  public WorkOperationView createStructureChangeRecord(StructureChangeRecordCreateRequest request) {
+    var ids =
+        receipts.execute(
+            "STRUCTURE_RECORD",
+            request.execution().idempotencyKey(),
+            request,
+            () -> List.of(createStructureChangeRecord(request, Set.of()).id()));
+    return queryService.get(ids.getFirst());
+  }
 
-	private WorkOperationView createStructureChangeRecord(StructureChangeRecordCreateRequest request,
-			Set<Long> placementExclusionOrchidGroupIds) {
-		WorkOperationView planned = planService.create(request.operation());
-		if (!WorkTypeDefinition.forCode(planned.workTypeCode()).supportsStructureExecution()) {
-			throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업 기록만 이 방식으로 저장할 수 있습니다.");
-		}
-		Map<Long, Integer> plannedQuantities = planned.targets()
-			.stream()
-			.filter(target -> target.orchidGroupId() != null)
-			.collect(Collectors.toMap(target -> target.orchidGroupId(), target -> target.quantitySnapshot()));
-		Map<Long, Integer> inputQuantities = request.execution()
-			.sources()
-			.stream()
-			.collect(Collectors.toMap(source -> source.sourceOrchidGroupId(), source -> source.inputQuantity(),
-					(left, right) -> {
-						throw new IllegalArgumentException("작업 기록의 원본 난 묶음은 중복될 수 없습니다.");
-					}));
-		if (!plannedQuantities.equals(inputQuantities)) {
-			throw new IllegalArgumentException("작업 기록은 선택한 모든 원본의 전체 수량을 한 번에 처리해야 합니다.");
-		}
-		progressService.start(planned.id());
-		WorkOperationView completed = structureChangeExecutionService.execute(planned.id(), request.execution(),
-				placementExclusionOrchidGroupIds);
-		if (!"COMPLETED".equals(completed.status().name())) {
-			throw new IllegalStateException("구조 변경 작업 기록의 모든 대상을 완료하지 못했습니다.");
-		}
-		return completed;
-	}
+  private WorkOperationView createStructureChangeRecord(
+      StructureChangeRecordCreateRequest request, Set<Long> placementExclusionOrchidGroupIds) {
+    WorkOperationView planned = planService.create(request.operation());
+    if (!WorkTypeDefinition.forCode(planned.workTypeCode()).supportsStructureExecution()) {
+      throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업 기록만 이 방식으로 저장할 수 있습니다.");
+    }
+    Map<Long, Integer> plannedQuantities =
+        planned.targets().stream()
+            .filter(target -> target.orchidGroupId() != null)
+            .collect(
+                Collectors.toMap(
+                    target -> target.orchidGroupId(), target -> target.quantitySnapshot()));
+    Map<Long, Integer> inputQuantities =
+        request.execution().sources().stream()
+            .collect(
+                Collectors.toMap(
+                    source -> source.sourceOrchidGroupId(),
+                    source -> source.inputQuantity(),
+                    (left, right) -> {
+                      throw new IllegalArgumentException("작업 기록의 원본 난 묶음은 중복될 수 없습니다.");
+                    }));
+    if (!plannedQuantities.equals(inputQuantities)) {
+      throw new IllegalArgumentException("작업 기록은 선택한 모든 원본의 전체 수량을 한 번에 처리해야 합니다.");
+    }
+    progressService.start(planned.id());
+    WorkOperationView completed =
+        structureChangeExecutionService.execute(
+            planned.id(), request.execution(), placementExclusionOrchidGroupIds);
+    if (!"COMPLETED".equals(completed.status().name())) {
+      throw new IllegalStateException("구조 변경 작업 기록의 모든 대상을 완료하지 못했습니다.");
+    }
+    return completed;
+  }
 
-	public List<WorkOperationView> createStructureChangeRecords(StructureChangeRecordBatchCreateRequest request) {
-		List<Long> sourceOrchidGroupIds = request.records()
-			.stream()
-			.flatMap(record -> record.execution().sources().stream())
-			.map(source -> source.sourceOrchidGroupId())
-			.toList();
-		Set<Long> placementExclusionOrchidGroupIds = new HashSet<>(sourceOrchidGroupIds);
-		if (placementExclusionOrchidGroupIds.size() != sourceOrchidGroupIds.size()) {
-			throw new IllegalArgumentException("품종별 작업 기록에서 같은 원본 난 묶음을 중복 사용할 수 없습니다.");
-		}
-		String key = fingerprints
-			.calculate(request.records().stream().map(record -> record.execution().idempotencyKey()).toList());
-		var ids = receipts.execute("STRUCTURE_RECORD_BATCH", key, request,
-				() -> request.records()
-					.stream()
-					.map(record -> createStructureChangeRecord(record, placementExclusionOrchidGroupIds).id())
-					.toList());
-		var byId = queryService.getAll(ids)
-			.stream()
-			.collect(Collectors.toMap(WorkOperationView::id, operation -> operation));
-		return ids.stream().map(byId::get).toList();
-	}
+  public List<WorkOperationView> createStructureChangeRecords(
+      StructureChangeRecordBatchCreateRequest request) {
+    List<Long> sourceOrchidGroupIds =
+        request.records().stream()
+            .flatMap(record -> record.execution().sources().stream())
+            .map(source -> source.sourceOrchidGroupId())
+            .toList();
+    Set<Long> placementExclusionOrchidGroupIds = new HashSet<>(sourceOrchidGroupIds);
+    if (placementExclusionOrchidGroupIds.size() != sourceOrchidGroupIds.size()) {
+      throw new IllegalArgumentException("품종별 작업 기록에서 같은 원본 난 묶음을 중복 사용할 수 없습니다.");
+    }
+    String key =
+        fingerprints.calculate(
+            request.records().stream().map(record -> record.execution().idempotencyKey()).toList());
+    var ids =
+        receipts.execute(
+            "STRUCTURE_RECORD_BATCH",
+            key,
+            request,
+            () -> {
+              Set<Long> remainingSourceIds = new HashSet<>(placementExclusionOrchidGroupIds);
+              List<Long> operationIds = new ArrayList<>();
+              for (StructureChangeRecordCreateRequest record : request.records()) {
+                operationIds.add(createStructureChangeRecord(record, remainingSourceIds).id());
+                record.execution().sources().stream()
+                    .map(source -> source.sourceOrchidGroupId())
+                    .forEach(remainingSourceIds::remove);
+              }
+              return List.copyOf(operationIds);
+            });
+    var byId =
+        queryService.getAll(ids).stream()
+            .collect(Collectors.toMap(WorkOperationView::id, operation -> operation));
+    return ids.stream().map(byId::get).toList();
+  }
 
-	public WorkOperationView createDiscardRecord(DiscardRecordCreateRequest request) {
-		return discardRecordService.create(request);
-	}
+  public List<WorkOperationView> createDiscardRecord(DiscardRecordCreateRequest request) {
+    return discardRecordService.create(request);
+  }
 
-	public List<WorkOperationView> createInboundPottingRecord(InboundPottingRecordCreateRequest request) {
-		Set<Long> plannedIds = new HashSet<>(request.plan().inboundRecordIds());
-		Set<Long> executionIds = request.executions()
-			.stream()
-			.map(execution -> execution.inboundRecordId())
-			.collect(Collectors.toSet());
-		if (plannedIds.size() != request.plan().inboundRecordIds().size()
-				|| executionIds.size() != request.executions().size() || !plannedIds.equals(executionIds)) {
-			throw new IllegalArgumentException("선택한 모든 입고 기록의 포트 작업 결과를 한 번씩 입력해야 합니다.");
-		}
-		if (request.executions()
-			.stream()
-			.anyMatch(execution -> !request.plan().plannedStartDate().equals(execution.pottingDate()))) {
-			throw new IllegalArgumentException("포트 작업 기록의 완료일은 작업일과 같아야 합니다.");
-		}
+  public List<WorkOperationView> createInboundPottingRecord(
+      InboundPottingRecordCreateRequest request) {
+    Set<Long> plannedIds = new HashSet<>(request.plan().inboundRecordIds());
+    Set<Long> executionIds =
+        request.executions().stream()
+            .map(execution -> execution.inboundRecordId())
+            .collect(Collectors.toSet());
+    if (plannedIds.size() != request.plan().inboundRecordIds().size()
+        || executionIds.size() != request.executions().size()
+        || !plannedIds.equals(executionIds)) {
+      throw new IllegalArgumentException("선택한 모든 입고 기록의 포트 작업 결과를 한 번씩 입력해야 합니다.");
+    }
+    if (request.executions().stream()
+        .anyMatch(
+            execution -> !request.plan().plannedStartDate().equals(execution.pottingDate()))) {
+      throw new IllegalArgumentException("포트 작업 기록의 완료일은 작업일과 같아야 합니다.");
+    }
 
-		String key = fingerprints.calculate(request.executions()
-			.stream()
-			.map(execution -> List.of(execution.inboundRecordId().toString(), execution.idempotencyKey()))
-			.toList());
-		var ids = receipts.execute("POTTING_RECORD", key, request,
-				() -> inboundPottingOperationService.executeRecord(request.plan(), request.executions())
-					.stream()
-					.map(WorkOperationView::id)
-					.toList());
-		return queryService.getAll(ids);
-	}
-
+    String key =
+        fingerprints.calculate(
+            request.executions().stream()
+                .map(
+                    execution ->
+                        List.of(execution.inboundRecordId().toString(), execution.idempotencyKey()))
+                .toList());
+    var ids =
+        receipts.execute(
+            "POTTING_RECORD",
+            key,
+            request,
+            () ->
+                inboundPottingOperationService
+                    .executeRecord(request.plan(), request.executions())
+                    .stream()
+                    .map(WorkOperationView::id)
+                    .toList());
+    return queryService.getAll(ids);
+  }
 }

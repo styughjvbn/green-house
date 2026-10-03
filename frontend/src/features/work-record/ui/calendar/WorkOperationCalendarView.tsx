@@ -29,7 +29,7 @@ export function WorkOperationCalendarView({
     workOperationCalendarQueryOptions(routeState),
   );
   const operations = operationsQuery.data ?? [];
-  const actions = useWorkOperationActions(operations);
+  const actions = useWorkOperationActions();
   const month = routeState.month;
   const status = routeState.filters.status;
   const loading = operationsQuery.isFetching || actions.loading;
@@ -190,10 +190,10 @@ function includesDate(operation: WorkOperationSummary, date: string) {
 }
 
 function statusClass(status: WorkOperationStatus) {
-  if (status === "COMPLETED" || status === "CORRECTED")
-    return "bg-[#e7f6eb] text-[#10783a]";
+  if (status === "COMPLETED") return "bg-[#e7f6eb] text-[#10783a]";
   if (status === "IN_PROGRESS") return "bg-[#e6f0ff] text-[#246df2]";
   if (status === "PAUSED") return "bg-[#fff3d8] text-[#8a5a12]";
-  if (status === "CANCELED") return "bg-[#f2eeee] text-[#765f5a]";
+  if (status === "STOPPED" || status === "CANCELED")
+    return "bg-[#f2eeee] text-[#765f5a]";
   return "bg-[#eef2ed] text-[#435047]";
 }

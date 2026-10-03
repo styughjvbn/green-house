@@ -8,24 +8,23 @@ import org.springframework.stereotype.Component;
 @Component
 public class DivideStrategy implements StructureChangeStrategy {
 
-	@Override
-	public String supports() {
-		return WorkTypeDefinition.DIVIDE.name();
-	}
+  @Override
+  public String supports() {
+    return WorkTypeDefinition.DIVIDE.name();
+  }
 
-	@Override
-	public String workLabel() {
-		return "분주";
-	}
+  @Override
+  public String workLabel() {
+    return "분주";
+  }
 
-	@Override
-	public OrchidGroupLineageRelationType lineageType() {
-		return OrchidGroupLineageRelationType.SPLIT_TO;
-	}
+  @Override
+  public OrchidGroupLineageRelationType lineageType() {
+    return OrchidGroupLineageRelationType.SPLIT_TO;
+  }
 
-	@Override
-	public void validate(StructureChangeCommand request) {
-		// 분주는 최종 결과 수량만 입력하며, 원본 투입 수량보다 커질 수 있다.
-	}
-
+  @Override
+  public void validate(StructureChangeCommand request) {
+    // 분주는 최종 결과 수량만 입력하며, 원본 투입 수량보다 커질 수 있다.
+  }
 }

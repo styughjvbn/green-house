@@ -25,7 +25,7 @@ const WORK_STATUSES: WorkOperationStatus[] = [
   "IN_PROGRESS",
   "PAUSED",
   "COMPLETED",
-  "CORRECTED",
+  "STOPPED",
   "CANCELED",
 ];
 
@@ -59,7 +59,8 @@ export function needsWorkRecordUrlNormalization(
     (state.view !== "CALENDAR" || month === state.month) &&
     (page == null || page === String(state.page)) &&
     (size == null || size === String(state.size)) &&
-    (status == null || status === state.filters.status)
+    (status == null || status === state.filters.status) &&
+    reader.get("hasCorrections") == null
   );
 }
 
@@ -81,6 +82,7 @@ export function createNormalizedWorkRecordSearchParams(
   if (params.has("page")) params.set("page", String(state.page));
   if (params.has("size")) params.set("size", String(state.size));
   if (params.has("status") && !state.filters.status) params.delete("status");
+  params.delete("hasCorrections");
   return params;
 }
 
@@ -111,6 +113,7 @@ export function writeWorkListFilterParams(
   setParam(params, "to", filters.to);
   setParam(params, "status", filters.status);
   setParam(params, "keyword", filters.keyword);
+  params.delete("hasCorrections");
 }
 
 export function setWorkWorkspaceScope(

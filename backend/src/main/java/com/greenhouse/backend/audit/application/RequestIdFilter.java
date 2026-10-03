@@ -19,34 +19,36 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Slf4j
 public class RequestIdFilter extends OncePerRequestFilter {
 
-	public static final String MDC_KEY = "requestId";
+  public static final String MDC_KEY = "requestId";
 
-	private static final String HEADER = "X-Request-Id";
+  private static final String HEADER = "X-Request-Id";
 
-	@Override
-	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-			throws ServletException, IOException {
-		String requestId = validRequestId(request.getHeader(HEADER));
-		if (requestId == null)
-			requestId = UUID.randomUUID().toString();
-		MDC.put(MDC_KEY, requestId);
-		response.setHeader(HEADER, requestId);
-		long startedAt = System.nanoTime();
-		try {
-			chain.doFilter(request, response);
-		}
-		finally {
-			long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
-			log.info("event=HTTP_REQUEST_COMPLETED method={} path={} status={} durationMs={} requestId={}",
-					request.getMethod(), request.getRequestURI(), response.getStatus(), elapsedMs, requestId);
-			MDC.remove(MDC_KEY);
-		}
-	}
+  @Override
+  protected void doFilterInternal(
+      HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+      throws ServletException, IOException {
+    String requestId = validRequestId(request.getHeader(HEADER));
+    if (requestId == null) requestId = UUID.randomUUID().toString();
+    MDC.put(MDC_KEY, requestId);
+    response.setHeader(HEADER, requestId);
+    long startedAt = System.nanoTime();
+    try {
+      chain.doFilter(request, response);
+    } finally {
+      long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+      log.info(
+          "event=HTTP_REQUEST_COMPLETED method={} path={} status={} durationMs={} requestId={}",
+          request.getMethod(),
+          request.getRequestURI(),
+          response.getStatus(),
+          elapsedMs,
+          requestId);
+      MDC.remove(MDC_KEY);
+    }
+  }
 
-	private String validRequestId(String value) {
-		if (value == null || value.isBlank() || value.length() > 100)
-			return null;
-		return value.matches("[A-Za-z0-9._:-]+") ? value : null;
-	}
-
+  private String validRequestId(String value) {
+    if (value == null || value.isBlank() || value.length() > 100) return null;
+    return value.matches("[A-Za-z0-9._:-]+") ? value : null;
+  }
 }

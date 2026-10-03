@@ -14,40 +14,34 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class InboundRecordAuditSupport {
 
-	private final AuditEventWriter auditWriter;
+  private final AuditEventWriter auditWriter;
 
-	public Map<String, Object> snapshot(InboundRecord record) {
-		var data = new LinkedHashMap<String, Object>();
-		data.put("inboundDate", record.getInboundDate());
-		data.put("inboundType", record.getInboundType());
-		data.put("varietyId", record.getVariety().getId());
-		data.put("status", record.getStatus());
-		data.put("bottleCount", record.getBottleCount());
-		data.put("estimatedQuantity", record.getEstimatedQuantity());
-		data.put("actualQuantity", record.getActualQuantity());
-		data.put("tempLocation", record.getTempLocation());
-		data.put("pottingDueDate", record.getPottingDueDate());
-		data.put("pottingDate", record.getPottingDate());
-		data.put("potSize", record.getPotSize());
-		data.put("ageYear", record.getAgeYear());
-		data.put("growthStage", record.getGrowthStage());
-		data.put("placementType", record.getPlacementType());
-		data.put("trayCount", record.getTrayCount());
-		data.put("bedZoneId", record.getBedZone() == null ? null : record.getBedZone().getId());
-		data.put("createdOrchidGroupId",
-				record.getCreatedOrchidGroup() == null ? null : record.getCreatedOrchidGroup().getId());
-		data.put("worker", record.getWorker());
-		data.put("memo", record.getMemo());
-		return data;
-	}
+  public Map<String, Object> snapshot(InboundRecord record) {
+    var data = new LinkedHashMap<String, Object>();
+    data.put("inboundDate", record.getInboundDate());
+    data.put("inboundType", record.getInboundType());
+    data.put("varietyId", record.getVariety().getId());
+    data.put("status", record.getStatus());
+    data.put("estimatedQuantity", record.getEstimatedQuantity());
+    data.put("tempLocation", record.getTempLocation());
+    data.put("pottingDueDate", record.getPottingDueDate());
+    data.put("worker", record.getWorker());
+    data.put("memo", record.getMemo());
+    return data;
+  }
 
-	public Long record(AuditAction action, InboundRecord record, Map<String, Object> before,
-			Map<String, Object> after) {
-		Long zoneId = record.getBedZone() == null ? null : record.getBedZone().getId();
-		Long bedId = record.getBedZone() == null ? null : record.getBedZone().getPhysicalBed().getId();
-		Long houseId = record.getBedZone() == null ? null : record.getBedZone().getPhysicalBed().getHouse().getId();
-		return auditWriter.record(action, AuditSource.INBOUND_MANAGEMENT, new AuditEvent.Target("INBOUND_RECORD",
-				record.getId(), houseId, bedId, zoneId, record.getVariety().getId()), before, after, Map.of());
-	}
-
+  public Long record(
+      AuditAction action,
+      InboundRecord record,
+      Map<String, Object> before,
+      Map<String, Object> after) {
+    return auditWriter.record(
+        action,
+        AuditSource.INBOUND_MANAGEMENT,
+        new AuditEvent.Target(
+            "INBOUND_RECORD", record.getId(), null, null, null, record.getVariety().getId()),
+        before,
+        after,
+        Map.of());
+  }
 }

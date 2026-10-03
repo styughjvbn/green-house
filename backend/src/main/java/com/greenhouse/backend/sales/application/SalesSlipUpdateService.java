@@ -26,85 +26,99 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SalesSlipUpdateService {
 
-	private final SalesSlipRepository salesSlipRepository;
+  private final SalesSlipRepository salesSlipRepository;
 
-	private final PaymentEventReader paymentEventReader;
+  private final PaymentEventReader paymentEventReader;
 
-	private final BusinessPartnerReader businessPartnerReader;
+  private final BusinessPartnerReader businessPartnerReader;
 
-	private final SalesSlipAllocationFactory salesSlipAllocationFactory;
+  private final SalesSlipAllocationFactory salesSlipAllocationFactory;
 
-	private final SalesSlipInventoryService salesSlipInventoryService;
+  private final SalesSlipInventoryService salesSlipInventoryService;
 
-	private final ExpectedPaymentDateCalculator paymentDateCalculator;
+  private final ExpectedPaymentDateCalculator paymentDateCalculator;
 
-	private final PartnerBalanceService partnerBalanceService;
+  private final PartnerBalanceService partnerBalanceService;
 
-	private final SalesSlipAuditSupport auditSupport;
+  private final SalesSlipAuditSupport auditSupport;
 
-	private final SalesSlipDocumentAssembler responseAssembler;
+  private final SalesSlipDocumentAssembler responseAssembler;
 
-	public SalesSlipDocument update(Long salesSlipId, SalesSlipCommand request) {
-		SalesSlip salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
-			.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
-		Long previousPartnerId = salesSlip.getPartnerId();
-		Map<String, Object> before = auditSupport.snapshot(salesSlip);
+  public SalesSlipDocument update(Long salesSlipId, SalesSlipCommand request) {
+    SalesSlip salesSlip =
+        salesSlipRepository
+            .findForUpdateById(salesSlipId)
+            .orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+    Long previousPartnerId = salesSlip.getPartnerId();
+    Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
-		validateEditable(salesSlip, request);
-		if (request.partnerId() == null) {
-			throw new IllegalArgumentException("일반 판매는 거래처를 선택해야 합니다.");
-		}
-		if (request.items().isEmpty()) {
-			throw new IllegalArgumentException("일반 판매 품목은 1개 이상 입력해야 합니다.");
-		}
+    validateEditable(salesSlip, request);
+    if (request.partnerId() == null) {
+      throw new IllegalArgumentException("일반 판매는 거래처를 선택해야 합니다.");
+    }
+    if (request.items().isEmpty()) {
+      throw new IllegalArgumentException("일반 판매 품목은 1개 이상 입력해야 합니다.");
+    }
 
-		var partner = businessPartnerReader.getActiveInfo(request.partnerId());
-		if (partner.partnerType() == PartnerType.AUCTION_HOUSE) {
-			throw new IllegalArgumentException("경매장 거래처는 경매 판매 전표에서 사용해야 합니다.");
-		}
-		partnerBalanceService.lockPartners(List.of(previousPartnerId, partner.id()));
-		var expectedPaymentDate = paymentDateCalculator.calculate(partner.id(), request.saleDate());
+    var partner = businessPartnerReader.getActiveInfo(request.partnerId());
+    if (partner.partnerType() == PartnerType.AUCTION_HOUSE) {
+      throw new IllegalArgumentException("경매장 거래처는 경매 판매 전표에서 사용해야 합니다.");
+    }
+    partnerBalanceService.lockPartners(List.of(previousPartnerId, partner.id()));
+    var expectedPaymentDate = paymentDateCalculator.calculate(partner.id(), request.saleDate());
 
-		salesSlipInventoryService.releaseForEdit(salesSlip);
+    salesSlipInventoryService.releaseForEdit(salesSlip);
 
-		List<SalesSlipItem> items = salesSlipAllocationFactory.createItems(request.items());
-		if (salesSlip.getItems().size() != items.size()) {
-			throw new IllegalArgumentException("품목 개수 변경 수정은 아직 지원하지 않습니다.");
-		}
+    List<SalesSlipItem> items = salesSlipAllocationFactory.createItems(request.items());
+    if (salesSlip.getItems().size() != items.size()) {
+      throw new IllegalArgumentException("품목 개수 변경 수정은 아직 지원하지 않습니다.");
+    }
 
-		salesSlip.updateDraftInfo(request.saleDate(), partner.id(),
-				SalesTextNormalizer.defaultText(request.paymentStatus(), "미입금"),
-				SalesTextNormalizer.normalize(request.paymentMethod()), SalesTextNormalizer.normalize(request.memo()));
-		for (int index = 0; index < salesSlip.getItems().size(); index++) {
-			var currentItem = salesSlip.getItems().get(index);
-			var nextItem = items.get(index);
-			currentItem.updateDetails(nextItem.getItemName(), nextItem.getGenus(), nextItem.getSpec(),
-					nextItem.getQuantity(), nextItem.getUnitPrice(), nextItem.getMemo());
-			currentItem
-				.replaceAllocations(nextItem.getAllocations().stream().map(SalesSlipItemAllocation::copy).toList());
-		}
-		salesSlip.refreshAmounts();
-		salesSlip.updateExpectedPaymentDate(expectedPaymentDate);
-		salesSlipRepository.saveAndFlush(salesSlip);
-		SalesSlip persisted = salesSlipRepository.findWithDetailsById(salesSlipId)
-			.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
-		salesSlipInventoryService.reserve(persisted);
-		partnerBalanceService.updateReceivable(partner.id(),
-				salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);
-		if (!previousPartnerId.equals(partner.id())) {
-			partnerBalanceService.updateReceivable(previousPartnerId,
-					salesSlipRepository.sumDirectReceivableByPartnerId(previousPartnerId), null);
-		}
-		auditSupport.record(AuditAction.UPDATED, persisted, before, auditSupport.snapshot(persisted));
+    salesSlip.updateDraftInfo(
+        request.saleDate(),
+        partner.id(),
+        SalesTextNormalizer.defaultText(request.paymentStatus(), "미입금"),
+        SalesTextNormalizer.normalize(request.paymentMethod()),
+        SalesTextNormalizer.normalize(request.memo()));
+    for (int index = 0; index < salesSlip.getItems().size(); index++) {
+      var currentItem = salesSlip.getItems().get(index);
+      var nextItem = items.get(index);
+      currentItem.updateDetails(
+          nextItem.getItemName(),
+          nextItem.getGenus(),
+          nextItem.getSpec(),
+          nextItem.getQuantity(),
+          nextItem.getUnitPrice(),
+          nextItem.getMemo());
+      currentItem.replaceAllocations(
+          nextItem.getAllocations().stream().map(SalesSlipItemAllocation::copy).toList());
+    }
+    salesSlip.refreshAmounts();
+    salesSlip.updateExpectedPaymentDate(expectedPaymentDate);
+    salesSlipRepository.saveAndFlush(salesSlip);
+    SalesSlip persisted =
+        salesSlipRepository
+            .findWithDetailsById(salesSlipId)
+            .orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+    salesSlipInventoryService.reserve(persisted);
+    partnerBalanceService.updateReceivable(
+        partner.id(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);
+    if (!previousPartnerId.equals(partner.id())) {
+      partnerBalanceService.updateReceivable(
+          previousPartnerId,
+          salesSlipRepository.sumDirectReceivableByPartnerId(previousPartnerId),
+          null);
+    }
+    auditSupport.record(AuditAction.UPDATED, persisted, before, auditSupport.snapshot(persisted));
 
-		return responseAssembler.assemble(persisted);
-	}
+    return responseAssembler.assemble(persisted);
+  }
 
-	private void validateEditable(SalesSlip salesSlip, SalesSlipCommand request) {
-		if (request.salesType() == SalesType.AUCTION) {
-			throw new IllegalArgumentException("경매 판매 전표 수정은 아직 지원하지 않습니다.");
-		}
-		salesSlip.requireEditable(paymentEventReader.existsByTarget(PaymentTargetType.SALES_SLIP, salesSlip.getId()));
-	}
-
+  private void validateEditable(SalesSlip salesSlip, SalesSlipCommand request) {
+    if (request.salesType() == SalesType.AUCTION) {
+      throw new IllegalArgumentException("경매 판매 전표 수정은 아직 지원하지 않습니다.");
+    }
+    salesSlip.requireEditable(
+        paymentEventReader.existsByTarget(PaymentTargetType.SALES_SLIP, salesSlip.getId()));
+  }
 }

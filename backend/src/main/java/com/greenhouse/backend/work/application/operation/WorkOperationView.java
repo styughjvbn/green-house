@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationAction;
+import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
@@ -15,23 +16,70 @@ import java.util.List;
 import java.util.Map;
 
 @Schema(name = "WorkOperationResponse")
-public record WorkOperationView(Long id, Long workTypeId, String workTypeCode, String workType,
-		WorkTypeTemplate workTypeTemplate, WorkTypeWorkflow workTypeWorkflow, String title, WorkOperationStatus status,
-		LocalDate plannedStartDate, LocalDate plannedEndDate, LocalDateTime actualStartAt, LocalDateTime actualEndAt,
-		WorkSourceScopeType sourceScopeType, Long sourceScopeId, Map<String, Object> sourceConditionSnapshot,
-		LocalDateTime targetSnapshotAt, Map<String, Object> details, String worker, String memo,
-		WorkOperationProgress progress, List<WorkOperationTargetView> targets,
-		List<WorkOperationAction> availableActions) {
+public record WorkOperationView(
+    Long id,
+    Long workTypeId,
+    String workTypeCode,
+    String workType,
+    WorkTypeTemplate workTypeTemplate,
+    WorkTypeWorkflow workTypeWorkflow,
+    String title,
+    WorkOperationStatus status,
+    LocalDate plannedStartDate,
+    LocalDate plannedEndDate,
+    LocalDateTime actualStartAt,
+    LocalDateTime actualEndAt,
+    WorkSourceScopeType sourceScopeType,
+    Long sourceScopeId,
+    Map<String, Object> sourceConditionSnapshot,
+    LocalDateTime targetSnapshotAt,
+    Map<String, Object> details,
+    String worker,
+    String memo,
+    Long parentOperationId,
+    WorkOperationRelationType relationType,
+    LocalDateTime voidedAt,
+    String voidReason,
+    Long voidMutationId,
+    WorkOperationProgress progress,
+    List<WorkOperationTargetView> targets,
+    List<WorkOperationAction> availableActions,
+    long correctionCount) {
 
-	public static WorkOperationView from(WorkOperation operation, List<WorkOperationTargetView> targets,
-			List<WorkOperationAction> availableActions) {
-		return new WorkOperationView(operation.getId(), operation.getWorkType().getId(),
-				operation.getWorkType().getCode(), operation.getWorkType().getName(),
-				operation.getWorkType().getTemplate(), operation.getWorkType().workflow(), operation.getTitle(),
-				operation.getStatus(), operation.getPlannedStartDate(), operation.getPlannedEndDate(),
-				TimeConfig.toFarmTime(operation.getActualStartAt()), TimeConfig.toFarmTime(operation.getActualEndAt()),
-				operation.getSourceScopeType(), operation.getSourceScopeId(), operation.getSourceConditionSnapshot(),
-				TimeConfig.toFarmTime(operation.getTargetSnapshotAt()), operation.getDetails(), operation.getWorker(),
-				operation.getMemo(), WorkOperationProgress.from(targets), targets, availableActions);
-	}
+  public static WorkOperationView from(
+      WorkOperation operation,
+      WorkOperationProgress progress,
+      List<WorkOperationTargetView> targets,
+      List<WorkOperationAction> availableActions,
+      long correctionCount) {
+    return new WorkOperationView(
+        operation.getId(),
+        operation.getWorkType().getId(),
+        operation.getWorkType().getCode(),
+        operation.getWorkType().getName(),
+        operation.getWorkType().getTemplate(),
+        operation.getWorkType().workflow(),
+        operation.getTitle(),
+        operation.getStatus(),
+        operation.getPlannedStartDate(),
+        operation.getPlannedEndDate(),
+        TimeConfig.toFarmTime(operation.getActualStartAt()),
+        TimeConfig.toFarmTime(operation.getActualEndAt()),
+        operation.getSourceScopeType(),
+        operation.getSourceScopeId(),
+        operation.getSourceConditionSnapshot(),
+        TimeConfig.toFarmTime(operation.getTargetSnapshotAt()),
+        operation.getDetails(),
+        operation.getWorker(),
+        operation.getMemo(),
+        operation.getParentOperation() == null ? null : operation.getParentOperation().getId(),
+        operation.getRelationType(),
+        TimeConfig.toFarmTime(operation.getVoidedAt()),
+        operation.getVoidReason(),
+        operation.getVoidMutationId(),
+        progress,
+        targets,
+        availableActions,
+        correctionCount);
+  }
 }

@@ -67,13 +67,8 @@ const TEMPLATE_CONFIG: Record<WorkTypeTemplate, WorkTypeTemplateConfig> = {
     fields: ["worker", "memo"],
     labels: {},
   },
-  MULTI_CREATE: {
-    label: "난 묶음 다중 생성형",
-    fields: ["worker", "memo"],
-    labels: {},
-  },
-  CORRECTION: {
-    label: "구조 변경 보정형",
+  RECONCILIATION: {
+    label: "현장 동기화형",
     fields: ["worker", "memo"],
     labels: {},
   },

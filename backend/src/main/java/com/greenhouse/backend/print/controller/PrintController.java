@@ -17,17 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PrintController {
 
-	private final PrintQueryService printQueryService;
+  private final PrintQueryService printQueryService;
 
-	@GetMapping("/print")
-	public ApiResponse<PageResponse<SalesSlipSummary>> getPrintableSalesSlips(
-			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-		return ApiResponse.ok(printQueryService.getPrintableSalesSlips(page, size));
-	}
+  @GetMapping("/print")
+  public ApiResponse<PageResponse<SalesSlipSummary>> getPrintableSalesSlips(
+      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+    return ApiResponse.ok(printQueryService.getPrintableSalesSlips(page, size));
+  }
 
-	@GetMapping("/{salesSlipId}/print")
-	public ApiResponse<SalesSlipDocument> getSalesSlipPrintData(@PathVariable Long salesSlipId) {
-		return ApiResponse.ok(printQueryService.getSalesSlipPrintData(salesSlipId));
-	}
-
+  @GetMapping("/{salesSlipId}/print")
+  public ApiResponse<SalesSlipDocument> getSalesSlipPrintData(@PathVariable Long salesSlipId) {
+    return ApiResponse.ok(printQueryService.getSalesSlipPrintData(salesSlipId));
+  }
 }

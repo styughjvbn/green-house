@@ -4,6 +4,7 @@ metadata:
   name: green-house-config
   namespace: green-house
 data:
+  APP_ENV: prod
   DATABASE_URL: jdbc:postgresql://green-house-postgres-host:5432/greenhouse
   DATABASE_USERNAME: greenhouse
   FRONTEND_ORIGIN_PATTERNS: https://green-house.sjw-project.site

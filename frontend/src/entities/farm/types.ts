@@ -362,6 +362,13 @@ export type WorkOperation = {
   details: Record<string, unknown> | null;
   worker: string | null;
   memo: string | null;
+  parentOperationId: number | null;
+  relationType: "MOVEMENT_DISCARD" | null;
+  voidedAt: string | null;
+  voidReason: string | null;
+  voidMutationId: number | null;
+  correctionCount: number;
+  relationSummary?: WorkOperationRelationSummary;
   progress: {
     total: number;
     pending: number;
@@ -378,6 +385,39 @@ export type WorkOperation = {
 };
 
 export type WorkOperationSummary = Omit<WorkOperation, "targets">;
+
+export type WorkOperationRelationSummary = {
+  originType: NonNullable<
+    ApiSchemas["WorkOperationRelationSummaryResponse"]["originType"]
+  >;
+  inboundRecordIds: number[];
+  creationBatchSize: number;
+  hasLinkedOperations: boolean;
+  linkedOperationCount: number;
+};
+
+export type WorkOperationCancellationEligibility = {
+  workOperationId: number;
+  cancellable: boolean;
+  affectedOperations: Array<{
+    workOperationId: number;
+    title: string;
+    workTypeName: string;
+    workDate: string;
+    primary: boolean;
+  }>;
+  affectedOrchidGroups: Array<{
+    orchidGroupId: number;
+    varietyName: string | null;
+    quantity: number | null;
+    impactType: "RECORD_CANCELED" | "RESTORED" | "CREATION_CANCELED";
+  }>;
+  blockers: Array<{
+    code: string;
+    message: string;
+    count: number;
+  }>;
+};
 
 export type OrchidGroupWorkHistory = {
   sourceKind: "WORK_OPERATION" | "WORK_OPERATION_EFFECT";
@@ -399,6 +439,7 @@ export type OrchidGroupWorkHistory = {
   currentLocation: WorkLocationSnapshot;
   worker: string | null;
   memo: string | null;
+  correctable: boolean;
 };
 
 export type PartnerType = NonNullable<

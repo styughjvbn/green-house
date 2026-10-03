@@ -93,21 +93,21 @@ components:
     AuthenticatedUserResponse:
       type: object
       properties:
-        username:
-          type: string
         role:
           type: string
           enum:
           - ADMIN
           - WORKER
           - DEMO
+        username:
+          type: string
     LoginRequest:
       type: object
       properties:
-        username:
+        password:
           type: string
           minLength: 1
-        password:
+        username:
           type: string
           minLength: 1
       required:

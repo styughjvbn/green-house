@@ -8,7 +8,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
+import com.jayway.jsonpath.JsonPath;
+import java.time.Clock;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -16,21 +19,28 @@ import org.springframework.transaction.annotation.Transactional;
 
 class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 
-	@Test
-	void createsUpdatesAndCancelsOrchidGroupWithoutDeletingHistory() throws Exception {
-		var sampleHouse = houseRepository.findAll()
-			.stream()
-			.filter(house -> house.getNumber() == 3)
-			.findFirst()
-			.orElseThrow();
-		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
-		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
-		var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
-		var updateVariety = varietyRepository.findAll().stream().skip(1).findFirst().orElseThrow();
-		var beforeCount = orchidGroupRepository.search(null, "", null, sampleZone.getId(), null).size();
+  @Test
+  void createsUpdatesAndCancelsOrchidGroupWithoutDeletingHistory() throws Exception {
+    var sampleHouse =
+        houseRepository.findAll().stream()
+            .filter(house -> house.getNumber() == 3)
+            .findFirst()
+            .orElseThrow();
+    var sampleBed =
+        physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+    var sampleZone =
+        bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+    var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
+    var updateVariety = varietyRepository.findAll().stream().skip(1).findFirst().orElseThrow();
+    var beforeCount = orchidGroupRepository.search(null, "", null, sampleZone.getId(), null).size();
 
-		var createResult = mockMvc
-			.perform(post("/api/orchid-groups").contentType(MediaType.APPLICATION_JSON).content("""
+    var createResult =
+        mockMvc
+            .perform(
+                post("/api/orchid-groups")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
 					{
 					  "bedZoneId": %d,
 					  "varietyId": %d,
@@ -44,21 +54,25 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 					  "trayCount": 1,
 					  "memo": "테스트 생성"
 					}
-					""".formatted(sampleZone.getId(), sampleVariety.getId())))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.bedZoneId").value(sampleZone.getId()))
-			.andExpect(jsonPath("$.data.varietyId").value(sampleVariety.getId()))
-			.andExpect(jsonPath("$.data.varietyName").value(sampleVariety.getName()))
-			.andExpect(jsonPath("$.data.quantity").value(15))
-			.andExpect(jsonPath("$.data.sortOrder").value(beforeCount + 1))
-			.andReturn();
+					"""
+                            .formatted(sampleZone.getId(), sampleVariety.getId())))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data.bedZoneId").value(sampleZone.getId()))
+            .andExpect(jsonPath("$.data.varietyId").value(sampleVariety.getId()))
+            .andExpect(jsonPath("$.data.varietyName").value(sampleVariety.getName()))
+            .andExpect(jsonPath("$.data.quantity").value(15))
+            .andExpect(jsonPath("$.data.sortOrder").value(beforeCount + 1))
+            .andReturn();
 
-		var responseBody = createResult.getResponse().getContentAsString();
-		var createdId = Long.valueOf(responseBody.replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+    var responseBody = createResult.getResponse().getContentAsString();
+    var createdId = Long.valueOf(responseBody.replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
 
-		mockMvc
-			.perform(patch("/api/orchid-groups/{orchidGroupId}", createdId).contentType(MediaType.APPLICATION_JSON)
-				.content("""
+    mockMvc
+        .perform(
+            patch("/api/orchid-groups/{orchidGroupId}", createdId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
 						{
 						  "varietyId": %d,
 						  "quantity": 22,
@@ -71,127 +85,162 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 						  "trayCount": 2,
 						  "memo": "테스트 수정"
 						}
-						""".formatted(updateVariety.getId())))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.id").value(createdId))
-			.andExpect(jsonPath("$.data.bedZoneId").value(sampleZone.getId()))
-			.andExpect(jsonPath("$.data.varietyId").value(updateVariety.getId()))
-			.andExpect(jsonPath("$.data.varietyName").value(updateVariety.getName()))
-			.andExpect(jsonPath("$.data.quantity").value(22))
-			.andExpect(jsonPath("$.data.status").value("주의"));
+						"""
+                        .formatted(updateVariety.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.id").value(createdId))
+        .andExpect(jsonPath("$.data.bedZoneId").value(sampleZone.getId()))
+        .andExpect(jsonPath("$.data.varietyId").value(updateVariety.getId()))
+        .andExpect(jsonPath("$.data.varietyName").value(updateVariety.getName()))
+        .andExpect(jsonPath("$.data.quantity").value(22))
+        .andExpect(jsonPath("$.data.status").value("주의"));
 
-		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", createdId))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data").doesNotExist());
+    mockMvc
+        .perform(delete("/api/orchid-groups/{orchidGroupId}", createdId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data").doesNotExist());
 
-		var canceled = orchidGroupRepository.findById(createdId).orElseThrow();
-		assertThat(canceled.getQuantity()).isZero();
-		assertThat(canceled.getStatus()).isEqualTo("생성 취소");
-		assertThat(canceled.getStateRevision()).isEqualTo(3L);
-	}
+    var canceled = orchidGroupRepository.findById(createdId).orElseThrow();
+    assertThat(canceled.getQuantity()).isZero();
+    assertThat(canceled.getStatus()).isEqualTo("생성 취소");
+    assertThat(canceled.getStateRevision()).isEqualTo(3L);
+  }
 
-	@Test
-	@Transactional
-	void preservesOrchidGroupLinkedToInboundWorkHistory() throws Exception {
-		var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
-		var sampleHouse = houseRepository.findAll()
-			.stream()
-			.filter(house -> house.getNumber() == 3)
-			.findFirst()
-			.orElseThrow();
-		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
-		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+  @Test
+  @Transactional
+  void preservesOrchidGroupLinkedToInboundWorkHistory() throws Exception {
+    var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
+    var sampleHouse =
+        houseRepository.findAll().stream()
+            .filter(house -> house.getNumber() == 3)
+            .findFirst()
+            .orElseThrow();
+    var sampleBed =
+        physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+    var sampleZone =
+        bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
 
-		var createResult = mockMvc
-			.perform(post("/api/inbound-records").contentType(MediaType.APPLICATION_JSON).content("""
+    var createResult =
+        mockMvc
+            .perform(
+                post("/api/inbound-records")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
 					{
 					  "inboundDate": "2026-07-04",
 					  "inboundType": "PRODUCT_POT",
 					  "varietyId": %d,
-					  "actualQuantity": 60,
-					  "potSize": "4치",
-					  "ageYear": 2,
-					  "placementType": "TRAY",
-					  "trayCount": 2,
-					  "bedZoneId": %d,
+					  "placement": {
+					    "quantity": 60,
+					    "potSize": "4치",
+					    "ageYear": 2,
+					    "placementType": "TRAY",
+					    "trayCount": 2,
+					    "bedZoneId": %d
+					  },
 					  "worker": "관리자",
 					  "memo": "상품분 입고"
 					}
-					""".formatted(sampleVariety.getId(), sampleZone.getId())))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.createdOrchidGroupId").isNumber())
-			.andReturn();
+					"""
+                            .formatted(sampleVariety.getId(), sampleZone.getId())))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber())
+            .andReturn();
 
-		var inboundRecordId = Long
-			.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
-		var createdOrchidGroupId = Long.valueOf(createResult.getResponse()
-			.getContentAsString()
-			.replaceAll(".*\\\"createdOrchidGroupId\\\":(\\d+).*", "$1"));
+    Number inboundRecordIdValue =
+        JsonPath.read(createResult.getResponse().getContentAsString(), "$.data.id");
+    Long inboundRecordId = inboundRecordIdValue.longValue();
+    Number createdOrchidGroupIdValue =
+        JsonPath.read(
+            createResult.getResponse().getContentAsString(), "$.data.createdOrchidGroups[0].id");
+    Long createdOrchidGroupId = createdOrchidGroupIdValue.longValue();
 
-		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", createdOrchidGroupId))
-			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.error.code").value("CONFLICT"));
+    mockMvc
+        .perform(delete("/api/orchid-groups/{orchidGroupId}", createdOrchidGroupId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error.code").value("CONFLICT"));
 
-		assertThat(orchidGroupRepository.existsById(createdOrchidGroupId)).isTrue();
-		assertThat(inboundRecordRepository.findWithDetailsById(inboundRecordId)).get()
-			.extracting(record -> record.getCreatedOrchidGroup())
-			.isNotNull();
-	}
+    assertThat(orchidGroupRepository.existsById(createdOrchidGroupId)).isTrue();
+    assertThat(inboundRecordRepository.findWithDetailsById(inboundRecordId))
+        .get()
+        .satisfies(record -> assertThat(record.getCreatedOrchidGroups()).hasSize(1));
+  }
 
-	@Test
-	@Transactional
-	void calculatesOrchidGroupAgeYearFromInboundDate() throws Exception {
-		var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
-		var sampleHouse = houseRepository.findAll()
-			.stream()
-			.filter(house -> house.getNumber() == 3)
-			.findFirst()
-			.orElseThrow();
-		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
-		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
-		LocalDate inboundDate = LocalDate.now().minusYears(2).minusDays(1);
+  @Test
+  @Transactional
+  void calculatesOrchidGroupAgeYearFromInboundDate() throws Exception {
+    var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
+    var sampleHouse =
+        houseRepository.findAll().stream()
+            .filter(house -> house.getNumber() == 3)
+            .findFirst()
+            .orElseThrow();
+    var sampleBed =
+        physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+    var sampleZone =
+        bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+    LocalDate inboundDate = LocalDate.now().minusYears(2).minusDays(1);
 
-		var createResult = mockMvc
-			.perform(post("/api/inbound-records").contentType(MediaType.APPLICATION_JSON).content("""
+    var createResult =
+        mockMvc
+            .perform(
+                post("/api/inbound-records")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
 					{
 					  "inboundDate": "%s",
 					  "inboundType": "PRODUCT_POT",
 					  "varietyId": %d,
-					  "actualQuantity": 40,
-					  "potSize": "4인치",
-					  "ageYear": 1,
-					  "placementType": "TRAY",
-					  "trayCount": 1,
-					  "bedZoneId": %d,
+					  "placement": {
+					    "quantity": 40,
+					    "potSize": "4인치",
+					    "ageYear": 1,
+					    "placementType": "TRAY",
+					    "trayCount": 1,
+					    "bedZoneId": %d
+					  },
 					  "worker": "관리자"
 					}
-					""".formatted(inboundDate, sampleVariety.getId(), sampleZone.getId())))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.createdOrchidGroupId").isNumber())
-			.andReturn();
+					"""
+                            .formatted(inboundDate, sampleVariety.getId(), sampleZone.getId())))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber())
+            .andReturn();
 
-		var createdOrchidGroupId = Long.valueOf(createResult.getResponse()
-			.getContentAsString()
-			.replaceAll(".*\\\"createdOrchidGroupId\\\":(\\d+).*", "$1"));
+    Number createdOrchidGroupIdValue =
+        JsonPath.read(
+            createResult.getResponse().getContentAsString(), "$.data.createdOrchidGroups[0].id");
+    Long createdOrchidGroupId = createdOrchidGroupIdValue.longValue();
 
-		assertThat(OrchidGroupResponse
-			.from(orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow(),
-					com.greenhouse.backend.common.config.TimeConfig.farmToday(java.time.Clock.systemUTC()))
-			.ageYear()).isEqualTo(3);
-	}
+    assertThat(
+            OrchidGroupResponse.from(
+                    orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow(),
+                    TimeConfig.farmToday(Clock.systemUTC()))
+                .ageYear())
+        .isEqualTo(3);
+  }
 
-	@Test
-	void rejectsOverlappingOrchidGroupPlacement() throws Exception {
-		var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
-		var sampleHouse = houseRepository.findAll()
-			.stream()
-			.filter(house -> house.getNumber() == 3)
-			.findFirst()
-			.orElseThrow();
-		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
-		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+  @Test
+  void rejectsOverlappingOrchidGroupPlacement() throws Exception {
+    var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
+    var sampleHouse =
+        houseRepository.findAll().stream()
+            .filter(house -> house.getNumber() == 3)
+            .findFirst()
+            .orElseThrow();
+    var sampleBed =
+        physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+    var sampleZone =
+        bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
 
-		mockMvc.perform(post("/api/orchid-groups").contentType(MediaType.APPLICATION_JSON).content("""
+    mockMvc
+        .perform(
+            post("/api/orchid-groups")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
 				{
 				  "bedZoneId": %d,
 				  "varietyId": %d,
@@ -200,23 +249,31 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 				  "startPosition": 6,
 				  "endPosition": 8
 				}
-				""".formatted(sampleZone.getId(), sampleVariety.getId())))
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
-	}
+				"""
+                        .formatted(sampleZone.getId(), sampleVariety.getId())))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+  }
 
-	@Test
-	void rejectsOrchidGroupPlacementShorterThanOneUnit() throws Exception {
-		var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
-		var sampleHouse = houseRepository.findAll()
-			.stream()
-			.filter(house -> house.getNumber() == 3)
-			.findFirst()
-			.orElseThrow();
-		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
-		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+  @Test
+  void rejectsOrchidGroupPlacementShorterThanOneUnit() throws Exception {
+    var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
+    var sampleHouse =
+        houseRepository.findAll().stream()
+            .filter(house -> house.getNumber() == 3)
+            .findFirst()
+            .orElseThrow();
+    var sampleBed =
+        physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+    var sampleZone =
+        bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
 
-		mockMvc.perform(post("/api/orchid-groups").contentType(MediaType.APPLICATION_JSON).content("""
+    mockMvc
+        .perform(
+            post("/api/orchid-groups")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
 				{
 				  "bedZoneId": %d,
 				  "varietyId": %d,
@@ -225,65 +282,84 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 				  "startPosition": 21,
 				  "endPosition": 21.5
 				}
-				""".formatted(sampleZone.getId(), sampleVariety.getId())))
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
-	}
+				"""
+                        .formatted(sampleZone.getId(), sampleVariety.getId())))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+  }
 
-	@Test
-	@Transactional
-	void autoPlacesInboundOrchidGroupIntoFirstAvailableSingleSlot() throws Exception {
-		var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
-		var sampleHouse = houseRepository.findAll()
-			.stream()
-			.filter(house -> house.getNumber() == 3)
-			.findFirst()
-			.orElseThrow();
-		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
-		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+  @Test
+  @Transactional
+  void autoPlacesInboundOrchidGroupIntoFirstAvailableSingleSlot() throws Exception {
+    var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
+    var sampleHouse =
+        houseRepository.findAll().stream()
+            .filter(house -> house.getNumber() == 3)
+            .findFirst()
+            .orElseThrow();
+    var sampleBed =
+        physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+    var sampleZone =
+        bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
 
-		var createResult = mockMvc
-			.perform(post("/api/inbound-records").contentType(MediaType.APPLICATION_JSON).content("""
+    var createResult =
+        mockMvc
+            .perform(
+                post("/api/inbound-records")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
 					{
 					  "inboundDate": "2026-07-04",
 					  "inboundType": "PRODUCT_POT",
 					  "varietyId": %d,
-					  "actualQuantity": 60,
-					  "potSize": "4치",
-					  "ageYear": 2,
-					  "placementType": "TRAY",
-					  "trayCount": 2,
-					  "bedZoneId": %d,
+					  "placement": {
+					    "quantity": 60,
+					    "potSize": "4치",
+					    "ageYear": 2,
+					    "placementType": "TRAY",
+					    "trayCount": 2,
+					    "bedZoneId": %d
+					  },
 					  "worker": "관리자"
 					}
-					""".formatted(sampleVariety.getId(), sampleZone.getId())))
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.createdOrchidGroupId").isNumber())
-			.andReturn();
+					"""
+                            .formatted(sampleVariety.getId(), sampleZone.getId())))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber())
+            .andReturn();
 
-		var createdOrchidGroupId = Long.valueOf(createResult.getResponse()
-			.getContentAsString()
-			.replaceAll(".*\\\"createdOrchidGroupId\\\":(\\d+).*", "$1"));
-		var created = orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow();
+    Number createdOrchidGroupIdValue =
+        JsonPath.read(
+            createResult.getResponse().getContentAsString(), "$.data.createdOrchidGroups[0].id");
+    Long createdOrchidGroupId = createdOrchidGroupIdValue.longValue();
+    var created = orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow();
 
-		assertThat(created.getStartPosition()).isEqualByComparingTo("21.00");
-		assertThat(created.getEndPosition()).isEqualByComparingTo("22.00");
-	}
+    assertThat(created.getStartPosition()).isEqualByComparingTo("21.00");
+    assertThat(created.getEndPosition()).isEqualByComparingTo("22.00");
+  }
 
-	@Test
-	@Transactional
-	void rejectsPottingWhenBedZoneHasNoSingleSlotAvailable() throws Exception {
-		var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
-		var sampleHouse = houseRepository.findAll()
-			.stream()
-			.filter(house -> house.getNumber() == 3)
-			.findFirst()
-			.orElseThrow();
-		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
-		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+  @Test
+  @Transactional
+  void rejectsPottingWhenBedZoneHasNoSingleSlotAvailable() throws Exception {
+    var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
+    var sampleHouse =
+        houseRepository.findAll().stream()
+            .filter(house -> house.getNumber() == 3)
+            .findFirst()
+            .orElseThrow();
+    var sampleBed =
+        physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+    var sampleZone =
+        bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
 
-		for (int slot = 21; slot < 24; slot++) {
-			mockMvc.perform(post("/api/orchid-groups").contentType(MediaType.APPLICATION_JSON).content("""
+    for (int slot = 21; slot < 24; slot++) {
+      mockMvc
+          .perform(
+              post("/api/orchid-groups")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(
+                      """
 					{
 					  "bedZoneId": %d,
 					  "varietyId": %d,
@@ -292,102 +368,131 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 					  "startPosition": %d,
 					  "endPosition": %d
 					}
-					""".formatted(sampleZone.getId(), sampleVariety.getId(), slot, slot + 1)))
-				.andExpect(status().isCreated());
-		}
+					"""
+                          .formatted(sampleZone.getId(), sampleVariety.getId(), slot, slot + 1)))
+          .andExpect(status().isCreated());
+    }
 
-		var flaskCreateResult = mockMvc
-			.perform(post("/api/inbound-records").contentType(MediaType.APPLICATION_JSON).content("""
+    var flaskCreateResult =
+        mockMvc
+            .perform(
+                post("/api/inbound-records")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
 					{
 					  "inboundDate": "2026-07-10",
 					  "inboundType": "FLASK_SEEDLING",
 					  "varietyId": %d,
-					  "bottleCount": 10,
 					  "estimatedQuantity": 100,
 					  "tempLocation": "작업장 선반",
 					  "pottingDueDate": "2026-07-12",
 					  "worker": "관리자"
 					}
-					""".formatted(sampleVariety.getId())))
-			.andExpect(status().isCreated())
-			.andReturn();
-		var flaskRecordId = Long
-			.valueOf(flaskCreateResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+					"""
+                            .formatted(sampleVariety.getId())))
+            .andExpect(status().isCreated())
+            .andReturn();
+    var flaskRecordId =
+        Long.valueOf(
+            flaskCreateResult
+                .getResponse()
+                .getContentAsString()
+                .replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
 
-		mockMvc
-			.perform(post("/api/inbound-records/{inboundRecordId}/potting", flaskRecordId)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(
-						"""
+    mockMvc
+        .perform(
+            post("/api/inbound-records/{inboundRecordId}/potting", flaskRecordId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
 								{
 								  "pottingDate": "2026-07-12",
 								  "results": [{"quantity": 20, "bedZoneId": %d, "startPosition": 21, "endPosition": 22, "potSize": "3.5치", "ageYear": 1}],
-								  "potSize": "3.5치",
-								  "ageYear": 1,
-								  "growthStage": "유묘",
-								  "placementType": "TRAY",
-								  "trayCount": 1,
-								  "bedZoneId": %d,
 								  "worker": "관리자"
 								}
 								"""
-							.formatted(sampleZone.getId(), sampleZone.getId())))
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
-	}
+                        .formatted(sampleZone.getId())))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+  }
 
-	@Test
-	void returnsValidationErrorsForInvalidOrchidGroupMutations() throws Exception {
-		var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
+  @Test
+  void returnsValidationErrorsForInvalidOrchidGroupMutations() throws Exception {
+    var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
 
-		mockMvc.perform(post("/api/orchid-groups").contentType(MediaType.APPLICATION_JSON).content("""
+    mockMvc
+        .perform(
+            post("/api/orchid-groups")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
 				{
 				  "bedZoneId": 999999,
 				  "varietyId": %d,
 				  "quantity": 10,
 				  "status": "정상"
 				}
-				""".formatted(sampleVariety.getId())))
-			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+				"""
+                        .formatted(sampleVariety.getId())))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
 
-		mockMvc.perform(post("/api/orchid-groups").contentType(MediaType.APPLICATION_JSON).content("""
+    mockMvc
+        .perform(
+            post("/api/orchid-groups")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
 				{
 				  "bedZoneId": 1,
 				  "quantity": 0,
 				  "status": ""
 				}
-				""")).andExpect(status().isBadRequest()).andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+				"""))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 
-		mockMvc
-			.perform(patch("/api/orchid-groups/{orchidGroupId}", 999999).contentType(MediaType.APPLICATION_JSON)
-				.content("""
+    mockMvc
+        .perform(
+            patch("/api/orchid-groups/{orchidGroupId}", 999999)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
 						{
 						  "varietyId": %d,
 						  "quantity": 1,
 						  "status": "정상"
 						}
-						""".formatted(sampleVariety.getId())))
-			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
-	}
+						"""
+                        .formatted(sampleVariety.getId())))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+  }
 
-	@Test
-	void movesOrchidGroupAndCreatesMovementWorkOperation() throws Exception {
-		var sampleHouse = houseRepository.findAll()
-			.stream()
-			.filter(house -> house.getNumber() == 3)
-			.findFirst()
-			.orElseThrow();
-		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
-		var zones = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId());
-		var sourceZone = zones.get(0);
-		var targetZone = zones.get(1);
-		var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
-		var targetBeforeCount = orchidGroupRepository.search(null, null, null, targetZone.getId(), null).size();
+  @Test
+  void movesOrchidGroupAndCreatesMovementWorkOperation() throws Exception {
+    var sampleHouse =
+        houseRepository.findAll().stream()
+            .filter(house -> house.getNumber() == 3)
+            .findFirst()
+            .orElseThrow();
+    var sampleBed =
+        physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+    var zones = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId());
+    var sourceZone = zones.get(0);
+    var targetZone = zones.get(1);
+    var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
+    var targetBeforeCount =
+        orchidGroupRepository.search(null, null, null, targetZone.getId(), null).size();
 
-		var createResult = mockMvc
-			.perform(post("/api/orchid-groups").contentType(MediaType.APPLICATION_JSON).content("""
+    var createResult =
+        mockMvc
+            .perform(
+                post("/api/orchid-groups")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
 					{
 					  "bedZoneId": %d,
 					  "varietyId": %d,
@@ -396,92 +501,94 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 					  "endPosition": 22,
 					  "status": "정상"
 					}
-					""".formatted(sourceZone.getId(), sampleVariety.getId())))
-			.andExpect(status().isCreated())
-			.andReturn();
-		var createdId = Long
-			.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+					"""
+                            .formatted(sourceZone.getId(), sampleVariety.getId())))
+            .andExpect(status().isCreated())
+            .andReturn();
+    var createdId =
+        Long.valueOf(
+            createResult
+                .getResponse()
+                .getContentAsString()
+                .replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
 
-		mockMvc
-			.perform(patch("/api/orchid-groups/{orchidGroupId}/move", createdId).contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "toBedZoneId": %d,
-						  "startPosition": 0,
-						  "endPosition": 1,
-						  "worker": "테스터",
-						  "memo": "이동 테스트 메모"
-						}
-						""".formatted(targetZone.getId())))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.id").value(createdId))
-			.andExpect(jsonPath("$.data.bedZoneId").value(targetZone.getId()))
-			.andExpect(jsonPath("$.data.sortOrder").value(targetBeforeCount + 1));
+    mockMvc
+        .perform(movementRecord(createdId, targetZone.getId(), 0, 1))
+        .andExpect(status().isCreated());
 
-		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", createdId))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data[0].workType").value("자리 이동"))
-			.andExpect(jsonPath("$.data[0].sourceKind").value("WORK_OPERATION"));
+    mockMvc
+        .perform(get("/api/orchid-groups/{id}", createdId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.id").value(createdId))
+        .andExpect(jsonPath("$.data.bedZoneId").value(targetZone.getId()))
+        .andExpect(jsonPath("$.data.sortOrder").value(targetBeforeCount + 1));
 
-		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", createdId))
-			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.error.code").value("CONFLICT"));
-	}
+    mockMvc
+        .perform(get("/api/orchid-groups/{id}/work-history", createdId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data[0].workType").value("자리 이동"))
+        .andExpect(jsonPath("$.data[0].sourceKind").value("WORK_OPERATION"));
 
-	@Test
-	void returnsValidationErrorsForInvalidOrchidGroupMove() throws Exception {
-		mockMvc
-			.perform(patch("/api/orchid-groups/{orchidGroupId}/move", 999999).contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "toBedZoneId": 1
-						}
-						"""))
-			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+    mockMvc
+        .perform(delete("/api/orchid-groups/{orchidGroupId}", createdId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error.code").value("CONFLICT"));
+  }
 
-		var sampleHouse = houseRepository.findAll()
-			.stream()
-			.filter(house -> house.getNumber() == 3)
-			.findFirst()
-			.orElseThrow();
-		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
-		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
-		var sampleGroup = orchidGroupRepository.search(null, "", null, sampleZone.getId(), null).getFirst();
+  @Test
+  void returnsValidationErrorsForInvalidOrchidGroupMove() throws Exception {
+    mockMvc
+        .perform(movementRecord(999999L, 1L, 0, 1))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 
-		mockMvc
-			.perform(patch("/api/orchid-groups/{orchidGroupId}/move", sampleGroup.getId())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "toBedZoneId": 999999
-						}
-						"""))
-			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+    var sampleHouse =
+        houseRepository.findAll().stream()
+            .filter(house -> house.getNumber() == 3)
+            .findFirst()
+            .orElseThrow();
+    var sampleBed =
+        physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+    var sampleZone =
+        bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+    var sampleGroup =
+        orchidGroupRepository.search(null, "", null, sampleZone.getId(), null).getFirst();
 
-		mockMvc
-			.perform(patch("/api/orchid-groups/{orchidGroupId}/move", sampleGroup.getId())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("{}"))
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
-	}
+    mockMvc
+        .perform(movementRecord(sampleGroup.getId(), 999999L, 0, 1))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
 
-	@Test
-	@Transactional
-	void hidesDepletedOrchidGroupFromActiveFarmViews() throws Exception {
-		var sampleHouse = houseRepository.findAll()
-			.stream()
-			.filter(house -> house.getNumber() == 3)
-			.findFirst()
-			.orElseThrow();
-		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
-		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).get(1);
-		var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
+    mockMvc
+        .perform(
+            post("/api/work-operations/structure-change-records/batch")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+  }
 
-		var createGroupResult = mockMvc
-			.perform(post("/api/orchid-groups").contentType(MediaType.APPLICATION_JSON).content("""
+  @Test
+  @Transactional
+  void hidesDepletedOrchidGroupFromActiveFarmViews() throws Exception {
+    var sampleHouse =
+        houseRepository.findAll().stream()
+            .filter(house -> house.getNumber() == 3)
+            .findFirst()
+            .orElseThrow();
+    var sampleBed =
+        physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+    var sampleZone =
+        bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).get(1);
+    var sampleVariety = varietyRepository.findAll().stream().findFirst().orElseThrow();
+
+    var createGroupResult =
+        mockMvc
+            .perform(
+                post("/api/orchid-groups")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
 					{
 					  "bedZoneId": %d,
 					  "varietyId": %d,
@@ -490,25 +597,44 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 					  "endPosition": 24,
 					  "status": "정상"
 					}
-					""".formatted(sampleZone.getId(), sampleVariety.getId())))
-			.andExpect(status().isCreated())
-			.andReturn();
-		var orchidGroupId = Long
-			.valueOf(createGroupResult.getResponse().getContentAsString().replaceFirst(".*?\\\"id\\\":(\\d+).*", "$1"));
+					"""
+                            .formatted(sampleZone.getId(), sampleVariety.getId())))
+            .andExpect(status().isCreated())
+            .andReturn();
+    var orchidGroupId =
+        Long.valueOf(
+            createGroupResult
+                .getResponse()
+                .getContentAsString()
+                .replaceFirst(".*?\\\"id\\\":(\\d+).*", "$1"));
 
-		var partnerResult = mockMvc
-			.perform(post("/api/business-partners").contentType(MediaType.APPLICATION_JSON).content("""
+    var partnerResult =
+        mockMvc
+            .perform(
+                post("/api/business-partners")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
 					{
 					  "name": "소진 테스트 거래처",
 					  "partnerType": "WHOLESALE"
 					}
 					"""))
-			.andExpect(status().isCreated())
-			.andReturn();
-		var partnerId = Long
-			.valueOf(partnerResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+            .andExpect(status().isCreated())
+            .andReturn();
+    var partnerId =
+        Long.valueOf(
+            partnerResult
+                .getResponse()
+                .getContentAsString()
+                .replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
 
-		mockMvc.perform(post("/api/sales-slips").contentType(MediaType.APPLICATION_JSON).content("""
+    mockMvc
+        .perform(
+            post("/api/sales-slips")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
 				{
 				  "saleDate": "2026-07-08",
 				  "partnerId": %d,
@@ -528,19 +654,28 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 				    }
 				  ]
 				}
-				""".formatted(partnerId, sampleVariety.getName(), sampleVariety.getGenus(), orchidGroupId)))
-			.andExpect(status().isCreated());
+				"""
+                        .formatted(
+                            partnerId,
+                            sampleVariety.getName(),
+                            sampleVariety.getGenus(),
+                            orchidGroupId)))
+        .andExpect(status().isCreated());
 
-		assertThat(orchidGroupRepository.findById(orchidGroupId).orElseThrow().getQuantity()).isZero();
+    assertThat(orchidGroupRepository.findById(orchidGroupId).orElseThrow().getQuantity()).isZero();
 
-		mockMvc.perform(get("/api/orchid-groups").param("bedZoneId", sampleZone.getId().toString()))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data[?(@.id == %d)]".formatted(orchidGroupId)).isEmpty());
+    mockMvc
+        .perform(get("/api/orchid-groups").param("bedZoneId", sampleZone.getId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data[?(@.id == %d)]".formatted(orchidGroupId)).isEmpty());
 
-		mockMvc.perform(get("/api/houses/{houseId}", sampleHouse.getId()))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.physicalBeds[?(@.id == %d)].bedZones[0].orchidGroups[?(@.id == %d)]"
-				.formatted(sampleBed.getId(), orchidGroupId)).doesNotExist());
-	}
-
+    mockMvc
+        .perform(get("/api/houses/{houseId}", sampleHouse.getId()))
+        .andExpect(status().isOk())
+        .andExpect(
+            jsonPath(
+                    "$.data.physicalBeds[?(@.id == %d)].bedZones[0].orchidGroups[?(@.id == %d)]"
+                        .formatted(sampleBed.getId(), orchidGroupId))
+                .doesNotExist());
+  }
 }

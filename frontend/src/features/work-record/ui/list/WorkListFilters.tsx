@@ -55,7 +55,7 @@ export function WorkListFilters({
             <option value="IN_PROGRESS">진행 중</option>
             <option value="PAUSED">일시중지</option>
             <option value="COMPLETED">완료</option>
-            <option value="CORRECTED">보정됨</option>
+            <option value="STOPPED">종료</option>
             <option value="CANCELED">취소</option>
           </FilterSelect>
           <FilterInput

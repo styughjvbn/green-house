@@ -13,29 +13,29 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface AuctionShipmentLotRepository
-		extends JpaRepository<AuctionShipmentLot, Long>, AuctionShipmentLotRepositoryCustom {
+    extends JpaRepository<AuctionShipmentLot, Long>, AuctionShipmentLotRepositoryCustom {
 
-	List<AuctionShipmentLot> findAllByShipmentIdIn(Collection<Long> shipmentIds);
+  List<AuctionShipmentLot> findAllByShipmentIdIn(Collection<Long> shipmentIds);
 
-	boolean existsByShipmentIdAndCurrentStatusNot(Long shipmentId, AuctionLotStatus status);
+  boolean existsByShipmentIdAndCurrentStatusNot(Long shipmentId, AuctionLotStatus status);
 
-	@Query("""
+  @Query(
+      """
 			select distinct lot.shipment.id from AuctionShipmentLot lot
 			where lot.shipment.id in :shipmentIds
 			  and lot.currentStatus <> :status
 			""")
-	List<Long> findShipmentIdsWithStatusNot(@Param("shipmentIds") Collection<Long> shipmentIds,
-			@Param("status") AuctionLotStatus status);
+  List<Long> findShipmentIdsWithStatusNot(
+      @Param("shipmentIds") Collection<Long> shipmentIds, @Param("status") AuctionLotStatus status);
 
-	@EntityGraph(attributePaths = { "shipment" })
-	List<AuctionShipmentLot> findAllByOrderByIdDesc();
+  @EntityGraph(attributePaths = {"shipment"})
+  List<AuctionShipmentLot> findAllByOrderByIdDesc();
 
-	@EntityGraph(attributePaths = { "shipment" })
-	Optional<AuctionShipmentLot> findWithDetailsById(Long id);
+  @EntityGraph(attributePaths = {"shipment"})
+  Optional<AuctionShipmentLot> findWithDetailsById(Long id);
 
-	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@EntityGraph(attributePaths = { "shipment" })
-	@Query("select lot from AuctionShipmentLot lot where lot.id = :id")
-	Optional<AuctionShipmentLot> findForUpdateById(@Param("id") Long id);
-
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @EntityGraph(attributePaths = {"shipment"})
+  @Query("select lot from AuctionShipmentLot lot where lot.id = :id")
+  Optional<AuctionShipmentLot> findForUpdateById(@Param("id") Long id);
 }

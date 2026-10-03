@@ -4,8 +4,9 @@ import java.util.List;
 
 public interface WorkTargetResolver {
 
-	List<ResolvedWorkTarget> resolve(WorkTargetSelection selection);
+  List<ResolvedWorkTarget> resolve(WorkTargetSelection selection);
 
-	ResolvedWorkTarget getCurrent(Long orchidGroupId);
+  ResolvedWorkTarget getCurrent(Long orchidGroupId);
 
+  void lockAndValidateActive(List<Long> orchidGroupIds);
 }

@@ -98,21 +98,17 @@ export type WorkOperationCorrectionAdjustment = {
   afterStatus: string;
 };
 
-export type WorkOperationCorrectionItem = {
-  id: number;
-  reason: string;
-  createdAt: string;
-  correctionOperation: WorkOperation;
-  effectDetails: {
-    beforeWorkDate?: string;
-    afterWorkDate?: string;
-    adjustments?: WorkOperationCorrectionAdjustment[];
-  };
-};
+export type WorkOperationCorrectionItem = NonNullable<
+  import("@/shared/api/generated/openapi").components["schemas"]["WorkOperationCorrectionsResponse"]["corrections"]
+>[number];
 
 export type WorkOperationCorrections = {
+  quantityCorrectionEnabled: import("@/shared/api/generated/openapi").components["schemas"]["WorkOperationCorrectionsResponse"]["quantityCorrectionEnabled"];
   originalOperation: WorkOperation;
   corrections: WorkOperationCorrectionItem[];
+  quantityBalances: NonNullable<
+    import("@/shared/api/generated/openapi").components["schemas"]["WorkOperationCorrectionsResponse"]["quantityBalances"]
+  >;
 };
 
 export type OrchidGroupLineageRelationType =
@@ -158,13 +154,6 @@ export type OrchidGroupLineageTransformation = {
   createdAt: string;
   sources: OrchidGroupLineageNode[];
   results: OrchidGroupLineageNode[];
-};
-
-export type PreciseMovePayload = {
-  toBedZoneId: number;
-  startPosition?: number | null;
-  endPosition?: number | null;
-  memo: string;
 };
 
 export type WorkRecordSummary = {

@@ -11,8 +11,9 @@ export function operationStatusLabel(status: WorkOperation["status"]) {
     IN_PROGRESS: "진행 중",
     PAUSED: "일시중지",
     COMPLETED: "완료",
+    STOPPED: "종료",
     CANCELED: "취소",
-    CORRECTED: "보정",
+    VOIDED: "취소",
   }[status];
 }
 
@@ -25,7 +26,7 @@ export function targetStatusLabel(
     PARTIALLY_COMPLETED: "부분 완료",
     COMPLETED: "완료",
     SKIPPED: "건너뜀",
-    CANCELED: "취소",
+    CANCELED: "종료",
     FAILED: "실패",
   }[status];
 }

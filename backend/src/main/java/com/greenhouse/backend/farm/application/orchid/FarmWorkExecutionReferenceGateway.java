@@ -17,31 +17,37 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class FarmWorkExecutionReferenceGateway implements WorkExecutionReferenceGateway {
 
-	private final OrchidGroupRepository orchidGroupRepository;
+  private final OrchidGroupRepository orchidGroupRepository;
 
-	private final BedZoneRepository bedZoneRepository;
+  private final BedZoneRepository bedZoneRepository;
 
-	@Override
-	public Map<Long, String> varietyNames(Collection<Long> orchidGroupIds) {
-		if (orchidGroupIds.isEmpty()) {
-			return Map.of();
-		}
-		return orchidGroupRepository.findNameRowsByIdIn(orchidGroupIds)
-			.stream()
-			.collect(Collectors.toMap(row -> row.id(), row -> row.varietyName(), (left, right) -> left,
-					LinkedHashMap::new));
-	}
+  @Override
+  public Map<Long, String> varietyNames(Collection<Long> orchidGroupIds) {
+    if (orchidGroupIds.isEmpty()) {
+      return Map.of();
+    }
+    return orchidGroupRepository.findNameRowsByIdIn(orchidGroupIds).stream()
+        .collect(
+            Collectors.toMap(
+                row -> row.id(),
+                row -> row.varietyName(),
+                (left, right) -> left,
+                LinkedHashMap::new));
+  }
 
-	@Override
-	public Map<Long, WorkExecutionLocation> locations(Collection<Long> bedZoneIds) {
-		if (bedZoneIds.isEmpty()) {
-			return Map.of();
-		}
-		return bedZoneRepository.findLocationRowsByIdIn(bedZoneIds)
-			.stream()
-			.collect(Collectors.toMap(row -> row.id(),
-					row -> new WorkExecutionLocation(row.houseNumber(), row.physicalBedNumber(), row.bedZoneName()),
-					(left, right) -> left, LinkedHashMap::new));
-	}
-
+  @Override
+  public Map<Long, WorkExecutionLocation> locations(Collection<Long> bedZoneIds) {
+    if (bedZoneIds.isEmpty()) {
+      return Map.of();
+    }
+    return bedZoneRepository.findLocationRowsByIdIn(bedZoneIds).stream()
+        .collect(
+            Collectors.toMap(
+                row -> row.id(),
+                row ->
+                    new WorkExecutionLocation(
+                        row.houseNumber(), row.physicalBedNumber(), row.bedZoneName()),
+                (left, right) -> left,
+                LinkedHashMap::new));
+  }
 }

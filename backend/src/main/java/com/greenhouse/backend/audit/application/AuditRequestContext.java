@@ -13,25 +13,30 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Component
 public class AuditRequestContext {
 
-	public AuditEvent.Identity current() {
-		var attributes = RequestContextHolder.getRequestAttributes();
-		if (!(attributes instanceof ServletRequestAttributes servletAttributes)) {
-			return new AuditEvent.Identity(null, null, null, MDC.get(RequestIdFilter.MDC_KEY));
-		}
-		HttpServletRequest request = servletAttributes.getRequest();
-		HttpSession session = request.getSession(false);
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		String actorId = authentication != null && authentication.isAuthenticated()
-				&& !(authentication instanceof AnonymousAuthenticationToken) ? authentication.getName() : null;
-		return new AuditEvent.Identity(actorId, session == null ? null : session.getId(),
-				normalize(request.getHeader("X-Client-Instance-Id"), 100), MDC.get(RequestIdFilter.MDC_KEY));
-	}
+  public AuditEvent.Identity current() {
+    var attributes = RequestContextHolder.getRequestAttributes();
+    if (!(attributes instanceof ServletRequestAttributes servletAttributes)) {
+      return new AuditEvent.Identity(null, null, null, MDC.get(RequestIdFilter.MDC_KEY));
+    }
+    HttpServletRequest request = servletAttributes.getRequest();
+    HttpSession session = request.getSession(false);
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    String actorId =
+        authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)
+            ? authentication.getName()
+            : null;
+    return new AuditEvent.Identity(
+        actorId,
+        session == null ? null : session.getId(),
+        normalize(request.getHeader("X-Client-Instance-Id"), 100),
+        MDC.get(RequestIdFilter.MDC_KEY));
+  }
 
-	private String normalize(String value, int maxLength) {
-		if (value == null || value.isBlank())
-			return null;
-		String trimmed = value.trim();
-		return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
-	}
-
+  private String normalize(String value, int maxLength) {
+    if (value == null || value.isBlank()) return null;
+    String trimmed = value.trim();
+    return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
+  }
 }

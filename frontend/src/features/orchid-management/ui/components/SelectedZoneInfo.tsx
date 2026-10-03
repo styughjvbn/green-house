@@ -588,7 +588,7 @@ function ActivityItem({
         </p>
       ) : null}
       {detailed &&
-      item.sourceKind === "WORK_OPERATION_EFFECT" &&
+      item.correctable &&
       item.workOperationId != null &&
       onOpenCorrection ? (
         <button

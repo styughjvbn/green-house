@@ -8,6 +8,7 @@ import {
   ListChecks,
   LoaderCircle,
   Move,
+  RefreshCcw,
   Search,
 } from "lucide-react";
 import {
@@ -30,6 +31,9 @@ import ActionButton from "./ActionButton";
 import CopiedOrchidGroupPanel from "./CopiedOrchidGroupPanel";
 import OrchidGroupList from "./OrchidGroupList";
 import OrchidGroupMutationPanel from "./OrchidGroupMutationPanel";
+
+// 구역·묶음 단위 실사 흐름으로 개편하기 전까지 진입점을 숨긴다.
+const STOCK_COUNT_ENABLED = false;
 
 export default function OrchidSelectionPanel({
   copiedOrchidGroup,
@@ -56,6 +60,7 @@ export default function OrchidSelectionPanel({
   onEdit,
   onOpenEdit,
   onOpenMovementRecord,
+  onOpenReconciliation,
   onOpenPaste,
   onOpenWorkRecord,
   onSelectOrchidGroup,
@@ -90,6 +95,7 @@ export default function OrchidSelectionPanel({
   onEdit: (payload: MutationPayload) => Promise<void>;
   onOpenEdit: (orchidGroupId: number) => void;
   onOpenMovementRecord: () => void;
+  onOpenReconciliation: () => void;
   onOpenPaste: () => void;
   onOpenWorkRecord: () => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
@@ -543,6 +549,16 @@ export default function OrchidSelectionPanel({
                     onClick={onOpenMovementRecord}
                     disabled={!selectedOrchidGroup}
                   />
+                  {STOCK_COUNT_ENABLED ? (
+                    <div className="col-span-2">
+                      <ActionButton
+                        icon={<RefreshCcw className="h-4 w-4" />}
+                        label="실사 수량 조정"
+                        onClick={onOpenReconciliation}
+                        disabled={!selectedOrchidGroup}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>

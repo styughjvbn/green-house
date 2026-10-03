@@ -1,5 +1,4 @@
 export {
-  deleteInboundRecord,
   getInboundRecords,
   getMaterials,
   getVarieties,

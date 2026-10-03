@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -11,61 +12,84 @@ import org.springframework.stereotype.Component;
 @Component
 public class WorkOperationSupport {
 
-	private final Clock clock;
+  private static final int MAX_TITLE_LENGTH = 150;
 
-	private final RequestActorProvider requestActorProvider;
+  private final Clock clock;
 
-	WorkOperationSupport(Clock clock) {
-		this(clock, new RequestActorProvider(false, "demo"));
-	}
+  private final RequestActorProvider requestActorProvider;
 
-	@Autowired
-	public WorkOperationSupport(Clock clock, RequestActorProvider requestActorProvider) {
-		this.clock = clock;
-		this.requestActorProvider = requestActorProvider;
-	}
+  WorkOperationSupport(Clock clock) {
+    this(clock, new RequestActorProvider(false, "demo"));
+  }
 
-	public LocalDate today() {
-		return TimeConfig.farmToday(clock);
-	}
+  @Autowired
+  public WorkOperationSupport(Clock clock, RequestActorProvider requestActorProvider) {
+    this.clock = clock;
+    this.requestActorProvider = requestActorProvider;
+  }
 
-	public LocalDateTime now() {
-		return TimeConfig.utcNow(clock);
-	}
+  public LocalDate today() {
+    return TimeConfig.farmToday(clock);
+  }
 
-	public LocalDateTime completionTime(LocalDate completedDate) {
-		LocalDate today = today();
-		LocalDate date = completedDate == null ? today : completedDate;
-		if (date.isAfter(today)) {
-			throw new IllegalArgumentException("완료일은 오늘 이후로 입력할 수 없습니다.");
-		}
-		return TimeConfig.farmDateTimeToUtc(date, clock);
-	}
+  public LocalDateTime now() {
+    return TimeConfig.utcNow(clock);
+  }
 
-	public void validateDates(LocalDate startDate, LocalDate endDate) {
-		if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
-			throw new IllegalArgumentException("예정 종료일은 예정 시작일보다 빠를 수 없습니다.");
-		}
-	}
+  public LocalDateTime completionTime(LocalDate completedDate) {
+    LocalDate today = today();
+    LocalDate date = completedDate == null ? today : completedDate;
+    if (date.isAfter(today)) {
+      throw new IllegalArgumentException("완료일은 오늘 이후로 입력할 수 없습니다.");
+    }
+    return TimeConfig.farmDateTimeToUtc(date, clock);
+  }
 
-	public String normalize(String value) {
-		if (value == null) {
-			return null;
-		}
-		String normalized = value.trim();
-		return normalized.isEmpty() ? null : normalized;
-	}
+  public void validateDates(LocalDate startDate, LocalDate endDate) {
+    if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+      throw new IllegalArgumentException("예정 종료일은 예정 시작일보다 빠를 수 없습니다.");
+    }
+  }
 
-	public String normalizeRequired(String value) {
-		String normalized = normalize(value);
-		if (normalized == null) {
-			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
-		}
-		return normalized;
-	}
+  public String normalize(String value) {
+    if (value == null) {
+      return null;
+    }
+    String normalized = value.trim();
+    return normalized.isEmpty() ? null : normalized;
+  }
 
-	public String actor(String requestedActor) {
-		return requestActorProvider.resolve(requestedActor);
-	}
+  public String normalizeRequired(String value) {
+    String normalized = normalize(value);
+    if (normalized == null) {
+      throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
+    }
+    return normalized;
+  }
 
+  public String varietyHistoryTitle(String varietyName, WorkTypeDefinition definition) {
+    String eventTitle = definition == null ? null : definition.historyTitle();
+    if (eventTitle == null) {
+      throw new IllegalArgumentException("자동 이력 제목을 지원하지 않는 작업 유형입니다.");
+    }
+    return joinTitle(normalizeRequired(varietyName), eventTitle, " · ");
+  }
+
+  public String followUpHistoryTitle(String originalTitle, String suffix) {
+    return joinTitle(normalizeRequired(originalTitle), normalizeRequired(suffix), " ");
+  }
+
+  private String joinTitle(String prefix, String suffix, String separator) {
+    int prefixLimit = MAX_TITLE_LENGTH - separator.length() - suffix.length();
+    if (prefixLimit < 1) {
+      throw new IllegalArgumentException("자동 이력 제목은 150자 이하여야 합니다.");
+    }
+    String fittedPrefix =
+        prefix.length() <= prefixLimit ? prefix : prefix.substring(0, prefixLimit).stripTrailing();
+    return fittedPrefix + separator + suffix;
+  }
+
+  public String actor(String requestedActor) {
+    return requestActorProvider.resolve(requestedActor);
+  }
 }

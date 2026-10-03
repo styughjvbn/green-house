@@ -39,12 +39,17 @@ export function WorkOperationDetailPanel({
         {actions.selected ? (
           <OperationResult
             className="h-full"
+            detailInitialTab={actions.detailInitialTab}
+            detailSelectionKey={actions.detailSelectionKey}
             operation={actions.selected}
             loading={actions.loading || housesQuery.isFetching}
             onComplete={actions.complete}
             onOperationAction={actions.runOperationAction}
             onTargetAction={actions.runTargetAction}
+            onUpdateTitle={actions.updateTitle}
             onExecuteTarget={actions.openExecution}
+            onSelectOperation={actions.selectFromGraph}
+            onVoidSaved={actions.voidSaved}
           />
         ) : actions.detailLoading ? (
           <div className="flex h-full min-h-40 items-center justify-center rounded-md border border-[#dfe5dc] bg-white p-8 text-center text-sm text-[#5c6a60] shadow-sm">

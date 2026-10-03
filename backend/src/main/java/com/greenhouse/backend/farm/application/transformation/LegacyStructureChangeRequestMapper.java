@@ -13,25 +13,38 @@ import org.springframework.stereotype.Component;
 @Component
 public class LegacyStructureChangeRequestMapper {
 
-	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-	public RepotWorkOperationRequest read(WorkEffectCommand command) {
-		return command.payload() == null
-				? objectMapper.convertValue(command.resultDetails(), RepotWorkOperationRequest.class)
-				: command.payloadAs(RepotWorkOperationRequest.class);
-	}
+  public RepotWorkOperationRequest read(WorkEffectCommand command) {
+    return command.payload() == null
+        ? objectMapper.convertValue(command.resultDetails(), RepotWorkOperationRequest.class)
+        : command.payloadAs(RepotWorkOperationRequest.class);
+  }
 
-	public StructureChangeCommand from(RepotWorkOperationRequest request) {
-		Long sourceId = request.sourceOrchidGroupId();
-		return new StructureChangeCommand(request.idempotencyKey(), request.workDate(), request.worker(),
-				request.memo(), List.of(new StructureChangeSourceInput(sourceId, request.inputQuantity(), null, null)),
-				request.results()
-					.stream()
-					.map(result -> new StructureChangeResultInput(result.bedZoneId(), result.quantity(), sourceId,
-							result.potSize(), result.ageYear(), StructureChangeResultPurpose.NORMAL,
-							result.placementType(), result.trayCount(), result.splitPlacementAllowed(),
-							result.startPosition(), result.endPosition(), result.memo()))
-					.toList());
-	}
-
+  public StructureChangeCommand from(RepotWorkOperationRequest request) {
+    Long sourceId = request.sourceOrchidGroupId();
+    return new StructureChangeCommand(
+        request.idempotencyKey(),
+        request.workDate(),
+        request.worker(),
+        request.memo(),
+        List.of(new StructureChangeSourceInput(sourceId, request.inputQuantity(), null, null)),
+        request.results().stream()
+            .map(
+                result ->
+                    new StructureChangeResultInput(
+                        result.bedZoneId(),
+                        result.quantity(),
+                        sourceId,
+                        result.potSize(),
+                        result.ageYear(),
+                        StructureChangeResultPurpose.NORMAL,
+                        result.placementType(),
+                        result.trayCount(),
+                        result.splitPlacementAllowed(),
+                        result.startPosition(),
+                        result.endPosition(),
+                        result.memo()))
+            .toList());
+  }
 }

@@ -4,7 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(name = "WorkTargetAction")
 public enum WorkTargetAction {
-
-	START, COMPLETE, EXECUTE, SKIP
-
+  START,
+  COMPLETE,
+  EXECUTE,
+  SKIP
 }

@@ -25,51 +25,58 @@ import lombok.NoArgsConstructor;
 @Table(name = "bed_zone_capacities")
 public class BedZoneCapacity extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "bed_zone_capacities_id_seq")
-	@SequenceGenerator(name = "bed_zone_capacities_id_seq", sequenceName = "bed_zone_capacities_id_seq",
-			allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "bed_zone_capacities_id_seq")
+  @SequenceGenerator(
+      name = "bed_zone_capacities_id_seq",
+      sequenceName = "bed_zone_capacities_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "bed_zone_id", nullable = false)
-	private BedZone bedZone;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "bed_zone_id", nullable = false)
+  private BedZone bedZone;
 
-	@Column(name = "placement_type", nullable = false, length = 100)
-	private String placementType;
+  @Column(name = "placement_type", nullable = false, length = 100)
+  private String placementType;
 
-	@Column(name = "pot_size", length = 50)
-	private String potSize;
+  @Column(name = "pot_size", length = 50)
+  private String potSize;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "capacity_mode", nullable = false, length = 20)
-	private PlacementCapacityMode capacityMode;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "capacity_mode", nullable = false, length = 20)
+  private PlacementCapacityMode capacityMode;
 
-	@Column(name = "unit_span", precision = 6, scale = 2, nullable = false)
-	private BigDecimal unitSpan;
+  @Column(name = "unit_span", precision = 6, scale = 2, nullable = false)
+  private BigDecimal unitSpan;
 
-	@Column(name = "capacity_value", nullable = false)
-	private Integer capacityValue;
+  @Column(name = "capacity_value", nullable = false)
+  private Integer capacityValue;
 
-	@Column(name = "is_allowed", nullable = false)
-	private Boolean allowed;
+  @Column(name = "is_allowed", nullable = false)
+  private Boolean allowed;
 
-	@Column(columnDefinition = "text")
-	private String memo;
+  @Column(columnDefinition = "text")
+  private String memo;
 
-	public BedZoneCapacity(String placementType, String potSize, PlacementCapacityMode capacityMode,
-			BigDecimal unitSpan, Integer capacityValue, Boolean allowed, String memo) {
-		this.placementType = placementType;
-		this.potSize = PotSizeCode.fromInput(potSize).getDisplayValue();
-		this.capacityMode = capacityMode;
-		this.unitSpan = unitSpan;
-		this.capacityValue = capacityValue;
-		this.allowed = allowed;
-		this.memo = memo;
-	}
+  public BedZoneCapacity(
+      String placementType,
+      String potSize,
+      PlacementCapacityMode capacityMode,
+      BigDecimal unitSpan,
+      Integer capacityValue,
+      Boolean allowed,
+      String memo) {
+    this.placementType = placementType;
+    this.potSize = PotSizeCode.fromInput(potSize).getDisplayValue();
+    this.capacityMode = capacityMode;
+    this.unitSpan = unitSpan;
+    this.capacityValue = capacityValue;
+    this.allowed = allowed;
+    this.memo = memo;
+  }
 
-	void setBedZone(BedZone bedZone) {
-		this.bedZone = bedZone;
-	}
-
+  void setBedZone(BedZone bedZone) {
+    this.bedZone = bedZone;
+  }
 }

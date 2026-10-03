@@ -7,11 +7,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface SalesSlipItemAllocationRepository extends JpaRepository<SalesSlipItemAllocation, Long> {
+public interface SalesSlipItemAllocationRepository
+    extends JpaRepository<SalesSlipItemAllocation, Long> {
 
-	long countByOrchidGroupIdIn(Collection<Long> orchidGroupIds);
+  long countByOrchidGroupIdIn(Collection<Long> orchidGroupIds);
 
-	@Query("""
+  @Query(
+      """
 			select new com.greenhouse.backend.sales.repository.SalesReservationReconciliationRow(
 				allocation.orchidGroupId, sum(allocation.allocatedQuantity))
 			from SalesSlipItemAllocation allocation
@@ -22,10 +24,12 @@ public interface SalesSlipItemAllocationRepository extends JpaRepository<SalesSl
 			group by allocation.orchidGroupId
 			order by allocation.orchidGroupId
 			""")
-	List<SalesReservationReconciliationRow> sumDraftReservationsByOrchidGroupIdIn(
-			@Param("orchidGroupIds") Collection<Long> orchidGroupIds, @Param("draftStatus") String draftStatus);
+  List<SalesReservationReconciliationRow> sumDraftReservationsByOrchidGroupIdIn(
+      @Param("orchidGroupIds") Collection<Long> orchidGroupIds,
+      @Param("draftStatus") String draftStatus);
 
-	@Query("""
+  @Query(
+      """
 			select allocation from SalesSlipItemAllocation allocation
 			join fetch allocation.salesSlipItem item
 			join fetch item.salesSlip slip
@@ -33,7 +37,6 @@ public interface SalesSlipItemAllocationRepository extends JpaRepository<SalesSl
 			where slip.id in :salesSlipIds
 			order by item.id asc, allocation.id asc
 			""")
-	List<SalesSlipItemAllocation> findAllWithSnapshotsBySalesSlipIdIn(
-			@Param("salesSlipIds") Collection<Long> salesSlipIds);
-
+  List<SalesSlipItemAllocation> findAllWithSnapshotsBySalesSlipIdIn(
+      @Param("salesSlipIds") Collection<Long> salesSlipIds);
 }

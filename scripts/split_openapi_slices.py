@@ -23,14 +23,14 @@ DOMAIN_MAP = dict(
         ("orchid-command", [
             "orchid-group-command-controller",
             "bed-placement-controller",
-            "multi-create-work-operation-controller",
             "repot-work-operation-controller",
         ]),
+        ("orchid-mutation", ["orchid-group-mutation-query-controller"]),
         ("inventory", ["variety-controller", "material-controller", "inbound-record-controller"]),
         ("orchid-collection", ["orchid-group-collection-controller"]),
         ("derived-orchid-group", ["derived-orchid-group-controller"]),
         ("work", ["work-type-controller"]),
-        ("work-operation", ["work-operation-controller"]),
+        ("work-operation", ["work-operation-controller", "work-operation-void-controller"]),
         ("partner", ["business-partner-controller", "partner-settlement-settings-controller"]),
         ("sales", ["sales-controller", "print-controller"]),
         ("analytics", ["analytics-controller"]),
@@ -151,9 +151,22 @@ def build_slice(openapi: dict[str, Any], slice_name: str, tags: list[str]) -> di
     return slice_doc
 
 
+def normalize_property_order(value: Any) -> Any:
+    """Stabilize property maps without changing ordered arrays or other map layouts."""
+    if isinstance(value, dict):
+        normalized = {key: normalize_property_order(nested) for key, nested in value.items()}
+        properties = normalized.get("properties")
+        if isinstance(properties, dict):
+            normalized["properties"] = dict(sorted(properties.items()))
+        return normalized
+    if isinstance(value, list):
+        return [normalize_property_order(nested) for nested in value]
+    return value
+
+
 def dump_yaml(document: dict[str, Any]) -> str:
     return yaml.safe_dump(
-        document,
+        normalize_property_order(document),
         allow_unicode=True,
         sort_keys=False,
         width=120,

@@ -10,7 +10,7 @@
 발생한다.
 
 - Farm 관리: 생성, 상세 수정, 이동, 생성 취소와 삭제
-- Work: 폐기, 자리 이동, 분갈이, 분주, 합식, 다중 생성, 보정
+- Work: 폐기, 자리 이동, 분갈이, 분주, 합식, 보정
 - Inbound: 즉시 배치 입고와 포트 작업 결과 생성
 - Sales: 예약, 예약 해제, 출고, 출고 취소
 
@@ -177,7 +177,7 @@ HTTP API는 기존 Work, Sales, Inbound, OrchidGroup API를 유지한다. Mutati
 - 수량, 예약 수량과 상태 변경
 - 논리 구역, 정렬 순서와 숫자 배치 구간 변경
 - 폐기, 출고와 출고 취소
-- 분갈이, 분주, 합식, 자리 이동과 다중 생성
+- 분갈이, 분주, 합식과 자리 이동
 - 완료 작업 결과의 보정과 업무 취소에 따른 보상
 
 하나의 요청에서 여러 필드를 변경하면 하나의 원자적 Mutation으로 기록한다.
@@ -475,7 +475,7 @@ Correction과 Compensation은 서로 다른 업무 의미를 가진다.
 - Correction: 과거 기록 또는 결과가 잘못되어 현재 상태를 보정한다.
 - Compensation: 과거 행위는 유효했으나 이후 업무 취소로 반대 효과를 적용한다.
 
-하나의 보정 작업이 여러 실행 회차의 결과를 변경할 수 있으므로 Mutation 본체의
+하나의 보정 이벤트가 여러 실행 회차의 결과를 변경할 수 있으므로 Mutation 본체의
 단일 `correction_of` 또는 `compensation_of` 컬럼을 사용하지 않는다. 별도 관계를
 사용한다.
 
@@ -485,6 +485,10 @@ orchid_group_mutation_relations
 - related_mutation_id
 - relation_type: CORRECTS | COMPENSATES | SUPERSEDES
 ```
+
+작업 기록 보정은 독립 WorkOperation이 아닌 원본 작업의 감사 이벤트다. 수량·상태 보정과 생성 취소
+Mutation의 출처는 `WORK / WORK_CORRECTION / 감사 이벤트 ID`이며, 조회는 해당 이벤트의 원본 작업으로
+연결한다. 날짜만 변경하는 이벤트에는 Mutation을 만들지 않는다.
 
 자동 역연산이나 자동 연쇄 rollback은 제공하지 않는다. 각 상위 도메인이 후속
 사용 여부와 보정·보상 가능성을 판단한 후 명시적인 typed command를 요청한다.
@@ -680,7 +684,7 @@ ADR, write-path·retirement inventory와 운영 데이터 profiling
 → Work command receipt·effect identity·fingerprint 정리
 → Mutation schema, core와 operator-run state-chain importer
 → Farm 생성·수정·생성 취소·이동 command 준비
-→ 폐기·다중 생성과 Work N:M 구조 변경 command 준비
+→ 폐기와 Work N:M 구조 변경 command 준비
 → Inbound 생성·포트 command 준비
 → Sales 예약·해제·출고·취소 command 준비
 → Correction·Compensation과 legacy source 처리 준비
@@ -717,7 +721,7 @@ typed command로 Engine만 호출한다. 위의 단계별 전환 절차는 결�
 
 - Farm 단건·일괄 생성/수정, 생성 취소, 이동과 품종명 전파
 - Inbound 즉시 배치와 Work 기반 포트 결과 생성
-- Work 폐기, 이동, 분갈이, 분주, 합식, 다중 생성·취소와 보정
+- Work 폐기, 이동, 분갈이, 분주, 합식과 보정
 - Sales 예약, 수정 예약 해제·재예약, 출고, 예약 취소와 출고 복구
 
 각 요청은 Engine만 실행한다. Work 효과는 기존 `TARGET:{id}`,

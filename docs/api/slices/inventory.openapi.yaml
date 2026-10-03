@@ -56,7 +56,7 @@ paths:
     post:
       tags:
       - variety-controller
-      operationId: create_2
+      operationId: create_1
       requestBody:
         content:
           application/json:
@@ -120,7 +120,7 @@ paths:
     post:
       tags:
       - material-controller
-      operationId: create_5
+      operationId: create_4
       requestBody:
         content:
           application/json:
@@ -169,10 +169,8 @@ paths:
         schema:
           type: string
           enum:
-          - TEMP_STORED
           - POTTING_PENDING
           - POTTING_IN_PROGRESS
-          - POTTED
           - PLACED
           - CANCELED
       - name: variety
@@ -204,7 +202,7 @@ paths:
     post:
       tags:
       - inbound-record-controller
-      operationId: create_6
+      operationId: create_5
       requestBody:
         content:
           application/json:
@@ -244,11 +242,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
       deprecated: true
+  /api/inbound-records/{inboundRecordId}/potting-void:
+    post:
+      tags:
+      - inbound-record-controller
+      operationId: voidPotting
+      parameters:
+      - name: inboundRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundRecordPottingVoidRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
   /api/inbound-records/{inboundRecordId}/cancel:
     post:
       tags:
       - inbound-record-controller
-      operationId: cancel_2
+      operationId: cancel
       parameters:
       - name: inboundRecordId
         in: path
@@ -447,24 +470,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
-    delete:
-      tags:
-      - inbound-record-controller
-      operationId: delete_3
-      parameters:
-      - name: inboundRecordId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseVoid'
     patch:
       tags:
       - inbound-record-controller
@@ -589,28 +594,95 @@ components:
     InboundNewVarietyRequest:
       type: object
       properties:
-        genus:
-          type: string
-          maxLength: 100
-          minLength: 0
-        name:
-          type: string
-          maxLength: 150
-          minLength: 0
         defaultPotSize:
           type: string
           maxLength: 50
+          minLength: 0
+        genus:
+          type: string
+          maxLength: 100
           minLength: 0
         memo:
           type: string
           maxLength: 1000
           minLength: 0
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
       required:
       - genus
       - name
+    InboundOrchidGroupResponse:
+      type: object
+      properties:
+        ageYear:
+          type: integer
+          format: int32
+        bedZoneId:
+          type: integer
+          format: int64
+        endPosition:
+          type: number
+        id:
+          type: integer
+          format: int64
+        location:
+          type: string
+        placementType:
+          type: string
+        potSize:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        startPosition:
+          type: number
+        status:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+    InboundPlacementInput:
+      type: object
+      properties:
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        bedZoneId:
+          type: integer
+          format: int64
+        endPosition:
+          type: number
+        placementType:
+          type: string
+          maxLength: 100
+          minLength: 0
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        startPosition:
+          type: number
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - bedZoneId
+      - quantity
     InboundRecordCancelRequest:
       type: object
       properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
         memo:
           type: string
           maxLength: 1000
@@ -618,6 +690,10 @@ components:
     InboundRecordCreateRequest:
       type: object
       properties:
+        estimatedQuantity:
+          type: integer
+          format: int32
+          minimum: 1
         inboundDate:
           type: string
           format: date
@@ -629,73 +705,27 @@ components:
           - PRODUCT_POT
           - SAMPLE
           - ETC
-        varietyId:
-          type: integer
-          format: int64
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
         newVariety:
           $ref: '#/components/schemas/InboundNewVarietyRequest'
-        bottleCount:
-          type: integer
-          format: int32
-          minimum: 0
-        estimatedQuantity:
-          type: integer
-          format: int32
-          minimum: 1
-        actualQuantity:
-          type: integer
-          format: int32
-          minimum: 1
+        placement:
+          $ref: '#/components/schemas/InboundPlacementInput'
+        pottingDueDate:
+          type: string
+          format: date
         tempLocation:
           type: string
           maxLength: 255
           minLength: 0
-        pottingDueDate:
-          type: string
-          format: date
-        potSize:
-          type: string
-          maxLength: 50
-          minLength: 0
-        ageYear:
-          type: integer
-          format: int32
-          minimum: 0
-        growthStage:
-          type: string
-          maxLength: 100
-          minLength: 0
-        placementType:
-          type: string
-          maxLength: 100
-          minLength: 0
-        trayCount:
-          type: integer
-          format: int32
-          minimum: 0
-        bedZoneId:
+        varietyId:
           type: integer
           format: int64
-        startPosition:
-          type: number
-        endPosition:
-          type: number
-        status:
-          type: string
-          enum:
-          - TEMP_STORED
-          - POTTING_PENDING
-          - POTTING_IN_PROGRESS
-          - POTTED
-          - PLACED
-          - CANCELED
         worker:
           type: string
           maxLength: 50
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
           minLength: 0
       required:
       - inboundDate
@@ -703,6 +733,10 @@ components:
     InboundRecordPottingRequest:
       type: object
       properties:
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
         pottingDate:
           type: string
           format: date
@@ -712,24 +746,51 @@ components:
             $ref: '#/components/schemas/RepotResultOrchidGroupRequest'
           maxItems: 100
           minItems: 0
-        growthStage:
-          type: string
-          maxLength: 100
-          minLength: 0
         worker:
           type: string
           maxLength: 50
           minLength: 0
-        memo:
+      required:
+      - pottingDate
+      - results
+    InboundRecordPottingVoidRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
           type: string
           maxLength: 1000
           minLength: 0
       required:
-      - pottingDate
-      - results
+      - idempotencyKey
+      - reason
     InboundRecordResponse:
       type: object
       properties:
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - CANCEL
+            - VOID_POTTING
+        createdAt:
+          type: string
+          format: date-time
+        createdOrchidGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundOrchidGroupResponse'
+        editable:
+          type: boolean
+        estimatedQuantity:
+          type: integer
+          format: int32
+        genus:
+          type: string
         id:
           type: integer
           format: int64
@@ -738,119 +799,52 @@ components:
           format: date
         inboundType:
           type: string
-        varietyId:
-          type: integer
-          format: int64
-        genus:
+        memo:
           type: string
-        varietyName:
-          type: string
-        status:
-          type: string
-        bottleCount:
-          type: integer
-          format: int32
-        estimatedQuantity:
-          type: integer
-          format: int32
-        actualQuantity:
-          type: integer
-          format: int32
-        tempLocation:
-          type: string
-        pottingDueDate:
-          type: string
-          format: date
         pottingDate:
           type: string
           format: date
-        potSize:
+        pottingDueDate:
           type: string
-        ageYear:
-          type: integer
-          format: int32
-        growthStage:
+          format: date
+        status:
           type: string
-        placementType:
+        tempLocation:
           type: string
-        trayCount:
-          type: integer
-          format: int32
-        bedZoneId:
-          type: integer
-          format: int64
-        currentLocation:
-          type: string
-        createdOrchidGroupId:
-          type: integer
-          format: int64
-        createdOrchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-        worker:
-          type: string
-        memo:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
         updatedAt:
           type: string
           format: date-time
+        varietyId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        worker:
+          type: string
     InboundRecordUpdateRequest:
       type: object
       properties:
-        inboundDate:
-          type: string
-          format: date
-        bottleCount:
-          type: integer
-          format: int32
-          minimum: 0
         estimatedQuantity:
           type: integer
           format: int32
           minimum: 1
-        actualQuantity:
-          type: integer
-          format: int32
-          minimum: 1
+        inboundDate:
+          type: string
+          format: date
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        pottingDueDate:
+          type: string
+          format: date
         tempLocation:
           type: string
           maxLength: 255
           minLength: 0
-        pottingDueDate:
-          type: string
-          format: date
-        potSize:
-          type: string
-          maxLength: 50
-          minLength: 0
-        ageYear:
-          type: integer
-          format: int32
-          minimum: 0
-        growthStage:
-          type: string
-          maxLength: 100
-          minLength: 0
-        placementType:
-          type: string
-          maxLength: 100
-          minLength: 0
-        trayCount:
-          type: integer
-          format: int32
-          minimum: 0
         worker:
           type: string
           maxLength: 50
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
           minLength: 0
       required:
       - inboundDate
@@ -861,11 +855,11 @@ components:
           type: string
           maxLength: 50
           minLength: 0
-        name:
+        manufacturer:
           type: string
           maxLength: 150
           minLength: 0
-        manufacturer:
+        name:
           type: string
           maxLength: 150
           minLength: 0
@@ -891,16 +885,21 @@ components:
     MaterialResponse:
       type: object
       properties:
+        active:
+          type: boolean
+        category:
+          type: string
+        code:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
         id:
           type: integer
           format: int64
-        code:
-          type: string
-        category:
+        manufacturer:
           type: string
         name:
-          type: string
-        manufacturer:
           type: string
         specification:
           type: string
@@ -908,16 +907,11 @@ components:
           type: string
         storageLocation:
           type: string
-        usage:
-          type: string
-        active:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
         updatedAt:
           type: string
           format: date-time
+        usage:
+          type: string
     MaterialUpdateRequest:
       type: object
       properties:
@@ -925,11 +919,11 @@ components:
           type: string
           maxLength: 50
           minLength: 0
-        name:
+        manufacturer:
           type: string
           maxLength: 150
           minLength: 0
-        manufacturer:
+        name:
           type: string
           maxLength: 150
           minLength: 0
@@ -1012,34 +1006,13 @@ components:
     RepotResultOrchidGroupRequest:
       type: object
       properties:
-        bedZoneId:
-          type: integer
-          format: int64
-        quantity:
-          type: integer
-          format: int32
-          minimum: 1
-        potSize:
-          type: string
-          maxLength: 50
-          minLength: 0
         ageYear:
           type: integer
           format: int32
           minimum: 0
-        placementType:
-          type: string
-          maxLength: 50
-          minLength: 0
-        trayCount:
+        bedZoneId:
           type: integer
-          format: int32
-          minimum: 0
-        splitPlacementAllowed:
-          type: boolean
-        startPosition:
-          type: number
-          minimum: 0.0
+          format: int64
         endPosition:
           type: number
           minimum: 0.0
@@ -1047,6 +1020,27 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
+        placementType:
+          type: string
+          maxLength: 50
+          minLength: 0
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        splitPlacementAllowed:
+          type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
       required:
       - bedZoneId
       - endPosition
@@ -1055,51 +1049,51 @@ components:
     VarietyConnectedOrchidGroupResponse:
       type: object
       properties:
+        latestWorkDate:
+          type: string
+          format: date
+        location:
+          type: string
         orchidGroupId:
           type: integer
           format: int64
-        location:
-          type: string
         quantity:
           type: integer
           format: int32
         status:
           type: string
-        latestWorkDate:
-          type: string
-          format: date
     VarietyCreateRequest:
       type: object
       properties:
-        genus:
-          type: string
-          maxLength: 100
-          minLength: 0
-        name:
-          type: string
-          maxLength: 150
-          minLength: 0
         alias:
           type: string
           maxLength: 150
           minLength: 0
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
         defaultPotSize:
           type: string
           maxLength: 50
           minLength: 0
-        color:
-          type: string
-          pattern: ^#[0-9A-Fa-f]{6}$
-        saleEnabled:
-          type: boolean
         description:
           type: string
           maxLength: 2000
+          minLength: 0
+        genus:
+          type: string
+          maxLength: 100
           minLength: 0
         memo:
           type: string
           maxLength: 2000
           minLength: 0
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        saleEnabled:
+          type: boolean
       required:
       - genus
       - name
@@ -1117,92 +1111,92 @@ components:
     VarietyNameResponse:
       type: object
       properties:
+        genus:
+          type: string
         id:
           type: integer
           format: int64
-        genus:
-          type: string
         name:
           type: string
     VarietyResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-        code:
-          type: string
-        genus:
-          type: string
-        name:
-          type: string
-        alias:
-          type: string
-        defaultPotSize:
-          type: string
-        color:
-          type: string
-        saleEnabled:
-          type: boolean
         active:
           type: boolean
-        description:
+        alias:
           type: string
-        memo:
+        code:
+          type: string
+        color:
           type: string
         connectedGroupCount:
           type: integer
           format: int64
-        totalQuantity:
+        createdAt:
+          type: string
+          format: date-time
+        defaultPotSize:
+          type: string
+        description:
+          type: string
+        genus:
+          type: string
+        id:
           type: integer
           format: int64
-        saleableQuantity:
-          type: integer
-          format: int64
+        memo:
+          type: string
+        name:
+          type: string
         recentInboundDate:
           type: string
           format: date
         recentWorkDate:
           type: string
           format: date
-        createdAt:
-          type: string
-          format: date-time
+        saleEnabled:
+          type: boolean
+        saleableQuantity:
+          type: integer
+          format: int64
+        totalQuantity:
+          type: integer
+          format: int64
         updatedAt:
           type: string
           format: date-time
     VarietyUpdateRequest:
       type: object
       properties:
-        genus:
-          type: string
-          maxLength: 100
-          minLength: 0
-        name:
-          type: string
-          maxLength: 150
-          minLength: 0
         alias:
           type: string
           maxLength: 150
           minLength: 0
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
         defaultPotSize:
           type: string
           maxLength: 50
           minLength: 0
-        color:
-          type: string
-          pattern: ^#[0-9A-Fa-f]{6}$
-        saleEnabled:
-          type: boolean
         description:
           type: string
           maxLength: 2000
+          minLength: 0
+        genus:
+          type: string
+          maxLength: 100
           minLength: 0
         memo:
           type: string
           maxLength: 2000
           minLength: 0
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        saleEnabled:
+          type: boolean
       required:
       - genus
       - name

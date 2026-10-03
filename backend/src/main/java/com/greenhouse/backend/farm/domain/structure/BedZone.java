@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.domain.structure;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -30,63 +31,65 @@ import lombok.NoArgsConstructor;
 @Table(name = "bed_zones")
 public class BedZone extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "bed_zones_id_seq")
-	@SequenceGenerator(name = "bed_zones_id_seq", sequenceName = "bed_zones_id_seq", allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "bed_zones_id_seq")
+  @SequenceGenerator(
+      name = "bed_zones_id_seq",
+      sequenceName = "bed_zones_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "physical_bed_id", nullable = false)
-	private PhysicalBed physicalBed;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "physical_bed_id", nullable = false)
+  private PhysicalBed physicalBed;
 
-	@Column(nullable = false)
-	private String name;
+  @Column(nullable = false)
+  private String name;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
-	private BedZoneSide side;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private BedZoneSide side;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "zone_type", nullable = false)
-	private BedZoneType zoneType;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "zone_type", nullable = false)
+  private BedZoneType zoneType;
 
-	@Column(name = "sort_order", nullable = false)
-	private Integer sortOrder;
+  @Column(name = "sort_order", nullable = false)
+  private Integer sortOrder;
 
-	@Column(name = "is_active", nullable = false)
-	private Boolean active;
+  @Column(name = "is_active", nullable = false)
+  private Boolean active;
 
-	@Column(columnDefinition = "text")
-	private String memo;
+  @Column(columnDefinition = "text")
+  private String memo;
 
-	@OneToMany(mappedBy = "bedZone")
-	@OrderBy("sortOrder ASC")
-	private List<OrchidGroup> orchidGroups = new ArrayList<>();
+  @OneToMany(mappedBy = "bedZone")
+  @OrderBy("sortOrder ASC")
+  private List<OrchidGroup> orchidGroups = new ArrayList<>();
 
-	@OneToMany(mappedBy = "bedZone", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
-	@OrderBy("capacityMode ASC")
-	private Set<BedZoneCapacity> capacities = new LinkedHashSet<>();
+  @OneToMany(mappedBy = "bedZone", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OrderBy("capacityMode ASC")
+  private Set<BedZoneCapacity> capacities = new LinkedHashSet<>();
 
-	public BedZone(String name, BedZoneSide side, Integer sortOrder) {
-		this.name = name;
-		this.side = side;
-		this.zoneType = BedZoneType.DEFAULT;
-		this.sortOrder = sortOrder;
-		this.active = true;
-	}
+  public BedZone(String name, BedZoneSide side, Integer sortOrder) {
+    this.name = name;
+    this.side = side;
+    this.zoneType = BedZoneType.DEFAULT;
+    this.sortOrder = sortOrder;
+    this.active = true;
+  }
 
-	void setPhysicalBed(PhysicalBed physicalBed) {
-		this.physicalBed = physicalBed;
-	}
+  void setPhysicalBed(PhysicalBed physicalBed) {
+    this.physicalBed = physicalBed;
+  }
 
-	public void replaceCapacities(List<BedZoneCapacity> nextCapacities) {
-		capacities.clear();
-		nextCapacities.forEach(this::addCapacity);
-	}
+  public void replaceCapacities(List<BedZoneCapacity> nextCapacities) {
+    capacities.clear();
+    nextCapacities.forEach(this::addCapacity);
+  }
 
-	public void addCapacity(BedZoneCapacity capacity) {
-		capacities.add(capacity);
-		capacity.setBedZone(this);
-	}
-
+  public void addCapacity(BedZoneCapacity capacity) {
+    capacities.add(capacity);
+    capacity.setBedZone(this);
+  }
 }

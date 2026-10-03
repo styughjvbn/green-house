@@ -6,6 +6,8 @@ import type {
   OrchidManagementViewport,
   OrchidGroup,
   VarietyOption,
+  WorkOperation,
+  WorkType,
 } from "@/entities/farm/types";
 import type {
   DerivedOrchidGroup,
@@ -13,14 +15,50 @@ import type {
   OrchidGroupBatchUpdateItem,
   OrchidGroupCollection,
   OrchidGroupLineage,
-  PreciseMovePayload,
   WorkOperationCorrections,
   WorkHistoryPage,
 } from "../model/types";
+import { createUuid } from "@/shared/lib/id";
+import { movementRecordPayload } from "../lib/movementRecordPayload";
 
 export function getOrchidGroupLineage(orchidGroupId: number) {
   return fetchApi<OrchidGroupLineage>(
     `/orchid-groups/${orchidGroupId}/lineage`,
+  );
+}
+
+export function getOrchidManagementHouses(): Promise<House[]> {
+  return fetchApi<House[]>("/houses");
+}
+
+export type StockCountContext =
+  import("@/shared/api/generated/openapi").components["schemas"]["OrchidStockCountContext"];
+export type StockCountRequest =
+  import("@/shared/api/generated/openapi").components["schemas"]["OrchidStockCountRequest"];
+export type StockCountEvent =
+  import("@/shared/api/generated/openapi").components["schemas"]["OrchidStockCountResponse"];
+
+export function getStockCountContext(id: number, signal?: AbortSignal) {
+  return fetchApi<StockCountContext>(
+    `/orchid-groups/${id}/stock-count-context`,
+    { signal },
+  );
+}
+export function getStockCounts(id: number, signal?: AbortSignal) {
+  return fetchApi<import("@/shared/api/page").Page<StockCountEvent>>(
+    `/orchid-groups/${id}/stock-counts?page=0&size=20`,
+    { signal },
+  );
+}
+export function countOrchidGroup(id: number, payload: StockCountRequest) {
+  return requestApi<StockCountEvent>(
+    `/orchid-groups/${id}/stock-counts`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "실사 수량을 적용하지 못했습니다.",
   );
 }
 
@@ -32,19 +70,7 @@ export function getWorkOperationCorrections(workOperationId: number) {
 
 export async function createWorkOperationCorrection(
   workOperationId: number,
-  payload: {
-    idempotencyKey: string;
-    title: string;
-    workDate: string;
-    worker: string | null;
-    memo: string | null;
-    reason: string;
-    orchidGroupAdjustments: Array<{
-      orchidGroupId: number;
-      quantity: number;
-      status: string;
-    }>;
-  },
+  payload: import("@/shared/api/generated/openapi").components["schemas"]["WorkOperationCorrectionCreateRequest"],
 ): Promise<WorkOperationCorrections> {
   return requestApi<WorkOperationCorrections>(
     `/work-operations/${workOperationId}/corrections`,
@@ -96,16 +122,35 @@ export async function deleteOrchidGroup(orchidGroupId: number): Promise<void> {
   );
 }
 
-export async function moveOrchidGroup(
+export async function recordOrchidGroupMovement(
   orchidGroupId: number,
-  payload: PreciseMovePayload,
+  destination: {
+    bedZoneId: number;
+    startPosition: number;
+    endPosition: number;
+  },
+  businessDate: string,
 ): Promise<void> {
+  const [group, types] = await Promise.all([
+    fetchApi<OrchidGroup>(`/orchid-groups/${orchidGroupId}`),
+    fetchApi<WorkType[]>("/work-types"),
+  ]);
+  const movementType = types.find((type) => type.code === "MOVEMENT");
+  if (!movementType) throw new Error("자리 이동 작업 유형을 찾을 수 없습니다.");
   await requestApi<void>(
-    `/orchid-groups/${orchidGroupId}/move`,
+    "/work-operations/structure-change-records/batch",
     {
-      method: "PATCH",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, memo: payload.memo.trim() || null }),
+      body: JSON.stringify(
+        movementRecordPayload(
+          group,
+          destination,
+          movementType.id,
+          businessDate,
+          createUuid(),
+        ),
+      ),
     },
     "이동하지 못했습니다.",
   );

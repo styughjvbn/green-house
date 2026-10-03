@@ -16,7 +16,7 @@ docker compose up -d db
 
 # backend 실행
 cd backend
-./gradlew bootRun
+APP_ENV=dev ./gradlew bootRun
 
 # frontend 실행
 cd frontend
@@ -28,6 +28,13 @@ Linux/macOS에서는 개발 서버를 한 번에 실행할 수 있다.
 
 ```bash
 ./scripts/dev-start.sh
+```
+
+백엔드 코드를 변경한 뒤 실행 중인 프론트엔드와 DB는 유지하고 백엔드만 다시
+시작하려면 다음 옵션을 사용한다. 백엔드가 실행 중이 아니면 새로 시작한다.
+
+```bash
+./scripts/dev-start.sh --restart-backend
 ```
 
 프론트엔드 렌더링 성능처럼 production build 기준으로 확인해야 할 때는 다음 옵션을
@@ -43,6 +50,7 @@ Linux/macOS에서는 개발 서버를 한 번에 실행할 수 있다.
 ### Backend
 
 ```text
+APP_ENV
 DATABASE_URL
 DATABASE_USERNAME
 DATABASE_PASSWORD
@@ -95,10 +103,18 @@ DEMO_MAX_REQUEST_BYTES
 ### Frontend
 
 ```text
+APP_ENV
 BACKEND_API_URL
 API_BASE_URL
 NEXT_PUBLIC_API_BASE_URL
 ```
+
+`APP_ENV`는 실행 환경을 `dev` 또는 `prod`로 명시한다. 로컬 `dev-start.sh`는 `dev`를
+강제하고 Kubernetes와 프론트 Docker 이미지는 `prod`를 명시한다. 값이 없는 프론트는
+Next.js의 `NODE_ENV=development`일 때만 `dev`로 보정하며 그 외에는 `prod`로 처리한다.
+백엔드는 값이 없으면 `prod`로 처리한다. `/mutation-lab` 메뉴·페이지와
+`/api/orchid-group-mutations` 진단 API는 `dev`에서만 활성화된다. `DEMO_MODE`는 이 구분과
+독립적인 데모 인증·제한 설정이다.
 
 ## 3. 초기 데이터
 
@@ -192,6 +208,16 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - V22는 `ACTIVE` coverage에서 Mutation context 없는 난 묶음 INSERT·UPDATE와 모든 DELETE를 차단하고, 커밋 시 변경 revision에 대응하는 `CREATE` 또는 `CHANGE` Entry를 검증한다. `PREPARING`에서는 차단하지 않는다.
 - V23은 `UNMAPPED`으로 남은 기존 난 묶음 중 의미가 명확한 스마트 따옴표 3·4인치 값만 표준 화분 코드로 보정한다. 다른 `UNMAPPED` 값은 자동 변환하지 않는다.
 - V24는 품종·자재 코드용 sequence를 만든다. 기존 코드와 ID는 바꾸지 않고 기존 ID·숫자 코드의 최댓값 다음에서 발급을 시작한다. 삭제·실패한 트랜잭션으로 번호가 비어도 재사용하지 않는다.
+- V28은 작업 취소 메타데이터와 보류된 현장 상태 동기화 유형을 추가하고 기존 `MULTI_CREATE` 유형을 제거한다.
+- V29는 이동에 함께 등록한 폐기 작업의 부모·관계 필드를 추가하고 기존 JSON 관계를 정규화한다.
+- V30은 입고 상태·출처를 정규화하고 중복 입고 결과 필드를 제거한다. 출처 backfill 뒤 지연 constraint를 즉시 검증한 다음 FK·컬럼을 제거해 PostgreSQL pending trigger 충돌을 방지한다. 작업 멱등 접수 결과의 소속 테이블도 생성·backfill한다.
+- V31은 과거 이동 전 폐기 이력을 이동 후 잔여 폐기로 재배열한다. 재배열한 이력이 현재 말단이면 현재 난 묶음 상태도 마지막 원장 스냅샷에 맞추며, 수량·위치·revision·시각은 유지한다. 후속 변경이 있으면 해당 변경의 `before` 스냅샷을 재배열한 말단에 연결하되, 후속 결과와 현재 행은 덮어쓰지 않는다. 이어서 과거 1:1 이동의 원본 ID·속성·후속 참조를 복원하고, 다품종 폐기 작업을 품종별로 분리하며 폐기 실행 수량을 정규화한다. 자동 보정이 불명확한 관계는 적용을 중단하고 이 맥락 전체를 rollback한다.
+- V32는 품종별·시스템 작업 제목을 자동 명명 규칙으로 정규화하고, 효과가 남아 있는 기존 `CANCELED` 작업을 `STOPPED`로 분리한다. 일반 작업의 사용자 제목은 보존한다.
+- V33은 보정을 원본 작업의 감사 이벤트로 저장하도록 스키마를 변경하고 전용 멱등 접수 테이블을 추가한다.
+  기존 보정 데이터 이관은 포함하지 않는다. 적용 대상 DB에 보정 작업·관계 또는 보정 상태가 있으면
+  마이그레이션을 중단한다. 개발 DB에서 0건을 확인했으며 다른 환경은 배포 전에 별도로 확인한다.
+- V34는 현재 실사 수량의 멱등 접수·감사 기록을 추가한다. 기존 수량이나 과거 작업을 backfill하지 않는다. 배포 시 migration 적용과 새 백엔드 기동 후 프론트를 함께 갱신한다. 실사 API는 기존 상태·위치 동기화 API의 재활성화가 아니다.
+- 실사 수량 조정(`features.stock-count.enabled`)과 작업 기록 수량 정정(`features.work-quantity-correction.enabled`)은 기본값 `false`로 보류한다. 운영에서 활성화하지 않는다. V34와 기존 감사 기록은 보존하고, 작업일·상태 정정 및 결과 생성 취소는 계속 허용한다.
 
 V24 전환 시 기존 코드 발급 방식과 새 방식이 동시에 쓰이지 않도록 이전 백엔드 인스턴스의 쓰기를 중지한 후 migration과 새 버전 기동을 진행한다. 신규 코드 생성 후 구버전으로 단순 rollback하지 않는다. 데이터 수입 등으로 코드를 직접 추가하는 운영 변경은 쓰기를 중지하고 코드 sequence가 추가된 숫자 코드보다 큰지 함께 확인한다.
 
@@ -200,6 +226,29 @@ V21~V23은 아직 운영에 배포되지 않은 기존 V21~V28 실험 migration�
 V21~V28을 적용했던 개발·rehearsal DB는 checksum repair나 수동 스키마 변경을 하지
 않고 V20 운영 백업으로 다시 초기화한다. 이 통합본을 운영에 적용한 뒤에는 파일을
 수정하거나 번호를 다시 사용하지 않는다.
+
+V28 이후 migration은 모두 운영 미적용인 상태에서 기존 14개 파일을 7개 맥락으로
+통합했다. V1~V27은 변경하지 않으며 지원하는 업그레이드 경로는 `V27 → V28~V34`다.
+
+| 새 버전 | 맥락 | 통합 전 버전 |
+|---|---|---|
+| V28 | 작업 취소 기반·시스템 유형 | V28, V29 |
+| V29 | 이동·폐기 작업 관계 | V30 |
+| V30 | 입고·작업 멱등 접수 정규화 | V32, V33 |
+| V31 | 과거 이동·폐기 이력 정규화 | V35~V38, V41 |
+| V32 | 작업 제목·종료 상태 정규화 | V39, V40 |
+| V33 | 원본 작업 보정 감사 이벤트 | V42 |
+| V34 | 현재 실사 수량 감사 기록 | V43 |
+
+각 맥락 안의 기존 SQL 단계는 유지한다. 폐기 실행 수량 보정(기존 V41)은 그 기준이
+되는 과거 이력 보정의 마지막 단계로 통합한다. 작업 제목·상태 정규화는 해당 수량을
+읽거나 변경하지 않는다. 과거 이력의 원본 버전 표기는 SQL 내부 단계의 출처이며 별도
+Flyway 버전이 아니다.
+
+통합 전 V28 이상을 적용한 개발·rehearsal DB는 checksum repair나 수동 history 수정으로
+이어 쓰지 않고, V27 이하 운영 백업 또는 초기 데이터에서 다시 초기화한다. 기존 V28 이상
+적용 DB로 새 백엔드를 바로 기동하지 않는다. 이 통합본을 운영에 적용한 뒤에는 파일을
+수정하거나 번호를 재사용하지 않는다.
 
 운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 HTTP 서버 없이 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다. V20 백업처럼 상태 원장이 없거나 PREPARING인 경우 복원 후 종료 코드 2로 전환 필요를 알린다. 아래 PLAN/IMPORT/VERIFY/ACTIVE 절차를 완료한 뒤 업무 서버를 시작한다.
 
@@ -415,9 +464,9 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 
 화면에서 다음 순서로 확인한다.
 
-1. 난 묶음 단건·다중 생성, 상세 수정, 이동과 새로 만든 묶음의 생성 취소
+1. 난 묶음 단건 생성, 상세 수정, 이동과 새로 만든 묶음의 생성 취소
 2. 즉시 배치 입고와 유리병 모종 포트 작업
-3. 폐기, 자리 이동, 분갈이, 분주, 합식, 다중 생성·취소와 완료 결과 보정
+3. 폐기, 자리 이동, 분갈이, 분주, 합식과 완료 결과 보정
 4. 판매 전표 등록, 작성중 예약, 전표 수정·취소, 출고 완료와 출고 완료 취소
 5. 같은 Work 실행 키와 즉시 작업 요청 키 재호출 시 수량·결과가 중복되지 않는지 확인
 
@@ -766,4 +815,4 @@ Playwright 실행을 순서대로 수행한다. 결과는
 PostgreSQL job은 먼저 `docker info`로 실행 환경을 확인하고 Testcontainers가 만든 격리 DB에서
 `workE2eTest`와 `workBenchmark -PworkBenchmarkEnforce=true`를 각각 실행한다. 운영 DB 접속 정보는 사용하지 않는다. 백엔드 테스트 보고서와 PostgreSQL 테스트·벤치마크 결과는 성공 여부와 관계없이 artifact로 업로드해 14일간 보관한다.
 Docker가 없으면 PostgreSQL 검사는 실패한다. 벤치마크는 결과 의미와 쿼리 상한을 검사하고 시간·할당량은 참고값으로 기록한다.
-포맷 수정은 `backend`에서 `./gradlew format`으로 실행하며 CI는 소스를 자동 수정하지 않는다.
+Java 포맷 기준은 Spotless의 Google Java Format이다. `backend`에서 `./gradlew format`으로 적용하고 `./gradlew spotlessCheck`로 검사한다. CI의 `./gradlew check`에도 이 검사가 포함되며 소스를 자동 수정하지 않는다. Java는 2 spaces, Kotlin Gradle 스크립트는 기존 tab 4를 유지한다. VS Code는 `.vscode/extensions.json`의 Spotless Gradle·Gradle for Java 확장을 설치한 뒤 창을 다시 로드한다. Java 저장 포맷도 같은 Gradle 설정으로 처리하며 Red Hat Java 포맷은 끈다. 최초 전체 Java 포맷 적용은 기능 변경과 분리해 커밋한다.

@@ -24,31 +24,34 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthController {
 
-	private final AuthService authService;
+  private final AuthService authService;
 
-	private final Clock clock;
+  private final Clock clock;
 
-	@GetMapping("/context")
-	public ApiResponse<ApplicationContextResponse> context() {
-		return ApiResponse
-			.ok(new ApplicationContextResponse(TimeConfig.farmToday(clock), TimeConfig.FARM_TIME_ZONE.getId()));
-	}
+  @GetMapping("/context")
+  public ApiResponse<ApplicationContextResponse> context() {
+    return ApiResponse.ok(
+        new ApplicationContextResponse(
+            TimeConfig.farmToday(clock), TimeConfig.FARM_TIME_ZONE.getId()));
+  }
 
-	@PostMapping("/login")
-	public ApiResponse<AuthenticatedUserResponse> login(@Valid @RequestBody LoginRequest request,
-			HttpServletRequest servletRequest, HttpServletResponse response) {
-		return ApiResponse.ok(authService.login(request.username(), request.password(), servletRequest, response));
-	}
+  @PostMapping("/login")
+  public ApiResponse<AuthenticatedUserResponse> login(
+      @Valid @RequestBody LoginRequest request,
+      HttpServletRequest servletRequest,
+      HttpServletResponse response) {
+    return ApiResponse.ok(
+        authService.login(request.username(), request.password(), servletRequest, response));
+  }
 
-	@GetMapping("/me")
-	public ApiResponse<AuthenticatedUserResponse> me(Authentication authentication) {
-		return ApiResponse.ok(authService.currentUser(authentication));
-	}
+  @GetMapping("/me")
+  public ApiResponse<AuthenticatedUserResponse> me(Authentication authentication) {
+    return ApiResponse.ok(authService.currentUser(authentication));
+  }
 
-	@PostMapping("/logout")
-	public ApiResponse<Void> logout(HttpServletRequest request, HttpServletResponse response) {
-		authService.logout(request, response);
-		return ApiResponse.ok(null);
-	}
-
+  @PostMapping("/logout")
+  public ApiResponse<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+    authService.logout(request, response);
+    return ApiResponse.ok(null);
+  }
 }

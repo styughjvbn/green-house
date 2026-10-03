@@ -21,55 +21,56 @@ import lombok.NoArgsConstructor;
 @Table(name = "orchid_group_collections")
 public class OrchidGroupCollection extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orchid_group_collections_id_seq")
-	@SequenceGenerator(name = "orchid_group_collections_id_seq", sequenceName = "orchid_group_collections_id_seq",
-			allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orchid_group_collections_id_seq")
+  @SequenceGenerator(
+      name = "orchid_group_collections_id_seq",
+      sequenceName = "orchid_group_collections_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@Column(nullable = false, length = 100)
-	private String name;
+  @Column(nullable = false, length = 100)
+  private String name;
 
-	@Column(columnDefinition = "text")
-	private String description;
+  @Column(columnDefinition = "text")
+  private String description;
 
-	@Column(length = 200)
-	private String purpose;
+  @Column(length = 200)
+  private String purpose;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 20)
-	private OrchidGroupCollectionStatus status;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 20)
+  private OrchidGroupCollectionStatus status;
 
-	@Column(name = "created_by", length = 100)
-	private String createdBy;
+  @Column(name = "created_by", length = 100)
+  private String createdBy;
 
-	@Version
-	@Column(nullable = false)
-	private long version;
+  @Version
+  @Column(nullable = false)
+  private long version;
 
-	public OrchidGroupCollection(String name, String description, String purpose, String createdBy) {
-		this.name = name;
-		this.description = description;
-		this.purpose = purpose;
-		this.createdBy = createdBy;
-		this.status = OrchidGroupCollectionStatus.ACTIVE;
-	}
+  public OrchidGroupCollection(String name, String description, String purpose, String createdBy) {
+    this.name = name;
+    this.description = description;
+    this.purpose = purpose;
+    this.createdBy = createdBy;
+    this.status = OrchidGroupCollectionStatus.ACTIVE;
+  }
 
-	public void update(String name, String description, String purpose) {
-		if (status == OrchidGroupCollectionStatus.ARCHIVED) {
-			throw new IllegalArgumentException("보관된 사용자 그룹은 수정할 수 없습니다.");
-		}
-		this.name = name;
-		this.description = description;
-		this.purpose = purpose;
-	}
+  public void update(String name, String description, String purpose) {
+    if (status == OrchidGroupCollectionStatus.ARCHIVED) {
+      throw new IllegalArgumentException("보관된 사용자 그룹은 수정할 수 없습니다.");
+    }
+    this.name = name;
+    this.description = description;
+    this.purpose = purpose;
+  }
 
-	public void archive() {
-		this.status = OrchidGroupCollectionStatus.ARCHIVED;
-	}
+  public void archive() {
+    this.status = OrchidGroupCollectionStatus.ARCHIVED;
+  }
 
-	public boolean isArchived() {
-		return status == OrchidGroupCollectionStatus.ARCHIVED;
-	}
-
+  public boolean isArchived() {
+    return status == OrchidGroupCollectionStatus.ARCHIVED;
+  }
 }

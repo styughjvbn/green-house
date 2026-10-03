@@ -7,9 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface HouseRepository extends JpaRepository<House, Long> {
 
-	boolean existsByNumber(Integer number);
+  boolean existsByNumber(Integer number);
 
-	@EntityGraph(attributePaths = { "physicalBeds" })
-	Optional<House> findWithPhysicalBedsById(Long id);
-
+  @EntityGraph(attributePaths = {"physicalBeds"})
+  Optional<House> findWithPhysicalBedsById(Long id);
 }

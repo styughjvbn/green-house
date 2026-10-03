@@ -18,20 +18,28 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class OrchidGroupQueryController {
 
-	private final FarmQueryService farmQueryService;
+  private final FarmQueryService farmQueryService;
 
-	private final OrchidGroupLineageService orchidGroupLineageService;
+  private final OrchidGroupLineageService orchidGroupLineageService;
 
-	@GetMapping
-	public ApiResponse<List<OrchidGroupResponse>> getOrchidGroups(@RequestParam(required = false) Long houseId,
-			@RequestParam(required = false) String keyword, @RequestParam(required = false) Long physicalBedId,
-			@RequestParam(required = false) Long bedZoneId, @RequestParam(required = false) String status) {
-		return ApiResponse.ok(farmQueryService.getOrchidGroups(houseId, keyword, physicalBedId, bedZoneId, status));
-	}
+  @GetMapping
+  public ApiResponse<List<OrchidGroupResponse>> getOrchidGroups(
+      @RequestParam(required = false) Long houseId,
+      @RequestParam(required = false) String keyword,
+      @RequestParam(required = false) Long physicalBedId,
+      @RequestParam(required = false) Long bedZoneId,
+      @RequestParam(required = false) String status) {
+    return ApiResponse.ok(
+        farmQueryService.getOrchidGroups(houseId, keyword, physicalBedId, bedZoneId, status));
+  }
 
-	@GetMapping("/{orchidGroupId}/lineage")
-	public ApiResponse<OrchidGroupLineageResponse> getLineage(@PathVariable Long orchidGroupId) {
-		return ApiResponse.ok(orchidGroupLineageService.getLineage(orchidGroupId));
-	}
+  @GetMapping("/{orchidGroupId}")
+  public ApiResponse<OrchidGroupResponse> getOrchidGroup(@PathVariable Long orchidGroupId) {
+    return ApiResponse.ok(farmQueryService.getOrchidGroup(orchidGroupId));
+  }
 
+  @GetMapping("/{orchidGroupId}/lineage")
+  public ApiResponse<OrchidGroupLineageResponse> getLineage(@PathVariable Long orchidGroupId) {
+    return ApiResponse.ok(orchidGroupLineageService.getLineage(orchidGroupId));
+  }
 }

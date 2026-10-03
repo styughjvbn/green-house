@@ -25,48 +25,51 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "partner_balance_summaries")
 public class PartnerBalanceSummary extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "partner_balance_summaries_id_seq")
-	@SequenceGenerator(name = "partner_balance_summaries_id_seq", sequenceName = "partner_balance_summaries_id_seq",
-			allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(
+      strategy = GenerationType.SEQUENCE,
+      generator = "partner_balance_summaries_id_seq")
+  @SequenceGenerator(
+      name = "partner_balance_summaries_id_seq",
+      sequenceName = "partner_balance_summaries_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@Version
-	@Column(nullable = false)
-	private Long version;
+  @Version
+  @Column(nullable = false)
+  private Long version;
 
-	@Column(name = "partner_id", nullable = false, unique = true)
-	private Long partnerId;
+  @Column(name = "partner_id", nullable = false, unique = true)
+  private Long partnerId;
 
-	@Column(name = "credit_balance", nullable = false)
-	private Long creditBalance;
+  @Column(name = "credit_balance", nullable = false)
+  private Long creditBalance;
 
-	@Column(name = "unapplied_payment_amount", nullable = false)
-	private Long unappliedPaymentAmount;
+  @Column(name = "unapplied_payment_amount", nullable = false)
+  private Long unappliedPaymentAmount;
 
-	@Column(name = "receivable_balance", nullable = false)
-	private Long receivableBalance;
+  @Column(name = "receivable_balance", nullable = false)
+  private Long receivableBalance;
 
-	@Getter(AccessLevel.NONE)
-	@OneToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "last_payment_event_id")
-	private PartnerPaymentEvent lastPaymentEvent;
+  @Getter(AccessLevel.NONE)
+  @OneToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "last_payment_event_id")
+  private PartnerPaymentEvent lastPaymentEvent;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "summary_json", columnDefinition = "jsonb")
-	private Map<String, Object> summaryJson;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "summary_json", columnDefinition = "jsonb")
+  private Map<String, Object> summaryJson;
 
-	public PartnerBalanceSummary(Long partnerId) {
-		this.partnerId = partnerId;
-		this.creditBalance = 0L;
-		this.unappliedPaymentAmount = 0L;
-		this.receivableBalance = 0L;
-	}
+  public PartnerBalanceSummary(Long partnerId) {
+    this.partnerId = partnerId;
+    this.creditBalance = 0L;
+    this.unappliedPaymentAmount = 0L;
+    this.receivableBalance = 0L;
+  }
 
-	public void updateReceivableBalance(Long receivableBalance, PartnerPaymentEvent lastPaymentEvent) {
-		this.receivableBalance = Math.max(0L, receivableBalance);
-		if (lastPaymentEvent != null)
-			this.lastPaymentEvent = lastPaymentEvent;
-	}
-
+  public void updateReceivableBalance(
+      Long receivableBalance, PartnerPaymentEvent lastPaymentEvent) {
+    this.receivableBalance = Math.max(0L, receivableBalance);
+    if (lastPaymentEvent != null) this.lastPaymentEvent = lastPaymentEvent;
+  }
 }

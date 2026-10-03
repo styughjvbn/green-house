@@ -4,6 +4,7 @@ import { Geist } from "next/font/google";
 import { DEFAULT_FONT_SCALE, FontScaleInitializer } from "@/features/settings";
 import { QueryProvider } from "@/shared/api/QueryProvider";
 import { getRuntimeContext } from "@/shared/api/runtimeContext";
+import { resolveAppEnvironment } from "@/shared/config/appEnvironment";
 import { PwaRuntime } from "@/shared/pwa";
 import { RuntimeContextProvider } from "@/shared/runtime/RuntimeContext";
 import { AppShell } from "@/widgets/app-shell/AppShell";
@@ -11,6 +12,7 @@ import { DemoEnvironmentBanner } from "@/widgets/demo-environment-banner/DemoEnv
 import "./globals.css";
 import "@/shared/pwa/pwa.css";
 import "leaflet/dist/leaflet.css";
+import "@xyflow/react/dist/style.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,6 +32,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const demoMode = process.env.DEMO_MODE === "true";
+  const appEnvironment = resolveAppEnvironment(
+    process.env.APP_ENV,
+    process.env.NODE_ENV,
+  );
   const runtimeContext = await getRuntimeContext().catch(() => null);
 
   return (
@@ -45,7 +51,10 @@ export default async function RootLayout({
       <body className="min-h-full bg-[#f7f8f6] text-[#1f2a24]">
         <FontScaleInitializer />
         <PwaRuntime />
-        <RuntimeContextProvider value={runtimeContext}>
+        <RuntimeContextProvider
+          appEnvironment={appEnvironment}
+          value={runtimeContext}
+        >
           <QueryProvider>
             <div
               className={

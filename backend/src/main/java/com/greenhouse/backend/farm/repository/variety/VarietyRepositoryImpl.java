@@ -16,68 +16,80 @@ import org.springframework.data.domain.Pageable;
 @RequiredArgsConstructor
 public class VarietyRepositoryImpl implements VarietyRepositoryCustom {
 
-	private final JPAQueryFactory queryFactory;
+  private final JPAQueryFactory queryFactory;
 
-	@Override
-	public Page<Variety> search(String keyword, String genus, Boolean saleEnabled, Boolean active, Pageable pageable) {
-		BooleanBuilder conditions = conditions(keyword, genus, saleEnabled, active);
-		List<Variety> content = queryFactory.selectFrom(variety)
-			.where(conditions)
-			.orderBy(variety.active.desc(), variety.genus.asc(), variety.name.asc())
-			.offset(pageable.getOffset())
-			.limit(pageable.getPageSize())
-			.fetch();
-		Long total = queryFactory.select(variety.id.count()).from(variety).where(conditions).fetchOne();
+  @Override
+  public Page<Variety> search(
+      String keyword, String genus, Boolean saleEnabled, Boolean active, Pageable pageable) {
+    BooleanBuilder conditions = conditions(keyword, genus, saleEnabled, active);
+    List<Variety> content =
+        queryFactory
+            .selectFrom(variety)
+            .where(conditions)
+            .orderBy(variety.active.desc(), variety.genus.asc(), variety.name.asc())
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .fetch();
+    Long total = queryFactory.select(variety.id.count()).from(variety).where(conditions).fetchOne();
 
-		return new PageImpl<>(content, pageable, total == null ? 0 : total);
-	}
+    return new PageImpl<>(content, pageable, total == null ? 0 : total);
+  }
 
-	@Override
-	public List<String> findDistinctGenera() {
-		return queryFactory.select(variety.genus).distinct().from(variety).orderBy(variety.genus.asc()).fetch();
-	}
+  @Override
+  public List<String> findDistinctGenera() {
+    return queryFactory
+        .select(variety.genus)
+        .distinct()
+        .from(variety)
+        .orderBy(variety.genus.asc())
+        .fetch();
+  }
 
-	@Override
-	public List<VarietyNameProjection> findActiveNames() {
-		return queryFactory
-			.select(Projections.constructor(VarietyNameProjection.class, variety.id, variety.genus, variety.name))
-			.from(variety)
-			.where(variety.active.isTrue())
-			.orderBy(variety.genus.asc(), variety.name.asc())
-			.fetch();
-	}
+  @Override
+  public List<VarietyNameProjection> findActiveNames() {
+    return queryFactory
+        .select(
+            Projections.constructor(
+                VarietyNameProjection.class, variety.id, variety.genus, variety.name))
+        .from(variety)
+        .where(variety.active.isTrue())
+        .orderBy(variety.genus.asc(), variety.name.asc())
+        .fetch();
+  }
 
-	private BooleanBuilder conditions(String keyword, String genus, Boolean saleEnabled, Boolean active) {
-		return new BooleanBuilder().and(keywordContains(keyword))
-			.and(genusEq(genus))
-			.and(saleEnabledEq(saleEnabled))
-			.and(activeEq(active));
-	}
+  private BooleanBuilder conditions(
+      String keyword, String genus, Boolean saleEnabled, Boolean active) {
+    return new BooleanBuilder()
+        .and(keywordContains(keyword))
+        .and(genusEq(genus))
+        .and(saleEnabledEq(saleEnabled))
+        .and(activeEq(active));
+  }
 
-	private BooleanBuilder keywordContains(String keyword) {
-		if (isBlank(keyword)) {
-			return null;
-		}
-		String normalizedKeyword = keyword.trim().toLowerCase();
-		return new BooleanBuilder().or(variety.code.lower().contains(normalizedKeyword))
-			.or(variety.name.lower().contains(normalizedKeyword))
-			.or(variety.alias.lower().contains(normalizedKeyword));
-	}
+  private BooleanBuilder keywordContains(String keyword) {
+    if (isBlank(keyword)) {
+      return null;
+    }
+    String normalizedKeyword = keyword.trim().toLowerCase();
+    return new BooleanBuilder()
+        .or(variety.code.lower().contains(normalizedKeyword))
+        .or(variety.name.lower().contains(normalizedKeyword))
+        .or(variety.alias.lower().contains(normalizedKeyword));
+  }
 
-	private BooleanExpression genusEq(String genus) {
-		return isBlank(genus) ? null : variety.genus.eq(genus);
-	}
+  private BooleanExpression genusEq(String genus) {
+    return isBlank(genus) ? null : variety.genus.eq(genus);
+  }
 
-	private BooleanExpression saleEnabledEq(Boolean saleEnabled) {
-		return saleEnabled == null ? null : variety.saleEnabled.eq(saleEnabled);
-	}
+  private BooleanExpression saleEnabledEq(Boolean saleEnabled) {
+    return saleEnabled == null ? null : variety.saleEnabled.eq(saleEnabled);
+  }
 
-	private BooleanExpression activeEq(Boolean active) {
-		return active == null ? null : variety.active.eq(active);
-	}
+  private BooleanExpression activeEq(Boolean active) {
+    return active == null ? null : variety.active.eq(active);
+  }
 
-	private boolean isBlank(String value) {
-		return value == null || value.isBlank();
-	}
-
+  private boolean isBlank(String value) {
+    return value == null || value.isBlank();
+  }
 }

@@ -28,7 +28,7 @@ paths:
     post:
       tags:
       - orchid-group-collection-controller
-      operationId: create_4
+      operationId: create_3
       requestBody:
         content:
           application/json:
@@ -194,7 +194,7 @@ components:
     OrchidGroupCollectionCreateRequest:
       type: object
       properties:
-        name:
+        createdBy:
           type: string
           maxLength: 100
           minLength: 0
@@ -202,19 +202,23 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
+        name:
+          type: string
+          maxLength: 100
+          minLength: 0
         purpose:
           type: string
           maxLength: 200
-          minLength: 0
-        createdBy:
-          type: string
-          maxLength: 100
           minLength: 0
       required:
       - name
     OrchidGroupCollectionMemberAddRequest:
       type: object
       properties:
+        createdBy:
+          type: string
+          maxLength: 100
+          minLength: 0
         orchidGroupIds:
           type: array
           items:
@@ -222,54 +226,62 @@ components:
             format: int64
           minItems: 1
           uniqueItems: true
-        createdBy:
-          type: string
-          maxLength: 100
-          minLength: 0
       required:
       - orchidGroupIds
     OrchidGroupCollectionMemberResponse:
       type: object
       properties:
+        ageYear:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
+        houseNumber:
+          type: integer
+          format: int32
+        joinedAt:
+          type: string
+          format: date-time
         membershipId:
           type: integer
           format: int64
         orchidGroupId:
           type: integer
           format: int64
-        varietyName:
+        physicalBedNumber:
+          type: integer
+          format: int32
+        potSize:
           type: string
         quantity:
           type: integer
           format: int32
         status:
           type: string
-        potSize:
+        varietyName:
           type: string
-        ageYear:
-          type: integer
-          format: int32
-        houseNumber:
-          type: integer
-          format: int32
-        physicalBedNumber:
-          type: integer
-          format: int32
-        bedZoneName:
-          type: string
-        joinedAt:
-          type: string
-          format: date-time
     OrchidGroupCollectionResponse:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-        name:
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
           type: string
         description:
           type: string
+        id:
+          type: integer
+          format: int64
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupCollectionMemberResponse'
+        name:
+          type: string
+        orchidGroupCount:
+          type: integer
+          format: int32
         purpose:
           type: string
         status:
@@ -277,34 +289,22 @@ components:
           enum:
           - ACTIVE
           - ARCHIVED
-        orchidGroupCount:
-          type: integer
-          format: int32
         totalQuantity:
           type: integer
           format: int32
-        createdBy:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
         updatedAt:
           type: string
           format: date-time
-        members:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupCollectionMemberResponse'
     OrchidGroupCollectionUpdateRequest:
       type: object
       properties:
-        name:
-          type: string
-          maxLength: 100
-          minLength: 0
         description:
           type: string
           maxLength: 1000
+          minLength: 0
+        name:
+          type: string
+          maxLength: 100
           minLength: 0
         purpose:
           type: string

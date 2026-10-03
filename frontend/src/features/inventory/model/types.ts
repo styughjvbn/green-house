@@ -84,12 +84,12 @@ export type InboundType =
   | "ETC";
 
 export type InboundStatus =
-  | "TEMP_STORED"
   | "POTTING_PENDING"
   | "POTTING_IN_PROGRESS"
-  | "POTTED"
   | "PLACED"
   | "CANCELED";
+
+export type InboundRecordAction = "CANCEL" | "VOID_POTTING";
 
 export interface InboundRecord {
   id: number;
@@ -99,25 +99,31 @@ export interface InboundRecord {
   genus: string;
   varietyName: string;
   status: InboundStatus;
-  bottleCount: number | null;
   estimatedQuantity: number | null;
-  actualQuantity: number | null;
   tempLocation: string | null;
   pottingDueDate: string | null;
   pottingDate: string | null;
-  potSize: string | null;
-  ageYear: number | null;
-  growthStage: string | null;
-  placementType: string | null;
-  trayCount: number | null;
-  bedZoneId: number | null;
-  currentLocation: string | null;
-  createdOrchidGroupId: number | null;
-  createdOrchidGroupIds: number[];
+  editable: boolean;
+  availableActions: InboundRecordAction[];
+  createdOrchidGroups: InboundOrchidGroup[];
   worker: string | null;
   memo: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface InboundOrchidGroup {
+  id: number;
+  quantity: number;
+  potSize: string | null;
+  ageYear: number | null;
+  status: string;
+  placementType: string | null;
+  trayCount: number | null;
+  bedZoneId: number;
+  location: string;
+  startPosition: number | null;
+  endPosition: number | null;
 }
 
 export interface InboundRecordPayload {
@@ -130,36 +136,28 @@ export interface InboundRecordPayload {
     defaultPotSize: string;
     memo: string;
   };
-  bottleCount?: number;
   estimatedQuantity?: number;
-  actualQuantity?: number;
   tempLocation?: string;
   pottingDueDate?: string;
-  potSize?: string;
-  ageYear?: number;
-  growthStage?: string;
-  placementType?: string;
-  trayCount?: number;
-  bedZoneId?: number;
-  startPosition?: number;
-  endPosition?: number;
-  status?: InboundStatus;
+  placement?: {
+    quantity: number;
+    potSize?: string;
+    ageYear?: number;
+    placementType?: string;
+    trayCount?: number;
+    bedZoneId: number;
+    startPosition?: number;
+    endPosition?: number;
+  };
   worker?: string;
   memo?: string;
 }
 
 export interface InboundRecordUpdatePayload {
   inboundDate: string;
-  bottleCount?: number;
   estimatedQuantity?: number;
-  actualQuantity?: number;
   tempLocation?: string;
   pottingDueDate?: string;
-  potSize?: string;
-  ageYear?: number;
-  growthStage?: string;
-  placementType?: string;
-  trayCount?: number;
   worker?: string;
   memo?: string;
 }
@@ -179,7 +177,6 @@ export interface InboundPottingPayload {
     endPosition: number;
     memo?: string;
   }>;
-  growthStage?: string;
   worker?: string;
   memo?: string;
 }

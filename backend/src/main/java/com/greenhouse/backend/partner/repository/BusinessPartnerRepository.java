@@ -11,23 +11,23 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface BusinessPartnerRepository
-		extends JpaRepository<BusinessPartner, Long>, BusinessPartnerRepositoryCustom {
+    extends JpaRepository<BusinessPartner, Long>, BusinessPartnerRepositoryCustom {
 
-	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select partner from BusinessPartner partner where partner.id in :partnerIds order by partner.id")
-	List<BusinessPartner> findAllForUpdateByIdIn(@Param("partnerIds") Collection<Long> partnerIds);
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      "select partner from BusinessPartner partner where partner.id in :partnerIds order by partner.id")
+  List<BusinessPartner> findAllForUpdateByIdIn(@Param("partnerIds") Collection<Long> partnerIds);
 
-	@Query("select p.id as id, p.name as name, p.partnerType as partnerType from BusinessPartner p where p.id in :ids")
-	List<Identity> findIdentities(@Param("ids") Collection<Long> ids);
+  @Query(
+      "select p.id as id, p.name as name, p.partnerType as partnerType from BusinessPartner p where p.id in :ids")
+  List<Identity> findIdentities(@Param("ids") Collection<Long> ids);
 
-	interface Identity {
+  interface Identity {
 
-		Long getId();
+    Long getId();
 
-		String getName();
+    String getName();
 
-		PartnerType getPartnerType();
-
-	}
-
+    PartnerType getPartnerType();
+  }
 }

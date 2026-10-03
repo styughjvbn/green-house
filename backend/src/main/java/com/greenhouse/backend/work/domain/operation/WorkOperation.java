@@ -1,7 +1,6 @@
 package com.greenhouse.backend.work.domain.operation;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -31,192 +30,321 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "work_operations")
 public class WorkOperation extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_operations_id_seq")
-	@SequenceGenerator(name = "work_operations_id_seq", sequenceName = "work_operations_id_seq", allocationSize = 50)
-	private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_operations_id_seq")
+  @SequenceGenerator(
+      name = "work_operations_id_seq",
+      sequenceName = "work_operations_id_seq",
+      allocationSize = 50)
+  private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "work_type_id", nullable = false)
-	private WorkType workType;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "work_type_id", nullable = false)
+  private WorkType workType;
 
-	@Column(nullable = false, length = 150)
-	private String title;
+  @Column(nullable = false, length = 150)
+  private String title;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 30)
-	private WorkOperationStatus status;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 30)
+  private WorkOperationStatus status;
 
-	@Column(name = "planned_start_date", nullable = false)
-	private LocalDate plannedStartDate;
+  @Column(name = "planned_start_date", nullable = false)
+  private LocalDate plannedStartDate;
 
-	@Column(name = "planned_end_date")
-	private LocalDate plannedEndDate;
+  @Column(name = "planned_end_date")
+  private LocalDate plannedEndDate;
 
-	@Column(name = "actual_start_at")
-	private LocalDateTime actualStartAt;
+  @Column(name = "actual_start_at")
+  private LocalDateTime actualStartAt;
 
-	@Column(name = "actual_end_at")
-	private LocalDateTime actualEndAt;
+  @Column(name = "actual_end_at")
+  private LocalDateTime actualEndAt;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "source_scope_type", nullable = false, length = 30)
-	private WorkSourceScopeType sourceScopeType;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "source_scope_type", nullable = false, length = 30)
+  private WorkSourceScopeType sourceScopeType;
 
-	@Column(name = "source_scope_id")
-	private Long sourceScopeId;
+  @Column(name = "source_scope_id")
+  private Long sourceScopeId;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "source_condition_snapshot", columnDefinition = "jsonb")
-	private Map<String, Object> sourceConditionSnapshot;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "source_condition_snapshot", columnDefinition = "jsonb")
+  private Map<String, Object> sourceConditionSnapshot;
 
-	@Column(name = "target_snapshot_at", nullable = false)
-	private LocalDateTime targetSnapshotAt;
+  @Column(name = "target_snapshot_at", nullable = false)
+  private LocalDateTime targetSnapshotAt;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(columnDefinition = "jsonb")
-	private Map<String, Object> details;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  private Map<String, Object> details;
 
-	@Column(length = 100)
-	private String worker;
+  @Column(length = 100)
+  private String worker;
 
-	@Column(columnDefinition = "text")
-	private String memo;
+  @Column(columnDefinition = "text")
+  private String memo;
 
-	@Column(name = "request_key", unique = true, length = 100)
-	private String requestKey;
+  @Column(name = "request_key", unique = true, length = 100)
+  private String requestKey;
 
-	@Version
-	@Column(nullable = false)
-	private long version;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "parent_operation_id")
+  private WorkOperation parentOperation;
 
-	public WorkOperation(WorkType workType, String title, LocalDate plannedStartDate, LocalDate plannedEndDate,
-			WorkSourceScopeType sourceScopeType, Long sourceScopeId, Map<String, Object> sourceConditionSnapshot,
-			Map<String, Object> details, String worker, String memo, LocalDateTime targetSnapshotAt) {
-		this.workType = workType;
-		this.title = title;
-		this.status = WorkOperationStatus.PLANNED;
-		this.plannedStartDate = plannedStartDate;
-		this.plannedEndDate = plannedEndDate;
-		this.sourceScopeType = sourceScopeType;
-		this.sourceScopeId = sourceScopeId;
-		this.sourceConditionSnapshot = sourceConditionSnapshot;
-		this.targetSnapshotAt = targetSnapshotAt;
-		this.details = details;
-		this.worker = worker;
-		this.memo = memo;
-	}
+  @Enumerated(EnumType.STRING)
+  @Column(name = "relation_type", length = 40)
+  private WorkOperationRelationType relationType;
 
-	public void assignRequestKey(String requestKey) {
-		if (this.requestKey != null) {
-			throw new IllegalStateException("요청 식별자는 변경할 수 없습니다.");
-		}
-		this.requestKey = requestKey;
-	}
+  @Column(name = "voided_at")
+  private LocalDateTime voidedAt;
 
-	public void complete(LocalDateTime completedAt) {
-		if (status == WorkOperationStatus.COMPLETED) {
-			return;
-		}
-		if (status != WorkOperationStatus.PLANNED && status != WorkOperationStatus.IN_PROGRESS) {
-			throw new IllegalArgumentException("완료할 수 없는 작업 상태입니다.");
-		}
-		if (actualStartAt == null) {
-			actualStartAt = completedAt;
-		}
-		actualEndAt = completedAt;
-		status = WorkOperationStatus.COMPLETED;
-	}
+  @Column(name = "void_reason", columnDefinition = "text")
+  private String voidReason;
 
-	public void start(LocalDateTime startedAt) {
-		if (status == WorkOperationStatus.IN_PROGRESS) {
-			return;
-		}
-		if (status != WorkOperationStatus.PLANNED) {
-			throw new IllegalArgumentException("시작할 수 없는 작업 상태입니다.");
-		}
-		if (actualStartAt == null) {
-			actualStartAt = startedAt;
-		}
-		status = WorkOperationStatus.IN_PROGRESS;
-	}
+  @Column(name = "void_request_key", unique = true, length = 100)
+  private String voidRequestKey;
 
-	public void pause() {
-		if (status == WorkOperationStatus.PAUSED) {
-			return;
-		}
-		if (status != WorkOperationStatus.IN_PROGRESS) {
-			throw new IllegalArgumentException("일시중지할 수 없는 작업 상태입니다.");
-		}
-		status = WorkOperationStatus.PAUSED;
-	}
+  @Column(name = "void_mutation_id")
+  private Long voidMutationId;
 
-	public void resume() {
-		if (status == WorkOperationStatus.IN_PROGRESS) {
-			return;
-		}
-		if (status != WorkOperationStatus.PAUSED) {
-			throw new IllegalArgumentException("재개할 수 없는 작업 상태입니다.");
-		}
-		status = WorkOperationStatus.IN_PROGRESS;
-	}
+  @Version
+  @Column(nullable = false)
+  private long version;
 
-	public void cancel(LocalDateTime canceledAt) {
-		if (status == WorkOperationStatus.CANCELED) {
-			return;
-		}
-		if (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.CORRECTED) {
-			throw new IllegalArgumentException("완료되거나 보정된 작업은 취소할 수 없습니다.");
-		}
-		actualEndAt = canceledAt;
-		status = WorkOperationStatus.CANCELED;
-	}
+  public WorkOperation(
+      WorkType workType,
+      String title,
+      LocalDate plannedStartDate,
+      LocalDate plannedEndDate,
+      WorkSourceScopeType sourceScopeType,
+      Long sourceScopeId,
+      Map<String, Object> sourceConditionSnapshot,
+      Map<String, Object> details,
+      String worker,
+      String memo,
+      LocalDateTime targetSnapshotAt) {
+    this.workType = workType;
+    this.title = title;
+    this.status = WorkOperationStatus.PLANNED;
+    this.plannedStartDate = plannedStartDate;
+    this.plannedEndDate = plannedEndDate;
+    this.sourceScopeType = sourceScopeType;
+    this.sourceScopeId = sourceScopeId;
+    this.sourceConditionSnapshot = sourceConditionSnapshot;
+    this.targetSnapshotAt = targetSnapshotAt;
+    this.details = details;
+    this.worker = worker;
+    this.memo = memo;
+  }
 
-	public void cancelCompletedStructureChange() {
-		if (status == WorkOperationStatus.CANCELED) {
-			return;
-		}
-		if (status != WorkOperationStatus.COMPLETED || workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
-			throw new IllegalArgumentException("완료된 구조 변경 작업만 결과 취소할 수 있습니다.");
-		}
-		status = WorkOperationStatus.CANCELED;
-	}
+  public void assignRequestKey(String requestKey) {
+    if (this.requestKey != null) {
+      throw new IllegalStateException("요청 식별자는 변경할 수 없습니다.");
+    }
+    this.requestKey = requestKey;
+  }
 
-	public void cancelCompletedInbound(LocalDateTime canceledAt) {
-		if (status == WorkOperationStatus.CANCELED) {
-			return;
-		}
-		if (status != WorkOperationStatus.COMPLETED || !WorkTypeDefinition.INBOUND.name().equals(workType.getCode())) {
-			throw new IllegalArgumentException("완료된 입고 작업만 입고 취소와 함께 취소할 수 있습니다.");
-		}
-		actualEndAt = canceledAt;
-		status = WorkOperationStatus.CANCELED;
-	}
+  public void updateTitle(String title) {
+    if (title == null || title.isBlank()) {
+      throw new IllegalArgumentException("작업명이 필요합니다.");
+    }
+    String normalized = title.trim();
+    if (normalized.length() > 150) {
+      throw new IllegalArgumentException("작업명은 150자 이하여야 합니다.");
+    }
+    this.title = normalized;
+  }
 
-	public void markCorrected() {
-		if (status == WorkOperationStatus.CORRECTED) {
-			return;
-		}
-		if (status != WorkOperationStatus.COMPLETED || workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
-			throw new IllegalArgumentException("완료된 구조 변경 작업만 보정할 수 있습니다.");
-		}
-		status = WorkOperationStatus.CORRECTED;
-	}
+  public void linkToParent(WorkOperation parentOperation, WorkOperationRelationType relationType) {
+    if (parentOperation == null || relationType == null) {
+      throw new IllegalArgumentException("연관 작업과 관계 유형이 필요합니다.");
+    }
+    if (this.parentOperation != null || this.relationType != null) {
+      throw new IllegalStateException("작업 관계는 변경할 수 없습니다.");
+    }
+    if (parentOperation == this) {
+      throw new IllegalArgumentException("작업은 자기 자신과 연결할 수 없습니다.");
+    }
+    this.parentOperation = parentOperation;
+    this.relationType = relationType;
+  }
 
-	public void correctWorkDate(LocalDate workDate) {
-		if (workDate == null) {
-			throw new IllegalArgumentException("보정 작업일이 필요합니다.");
-		}
-		if ((status != WorkOperationStatus.COMPLETED && status != WorkOperationStatus.CORRECTED)
-				|| workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
-			throw new IllegalArgumentException("완료된 구조 변경 작업의 작업일만 보정할 수 있습니다.");
-		}
-		long durationDays = plannedEndDate == null ? 0
-				: Math.max(0, ChronoUnit.DAYS.between(plannedStartDate, plannedEndDate));
-		plannedStartDate = workDate;
-		if (plannedEndDate != null) {
-			plannedEndDate = workDate.plusDays(durationDays);
-		}
-	}
+  public void complete(LocalDateTime completedAt) {
+    if (status == WorkOperationStatus.COMPLETED) {
+      return;
+    }
+    if (status != WorkOperationStatus.PLANNED && status != WorkOperationStatus.IN_PROGRESS) {
+      throw new IllegalArgumentException("완료할 수 없는 작업 상태입니다.");
+    }
+    if (actualStartAt == null) {
+      actualStartAt = completedAt;
+    }
+    actualEndAt = completedAt;
+    status = WorkOperationStatus.COMPLETED;
+  }
 
+  public void start(LocalDateTime startedAt) {
+    if (status == WorkOperationStatus.IN_PROGRESS) {
+      return;
+    }
+    if (status != WorkOperationStatus.PLANNED) {
+      throw new IllegalArgumentException("시작할 수 없는 작업 상태입니다.");
+    }
+    if (actualStartAt == null) {
+      actualStartAt = startedAt;
+    }
+    status = WorkOperationStatus.IN_PROGRESS;
+  }
+
+  public void pause() {
+    if (status == WorkOperationStatus.PAUSED) {
+      return;
+    }
+    if (status != WorkOperationStatus.IN_PROGRESS) {
+      throw new IllegalArgumentException("일시중지할 수 없는 작업 상태입니다.");
+    }
+    status = WorkOperationStatus.PAUSED;
+  }
+
+  public void resume() {
+    if (status == WorkOperationStatus.IN_PROGRESS) {
+      return;
+    }
+    if (status != WorkOperationStatus.PAUSED) {
+      throw new IllegalArgumentException("재개할 수 없는 작업 상태입니다.");
+    }
+    status = WorkOperationStatus.IN_PROGRESS;
+  }
+
+  public void stop(LocalDateTime stoppedAt) {
+    if (status == WorkOperationStatus.STOPPED) {
+      return;
+    }
+    if (status == WorkOperationStatus.COMPLETED
+        || status == WorkOperationStatus.CANCELED
+        || status == WorkOperationStatus.VOIDED) {
+      throw new IllegalArgumentException("완료·취소·보정·무효화된 작업은 남은 작업을 종료할 수 없습니다.");
+    }
+    actualEndAt = stoppedAt;
+    status = WorkOperationStatus.STOPPED;
+  }
+
+  public void cancel(LocalDateTime canceledAt) {
+    if (status == WorkOperationStatus.CANCELED) {
+      return;
+    }
+    if (status == WorkOperationStatus.COMPLETED
+        || status == WorkOperationStatus.STOPPED
+        || status == WorkOperationStatus.VOIDED) {
+      throw new IllegalArgumentException("완료·종료·보정·취소된 작업은 일반 취소할 수 없습니다.");
+    }
+    actualEndAt = canceledAt;
+    status = WorkOperationStatus.CANCELED;
+  }
+
+  public void cancelRecordedWork(LocalDateTime canceledAt, String reason, String requestKey) {
+    if (status == WorkOperationStatus.CANCELED) {
+      if (requestKey != null && requestKey.equals(voidRequestKey)) {
+        return;
+      }
+      throw new IllegalArgumentException("이미 다른 요청으로 취소된 작업입니다.");
+    }
+    if (status == WorkOperationStatus.STOPPED || status == WorkOperationStatus.VOIDED) {
+      throw new IllegalArgumentException("종료·취소된 작업은 다시 취소할 수 없습니다.");
+    }
+    if (reason == null || reason.isBlank() || requestKey == null || requestKey.isBlank()) {
+      throw new IllegalArgumentException("작업 취소 사유와 요청 식별자가 필요합니다.");
+    }
+    this.actualEndAt = canceledAt;
+    this.status = WorkOperationStatus.CANCELED;
+    this.voidedAt = canceledAt;
+    this.voidReason = reason.trim();
+    this.voidRequestKey = requestKey.trim();
+    this.voidMutationId = null;
+  }
+
+  public void cancelCompletedInbound(LocalDateTime canceledAt) {
+    if (status == WorkOperationStatus.CANCELED) {
+      return;
+    }
+    if (status != WorkOperationStatus.COMPLETED
+        || !WorkTypeDefinition.INBOUND.name().equals(workType.getCode())) {
+      throw new IllegalArgumentException("완료된 입고 작업만 입고 취소와 함께 취소할 수 있습니다.");
+    }
+    actualEndAt = canceledAt;
+    status = WorkOperationStatus.CANCELED;
+  }
+
+  public boolean isStructureResultCorrectable() {
+    return (status == WorkOperationStatus.COMPLETED)
+        && workType.supportsStructureResultManagement();
+  }
+
+  public void voidCompletedMutationWork(
+      LocalDateTime voidedAt, String reason, String requestKey, Long compensationMutationId) {
+    if (status == WorkOperationStatus.VOIDED) {
+      return;
+    }
+    if ((status != WorkOperationStatus.IN_PROGRESS
+            && status != WorkOperationStatus.PAUSED
+            && status != WorkOperationStatus.COMPLETED)
+        || (!workType.supportsMutationVoid()
+            && relationType != WorkOperationRelationType.MOVEMENT_DISCARD)) {
+      throw new IllegalArgumentException("실행 중이거나 완료된 구조 변경·폐기·포트 작업만 취소할 수 있습니다.");
+    }
+    if (reason == null
+        || reason.isBlank()
+        || requestKey == null
+        || requestKey.isBlank()
+        || compensationMutationId == null) {
+      throw new IllegalArgumentException("작업 취소 사유와 요청 식별자가 필요합니다.");
+    }
+    this.status = WorkOperationStatus.VOIDED;
+    this.actualEndAt = voidedAt;
+    this.voidedAt = voidedAt;
+    this.voidReason = reason.trim();
+    this.voidRequestKey = requestKey.trim();
+    this.voidMutationId = compensationMutationId;
+  }
+
+  public void voidCompletedInboundRegistration(
+      LocalDateTime voidedAt, String reason, String requestKey, Long compensationMutationId) {
+    if (status == WorkOperationStatus.VOIDED) {
+      return;
+    }
+    if (status != WorkOperationStatus.COMPLETED
+        || !WorkTypeDefinition.INBOUND.name().equals(workType.getCode())) {
+      throw new IllegalArgumentException("완료된 즉시 배치 입고 작업만 무효화할 수 있습니다.");
+    }
+    if (reason == null
+        || reason.isBlank()
+        || requestKey == null
+        || requestKey.isBlank()
+        || compensationMutationId == null) {
+      throw new IllegalArgumentException("입고 취소 사유와 요청 식별자가 필요합니다.");
+    }
+    this.status = WorkOperationStatus.VOIDED;
+    this.voidedAt = voidedAt;
+    this.voidReason = reason.trim();
+    this.voidRequestKey = requestKey.trim();
+    this.voidMutationId = compensationMutationId;
+  }
+
+  public void correctWorkDate(LocalDate workDate) {
+    if (workDate == null) {
+      throw new IllegalArgumentException("보정 작업일이 필요합니다.");
+    }
+    if (!isStructureResultCorrectable()) {
+      throw new IllegalArgumentException("완료된 구조 변경 작업의 작업일만 보정할 수 있습니다.");
+    }
+    long durationDays =
+        plannedEndDate == null
+            ? 0
+            : Math.max(0, ChronoUnit.DAYS.between(plannedStartDate, plannedEndDate));
+    plannedStartDate = workDate;
+    if (plannedEndDate != null) {
+      plannedEndDate = workDate.plusDays(durationDays);
+    }
+  }
 }
