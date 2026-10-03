@@ -1,10 +1,25 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.StreamSupport;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -21,28 +36,28 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 	JdbcTemplate jdbc;
 
 	@Autowired
-	javax.sql.DataSource dataSource;
+	DataSource dataSource;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService mutationQuery;
+	OrchidGroupMutationQueryService mutationQuery;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService mutationGraph;
+	OrchidGroupMutationGraphQueryService mutationGraph;
 
 	@Autowired
-	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector rehearsal;
+	WorkOrchidGroupLedgerRehearsalInspector rehearsal;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService reconciliation;
+	OrchidGroupLedgerReconciliationService reconciliation;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService migration;
+	OrchidGroupStateChainMigrationService migration;
 
 	@Autowired
-	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService cutover;
+	OrchidGroupLedgerCutoverService cutover;
 
 	@Autowired
-	com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository groups;
+	OrchidGroupRepository groups;
 
 	private long originalId;
 
@@ -52,11 +67,11 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 	void prepare() throws Exception {
 		seeder.resetKeepingSequences();
 		var scenario = seeder.seedContractScenario();
-		var key = java.util.UUID.randomUUID();
-		var date = java.time.LocalDate.of(2026, 8, 20);
-		com.greenhouse.backend.OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, date,
+		var key = UUID.randomUUID();
+		var date = LocalDate.of(2026, 8, 20);
+		OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, date,
 				"1.0.0");
-		cutover.execute(new com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand(key,
+		cutover.execute(new OrchidGroupLedgerCutoverCommand(key,
 				date, "1.0.0", "1.1.0", true));
 		var plan = post("/api/work-operations", """
 				{"workTypeId":%d,"title":"보정 대상","plannedStartDate":"2026-07-15",
@@ -128,8 +143,9 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 		String request = """
 				{"idempotencyKey":"bulk","workDate":"2026-07-15","worker":"작업자","memo":"검수","reason":"수량 확인",
 				 "orchidGroupAdjustments":[{"orchidGroupId":%d,"quantity":55,"status":"정상"},
-				  {"orchidGroupId":%d,"quantity":35,"status":"정상"}]}
-				""".formatted(resultIds.getFirst(), resultIds.getLast());
+				  {"orchidGroupId":%d,"quantity":35,"status":"정상"}],
+				 "quantityCorrections":[{"executionId":%d,"lossQuantity":10,"increaseQuantity":0}]}
+				""".formatted(resultIds.getFirst(), resultIds.getLast(), effectId());
 		var result = post(path(), request);
 		assertThat(result.status()).as(result.body().toString()).isEqualTo(201);
 		assertThat(result.data().path("originalOperation").path("status").asText()).isEqualTo("COMPLETED");
@@ -146,7 +162,7 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(history.data().path("totalElements").asLong()).isEqualTo(1);
 		var graph = get("/api/work-operations/" + originalId + "/graph?detail=MUTATION");
 		assertThat(graph.status()).as(graph.body().toString()).isEqualTo(200);
-		long workNodes = java.util.stream.StreamSupport.stream(graph.data().path("nodes").spliterator(), false)
+		long workNodes = StreamSupport.stream(graph.data().path("nodes").spliterator(), false)
 			.filter(node -> node.path("nodeType").asText().equals("WORK_OPERATION"))
 			.count();
 		assertThat(workNodes).isEqualTo(1);
@@ -162,8 +178,9 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 		String invalid = """
 				{"idempotencyKey":"retry","workDate":"2026-07-15","reason":"수량 확인",
 				 "orchidGroupAdjustments":[{"orchidGroupId":%d,"quantity":55,"status":"정상"},
-				  {"orchidGroupId":%d,"quantity":35,"status":"정상"}]}
-				""".formatted(resultIds.getFirst(), resultIds.getLast());
+				  {"orchidGroupId":%d,"quantity":35,"status":"정상"}],
+				 "quantityCorrections":[{"executionId":%d,"lossQuantity":10,"increaseQuantity":0}]}
+				""".formatted(resultIds.getFirst(), resultIds.getLast(), effectId());
 		ApiResult failed;
 		try {
 			failed = post(path(), invalid);
@@ -196,7 +213,7 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 	void rehearsalVerifiesAuditMutationProvenanceAndDetectsBrokenLinks() throws Exception {
 		assertThat(post(path(), request("ledger", 55, "2026-07-15")).status()).isEqualTo(201);
 		var mutations = mutationQuery.getMutations(resultIds.getFirst(),
-				com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType.CORRECTION, null, 0, 20);
+				OrchidGroupMutationType.CORRECTION, null, 0, 20);
 		assertThat(mutations.content()).singleElement().satisfies(mutation -> {
 			assertThat(mutation.workOperation()).isNotNull();
 			assertThat(mutation.workOperation().id()).isEqualTo(originalId);
@@ -211,7 +228,7 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(references.getFirst().changesGroups()).isTrue();
 		assertThat(references.getFirst().orchidGroupIds()).containsExactly(resultIds.getFirst());
 		assertThat(reconciliation.reconcile().issues()).noneMatch(issue -> issue.code().contains("WORK_CORRECTION"));
-		jdbc.update("UPDATE work_operation_corrections SET correlation_id = ?", java.util.UUID.randomUUID());
+		jdbc.update("UPDATE work_operation_corrections SET correlation_id = ?", UUID.randomUUID());
 		assertThat(reconciliation.reconcile().issues())
 			.anyMatch(issue -> issue.code().equals("INVALID_WORK_CORRECTION_MUTATION_LINK"));
 	}
@@ -233,8 +250,9 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 		var failed = post(path(), """
 				{"idempotencyKey":"occupied","workDate":"2026-07-14","reason":"보정",
 				 "orchidGroupAdjustments":[{"orchidGroupId":%d,"quantity":55,"status":"정상"},
-				 {"orchidGroupId":%d,"quantity":35,"status":"정상"}]}
-				""".formatted(resultIds.getFirst(), resultIds.getLast()));
+				 {"orchidGroupId":%d,"quantity":35,"status":"정상"}],
+				 "quantityCorrections":[{"executionId":%d,"lossQuantity":10,"increaseQuantity":0}]}
+				""".formatted(resultIds.getFirst(), resultIds.getLast(), effectId()));
 		assertThat(failed.status()).isEqualTo(400);
 		assertThat(failed.body().path("error").path("details").toString()).contains("겹칩니다");
 		assertThat(jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id")).isEqualTo(before);
@@ -267,8 +285,9 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 			var failed = post(path(), """
 					{"idempotencyKey":"forged-%d","workDate":"2026-07-15","reason":"보정",
 					 "cancelResultCreation":false,
-					 "orchidGroupAdjustments":[{"orchidGroupId":%d,"quantity":%d,"status":" 생성 취소 "}]}
-					""".formatted(quantity, resultIds.getFirst(), quantity));
+					 "orchidGroupAdjustments":[{"orchidGroupId":%d,"quantity":%d,"status":" 생성 취소 "}],
+					 "quantityCorrections":[{"executionId":%d,"lossQuantity":%d,"increaseQuantity":0}]}
+					""".formatted(quantity, resultIds.getFirst(), quantity, effectId(), 60 - quantity));
 			assertThat(failed.status()).isEqualTo(400);
 			assertThat(failed.body().path("error").path("details").toString()).contains("결과 생성 취소로 처리");
 		}
@@ -395,8 +414,14 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 	private String request(String key, int quantity, String date) {
 		return """
 				{"idempotencyKey":"%s","workDate":"%s","reason":"수량 확인",
-				 "orchidGroupAdjustments":[{"orchidGroupId":%d,"quantity":%d,"status":"정상"}]}
-				""".formatted(key, date, resultIds.getFirst(), quantity);
+				 "orchidGroupAdjustments":[{"orchidGroupId":%d,"quantity":%d,"status":"정상"}],
+				 "quantityCorrections":[{"executionId":%d,"lossQuantity":%d,"increaseQuantity":%d}]}
+				""".formatted(key, date, resultIds.getFirst(), quantity, effectId(), Math.max(60 - quantity, 0),
+				Math.max(quantity - 60, 0));
+	}
+
+	private long effectId() {
+		return jdbc.queryForObject("SELECT min(id) FROM work_applied_effects", Long.class);
 	}
 
 	private String path() {

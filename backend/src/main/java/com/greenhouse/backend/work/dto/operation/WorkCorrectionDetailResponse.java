@@ -2,13 +2,15 @@ package com.greenhouse.backend.work.dto.operation;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.work.application.correction.WorkQuantityBalanceChange;
 import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public record WorkCorrectionDetailResponse(Long id, LocalDateTime createdAt, String worker, String memo, String reason,
-		LocalDate beforeWorkDate, LocalDate afterWorkDate, List<WorkCorrectionAdjustmentResponse> adjustments) {
+		LocalDate beforeWorkDate, LocalDate afterWorkDate, List<WorkCorrectionAdjustmentResponse> adjustments,
+		List<WorkQuantityBalanceChange> quantityBalances) {
 
 	private static final JsonMapper MAPPER = JsonMapper.builder().findAndAddModules().build();
 
@@ -18,7 +20,9 @@ public record WorkCorrectionDetailResponse(Long id, LocalDateTime createdAt, Str
 				WorkCorrectionAdjustmentResponse[].class);
 		return new WorkCorrectionDetailResponse(correction.getId(), TimeConfig.toFarmTime(correction.getCreatedAt()),
 				correction.getWorker(), correction.getMemo(), correction.getReason(),
-				date(result.get("beforeWorkDate")), date(result.get("afterWorkDate")), List.of(rows));
+				date(result.get("beforeWorkDate")), date(result.get("afterWorkDate")), List.of(rows),
+				List.of(MAPPER.convertValue(result.getOrDefault("quantityBalances", List.of()),
+						WorkQuantityBalanceChange[].class)));
 	}
 
 	private static LocalDate date(Object value) {

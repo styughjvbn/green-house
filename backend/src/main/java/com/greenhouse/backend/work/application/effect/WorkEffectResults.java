@@ -119,7 +119,7 @@ public final class WorkEffectResults {
 		return quantityMap(commandDetails.get("sources"), "sourceOrchidGroupId", "inputQuantity");
 	}
 
-	static Map<Long, Integer> resultQuantities(Map<String, Object> resultDetails) {
+	public static Map<Long, Integer> resultQuantities(Map<String, Object> resultDetails) {
 		Map<Long, Integer> quantities = quantityMap(resultDetails.get("results"), "orchidGroupId", "quantity");
 		if (!quantities.isEmpty()) {
 			return quantities;

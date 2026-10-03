@@ -1561,6 +1561,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkCorrectionAdjustmentResponse'
+        quantityBalances:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkQuantityBalanceChange'
     WorkExecutionDetailResponse:
       type: object
       properties:
@@ -1805,6 +1809,12 @@ components:
           minItems: 0
         cancelResultCreation:
           type: boolean
+        quantityCorrections:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkQuantityCorrectionInput'
+          maxItems: 100
+          minItems: 0
       required:
       - idempotencyKey
       - orchidGroupAdjustments
@@ -1819,6 +1829,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkCorrectionDetailResponse'
+        quantityBalances:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkQuantityBalance'
     WorkOperationCreateRequest:
       type: object
       properties:
@@ -2488,6 +2502,70 @@ components:
           minLength: 0
       required:
       - title
+    WorkQuantityBalance:
+      type: object
+      properties:
+        executionId:
+          type: integer
+          format: int64
+        sourceInputQuantities:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int32
+        resultQuantities:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int32
+        inputQuantity:
+          type: integer
+          format: int32
+        resultQuantity:
+          type: integer
+          format: int32
+        lossQuantity:
+          type: integer
+          format: int32
+        increaseQuantity:
+          type: integer
+          format: int32
+        inputEditable:
+          type: boolean
+        increaseAllowed:
+          type: boolean
+        lossEditable:
+          type: boolean
+    WorkQuantityBalanceChange:
+      type: object
+      properties:
+        before:
+          $ref: '#/components/schemas/WorkQuantityBalance'
+        after:
+          $ref: '#/components/schemas/WorkQuantityBalance'
+    WorkQuantityCorrectionInput:
+      type: object
+      properties:
+        executionId:
+          type: integer
+          format: int64
+        sourceInputQuantities:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int32
+        lossQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        increaseQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - executionId
+      - increaseQuantity
+      - lossQuantity
     WorkTargetExecutionRequest:
       type: object
       properties:

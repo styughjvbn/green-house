@@ -34,6 +34,8 @@ public class WorkOperationCorrectionService {
 
 	private final WorkOperationSupport support;
 
+	private final WorkCorrectionQuantityService quantities;
+
 	public WorkOperationCorrectionsResponse create(Long originalId, WorkCorrectionCommand request) {
 		String key = WorkCommandReceipts.normalizeKey(request.idempotencyKey());
 		String fingerprint = fingerprints.calculate(new Request(originalId, request));
@@ -69,7 +71,8 @@ public class WorkOperationCorrectionService {
 				correctionRepository.findByOriginalWorkOperationIdOrderByCreatedAtAscIdAsc(originalId)
 					.stream()
 					.map(WorkCorrectionDetailResponse::from)
-					.toList());
+					.toList(),
+				quantities.context(originalId));
 	}
 
 	private record Request(Long originalId, WorkCorrectionCommand command) {

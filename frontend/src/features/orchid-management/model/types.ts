@@ -105,6 +105,9 @@ export type WorkOperationCorrectionItem = NonNullable<
 export type WorkOperationCorrections = {
   originalOperation: WorkOperation;
   corrections: WorkOperationCorrectionItem[];
+  quantityBalances: NonNullable<
+    import("@/shared/api/generated/openapi").components["schemas"]["WorkOperationCorrectionsResponse"]["quantityBalances"]
+  >;
 };
 
 export type OrchidGroupLineageRelationType =

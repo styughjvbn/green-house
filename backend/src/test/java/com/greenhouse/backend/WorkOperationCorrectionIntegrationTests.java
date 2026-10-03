@@ -28,6 +28,8 @@ import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -133,7 +135,7 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", createdGroupId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data[?(@.workOperationId == %d)].correctable".formatted(originalId))
-				.value(org.hamcrest.Matchers.hasItem(true)));
+				.value(Matchers.hasItem(true)));
 	}
 
 	@Test
@@ -194,8 +196,8 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 			.andExpect(jsonPath("$.data.corrections[0].adjustments", hasSize(0)));
 
 		var original = operationRepository.findWithWorkTypeById(originalId).orElseThrow();
-		assertThat(original.getPlannedStartDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 14));
-		assertThat(original.getPlannedEndDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 14));
+		assertThat(original.getPlannedStartDate()).isEqualTo(LocalDate.of(2026, 7, 14));
+		assertThat(original.getPlannedEndDate()).isEqualTo(LocalDate.of(2026, 7, 14));
 		var unchangedGroup = orchidGroupRepository.findById(createdGroupId).orElseThrow();
 		assertThat(unchangedGroup.getQuantity()).isEqualTo(30);
 		assertThat(unchangedGroup.getStatus()).isEqualTo("정상");
@@ -273,9 +275,10 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				    "orchidGroupId": %d,
 				    "quantity": 25,
 				    "status": "수량 보정"
-				  }]
+				  }],
+				  "quantityCorrections":[{"executionId":%d,"lossQuantity":5,"increaseQuantity":0}]
 				}
-				""".formatted(idempotencyKey, createdGroupId);
+				""".formatted(idempotencyKey, createdGroupId, appliedEffectRepository.findAll().getFirst().getId());
 	}
 
 	private String dateOnlyCorrectionRequest() {

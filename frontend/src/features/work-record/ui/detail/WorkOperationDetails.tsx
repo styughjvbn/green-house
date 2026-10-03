@@ -19,6 +19,7 @@ import {
 import { workOperationScopeLabel } from "../../lib/workOperationDisplay";
 import { workOperationDetailsQueryOptions } from "../../model/workRecordQueryOptions";
 import type {
+  WorkCorrectionDetail,
   WorkExecutionDetail,
   WorkExecutionResult,
   WorkExecutionSource,
@@ -341,6 +342,15 @@ function ExecutionTab({
                   actionLoading={actionLoading}
                   execution={execution}
                   resultCorrections={resultCorrections}
+                  quantityCorrections={(detail?.corrections ?? []).flatMap(
+                    (event) =>
+                      (event.quantityBalances ?? [])
+                        .filter(
+                          (change) =>
+                            change.after?.executionId === execution.id,
+                        )
+                        .map((change) => ({ event, change })),
+                  )}
                 />
               </li>
             ))}
@@ -646,11 +656,16 @@ function ExecutionContent({
   actionLoading,
   execution,
   resultCorrections,
+  quantityCorrections,
 }: {
   operation: WorkOperation;
   actionLoading: boolean;
   execution: WorkExecutionDetail;
   resultCorrections: Map<number, ResultCorrection[]>;
+  quantityCorrections: Array<{
+    event: WorkCorrectionDetail;
+    change: NonNullable<WorkCorrectionDetail["quantityBalances"]>[number];
+  }>;
 }) {
   return (
     <div className="mt-2 space-y-1 text-xs text-[#526057]">
@@ -686,6 +701,33 @@ function ExecutionContent({
       ) : null}
       {execution.increaseQuantity != null && execution.increaseQuantity > 0 ? (
         <p>증식 수량 {execution.increaseQuantity}분</p>
+      ) : null}
+      {quantityCorrections.length ? (
+        <div className="space-y-2 border-t border-[#ead7b4] pt-2 text-[#85550e]">
+          <p>
+            위 수량은 최초 실행 기록입니다. 아래에 작업 기록 정정을 표시합니다.
+          </p>
+          {quantityCorrections.map(({ event, change }) => (
+            <div key={event.id}>
+              <p>
+                정정: 투입 {change.before?.inputQuantity} →{" "}
+                {change.after?.inputQuantity} · 결과{" "}
+                {change.before?.resultQuantity} → {change.after?.resultQuantity}
+                분
+              </p>
+              <p>
+                손실 {change.before?.lossQuantity} →{" "}
+                {change.after?.lossQuantity} · 증식{" "}
+                {change.before?.increaseQuantity} →{" "}
+                {change.after?.increaseQuantity}분
+              </p>
+              <p>
+                {event.reason} · {formatDateTime(event.createdAt ?? "")}{" "}
+                {event.worker ? `· ${event.worker}` : ""}
+              </p>
+            </div>
+          ))}
+        </div>
       ) : null}
       {execution.reason ? <p>사유: {execution.reason}</p> : null}
       {execution.linkedWorkOperationId != null ? (

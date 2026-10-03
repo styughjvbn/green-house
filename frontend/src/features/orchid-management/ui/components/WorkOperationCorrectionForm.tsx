@@ -47,6 +47,17 @@ export default function WorkOperationCorrectionForm({
     queryFn: () => getWorkOperationCorrections(originalWorkOperationId),
   });
   const corrections = correctionQuery.data;
+  const balance = corrections?.quantityBalances.find(
+    (item) => orchidGroup.id in (item.resultQuantities ?? {}),
+  );
+  const [correctInputs, setCorrectInputs] = useState(false);
+  const [inputDrafts, setInputDrafts] = useState<Record<string, string>>({});
+  const [lossDraft, setLossDraft] = useState<string | null>(null);
+  const [growthDraft, setGrowthDraft] = useState<string | null>(null);
+  const quantityChanged = Number(quantity) !== orchidGroup.quantity;
+  const lossQuantity = lossDraft ?? String(balance?.lossQuantity ?? 0);
+  const increaseQuantity =
+    growthDraft ?? String(balance?.increaseQuantity ?? 0);
   const workDate =
     workDateDraft ??
     corrections?.originalOperation.plannedStartDate ??
@@ -69,6 +80,9 @@ export default function WorkOperationCorrectionForm({
     if (
       !cancelResultCreation &&
       nextQuantity === orchidGroup.quantity &&
+      !correctInputs &&
+      lossDraft == null &&
+      growthDraft == null &&
       status.trim() === orchidGroup.status &&
       workDate === corrections?.originalOperation.plannedStartDate
     ) {
@@ -87,13 +101,43 @@ export default function WorkOperationCorrectionForm({
         memo: memo.trim() || undefined,
         reason: reason.trim(),
         cancelResultCreation,
-        orchidGroupAdjustments: [
-          {
-            orchidGroupId: orchidGroup.id,
-            quantity: nextQuantity,
-            status: status.trim(),
-          },
-        ],
+        orchidGroupAdjustments:
+          cancelResultCreation ||
+          quantityChanged ||
+          status.trim() !== orchidGroup.status
+            ? [
+                {
+                  orchidGroupId: orchidGroup.id,
+                  quantity: nextQuantity,
+                  status: status.trim(),
+                },
+              ]
+            : [],
+        quantityCorrections:
+          !cancelResultCreation &&
+          balance &&
+          (quantityChanged ||
+            correctInputs ||
+            lossDraft != null ||
+            growthDraft != null)
+            ? [
+                {
+                  executionId: balance.executionId!,
+                  sourceInputQuantities: correctInputs
+                    ? Object.fromEntries(
+                        Object.entries(balance.sourceInputQuantities ?? {}).map(
+                          ([id, amount]) => [
+                            id,
+                            Number(inputDrafts[id] ?? amount),
+                          ],
+                        ),
+                      )
+                    : undefined,
+                  lossQuantity: Number(lossQuantity),
+                  increaseQuantity: Number(increaseQuantity),
+                },
+              ]
+            : [],
       });
       setIdempotencyKey(createUuid());
       await Promise.all([
@@ -118,11 +162,10 @@ export default function WorkOperationCorrectionForm({
     <section className="min-h-0 overflow-y-auto rounded-md border border-[#d5ad63] bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-bold text-[#8a5a12]">
-            구조 변경 결과 보정
-          </p>
+          <p className="text-sm font-bold text-[#8a5a12]">작업 기록 정정</p>
           <p className="mt-1 text-xs text-[#5c6a60]">
-            작업일·수량·상태 변경 전후를 원본 작업의 보정 내역에 남깁니다.
+            작업 당시 입력 오류만 정정합니다. 현재 세어본 수량 차이는 난 묶음
+            관리의 ‘실사 수량 조정’을 사용하세요.
           </p>
         </div>
         <button
@@ -198,6 +241,76 @@ export default function WorkOperationCorrectionForm({
               onChange={setMemo}
             />
           </div>
+          {!cancelResultCreation && balance ? (
+            <div className="space-y-2 rounded border border-[#ead9b9] p-3 text-xs">
+              <p>
+                현재 유효 작업 기록: 투입 {balance.inputQuantity} · 결과{" "}
+                {balance.resultQuantity} · 손실 {balance.lossQuantity} · 증식{" "}
+                {balance.increaseQuantity}분
+              </p>
+              <p>
+                투입 + 증식 = 결과 + 손실이어야 합니다. 원본 수량은 자동
+                변경하지 않습니다.
+              </p>
+              {balance.inputEditable ? (
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={correctInputs}
+                    onChange={(e) => setCorrectInputs(e.target.checked)}
+                  />
+                  원본별 투입량 입력 오류도 정정
+                </label>
+              ) : null}
+              {correctInputs
+                ? Object.entries(balance.sourceInputQuantities ?? {}).map(
+                    ([id, amount]) => (
+                      <Field
+                        key={id}
+                        label={`원본 #${id} 정정 투입량`}
+                        type="number"
+                        min="1"
+                        value={inputDrafts[id] ?? String(amount)}
+                        onChange={(value) =>
+                          setInputDrafts((previous) => ({
+                            ...previous,
+                            [id]: value,
+                          }))
+                        }
+                      />
+                    ),
+                  )
+                : null}
+              <div className="grid grid-cols-2 gap-2">
+                <Field
+                  label="정정 손실 수량"
+                  type="number"
+                  min="0"
+                  value={lossQuantity}
+                  onChange={setLossDraft}
+                  disabled={!balance.lossEditable}
+                />
+                <Field
+                  label="정정 증식 수량"
+                  type="number"
+                  min="0"
+                  value={increaseQuantity}
+                  onChange={setGrowthDraft}
+                  disabled={!balance.increaseAllowed}
+                />
+              </div>
+              {!balance.lossEditable ? (
+                <p>
+                  연관 폐기량 변경은 이동·폐기를 취소 후 함께 다시 기록해야
+                  합니다.
+                </p>
+              ) : null}
+              <p>
+                최초 작업 기록은 보존하고 정정된 수량 수지를 감사 내역으로
+                남깁니다.
+              </p>
+            </div>
+          ) : null}
           <label className="block text-xs font-semibold text-[#435047]">
             보정 사유
             <textarea

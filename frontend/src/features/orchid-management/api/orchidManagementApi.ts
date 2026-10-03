@@ -31,30 +31,34 @@ export function getOrchidManagementHouses(): Promise<House[]> {
   return fetchApi<House[]>("/houses");
 }
 
-export function reconcileOrchidGroup(
-  orchidGroupId: number,
-  payload: {
-    idempotencyKey: string;
-    title: string;
-    workDate: string;
-    worker: string | null;
-    memo: string | null;
-    reason: string;
-    actualQuantity: number;
-    actualStatus: string;
-    actualBedZoneId: number;
-    actualStartPosition: number;
-    actualEndPosition: number;
-  },
-): Promise<WorkOperation> {
-  return requestApi<WorkOperation>(
-    `/orchid-groups/${orchidGroupId}/reconciliations`,
+export type StockCountContext =
+  import("@/shared/api/generated/openapi").components["schemas"]["OrchidStockCountContext"];
+export type StockCountRequest =
+  import("@/shared/api/generated/openapi").components["schemas"]["OrchidStockCountRequest"];
+export type StockCountEvent =
+  import("@/shared/api/generated/openapi").components["schemas"]["OrchidStockCountResponse"];
+
+export function getStockCountContext(id: number, signal?: AbortSignal) {
+  return fetchApi<StockCountContext>(
+    `/orchid-groups/${id}/stock-count-context`,
+    { signal },
+  );
+}
+export function getStockCounts(id: number, signal?: AbortSignal) {
+  return fetchApi<import("@/shared/api/page").Page<StockCountEvent>>(
+    `/orchid-groups/${id}/stock-counts?page=0&size=20`,
+    { signal },
+  );
+}
+export function countOrchidGroup(id: number, payload: StockCountRequest) {
+  return requestApi<StockCountEvent>(
+    `/orchid-groups/${id}/stock-counts`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     },
-    "현장 상태를 동기화하지 못했습니다.",
+    "실사 수량을 적용하지 못했습니다.",
   );
 }
 

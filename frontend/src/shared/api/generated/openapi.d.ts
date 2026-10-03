@@ -570,6 +570,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orchid-groups/{orchidGroupId}/stock-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stockCountHistory"];
+        put?: never;
+        post: operations["stockCount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orchid-groups/{orchidGroupId}/reconciliations": {
         parameters: {
             query?: never;
@@ -1421,6 +1437,22 @@ export interface paths {
         };
         /** @deprecated */
         get: operations["getOrchidGroupHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orchid-groups/{orchidGroupId}/stock-count-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stockCountContext"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2464,6 +2496,18 @@ export interface components {
             reason: string;
             orchidGroupAdjustments: components["schemas"]["OrchidGroupCorrectionRequest"][];
             cancelResultCreation?: boolean;
+            quantityCorrections?: components["schemas"]["WorkQuantityCorrectionInput"][];
+        };
+        WorkQuantityCorrectionInput: {
+            /** Format: int64 */
+            executionId: number;
+            sourceInputQuantities?: {
+                [key: string]: number;
+            };
+            /** Format: int32 */
+            lossQuantity: number;
+            /** Format: int32 */
+            increaseQuantity: number;
         };
         ApiResponseWorkOperationCorrectionsResponse: {
             data?: components["schemas"]["WorkOperationCorrectionsResponse"];
@@ -2492,10 +2536,37 @@ export interface components {
             /** Format: date */
             afterWorkDate?: string;
             adjustments?: components["schemas"]["WorkCorrectionAdjustmentResponse"][];
+            quantityBalances?: components["schemas"]["WorkQuantityBalanceChange"][];
         };
         WorkOperationCorrectionsResponse: {
             originalOperation?: components["schemas"]["WorkOperationResponse"];
             corrections?: components["schemas"]["WorkCorrectionDetailResponse"][];
+            quantityBalances?: components["schemas"]["WorkQuantityBalance"][];
+        };
+        WorkQuantityBalance: {
+            /** Format: int64 */
+            executionId?: number;
+            sourceInputQuantities?: {
+                [key: string]: number;
+            };
+            resultQuantities?: {
+                [key: string]: number;
+            };
+            /** Format: int32 */
+            inputQuantity?: number;
+            /** Format: int32 */
+            resultQuantity?: number;
+            /** Format: int32 */
+            lossQuantity?: number;
+            /** Format: int32 */
+            increaseQuantity?: number;
+            inputEditable?: boolean;
+            increaseAllowed?: boolean;
+            lossEditable?: boolean;
+        };
+        WorkQuantityBalanceChange: {
+            before?: components["schemas"]["WorkQuantityBalance"];
+            after?: components["schemas"]["WorkQuantityBalance"];
         };
         WorkOperationCompleteRequest: {
             /** Format: date */
@@ -2762,6 +2833,42 @@ export interface components {
         ApiResponseOrchidGroupResponse: {
             data?: components["schemas"]["OrchidGroupResponse"];
             message?: string;
+        };
+        OrchidStockCountRequest: {
+            idempotencyKey: string;
+            /** Format: int64 */
+            expectedRevision: number;
+            /** Format: date */
+            countedDate: string;
+            /** Format: int32 */
+            actualQuantity: number;
+            reason: string;
+            worker?: string;
+            memo?: string;
+        };
+        ApiResponseOrchidStockCountResponse: {
+            data?: components["schemas"]["OrchidStockCountResponse"];
+            message?: string;
+        };
+        OrchidStockCountResponse: {
+            idempotencyKey?: string;
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** Format: date-time */
+            recordedAt?: string;
+            /** Format: date */
+            countedDate?: string;
+            /** Format: int32 */
+            beforeQuantity?: number;
+            /** Format: int32 */
+            actualQuantity?: number;
+            /** Format: int32 */
+            difference?: number;
+            reason?: string;
+            worker?: string;
+            memo?: string;
+            /** Format: int64 */
+            mutationId?: number;
         };
         OrchidGroupReconciliationRequest: {
             idempotencyKey: string;
@@ -3869,6 +3976,59 @@ export interface components {
         ApiResponseListOrchidGroupWorkHistoryResponse: {
             data?: components["schemas"]["OrchidGroupWorkHistoryResponse"][];
             message?: string;
+        };
+        ApiResponsePageOrchidStockCountResponse: {
+            data?: components["schemas"]["PageOrchidStockCountResponse"];
+            message?: string;
+        };
+        PageOrchidStockCountResponse: {
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            /** Format: int32 */
+            size?: number;
+            content?: components["schemas"]["OrchidStockCountResponse"][];
+            /** Format: int32 */
+            number?: number;
+            sort?: components["schemas"]["SortObject"];
+            /** Format: int32 */
+            numberOfElements?: number;
+            pageable?: components["schemas"]["PageableObject"];
+            first?: boolean;
+            last?: boolean;
+            empty?: boolean;
+        };
+        PageableObject: {
+            /** Format: int64 */
+            offset?: number;
+            sort?: components["schemas"]["SortObject"];
+            paged?: boolean;
+            /** Format: int32 */
+            pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            unpaged?: boolean;
+        };
+        SortObject: {
+            empty?: boolean;
+            sorted?: boolean;
+            unsorted?: boolean;
+        };
+        ApiResponseOrchidStockCountContext: {
+            data?: components["schemas"]["OrchidStockCountContext"];
+            message?: string;
+        };
+        OrchidStockCountContext: {
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: int64 */
+            stateRevision?: number;
+            /** Format: date */
+            businessDate?: string;
+            adjustable?: boolean;
         };
         ApiResponseOrchidGroupLineageResponse: {
             data?: components["schemas"]["OrchidGroupLineageResponse"];
@@ -5730,6 +5890,57 @@ export interface operations {
             };
         };
     };
+    stockCountHistory: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                orchidGroupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageOrchidStockCountResponse"];
+                };
+            };
+        };
+    };
+    stockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orchidGroupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrchidStockCountRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseOrchidStockCountResponse"];
+                };
+            };
+        };
+    };
     reconcile: {
         parameters: {
             query?: never;
@@ -7275,6 +7486,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseListOrchidGroupWorkHistoryResponse"];
+                };
+            };
+        };
+    };
+    stockCountContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orchidGroupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseOrchidStockCountContext"];
                 };
             };
         };

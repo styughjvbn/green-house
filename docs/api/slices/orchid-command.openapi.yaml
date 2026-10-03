@@ -85,6 +85,63 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/orchid-groups/{orchidGroupId}/stock-counts:
+    get:
+      tags:
+      - orchid-group-command-controller
+      operationId: stockCountHistory
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageOrchidStockCountResponse'
+    post:
+      tags:
+      - orchid-group-command-controller
+      operationId: stockCount
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidStockCountRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidStockCountResponse'
   /api/orchid-groups/{orchidGroupId}/reconciliations:
     post:
       tags:
@@ -190,6 +247,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseRepotWorkOperationResponse'
+  /api/orchid-groups/{orchidGroupId}/stock-count-context:
+    get:
+      tags:
+      - orchid-group-command-controller
+      operationId: stockCountContext
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidStockCountContext'
 components:
   schemas:
     ApiResponseBedZonePlacementProfileResponse:
@@ -213,6 +289,27 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/OrchidGroupResponse'
+        message:
+          type: string
+    ApiResponseOrchidStockCountContext:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/OrchidStockCountContext'
+        message:
+          type: string
+    ApiResponseOrchidStockCountResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/OrchidStockCountResponse'
+        message:
+          type: string
+    ApiResponsePageOrchidStockCountResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageOrchidStockCountResponse'
         message:
           type: string
     ApiResponseRepotWorkOperationResponse:
@@ -570,6 +667,141 @@ components:
       - quantity
       - status
       - varietyId
+    OrchidStockCountContext:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        stateRevision:
+          type: integer
+          format: int64
+        businessDate:
+          type: string
+          format: date
+        adjustable:
+          type: boolean
+    OrchidStockCountRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        expectedRevision:
+          type: integer
+          format: int64
+          minimum: 0
+        countedDate:
+          type: string
+          format: date
+        actualQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - actualQuantity
+      - countedDate
+      - expectedRevision
+      - idempotencyKey
+      - reason
+    OrchidStockCountResponse:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+        orchidGroupId:
+          type: integer
+          format: int64
+        recordedAt:
+          type: string
+          format: date-time
+        countedDate:
+          type: string
+          format: date
+        beforeQuantity:
+          type: integer
+          format: int32
+        actualQuantity:
+          type: integer
+          format: int32
+        difference:
+          type: integer
+          format: int32
+        reason:
+          type: string
+        worker:
+          type: string
+        memo:
+          type: string
+        mutationId:
+          type: integer
+          format: int64
+    PageOrchidStockCountResponse:
+      type: object
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidStockCountResponse'
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: '#/components/schemas/SortObject'
+        numberOfElements:
+          type: integer
+          format: int32
+        pageable:
+          $ref: '#/components/schemas/PageableObject'
+        first:
+          type: boolean
+        last:
+          type: boolean
+        empty:
+          type: boolean
+    PageableObject:
+      type: object
+      properties:
+        offset:
+          type: integer
+          format: int64
+        sort:
+          $ref: '#/components/schemas/SortObject'
+        paged:
+          type: boolean
+        pageNumber:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        unpaged:
+          type: boolean
     RepotResultOrchidGroupRequest:
       type: object
       properties:
@@ -683,6 +915,15 @@ components:
         increaseQuantity:
           type: integer
           format: int32
+    SortObject:
+      type: object
+      properties:
+        empty:
+          type: boolean
+        sorted:
+          type: boolean
+        unsorted:
+          type: boolean
     WorkOperationProgressResponse:
       type: object
       properties:

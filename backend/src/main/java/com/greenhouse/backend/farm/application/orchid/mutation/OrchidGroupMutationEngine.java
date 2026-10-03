@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.orchid.mutation;
 
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
@@ -17,14 +18,18 @@ import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -463,7 +468,8 @@ public class OrchidGroupMutationEngine {
 		}).toList();
 		orchidPlacementPolicy.validateRestoredPlacements(placements, changedGroupIds);
 		List<OrchidGroupMutation> relationTargets = recorder.findRelated(command.correctedMutations(), changedGroupIds,
-				Set.of(OrchidGroupMutationType.CREATE, OrchidGroupMutationType.TRANSFORM));
+				Set.of(OrchidGroupMutationType.CREATE, OrchidGroupMutationType.TRANSFORM,
+						OrchidGroupMutationType.MOVE));
 		OrchidGroupMutation mutation = recorder.start(OrchidGroupMutationType.CORRECTION, command.source(), fingerprint,
 				command.effectiveBusinessDate(), command.reason());
 
@@ -516,6 +522,35 @@ public class OrchidGroupMutationEngine {
 				command.effectiveBusinessDate(), command.reason(), group, revisionBefore, before, after);
 	}
 
+	public OrchidGroupMutationResult stockCount(StockCountOrchidGroupMutationCommand command) {
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
+		if (replay.isPresent())
+			return replay.get();
+		var group = findGroupForUpdate(command.orchidGroupId());
+		replay = replayResolver.findExisting(command.source(), fingerprint);
+		if (replay.isPresent())
+			return replay.get();
+		requireBaseline(group);
+		if (!Objects.equals(group.getStateRevision(), command.expectedRevision()))
+			throw new ConflictException("STOCK_COUNT_STALE",
+					"실사 확인 이후 묶음 상태가 변경되었습니다. 현재 상태를 다시 확인하세요.");
+		if (group.getQuantity().equals(command.actualQuantity()))
+			throw new IllegalArgumentException("현재 장부 수량과 다른 실사 수량이 필요합니다.");
+		if (command.actualQuantity() > 0) {
+			var zone = findZoneForUpdate(group.getBedZone().getId());
+			orchidPlacementPolicy.validateRestoredPlacements(List.of(new OrchidPlacementPolicy.RestoredPlacement(zone,
+					group.getStartPosition(), group.getEndPosition(), group.getSortOrder())), Set.of(group.getId()));
+		}
+		long revision = group.getStateRevision();
+		var before = OrchidGroupStateSnapshot.from(group);
+		group.applyStockCount(command.actualQuantity());
+		group.advanceStateRevision();
+		return recordChanged(OrchidGroupMutationType.RECONCILIATION, command.source(), fingerprint,
+				command.effectiveBusinessDate(), command.reason(), group, revision, before,
+				OrchidGroupStateSnapshot.from(group));
+	}
+
 	public OrchidGroupMutationResult compensateTransforms(CompensateTransformMutationsCommand command) {
 		return compensate(command, command.mutationIds(),
 				Set.of(OrchidGroupMutationType.TRANSFORM, OrchidGroupMutationType.MOVE,
@@ -523,7 +558,7 @@ public class OrchidGroupMutationEngine {
 				"구조 변경·자리 이동과 연관 선별 폐기 Mutation만 자동 취소할 수 있습니다.", command.creationCancellationOrchidGroupIds());
 	}
 
-	public java.util.Optional<OrchidGroupMutationResult> findTransformCompensation(
+	public Optional<OrchidGroupMutationResult> findTransformCompensation(
 			CompensateTransformMutationsCommand command) {
 		return replayResolver.findExisting(command.source(), commandFingerprint.calculate(command));
 	}
@@ -628,14 +663,14 @@ public class OrchidGroupMutationEngine {
 		return result;
 	}
 
-	public java.util.Optional<String> compensationPlacementBlocker(List<OrchidGroupMutationEntry> entries,
+	public Optional<String> compensationPlacementBlocker(List<OrchidGroupMutationEntry> entries,
 			Set<Long> cancellationIds) {
 		try {
 			validateCompensationPlacements(entries, cancellationIds);
-			return java.util.Optional.empty();
+			return Optional.empty();
 		}
 		catch (IllegalArgumentException exception) {
-			return java.util.Optional.of(exception.getMessage());
+			return Optional.of(exception.getMessage());
 		}
 	}
 
@@ -666,13 +701,13 @@ public class OrchidGroupMutationEngine {
 
 	private OrchidGroupMutationEntry earliestEntry(List<OrchidGroupMutationEntry> entries) {
 		return entries.stream()
-			.min(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+			.min(Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
 			.orElseThrow();
 	}
 
 	private OrchidGroupMutationEntry latestEntry(List<OrchidGroupMutationEntry> entries) {
 		return entries.stream()
-			.max(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+			.max(Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
 			.orElseThrow();
 	}
 
@@ -767,7 +802,7 @@ public class OrchidGroupMutationEngine {
 		}
 	}
 
-	private boolean equalNumber(java.math.BigDecimal left, java.math.BigDecimal right) {
+	private boolean equalNumber(BigDecimal left, BigDecimal right) {
 		if (left == null || right == null) {
 			return left == right;
 		}

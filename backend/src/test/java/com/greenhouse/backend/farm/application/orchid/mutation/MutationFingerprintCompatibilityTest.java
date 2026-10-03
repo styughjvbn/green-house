@@ -8,10 +8,14 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSou
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class MutationFingerprintCompatibilityTest {
@@ -27,7 +31,7 @@ class MutationFingerprintCompatibilityTest {
 			.calculate(new CompensateTransformMutationsCommand(source, List.of(11L, 9L), date, "reason", Set.of())));
 		var first = new CompensateTransformMutationsCommand(source, List.of(9L, 11L), date, "reason", Set.of(3L, 1L));
 		var second = new CompensateTransformMutationsCommand(source, List.of(11L, 9L), date, "reason",
-				new java.util.LinkedHashSet<>(List.of(1L, 3L)));
+				new LinkedHashSet<>(List.of(1L, 3L)));
 		assertThat(calculator.calculate(first)).isEqualTo(calculator.calculate(second))
 			.isNotEqualTo(calculator.calculate(legacy));
 	}
@@ -69,9 +73,10 @@ class MutationFingerprintCompatibilityTest {
 				new ReconcileOrchidGroupMutationCommand(source, 5L, 8, " 정상 ", 2L, BigDecimal.ZERO,
 						new BigDecimal("2.00"), date, " reason "),
 				new CompensateTransformMutationsCommand(source, List.of(11L, 9L), date, " reason "),
-				new CompensateCreateMutationsCommand(source, List.of(11L, 9L), date, " reason "));
+				new CompensateCreateMutationsCommand(source, List.of(11L, 9L), date, " reason "),
+				new StockCountOrchidGroupMutationCommand(source, 5L, 2L, 8, date, " reason "));
 		var calculator = new OrchidGroupMutationCommandFingerprint(new OrchidGroupMutationFingerprint());
-		var hashes = new java.util.TreeMap<String, String>();
+		var hashes = new TreeMap<String, String>();
 		commands.forEach(command -> hashes.put(command.getClass().getSimpleName(), calculator.calculate(command)));
 		assertThat(hashes.get("TransformOrchidGroupsMutationCommand"))
 			.isEqualTo("d0b0ff8022e25df4b57b63da968e8f922e0d52483529e42902579f72fa72c654");
@@ -82,9 +87,9 @@ class MutationFingerprintCompatibilityTest {
 			assertThat(hashes).containsOnlyKeys(existingHashes.keySet());
 			hashes.forEach((command, hash) -> assertThat(hash).as(command).isIn(existingHashes.get(command)));
 		}
-		assertThat(commands.stream().map(Object::getClass).collect(java.util.stream.Collectors.toSet()))
+		assertThat(commands.stream().map(Object::getClass).collect(Collectors.toSet()))
 			.containsExactlyInAnyOrderElementsOf(
-					java.util.Arrays.asList(OrchidGroupMutationCommand.class.getPermittedSubclasses()));
+					Arrays.asList(OrchidGroupMutationCommand.class.getPermittedSubclasses()));
 	}
 
 }

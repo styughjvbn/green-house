@@ -242,6 +242,16 @@ public class OrchidGroup extends BaseEntity {
 		applyQuantityAndStatus(correctedQuantity, correctedStatus);
 	}
 
+	public boolean allowsStockCount() {
+		return stateRevision != null && !OrchidGroupStatusPolicy.isInactive(status);
+	}
+
+	public void applyStockCount(Integer actualQuantity) {
+		if (!allowsStockCount())
+			throw new IllegalArgumentException("종료·폐기·판매 완료·생성 취소 묶음은 실사로 재활성화할 수 없습니다.");
+		applyQuantityAndStatus(actualQuantity, status);
+	}
+
 	private void applyQuantityAndStatus(Integer correctedQuantity, String correctedStatus) {
 		if (correctedQuantity == null || correctedQuantity < 0) {
 			throw new IllegalArgumentException("보정 수량은 0 이상이어야 합니다.");

@@ -41,6 +41,9 @@
   "RestoreOutboundOrchidGroupsMutationCommand": [
     "cccde0eef98f83463dc657484b3a7b055cc1df0fdfdfc1470ab01095ca8c2f69"
   ],
+  "StockCountOrchidGroupMutationCommand": [
+    "30e065e31d975b9aadf4d91eaed05b6b49fc7493cf3db224f43d28e70f920dfa"
+  ],
   "TransformOrchidGroupsMutationCommand": [
     "d0b0ff8022e25df4b57b63da968e8f922e0d52483529e42902579f72fa72c654"
   ],
