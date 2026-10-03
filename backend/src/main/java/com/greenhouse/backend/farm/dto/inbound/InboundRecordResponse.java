@@ -15,12 +15,12 @@ public record InboundRecordResponse(Long id, LocalDate inboundDate, String inbou
 		LocalDateTime updatedAt) {
 
 	public static InboundRecordResponse from(InboundRecord record, List<OrchidGroup> createdOrchidGroups,
-			LocalDate pottingDate) {
+			LocalDate pottingDate, boolean hasUndoablePotting) {
 		return new InboundRecordResponse(record.getId(), record.getInboundDate(), record.getInboundType().name(),
 				record.getVariety().getId(), record.getVariety().getGenus(), record.getVariety().getName(),
 				record.getStatus().name(), record.getEstimatedQuantity(), record.getTempLocation(),
 				record.getPottingDueDate(), pottingDate, record.isEditable(),
-				record.availableActions(!createdOrchidGroups.isEmpty()),
+				record.availableActions(!createdOrchidGroups.isEmpty(), hasUndoablePotting),
 				createdOrchidGroups.stream().map(InboundOrchidGroupResponse::from).toList(), record.getWorker(),
 				record.getMemo(), TimeConfig.toFarmTime(record.getCreatedAt()),
 				TimeConfig.toFarmTime(record.getUpdatedAt()));

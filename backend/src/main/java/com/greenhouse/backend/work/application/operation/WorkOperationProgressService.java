@@ -5,7 +5,6 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.application.effect.WorkEffectStore;
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
@@ -17,7 +16,6 @@ import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
-import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,8 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class WorkOperationProgressService {
 
-	private final WorkOperationRepository operationRepository;
-
 	private final WorkTargetExecutionRepository executionRepository;
 
 	private final WorkEffectProcessor workEffectProcessor;
@@ -48,6 +44,8 @@ public class WorkOperationProgressService {
 	private final WorkOperationQueryService queryService;
 
 	private final WorkOperationSupport support;
+
+	private final WorkOperationLockService operationLocks;
 
 	public WorkOperationView complete(Long operationId, LocalDate completedDate) {
 		WorkOperation operation = findOperation(operationId);
@@ -80,9 +78,9 @@ public class WorkOperationProgressService {
 		LocalDateTime canceledAt = support.now();
 		operation.stop(canceledAt);
 		executions.stream()
-			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
-			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.SKIPPED)
-			.forEach(execution -> execution.cancel(canceledAt));
+				.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
+				.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.SKIPPED)
+				.forEach(execution -> execution.cancel(canceledAt));
 		closeInboundPottingPlans(operation, executions);
 		return queryService.get(operationId);
 	}
@@ -104,12 +102,14 @@ public class WorkOperationProgressService {
 
 	WorkOperationView completeTarget(Long operationId, Long targetId, WorkTargetExecutionRequest request,
 			String executionKey) {
+		findOperation(operationId);
 		WorkTargetExecution execution = findExecutionForUpdate(operationId, targetId);
 		if (execution.isEffectApplied()) {
 			String effectKey = executionKey == null ? "TARGET:" + targetId : "POTTING:" + executionKey;
 			var existing = appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey)
-				.orElseThrow(
-						() -> new ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE", "완료된 대상은 원래 실행 API로 재요청해야 합니다."));
+					.orElseThrow(
+							() -> new ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE",
+									"완료된 대상은 원래 실행 API로 재요청해야 합니다."));
 			var completedAt = request.completedDate() == null ? existing.getAppliedAt()
 					: support.completionTime(request.completedDate());
 			effectStore.validateReplay(existing,
@@ -145,7 +145,7 @@ public class WorkOperationProgressService {
 			return;
 		}
 		List<WorkTargetExecution> executions = executionRepository
-			.findByTargetWorkOperationIdOrderByIdAsc(operation.getId());
+				.findByTargetWorkOperationIdOrderByIdAsc(operation.getId());
 		if (!executions.isEmpty() && executions.stream().allMatch(WorkTargetExecution::isTerminalForCompletion)) {
 			operation.complete(completedAt);
 		}
@@ -157,9 +157,9 @@ public class WorkOperationProgressService {
 			return;
 		}
 		InboundPottingPlanTarget current = inboundPottingPlanGateway.findCurrent(List.of(target.getInboundRecordId()))
-			.stream()
-			.findFirst()
-			.orElseThrow(() -> new NotFoundException("포트 작업 대상 입고 기록을 찾을 수 없습니다."));
+				.stream()
+				.findFirst()
+				.orElseThrow(() -> new NotFoundException("포트 작업 대상 입고 기록을 찾을 수 없습니다."));
 		target.refreshInboundSnapshot(current.varietyId(), current.varietyName(),
 				current.currentQuantity(target.getQuantitySnapshot()), current.potSize(), inboundLocation(current));
 	}
@@ -176,30 +176,29 @@ public class WorkOperationProgressService {
 			return;
 		}
 		List<Long> inboundRecordIds = executions.stream()
-			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
-			.map(WorkTargetExecution::getTarget)
-			.filter(target -> target.getTargetReferenceType() == WorkTargetReferenceType.INBOUND_RECORD)
-			.map(WorkOperationTarget::getInboundRecordId)
-			.distinct()
-			.toList();
+				.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
+				.map(WorkTargetExecution::getTarget)
+				.filter(target -> target.getTargetReferenceType() == WorkTargetReferenceType.INBOUND_RECORD)
+				.map(WorkOperationTarget::getInboundRecordId)
+				.distinct()
+				.toList();
 		if (!inboundRecordIds.isEmpty()) {
 			inboundPottingPlanGateway.closePottingPlan(inboundRecordIds);
 		}
 	}
 
 	private WorkOperation findOperation(Long operationId) {
-		return operationRepository.findWithWorkTypeById(operationId)
-			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
+		return operationLocks.lock(operationId);
 	}
 
 	private WorkTargetExecution findExecution(Long operationId, Long targetId) {
 		return executionRepository.findByTargetIdAndTargetWorkOperationId(targetId, operationId)
-			.orElseThrow(() -> new NotFoundException("작업 대상을 찾을 수 없습니다."));
+				.orElseThrow(() -> new NotFoundException("작업 대상을 찾을 수 없습니다."));
 	}
 
 	private WorkTargetExecution findExecutionForUpdate(Long operationId, Long targetId) {
 		return executionRepository.findForUpdateByTargetIdAndTargetWorkOperationId(targetId, operationId)
-			.orElseThrow(() -> new NotFoundException("작업 대상을 찾을 수 없습니다."));
+				.orElseThrow(() -> new NotFoundException("작업 대상을 찾을 수 없습니다."));
 	}
 
 	private void validateOperationInProgress(Long operationId) {

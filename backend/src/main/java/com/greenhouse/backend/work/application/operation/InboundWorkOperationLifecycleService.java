@@ -29,10 +29,30 @@ public class InboundWorkOperationLifecycleService {
 
 	private final WorkOperationVoidService workOperationVoidService;
 
-	public void voidPottingForInboundRecord(Long inboundRecordId, String requestKey, String reason) {
+	private final WorkOperationLockService operationLocks;
+
+	public void lockForInboundChange(Long inboundRecordId) {
+		operationLocks.lockAll(workTargetExecutionRepository.findOperationIdsForInbound(inboundRecordId));
+	}
+
+	@Transactional(readOnly = true)
+	public java.util.Set<Long> findInboundIdsWithUndoablePotting(java.util.Collection<Long> inboundIds) {
+		if (inboundIds.isEmpty())
+			return java.util.Set.of();
+		return java.util.Set.copyOf(workTargetExecutionRepository.findInboundIdsWithAppliedOperation(inboundIds,
+				WorkTypeDefinition.POTTING.name(), pottingUndoStatuses()));
+	}
+
+	private java.util.Set<WorkOperationStatus> pottingUndoStatuses() {
+		return java.util.Set.of(WorkOperationStatus.COMPLETED, WorkOperationStatus.IN_PROGRESS,
+				WorkOperationStatus.PAUSED);
+	}
+
+	public Long voidPottingForInboundRecord(Long inboundRecordId, String requestKey, String reason) {
 		WorkOperation operation = findSingleCompletedOperation(inboundRecordId, WorkTypeDefinition.POTTING);
 		workOperationVoidService.voidOperation(operation.getId(),
 				new WorkOperationCancellationRequest(requestKey, reason));
+		return operation.getId();
 	}
 
 	public void voidInboundRegistrationForCancellation(Long inboundRecordId, String requestKey, String reason) {
@@ -42,6 +62,7 @@ public class InboundWorkOperationLifecycleService {
 	}
 
 	public void cancelForInboundRecord(Long inboundRecordId) {
+		operationLocks.lockAll(workTargetExecutionRepository.findOperationIdsForInbound(inboundRecordId));
 		List<WorkTargetExecution> linkedExecutions = workTargetExecutionRepository
 			.findForUpdateByTargetInboundRecordIdOrderByIdAsc(inboundRecordId);
 		LocalDateTime canceledAt = support.now();
@@ -74,13 +95,12 @@ public class InboundWorkOperationLifecycleService {
 	}
 
 	private WorkOperation findSingleCompletedOperation(Long inboundRecordId, WorkTypeDefinition definition) {
+		var statuses = definition == WorkTypeDefinition.POTTING ? pottingUndoStatuses()
+				: java.util.Set.of(WorkOperationStatus.COMPLETED);
 		List<WorkOperation> operations = workTargetExecutionRepository
-			.findForUpdateByTargetInboundRecordIdOrderByIdAsc(inboundRecordId)
+			.findAppliedOperationIdsForInbound(inboundRecordId, definition.name(), statuses)
 			.stream()
-			.map(execution -> execution.getTarget().getWorkOperation())
-			.filter(operation -> definition.name().equals(operation.getWorkType().getCode()))
-			.filter(operation -> operation.getStatus() == WorkOperationStatus.COMPLETED)
-			.distinct()
+			.map(operationLocks::lock)
 			.toList();
 		if (operations.isEmpty()) {
 			throw new IllegalArgumentException(

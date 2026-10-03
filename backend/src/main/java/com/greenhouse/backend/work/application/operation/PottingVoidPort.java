@@ -7,6 +7,8 @@ public interface PottingVoidPort {
 
 	Inspection inspect(Long workOperationId, List<Effect> effects);
 
+	Inspection inspectForUpdate(Long workOperationId, List<Effect> effects);
+
 	Long compensate(Long workOperationId, String requestKey, List<Effect> effects, LocalDate businessDate,
 			String reason, boolean reopenInboundRecords);
 

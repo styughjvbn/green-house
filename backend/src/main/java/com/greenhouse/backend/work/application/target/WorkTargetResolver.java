@@ -8,4 +8,6 @@ public interface WorkTargetResolver {
 
 	ResolvedWorkTarget getCurrent(Long orchidGroupId);
 
+	void lockAndValidateActive(List<Long> orchidGroupIds);
+
 }

@@ -330,6 +330,31 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 		})).isInstanceOf(DataIntegrityViolationException.class).hasMessageContaining("foreign key");
 	}
 
+	@ParameterizedTest
+	@org.junit.jupiter.params.provider.EnumSource(SalesType.class)
+	void cancellationCannotRestoreOutboundStockIntoAnOccupiedPlacement(SalesType type) throws Exception {
+		activate();
+		var slip = creation.create(request(partner(type), type, DATE, 50, 50));
+		statuses.updateStatus(slip.id(),
+				new SalesSlipStatusUpdateRequest(type == SalesType.DIRECT ? "출고 완료" : "출하 완료", null));
+		assertStock(0, 0);
+		var group = groups.findById(groupId).orElseThrow();
+		var occupied = post("/api/orchid-groups", """
+				{"bedZoneId":%d,"varietyId":%d,"quantity":10,"potSize":"4치","ageYear":3,
+				 "status":"정상","startPosition":0,"endPosition":5}
+				""".formatted(group.getBedZone().getId(), group.getVariety().getId()));
+		assertThat(occupied.status()).as(occupied.body().toString()).isEqualTo(201);
+		var before = jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id");
+		long mutations = jdbc.queryForObject("SELECT count(*) FROM orchid_group_mutations", Long.class);
+		assertThatThrownBy(() -> statuses.updateStatus(slip.id(), new SalesSlipStatusUpdateRequest("취소", null)))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("겹칩니다");
+		assertThat(jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id")).isEqualTo(before);
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM orchid_group_mutations", Long.class)).isEqualTo(mutations);
+		assertThat(slips.findById(slip.id()).orElseThrow().isOutboundCompleted()).isTrue();
+		assertThat(reconciliation.reconcile().ready()).isTrue();
+	}
+
 	private void activate() {
 		// Import a pre-cutover fixture, then exercise the real PostgreSQL write fence.
 		assertThat(reconciliation.reconcile().issues()).isEmpty();

@@ -391,6 +391,15 @@ public class OrchidGroupMutationEngine {
 		if (replay.isPresent()) {
 			return replay.get();
 		}
+		if (mutationType == OrchidGroupMutationType.RESTORE_OUTBOUND) {
+			var zones = findZonesForUpdate(
+					groupsById.values().stream().map(group -> group.getBedZone().getId()).collect(Collectors.toSet()));
+			orchidPlacementPolicy.validateRestoredPlacements(groupsById.values()
+				.stream()
+				.map(group -> new OrchidPlacementPolicy.RestoredPlacement(zones.get(group.getBedZone().getId()),
+						group.getStartPosition(), group.getEndPosition(), group.getSortOrder()))
+				.toList(), groupsById.keySet());
+		}
 		List<OrchidGroupMutation> relationTargets = recorder.findRelated(relatedMutations,
 				new LinkedHashSet<>(orchidGroupIds), relationType == OrchidGroupMutationRelationType.COMPENSATES
 						? Set.of(OrchidGroupMutationType.CONSUME_RESERVATION) : Set.of());
@@ -549,7 +558,7 @@ public class OrchidGroupMutationEngine {
 		if (!entriesByGroup.keySet().containsAll(creationCancellationIds)) {
 			throw new IllegalArgumentException("생성 취소 대상은 상쇄할 Mutation에 포함된 난 묶음이어야 합니다.");
 		}
-		if (entriesByGroup.values().stream().anyMatch(this::hasBrokenCompensationChain)) {
+		if (effectiveHeadPolicy.hasBrokenCompensationChain(entries)) {
 			throw new IllegalArgumentException("같은 난 묶음의 작업 Mutation이 하나의 연속 상태 체인을 이루지 않습니다.");
 		}
 		Map<Long, OrchidGroup> groups = findGroupsForUpdate(new ArrayList<>(entriesByGroup.keySet()),
@@ -619,20 +628,40 @@ public class OrchidGroupMutationEngine {
 		return result;
 	}
 
-	private boolean hasBrokenCompensationChain(List<OrchidGroupMutationEntry> entries) {
-		List<OrchidGroupMutationEntry> ordered = entries.stream()
-			.sorted(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
-			.toList();
-		for (int index = 1; index < ordered.size(); index++) {
-			OrchidGroupMutationEntry previous = ordered.get(index - 1);
-			OrchidGroupMutationEntry current = ordered.get(index);
-			if (!previous.getStateRevisionAfter().equals(current.getStateRevisionBefore())
-					|| previous.getAfterState() == null || current.getBeforeState() == null
-					|| !previous.getAfterState().canonical().equals(current.getBeforeState().canonical())) {
-				return true;
-			}
+	public java.util.Optional<String> compensationPlacementBlocker(List<OrchidGroupMutationEntry> entries,
+			Set<Long> cancellationIds) {
+		try {
+			validateCompensationPlacements(entries, cancellationIds);
+			return java.util.Optional.empty();
 		}
-		return false;
+		catch (IllegalArgumentException exception) {
+			return java.util.Optional.of(exception.getMessage());
+		}
+	}
+
+	private void validateCompensationPlacements(List<OrchidGroupMutationEntry> entries, Set<Long> cancellationIds) {
+		var earliest = entries.stream()
+			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId))
+			.values()
+			.stream()
+			.map(this::earliestEntry)
+			.filter(entry -> !cancellationIds.contains(entry.getOrchidGroupId()) && entry.getBeforeState() != null
+					&& entry.getBeforeState().quantity() > 0)
+			.toList();
+		var zones = bedZoneRepository
+			.findAllById(earliest.stream().map(entry -> entry.getBeforeState().bedZoneId()).distinct().toList())
+			.stream()
+			.collect(Collectors.toMap(BedZone::getId, Function.identity()));
+		if (earliest.stream().anyMatch(entry -> !zones.containsKey(entry.getBeforeState().bedZoneId()))) {
+			throw new IllegalArgumentException("복구할 논리 구역을 찾을 수 없습니다.");
+		}
+		var placements = earliest.stream()
+			.map(entry -> new OrchidPlacementPolicy.RestoredPlacement(zones.get(entry.getBeforeState().bedZoneId()),
+					entry.getBeforeState().startPosition(), entry.getBeforeState().endPosition(),
+					entry.getBeforeState().sortOrder()))
+			.toList();
+		orchidPlacementPolicy.validateRestoredPlacements(placements,
+				entries.stream().map(OrchidGroupMutationEntry::getOrchidGroupId).collect(Collectors.toSet()));
 	}
 
 	private OrchidGroupMutationEntry earliestEntry(List<OrchidGroupMutationEntry> entries) {

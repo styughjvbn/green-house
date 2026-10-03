@@ -50,6 +50,8 @@ public class WorkOperationVoidService {
 
 	private final WorkOperationSupport support;
 
+	private final WorkOperationLockService operationLocks;
+
 	@Transactional(readOnly = true)
 	public WorkOperationCancellationEligibilityResponse eligibility(Long operationId) {
 		var operation = operationRepository.findWithWorkTypeById(operationId)
@@ -58,6 +60,10 @@ public class WorkOperationVoidService {
 	}
 
 	private CancellationInspection inspectCancellation(Long operationId, WorkOperation operation) {
+		return inspectCancellation(operationId, operation, false);
+	}
+
+	private CancellationInspection inspectCancellation(Long operationId, WorkOperation operation, boolean lock) {
 		var blockers = new ArrayList<WorkOperationCancellationEligibilityResponse.Blocker>();
 		if (operation.getStatus() == WorkOperationStatus.STOPPED
 				|| operation.getStatus() == WorkOperationStatus.CANCELED
@@ -115,18 +121,20 @@ public class WorkOperationVoidService {
 		List<StructureChangeVoidPort.OrchidGroupSummary> resultGroups;
 		List<StructureChangeVoidPort.Blocker> inspectionBlockers;
 		if (potting) {
-			var inspection = pottingVoidPort.inspect(operationId,
-					effects.stream()
-						.map(effect -> new PottingVoidPort.Effect(
-								effect.getTarget() == null ? null : effect.getTarget().getInboundRecordId(),
-								effect.getMutationId()))
-						.toList());
+			var portEffects = effects.stream()
+				.map(effect -> new PottingVoidPort.Effect(
+						effect.getTarget() == null ? null : effect.getTarget().getInboundRecordId(),
+						effect.getMutationId()))
+				.toList();
+			var inspection = lock ? pottingVoidPort.inspectForUpdate(operationId, portEffects)
+					: pottingVoidPort.inspect(operationId, portEffects);
 			sourceGroups = List.of();
 			resultGroups = inspection.resultOrchidGroups();
 			inspectionBlockers = inspection.blockers();
 		}
 		else {
-			var inspection = structureChangeVoidPort.inspect(operationId, mutationIds);
+			var inspection = lock ? structureChangeVoidPort.inspectForUpdate(operationId, mutationIds)
+					: structureChangeVoidPort.inspect(operationId, mutationIds);
 			sourceGroups = inspection.sourceOrchidGroups();
 			resultGroups = inspection.resultOrchidGroups();
 			inspectionBlockers = inspection.blockers();
@@ -215,21 +223,25 @@ public class WorkOperationVoidService {
 	}
 
 	public WorkOperationView cancelOperation(Long operationId, WorkOperationCancellationRequest request) {
-		var operation = operationRepository.findForUpdateById(operationId)
-			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
+		var operation = operationLocks.lock(operationId);
 		String requestKey = support.normalizeRequired(request.idempotencyKey());
+		String reason = support.normalizeRequired(request.reason());
 		if (operation.getStatus() == WorkOperationStatus.CANCELED
 				|| operation.getStatus() == WorkOperationStatus.VOIDED) {
 			if (!requestKey.equals(operation.getVoidRequestKey())) {
 				throw new IllegalArgumentException("이미 다른 요청으로 취소된 작업입니다.");
 			}
+			if (!reason.equals(operation.getVoidReason())) {
+				throw new com.greenhouse.backend.common.exception.ConflictException("IDEMPOTENCY_KEY_REUSED",
+						"같은 취소 키를 다른 사유에 사용할 수 없습니다.");
+			}
 			return queryService.get(operationId);
 		}
-		var inspection = inspectCancellation(operationId, operation);
+		executionRepository.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
+		var inspection = inspectCancellation(operationId, operation, true);
 		if (!inspection.cancellable()) {
 			throw new IllegalArgumentException(inspection.blockers().getFirst().message());
 		}
-		String reason = support.normalizeRequired(request.reason());
 		var now = support.now();
 		var executions = executionRepository.findByTargetWorkOperationIdOrderByIdAsc(operationId);
 		if (inspection.mutationIds().isEmpty()) {
@@ -297,12 +309,16 @@ public class WorkOperationVoidService {
 	}
 
 	public void voidInboundRegistration(Long operationId, WorkOperationCancellationRequest request) {
-		var operation = operationRepository.findWithWorkTypeById(operationId)
-			.orElseThrow(() -> new NotFoundException("입고 작업을 찾을 수 없습니다."));
+		var operation = operationLocks.lock(operationId);
 		String requestKey = support.normalizeRequired(request.idempotencyKey());
+		String reason = support.normalizeRequired(request.reason());
 		if (operation.getStatus() == WorkOperationStatus.VOIDED) {
 			if (!requestKey.equals(operation.getVoidRequestKey())) {
 				throw new IllegalArgumentException("이미 다른 요청으로 무효화된 입고 작업입니다.");
+			}
+			if (!reason.equals(operation.getVoidReason())) {
+				throw new com.greenhouse.backend.common.exception.ConflictException("IDEMPOTENCY_KEY_REUSED",
+						"같은 취소 키를 다른 사유에 사용할 수 없습니다.");
 			}
 			return;
 		}
@@ -310,14 +326,13 @@ public class WorkOperationVoidService {
 				|| !WorkTypeDefinition.INBOUND.name().equals(operation.getWorkType().getCode())) {
 			throw new IllegalArgumentException("완료된 즉시 배치 입고 작업만 취소할 수 있습니다.");
 		}
-		String reason = support.normalizeRequired(request.reason());
 		var effects = effectRepository.findByWorkOperationIdOrderByIdAsc(operationId);
 		var portEffects = effects.stream()
 			.map(effect -> new PottingVoidPort.Effect(
 					effect.getTarget() == null ? null : effect.getTarget().getInboundRecordId(),
 					effect.getMutationId()))
 			.toList();
-		var inspection = pottingVoidPort.inspect(operationId, portEffects);
+		var inspection = pottingVoidPort.inspectForUpdate(operationId, portEffects);
 		if (!inspection.blockers().isEmpty()) {
 			throw new IllegalArgumentException(inspection.blockers().getFirst().message());
 		}

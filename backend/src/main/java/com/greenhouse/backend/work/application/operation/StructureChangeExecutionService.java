@@ -48,6 +48,8 @@ public class StructureChangeExecutionService {
 
 	private final DiscardRecordService discardRecordService;
 
+	private final WorkOperationLockService operationLocks;
+
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	/**
@@ -55,6 +57,7 @@ public class StructureChangeExecutionService {
 	 */
 	@Deprecated(since = "2026-08", forRemoval = false)
 	public WorkOperationView completeMerge(Long operationId, WorkTargetExecutionRequest request) {
+		operationLocks.lock(operationId);
 		List<WorkTargetExecution> executions = executionRepository
 			.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
 		WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
@@ -95,6 +98,7 @@ public class StructureChangeExecutionService {
 
 	WorkOperationView execute(Long operationId, StructureChangeCommand request,
 			Set<Long> placementExclusionOrchidGroupIds) {
+		operationLocks.lock(operationId);
 		List<WorkTargetExecution> executions = executionRepository
 			.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
 		if (executions.isEmpty()) {

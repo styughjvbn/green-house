@@ -20,7 +20,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -59,6 +58,9 @@ class WorkOperationCancellationServiceTest {
 	@Mock
 	private WorkOperationSupport support;
 
+	@Mock
+	private WorkOperationLockService operationLocks;
+
 	@InjectMocks
 	private WorkOperationVoidService service;
 
@@ -75,7 +77,7 @@ class WorkOperationCancellationServiceTest {
 				WorkSourceScopeType.ORCHID_GROUP, 1L, Map.of(), Map.of(), null, null, NOW.minusMinutes(1));
 		operation.complete(NOW.minusSeconds(1));
 
-		when(operationRepository.findForUpdateById(1L)).thenReturn(Optional.of(operation));
+		when(operationLocks.lock(1L)).thenReturn(operation);
 		when(effectRepository.findByWorkOperationIdOrderByIdAsc(1L)).thenReturn(List.of(effect));
 		when(effect.getMutationId()).thenReturn(null);
 		when(executionRepository.findByTargetWorkOperationIdOrderByIdAsc(1L)).thenReturn(List.of());

@@ -17,4 +17,11 @@ public class InboundRecordFinder {
 			.orElseThrow(() -> new NotFoundException("입고 기록을 찾을 수 없습니다."));
 	}
 
+	public InboundRecord findForUpdate(Long inboundRecordId) {
+		return inboundRecordRepository.findAllForUpdateByIdIn(java.util.List.of(inboundRecordId))
+			.stream()
+			.findFirst()
+			.orElseThrow(() -> new NotFoundException("입고 기록을 찾을 수 없습니다."));
+	}
+
 }

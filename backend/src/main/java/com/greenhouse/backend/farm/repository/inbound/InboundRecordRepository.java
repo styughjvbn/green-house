@@ -26,13 +26,18 @@ public interface InboundRecordRepository extends JpaRepository<InboundRecord, Lo
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("""
-			select distinct record from InboundRecord record
-			join fetch record.variety
-			left join fetch record.createdOrchidGroups
+			select record from InboundRecord record
 			where record.id in :ids
 			order by record.id asc
 			""")
-	List<InboundRecord> findAllForUpdateByIdIn(@Param("ids") Collection<Long> ids);
+	List<InboundRecord> findRootsForUpdateByIdIn(@Param("ids") Collection<Long> ids);
+
+	default List<InboundRecord> findAllForUpdateByIdIn(Collection<Long> ids) {
+		var records = findRootsForUpdateByIdIn(ids);
+		if (!records.isEmpty())
+			findByIdIn(ids);
+		return records;
+	}
 
 	@EntityGraph(attributePaths = { "variety", "createdOrchidGroups" })
 	List<InboundRecord> findByInboundTypeAndStatusInOrderByPottingDueDateAscIdAsc(InboundType inboundType,

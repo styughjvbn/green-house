@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.application.orchid;
 
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionStatus;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
@@ -23,6 +24,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -54,9 +57,9 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 			case ORCHID_GROUP -> resolveManual(selection.sourceOrchidGroupIds());
 			case DERIVED_GROUP -> resolveActiveIds(
 					derivedOrchidGroupService.getMembers(selection.sourceDerivedGroupKey(), null, null, null)
-						.stream()
-						.map(member -> member.id())
-						.collect(Collectors.toSet()));
+							.stream()
+							.map(member -> member.id())
+							.collect(Collectors.toSet()));
 			case USER_COLLECTION -> resolveCollection(selection.sourceScopeId());
 			case MANUAL_SELECTION -> resolveManual(selection.sourceOrchidGroupIds());
 			default -> throw new IllegalArgumentException("아직 지원하지 않는 작업 대상 유형입니다.");
@@ -66,8 +69,26 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 	@Override
 	public ResolvedWorkTarget getCurrent(Long orchidGroupId) {
 		return orchidGroupRepository.findDetailById(orchidGroupId)
-			.map(this::toResolvedTarget)
-			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+				.map(this::toResolvedTarget)
+				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void lockAndValidateActive(List<Long> orchidGroupIds) {
+		var ids = orchidGroupIds.stream().distinct().sorted().toList();
+		try {
+			if (orchidGroupRepository.findAllForUpdateByIdIn(ids).size() != ids.size()
+					|| orchidGroupRepository.findActiveWorkTargetsByIds(ids).size() != ids.size()) {
+				throw targetChanged();
+			}
+		} catch (org.springframework.orm.ObjectOptimisticLockingFailureException exception) {
+			throw targetChanged();
+		}
+	}
+
+	private ConflictException targetChanged() {
+		return new ConflictException("WORK_TARGET_CHANGED", "작업 대상이 변경되었습니다. 현재 작업 가능한 난 묶음을 다시 선택해주세요.");
 	}
 
 	private ResolvedWorkTarget toResolvedTarget(OrchidGroup group) {
@@ -81,9 +102,9 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 			throw new NotFoundException("동을 찾을 수 없습니다.");
 		}
 		return orchidGroupRepository.findActiveWorkTargetsByHouseId(houseId)
-			.stream()
-			.map(this::toResolvedTarget)
-			.toList();
+				.stream()
+				.map(this::toResolvedTarget)
+				.toList();
 	}
 
 	private List<ResolvedWorkTarget> resolvePhysicalBed(Long physicalBedId) {
@@ -102,9 +123,9 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 
 	private List<ResolvedWorkTarget> resolveLocation(Long physicalBedId, Long bedZoneId) {
 		return orchidGroupRepository.findActiveWorkTargets(physicalBedId, bedZoneId)
-			.stream()
-			.map(this::toResolvedTarget)
-			.toList();
+				.stream()
+				.map(this::toResolvedTarget)
+				.toList();
 	}
 
 	private List<ResolvedWorkTarget> resolveCollection(Long collectionId) {
@@ -116,9 +137,9 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 			throw new IllegalArgumentException("보관된 사용자 그룹으로 새 작업을 만들 수 없습니다.");
 		}
 		Set<Long> ids = collectionMemberRepository.findByCollectionIdAndRemovedAtIsNullOrderByJoinedAtAsc(collectionId)
-			.stream()
-			.map(member -> member.getOrchidGroupId())
-			.collect(Collectors.toSet());
+				.stream()
+				.map(member -> member.getOrchidGroupId())
+				.collect(Collectors.toSet());
 		return resolveActiveIds(ids);
 	}
 

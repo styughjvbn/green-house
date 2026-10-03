@@ -125,12 +125,13 @@ public class InboundRecord extends BaseEntity {
 				&& !hasCreatedOrchidGroups();
 	}
 
-	public List<InboundRecordAction> availableActions(boolean hasActiveCreatedGroups) {
+	public List<InboundRecordAction> availableActions(boolean hasActiveCreatedGroups, boolean hasUndoablePotting) {
 		if (status == InboundStatus.CANCELED) {
 			return List.of();
 		}
 		if (inboundType == InboundType.FLASK_SEEDLING && status == InboundStatus.PLACED && hasActiveCreatedGroups) {
-			return List.of(InboundRecordAction.VOID_POTTING, InboundRecordAction.CANCEL);
+			return hasUndoablePotting ? List.of(InboundRecordAction.VOID_POTTING, InboundRecordAction.CANCEL)
+					: List.of();
 		}
 		return List.of(InboundRecordAction.CANCEL);
 	}

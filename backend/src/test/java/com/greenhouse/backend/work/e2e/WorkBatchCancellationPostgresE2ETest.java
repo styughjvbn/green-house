@@ -234,6 +234,64 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@Test
+	void batchesAcrossAnAlreadyCompensatedIntermediateWorkAndReplays() throws Exception {
+		for (boolean finalCancel : List.of(false, true)) {
+			prepareIndependentMoves(false, true);
+			Long id = sourceIds.getFirst();
+			Long first = workIds.getFirst();
+			Long intermediate = moveForHistory(id, zone, 0, 5);
+			assertThat(post("/api/work-operations/" + intermediate + "/cancel", """
+					{"idempotencyKey":"intermediate","reason":"오등록"}
+					""").status()).isEqualTo(200);
+			Long last = moveForHistory(id, zone, 12, 17);
+			String payload = request(List.of(first, last), finalCancel ? List.of(id) : List.of(), "neutralized-gap");
+			var response = post("/api/work-operations/cancel-batch", payload);
+			assertThat(response.status()).as(response.body().toString()).isEqualTo(200);
+			assertThat(groups.findById(id).orElseThrow().getQuantity()).isEqualTo(finalCancel ? 0 : 100);
+			assertThat(groups.findById(id).orElseThrow().getStatus()).isEqualTo(finalCancel ? "생성 취소" : "정상");
+			assertThat(post("/api/work-operations/cancel-batch", payload).data()).isEqualTo(response.data());
+			assertThat(reconciliation.reconcile().ready()).isTrue();
+		}
+	}
+
+	@Test
+	void doesNotSkipUncompensatedRoundTripsWithMatchingSnapshots() throws Exception {
+		prepareIndependentMoves(false, true);
+		Long id = sourceIds.getFirst();
+		Long first = workIds.getFirst();
+		Long destination = groups.findById(id).orElseThrow().getBedZone().getId();
+		moveForHistory(id, zone, 0, 5);
+		moveForHistory(id, destination, 0, 5);
+		Long last = moveForHistory(id, zone, 12, 17);
+		var response = post("/api/work-operations/cancel-batch",
+				request(List.of(first, last), List.of(id), "live-gap"));
+		assertThat(response.status()).isEqualTo(400);
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM work_operations WHERE status='VOIDED'", Long.class))
+			.isZero();
+		assertThat(reconciliation.reconcile().ready()).isTrue();
+	}
+
+	@Test
+	void eligibilityReportsTheSameOccupiedPlacementBlockerAsCancellation() throws Exception {
+		prepareIndependentMoves(false, true);
+		createGroup(zone, 10, 0, 5);
+		var eligibility = get("/api/work-operations/" + workIds.getFirst() + "/cancel-eligibility");
+		assertThat(eligibility.status()).as(eligibility.body().toString()).isEqualTo(200);
+		assertThat(eligibility.data().path("cancellable").asBoolean()).isFalse();
+		assertThat(eligibility.data().path("blockers").toString()).contains("RESTORATION_PLACEMENT_CONFLICT");
+		assertThat(post("/api/work-operations/" + workIds.getFirst() + "/cancel", """
+				{"idempotencyKey":"occupied","reason":"오등록"}
+				""").status()).isEqualTo(400);
+		assertThat(reconciliation.reconcile().ready()).isTrue();
+	}
+
+	private Long moveForHistory(Long id, Long destination, int start, int end) {
+		movement.move(id, new OrchidGroupMoveRequest(destination, BigDecimal.valueOf(start), BigDecimal.valueOf(end),
+				"worker", null));
+		return jdbc.queryForObject("SELECT max(id) FROM work_operations", Long.class);
+	}
+
+	@Test
 	void rejectsOverlappingPlacementsBetweenRestoredGroupsWithoutAnyPartialChanges() throws Exception {
 		assertRestorationConflict(true, true);
 	}

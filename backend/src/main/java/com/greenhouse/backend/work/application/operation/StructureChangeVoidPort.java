@@ -8,6 +8,8 @@ public interface StructureChangeVoidPort {
 
 	Inspection inspect(Long workOperationId, List<Long> mutationIds);
 
+	Inspection inspectForUpdate(Long workOperationId, List<Long> mutationIds);
+
 	Long compensate(Long workOperationId, String requestKey, List<Long> mutationIds, LocalDate businessDate,
 			String reason);
 

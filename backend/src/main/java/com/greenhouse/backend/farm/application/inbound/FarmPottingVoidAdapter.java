@@ -57,6 +57,17 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 	}
 
 	@Override
+	public Inspection inspectForUpdate(Long workOperationId, List<Effect> effects) {
+		var ids = effects.stream()
+			.map(Effect::inboundRecordId)
+			.filter(java.util.Objects::nonNull)
+			.distinct()
+			.sorted()
+			.toList();
+		return inspectCurrent(workOperationId, effects, inboundRecordRepository.findAllForUpdateByIdIn(ids));
+	}
+
+	@Override
 	public Long compensate(Long workOperationId, String requestKey, List<Effect> effects, LocalDate businessDate,
 			String reason, boolean reopenInboundRecords) {
 		List<Long> inboundIds = effects.stream()
@@ -107,7 +118,8 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 		Set<Long> resultIds = entries.stream()
 			.map(OrchidGroupMutationEntry::getOrchidGroupId)
 			.collect(Collectors.toCollection(LinkedHashSet::new));
-		Map<Long, OrchidGroup> groups = orchidGroupRepository.findAllById(resultIds)
+		Map<Long, OrchidGroup> groups = (lockedRecords == null ? orchidGroupRepository.findAllById(resultIds)
+				: orchidGroupRepository.findAllForUpdateByIdIn(resultIds))
 			.stream()
 			.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
 		long changed = effectiveHeadPolicy.countGroupsNotAtEffectiveHead(entries, groups);

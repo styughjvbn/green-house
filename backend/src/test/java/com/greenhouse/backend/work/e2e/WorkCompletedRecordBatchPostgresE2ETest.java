@@ -48,7 +48,8 @@ class WorkCompletedRecordBatchPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(recorded.status()).isEqualTo(201);
 		assertThat(recorded.data().path("status").asText()).isEqualTo("COMPLETED");
 		assertThat(recorded.data().path("targets")).hasSize(TARGET_COUNT);
-		assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(30L);
+		// 대상 건수와 무관한 일괄 root 잠금·활성 검증 쿼리 두 개를 포함한다.
+		assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(32L);
 	}
 
 	private long pesticideWorkTypeId() throws Exception {

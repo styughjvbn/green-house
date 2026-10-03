@@ -26,6 +26,7 @@ import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService;
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder;
+import com.greenhouse.backend.work.application.operation.WorkCommandReceipts;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -66,6 +67,8 @@ public class InboundRecordService {
 
 	private final InboundRecordResponseAssembler responseAssembler;
 
+	private final WorkCommandReceipts commandReceipts;
+
 	public InboundRecordResponse create(InboundRecordCreateCommand request) {
 		InboundStatus status = resolveCreateStatus(request);
 		validateCreate(request);
@@ -98,8 +101,7 @@ public class InboundRecordService {
 			}
 			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 			saved.markPlaced();
-		}
-		else {
+		} else {
 			saved.markPottingPending(status);
 		}
 		inboundWorkOperationRecorder.record(workOperationRequestFactory.create(saved, createdGroups), mutationLink);
@@ -107,7 +109,7 @@ public class InboundRecordService {
 	}
 
 	public InboundRecordResponse update(Long inboundRecordId, InboundRecordUpdateRequest request) {
-		InboundRecord inboundRecord = inboundRecordFinder.find(inboundRecordId);
+		InboundRecord inboundRecord = inboundRecordFinder.findForUpdate(inboundRecordId);
 		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
 		inboundRecord.updateMetadata(request.inboundDate(), request.estimatedQuantity(),
 				normalize(request.tempLocation()), request.pottingDueDate(),
@@ -117,7 +119,8 @@ public class InboundRecordService {
 	}
 
 	public InboundRecordResponse cancel(Long inboundRecordId, InboundRecordCancelRequest request) {
-		InboundRecord inboundRecord = inboundRecordFinder.find(inboundRecordId);
+		inboundWorkOperationLifecycleService.lockForInboundChange(inboundRecordId);
+		InboundRecord inboundRecord = inboundRecordFinder.findForUpdate(inboundRecordId);
 		if (inboundRecord.getStatus() == InboundStatus.CANCELED) {
 			return responseAssembler.assemble(inboundRecord);
 		}
@@ -128,8 +131,7 @@ public class InboundRecordService {
 			if (inboundRecord.getInboundType() == InboundType.FLASK_SEEDLING) {
 				inboundWorkOperationLifecycleService.voidPottingForInboundRecord(inboundRecordId,
 						childRequestKey(requestKey, "potting"), reason);
-			}
-			else {
+			} else {
 				inboundWorkOperationLifecycleService.voidInboundRegistrationForCancellation(inboundRecordId,
 						childRequestKey(requestKey, "registration"), reason);
 			}
@@ -142,13 +144,24 @@ public class InboundRecordService {
 	}
 
 	public InboundRecordResponse voidPotting(Long inboundRecordId, InboundRecordPottingVoidRequest request) {
-		InboundRecord inboundRecord = inboundRecordFinder.find(inboundRecordId);
-		inboundRecord.requirePottingVoidAllowed();
-		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
-		inboundWorkOperationLifecycleService.voidPottingForInboundRecord(inboundRecordId,
-				resolveRequestKey(request.idempotencyKey(), "inbound-potting-void", inboundRecordId), request.reason());
-		auditSupport.record(AuditAction.UPDATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
-		return responseAssembler.assemble(inboundRecord);
+		String reason = normalize(request.reason());
+		commandReceipts.executeExisting("INBOUND_POTTING_VOID:" + inboundRecordId, request.idempotencyKey(),
+				new PottingVoidIdentity(inboundRecordId, reason), () -> {
+					inboundWorkOperationLifecycleService.lockForInboundChange(inboundRecordId);
+					InboundRecord inboundRecord = inboundRecordFinder.findForUpdate(inboundRecordId);
+					inboundRecord.requirePottingVoidAllowed();
+					Map<String, Object> before = auditSupport.snapshot(inboundRecord);
+					Long operationId = inboundWorkOperationLifecycleService.voidPottingForInboundRecord(inboundRecordId,
+							resolveRequestKey(request.idempotencyKey(), "inbound-potting-void", inboundRecordId),
+							reason);
+					auditSupport.record(AuditAction.UPDATED, inboundRecord, before,
+							auditSupport.snapshot(inboundRecord));
+					return List.of(operationId);
+				});
+		return responseAssembler.assemble(inboundRecordFinder.find(inboundRecordId));
+	}
+
+	private record PottingVoidIdentity(Long inboundRecordId, String reason) {
 	}
 
 	private void validateCreate(InboundRecordCreateCommand request) {
@@ -185,7 +198,7 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("배치 구역이 필요합니다.");
 		}
 		return bedZoneRepository.findWithDetailsById(bedZoneId)
-			.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
+				.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
 	}
 
 	private String normalize(String value) {

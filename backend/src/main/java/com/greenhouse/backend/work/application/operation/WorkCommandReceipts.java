@@ -26,6 +26,15 @@ public class WorkCommandReceipts {
 	private final Clock clock;
 
 	public List<Long> execute(String scope, String key, Object request, Supplier<List<Long>> action) {
+		return execute(scope, key, request, action, true);
+	}
+
+	public List<Long> executeExisting(String scope, String key, Object request, Supplier<List<Long>> action) {
+		return execute(scope, key, request, action, false);
+	}
+
+	private List<Long> execute(String scope, String key, Object request, Supplier<List<Long>> action,
+			boolean creation) {
 		String identity = scope + ":" + normalizeKey(key);
 		String fingerprint = fingerprints.calculate(request);
 		int inserted = repository.claim(identity, fingerprint, TimeConfig.utcNow(clock));
@@ -39,10 +48,12 @@ public class WorkCommandReceipts {
 		}
 		receipt.complete(action.get());
 		repository.flush();
-		membershipRepository.saveAll(receipt.getResultOperationIds()
-			.stream()
-			.map(operationId -> new WorkCommandReceiptMembership(identity, operationId))
-			.toList());
+		if (creation) {
+			membershipRepository.saveAll(receipt.getResultOperationIds()
+				.stream()
+				.map(operationId -> new WorkCommandReceiptMembership(identity, operationId))
+				.toList());
+		}
 		return receipt.getResultOperationIds();
 	}
 

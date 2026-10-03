@@ -30,8 +30,10 @@ public class WorkOrchidGroupUsageInspector {
 	}
 
 	public long countOtherOperations(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {
-		return targetRepository.countActiveOtherOperations(orchidGroupIds, sourceWorkOperationId,
-				Set.of(WorkOperationStatus.STOPPED, WorkOperationStatus.CANCELED, WorkOperationStatus.VOIDED));
+		var excludedIds = sourceWorkOperationId == null ? Set.<Long>of() : Set.of(sourceWorkOperationId);
+		var canceledStatuses = Set.of(WorkOperationStatus.CANCELED, WorkOperationStatus.VOIDED);
+		return targetRepository.countActiveOtherOperations(orchidGroupIds, sourceWorkOperationId, canceledStatuses)
+				+ effectOrchidGroupRepository.countOperationsOutside(orchidGroupIds, excludedIds, canceledStatuses);
 	}
 
 	public boolean hasReferencesOutside(Set<Long> orchidGroupIds, Set<Long> workOperationIds) {

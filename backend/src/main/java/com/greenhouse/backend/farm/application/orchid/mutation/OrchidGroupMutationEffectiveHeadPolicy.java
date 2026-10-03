@@ -25,6 +25,85 @@ public class OrchidGroupMutationEffectiveHeadPolicy {
 
 	private final OrchidGroupMutationRelationRepository relationRepository;
 
+	public boolean hasBrokenCompensationChain(Collection<OrchidGroupMutationEntry> selectedEntries) {
+		var selectedByGroup = selectedEntries.stream()
+			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId));
+		var gaps = new java.util.ArrayList<ChainGap>();
+		for (var selected : selectedByGroup.values()) {
+			var ordered = selected.stream()
+				.sorted(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+				.toList();
+			for (int index = 1; index < ordered.size(); index++) {
+				var previous = ordered.get(index - 1);
+				var next = ordered.get(index);
+				if (!sameState(previous.getAfterState(), next.getBeforeState())
+						|| previous.getStateRevisionAfter() > next.getStateRevisionBefore()) {
+					return true;
+				}
+				if (!previous.getStateRevisionAfter().equals(next.getStateRevisionBefore())) {
+					gaps.add(new ChainGap(previous, next));
+				}
+			}
+		}
+		if (gaps.isEmpty()) {
+			return false;
+		}
+		var chains = entryRepository.findStateChainByOrchidGroupIdIn(selectedByGroup.keySet())
+			.stream()
+			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId));
+		var segmentIds = new java.util.ArrayList<Set<Long>>();
+		Set<Long> allIds = new LinkedHashSet<>();
+		for (var gap : gaps) {
+			var segment = chains.getOrDefault(gap.previous().getOrchidGroupId(), List.of())
+				.stream()
+				.filter(entry -> entry.getStateRevisionAfter() > gap.previous().getStateRevisionAfter()
+						&& entry.getStateRevisionAfter() <= gap.next().getStateRevisionBefore())
+				.sorted(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+				.toList();
+			var previous = gap.previous();
+			Set<Long> ids = new LinkedHashSet<>();
+			for (var entry : segment) {
+				if (!previous.getStateRevisionAfter().equals(entry.getStateRevisionBefore())
+						|| !sameState(previous.getAfterState(), entry.getBeforeState())) {
+					return true;
+				}
+				ids.add(entry.getMutation().getId());
+				previous = entry;
+			}
+			if (ids.isEmpty() || !previous.getStateRevisionAfter().equals(gap.next().getStateRevisionBefore())
+					|| !sameState(previous.getAfterState(), gap.next().getBeforeState())) {
+				return true;
+			}
+			segmentIds.add(ids);
+			allIds.addAll(ids);
+		}
+		var relations = relationRepository.findConnectedToMutationIds(allIds)
+			.stream()
+			.filter(relation -> relation.getRelationType() == OrchidGroupMutationRelationType.COMPENSATES)
+			.toList();
+		return segmentIds.stream().anyMatch(ids -> !neutralized(ids, relations).containsAll(ids));
+	}
+
+	private boolean sameState(OrchidGroupStateSnapshot left, OrchidGroupStateSnapshot right) {
+		return left != null && right != null && left.canonical().equals(right.canonical());
+	}
+
+	private Set<Long> neutralized(Set<Long> ids, List<OrchidGroupMutationRelation> relations) {
+		Set<Long> result = new LinkedHashSet<>();
+		for (var relation : relations) {
+			Long compensationId = relation.getMutation().getId();
+			Long originalId = relation.getRelatedMutation().getId();
+			if (ids.contains(compensationId) && ids.contains(originalId)) {
+				result.add(compensationId);
+				result.add(originalId);
+			}
+		}
+		return result;
+	}
+
+	private record ChainGap(OrchidGroupMutationEntry previous, OrchidGroupMutationEntry next) {
+	}
+
 	public long countGroupsNotAtEffectiveHead(Collection<OrchidGroupMutationEntry> targetEntries,
 			Map<Long, OrchidGroup> currentGroups) {
 		if (targetEntries.isEmpty()) {
@@ -64,15 +143,7 @@ public class OrchidGroupMutationEffectiveHeadPolicy {
 				return true;
 			}
 			Set<Long> downstreamMutationIds = downstreamMutationIdsByGroupId.get(target.getKey());
-			Set<Long> neutralizedMutationIds = new LinkedHashSet<>();
-			compensationRelations.forEach(relation -> {
-				Long compensationId = relation.getMutation().getId();
-				Long originalId = relation.getRelatedMutation().getId();
-				if (downstreamMutationIds.contains(compensationId) && downstreamMutationIds.contains(originalId)) {
-					neutralizedMutationIds.add(compensationId);
-					neutralizedMutationIds.add(originalId);
-				}
-			});
+			Set<Long> neutralizedMutationIds = neutralized(downstreamMutationIds, compensationRelations);
 			return !neutralizedMutationIds.containsAll(downstreamMutationIds);
 		}).count();
 	}

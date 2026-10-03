@@ -14,6 +14,13 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+	@ExceptionHandler({ org.springframework.orm.ObjectOptimisticLockingFailureException.class,
+			org.springframework.dao.PessimisticLockingFailureException.class })
+	ResponseEntity<ErrorResponse> handleConcurrentChange(Exception exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(ErrorResponse.of("CONCURRENT_MODIFICATION", "다른 요청이 먼저 처리되었습니다. 최신 상태를 확인하고 다시 요청해주세요.", List.of()));
+	}
+
 	@ExceptionHandler(CapacityConflictException.class)
 	ResponseEntity<ErrorResponse> handleCapacityConflict(CapacityConflictException exception) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)

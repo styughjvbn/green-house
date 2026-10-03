@@ -21,6 +21,9 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 	JdbcTemplate jdbc;
 
 	@Autowired
+	javax.sql.DataSource dataSource;
+
+	@Autowired
 	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService mutationQuery;
 
 	@Autowired
@@ -296,6 +299,63 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 
 	private List<ApiResult> parallel(String first, String second) throws Exception {
 		return parallel(path(), first, path(), second);
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(booleans = { true, false })
+	void cancellationAndNewWorkRegistrationSerializeOnTheResultRoot(boolean cancelFirst) throws Exception {
+		long result = resultIds.getFirst();
+		String cancelPath = "/api/work-operations/" + originalId + "/cancel";
+		String cancelBody = "{\"idempotencyKey\":\"race-cancel\",\"reason\":\"오등록\"}";
+		String planBody = """
+				{"workTypeId":%d,"title":"동시 등록","plannedStartDate":"2026-07-15",
+				 "sourceScopeType":"MANUAL_SELECTION","sourceOrchidGroupIds":[%d]}
+				""".formatted(jdbc.queryForObject("SELECT id FROM work_types WHERE code='PESTICIDE'", Long.class),
+				result);
+		try (var connection = dataSource.getConnection(); var executor = Executors.newFixedThreadPool(2)) {
+			connection.setAutoCommit(false);
+			try (var statement = connection.createStatement()) {
+				statement.executeQuery("SELECT id FROM orchid_groups WHERE id=" + result + " FOR UPDATE").close();
+			}
+			var first = executor.submit(
+					() -> post(cancelFirst ? cancelPath : "/api/work-operations", cancelFirst ? cancelBody : planBody));
+			try {
+				awaitLockWaiters(1);
+				var second = executor.submit(() -> post(cancelFirst ? "/api/work-operations" : cancelPath,
+						cancelFirst ? planBody : cancelBody));
+				awaitLockWaiters(2);
+				connection.commit();
+				var firstResult = first.get(20, TimeUnit.SECONDS);
+				var secondResult = second.get(20, TimeUnit.SECONDS);
+				assertThat(firstResult.status()).as(firstResult.body().toString()).isEqualTo(cancelFirst ? 200 : 201);
+				assertThat(secondResult.status()).as(secondResult.body().toString()).isEqualTo(cancelFirst ? 409 : 400);
+				if (cancelFirst) {
+					assertThat(secondResult.body().path("error").path("code").asText())
+						.isEqualTo("WORK_TARGET_CHANGED");
+				}
+			}
+			finally {
+				connection.rollback();
+			}
+		}
+		assertThat(jdbc.queryForObject(
+				"SELECT count(*) FROM work_operation_targets t JOIN work_operations w ON w.id=t.work_operation_id JOIN orchid_groups g ON g.id=t.orchid_group_id WHERE w.status='PLANNED' AND (g.quantity=0 OR g.status='생성 취소')",
+				Long.class))
+			.isZero();
+		assertThat(reconciliation.reconcile().ready()).isTrue();
+	}
+
+	private void awaitLockWaiters(int expected) throws Exception {
+		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+		while (System.nanoTime() < deadline) {
+			if (jdbc.queryForObject(
+					"SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock'",
+					Integer.class) >= expected) {
+				return;
+			}
+			Thread.sleep(25);
+		}
+		throw new AssertionError("Expected database lock waiters: " + expected);
 	}
 
 	@Test
