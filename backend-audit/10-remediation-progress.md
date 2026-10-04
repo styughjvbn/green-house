@@ -248,6 +248,43 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 프론트엔드 `npm run check`: 포맷·생성 타입 drift·전체 순수 로직 시험·lint·production build 성공.
 - `./gradlew spotlessCheck`, `git diff --check`: 성공. 전체 검증 뒤에는 진행 문서의 상태·결과·표현만 갱신했다. 실행 코드·테스트는 바꾸지 않았다.
 
+## 7차 변경 — BE-006 Farm 단건·일괄 상세 수정 잠금 순서
+
+작업일: 2026-10-04. 상태: Farm 교착 수정·정책 문서 갱신 및 최종 전체 검증 완료. Work 다품종 구조 기록과 다른 경로 간 전역 잠금 순서는 후속 범위다.
+
+### 수정 전 재현
+
+- 기존 구현에 PostgreSQL 회귀 4건을 먼저 실행했다. 같은 두 묶음을 반대 입력 순서로 수정하는 두 선행 순서에서 `orchid_groups` tuple lock 교착을 재현했다. 서로 다른 원본 집합이 같은 두 구역을 반대 순서로 사용하는 두 선행 순서에서도 `bed_zones` tuple lock 교착을 재현했다.
+- 선행 요청의 첫 `UPDATE_DETAILS` 직후 flush와 barrier를 사용하고, 후행 backend PID의 `pg_blocking_pids` 대기를 확인한 뒤 선행 요청을 진행했다. 네 경우 모두 실제 `deadlock detected`와 두 PID의 순환 대기를 확인했다. 구역 경쟁 fixture는 서로 다른 하우스의 구역을 사용하며 timeout을 교착 근거로 사용하지 않는다. 실제 SQL의 잠금 대상은 `FOR NO KEY UPDATE OF`의 묶음 또는 구역 root다.
+- 기존 `updateBatch`는 입력마다 묶음 → 구역을 잠그고 다음 입력으로 넘어갔다. 전체 묶음 집합을 정렬하는 것만으로는 원본 집합이 다른 구역 경쟁을 해결하지 못한다. 단건·일괄 모두 잠금 전 `findById`의 값을 무변경 판단과 감사의 변경 전 값에 사용했다.
+
+### 구현과 유지한 계약
+
+- [OrchidGroupCommandService](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupCommandService.java)의 단건·일괄 수정은 대상 묶음 전체 ID 순 → 잠금 뒤 확인한 현재 구역 전체 ID 순 → 연관 상세 일괄 로딩 순서다. 묶음·구역 집합은 각각 전체 중복 제거·정렬 후 500개씩 취득한다. 구역 ID는 잠긴 Entity에서 얻으므로 이동 대기 후 구역도 최신 값이다.
+- 최상위 application 트랜잭션을 유지한다. 사전 잠금은 상태 변경이나 Mutation 접수가 아니며 다른 짧은 트랜잭션을 열지 않는다. 수정·수량 불변식·상태 전이는 기존 Engine과 Entity가 소유한다. 범용 잠금 coordinator나 새 모듈 간 Entity 계약은 추가하지 않았다.
+- 감사·응답의 품종·입고·위치 연관은 모든 잠금 취득 뒤 기존 `findDetailsByIds`로 500개씩 읽는다. 기존 항목별 `findById` 두 호출을 제거하고 동일 persistence context의 잠긴 Entity를 Engine 실행 전후에 사용한다. 감사와 무변경 판단은 선행 요청 commit 또는 rollback 후 상태를 기준으로 한다.
+- 실제 적용과 응답은 기존 입력 순서를 유지한다. 같은 묶음이 중복된 기존 요청도 순서대로 적용하며 각 중간 상태의 snapshot·Mutation·감사를 보존한다. 위치 교환을 최종 상태만으로 허용하는 새 배치 정책은 추가하지 않았다. 후행 항목 실패는 앞선 수정·Mutation·감사까지 rollback한다.
+- 무변경 요청도 대상·구역을 잠그므로 잠금 범위와 보유 시간이 늘어난다. 500개 이내 무변경 배치의 조회 3회는 일괄 잠금·연관 로딩 비용이다. 실제 변경은 기존 항목별 Mutation·배치 충돌 검증·감사 쿼리를 계속 실행하므로 전체 쓰기의 query count가 데이터 건수와 무관하다고 주장하지 않는다.
+- Controller·요청/응답 DTO·DB schema는 변경하지 않았다. Flyway·OpenAPI·생성 TypeScript 갱신은 없다. 입력 값은 기존처럼 명시적인 보정 값이며, 화면 revision에 대한 새 충돌 계약이나 요청 키 기반 멱등 처리는 추가하지 않는다.
+
+### 회귀 방어와 한계
+
+- [FarmUpdateLockOrderPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/FarmUpdateLockOrderPostgresE2ETest.java): 15건. 역순 묶음 2건·서로 다른 묶음의 역순 구역 2건·외관상 무변경 요청 대기 1건·단건/일괄 양방향 2건·후행 항목 실패 1건·선행 실패 후 대기 배치 1건·이동 후 최신 구역/감사 1건·누락 대상 1건·중복 대상 순서 1건·무변경 이력 보존 1건·조회 수 회귀 2건이다.
+- 경쟁 9건은 실제 PID 대기를 확인한다. 후행 배치가 대기 전에 일부 Mutation을 실행하지 않는지, 최종 수량·revision·응답 순서·감사 전후 값과 모드, 원장 reconciliation을 검증한다. 선행 실패 후에는 원래 상태부터 후행 요청만 반영하며, 일반 실패와 누락 대상은 관련 5개 테이블의 JSON 값을 비교한다.
+- 이동 경쟁은 Engine의 실제 `MOVE`와 Farm 수정의 DB 경계를 검증한다. Work 작업 접수·효과·취소의 추가 atomicity 시험으로 간주하지 않는다. 경쟁 쿼리의 timeout은 시험 실패 상한이며 성공 근거는 실제 대기와 최종 상태다.
+- 조회 회귀는 품종이 각각 다른 1개/4개 묶음의 무변경 배치에서 연관 응답을 조립해도 3회만 조회하고 저장 값·이력이 불변인지 확인한다. 한 persistence context에서 같은 품종을 반복해 조회하는 fixture로 N+1을 숨기지 않는다.
+- [OrchidGroupCommandLockTest](../backend/src/test/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupCommandLockTest.java): 1건. 역순·중복 1,002개 입력, 1,001개 묶음과 역방향으로 매핑된 1,001개 구역에서 전체 집합 정렬·500/500/1 분할·모든 묶음 후 모든 구역 잠금을 검증한다. 마지막 구역 누락 시 상세 조회·Mutation·감사에 진입하지 않는다.
+- Work의 `StructureChangeRecordService.createStructureChangeRecords`는 여전히 기록별로 원본·구역 잠금을 누적한다. Work 배치끼리, Farm 수정과 Work 배치 사이, 다른 원본을 가진 Work 배치의 공유 목적 구역 경쟁은 후속 재현·수정 대상이다. 단건 Engine의 대상별 정렬이나 이번 Farm 선잠금만으로 이 범위를 완료 처리하지 않는다. 호출자가 이미 로딩한 Entity의 일반적인 persistence context 갱신 정책도 이번 수정의 범위가 아니다.
+
+### 검증
+
+- 초기 집중 PostgreSQL 11건 중 10건 성공. 무변경 fixture가 구형 화분 표기를 사용해 Engine의 변경 없음 validation에 걸린 1건은 원장 baseline 전 실제 Entity 표준 표기로 맞췄다. 운영 정책·코드를 완화하지 않았다. 이후 확장한 경쟁·rollback 13건과 기존 H2 일괄 수정·Engine 라우팅 회귀가 성공했다.
+- 추가 조회 fixture의 중복 품종명으로 실패한 2건은 `(genus, name)` UNIQUE에 맞게 각 이름을 구분한 뒤 다시 실행해 성공했다. 집중 조회 회귀 2건과 1,001개 분할 잠금 시험 1건 성공. 운영 코드·DB 제약을 완화하지 않았다.
+- 백엔드 전체 `./gradlew test`: 117개 클래스, 559건 성공. 신규 분할 잠금 1건과 기존 architecture·query-count·도메인·integration 회귀를 포함한다.
+- PostgreSQL 전체 `./gradlew workE2eTest`: 43개 클래스, 307건 성공. 신규 Farm 15건과 기존 292건을 포함하며 실패·오류·생략은 없다.
+- 프론트엔드 `npm run check`: 포맷·생성 타입 drift·전체 순수 로직 시험·lint·production build 성공.
+- `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 뒤에는 진행 문서의 상태·결과만 갱신했다. 실행 코드·테스트는 바꾸지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -256,7 +293,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `3a5114cc` — BE-003 금액 보호·V35·회귀·정책 문서.
 - `7cd07446` — BE-004 판매 가능 상태·조회·회귀·관련 문서.
 - `8a1101e2` — BE-005 경매 요청·receipt·V36·화면 키·계약 생성물·회귀·정책 문서.
-- BE-006 판매 수정 — `fix: lock sales allocation replacements in global order`. 합집합 잠금·경쟁 회귀·정책 문서를 한 목적의 별도 커밋으로 저장한다.
+- `0e803627` — BE-006 판매 수정 합집합 잠금·경쟁 회귀·정책 문서.
+- BE-006 Farm 수정 — `fix: lock farm correction batches before applying updates`. 묶음·구역 선잠금·집중 회귀·정책 문서를 별도 목적의 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -265,5 +303,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-003의 과거 잘못된 금액·잔액·입금은 별도 대사·복구 대상이다. V35 적용만으로 운영 자료의 정합성이 입증되거나 기존 위반 행이 모두 검증되는 것은 아니다.
 - BE-004 수정 전 확정된 판매 불가 상태의 예약은 자동 해제하지 않았다. 운영 영향과 기존 출고 여부는 별도 대사·업무 판단 대상이다.
 - BE-005의 기존 중복 결과·반환 및 정산 영향은 별도 대사 대상이다. 기존 기록을 중복으로 추정해 삭제하지 않는다.
-- BE-006의 판매 교차 수정은 합집합 선잠금으로 수정했다. 다음 변경은 Farm 일괄 수정·Work 다품종 구조 기록의 누적 잠금과 관련 구역 순서 검증이다. 전체 BE-006을 완료 처리하지 않는다.
+- BE-006의 판매 교차 수정과 Farm 단건·일괄 수정의 묶음·구역 교착을 수정했다. 다음 변경은 Work 다품종 구조 기록의 누적 잠금과 관련 구역 순서, Farm과의 교차 경로 경쟁 검증이다. 전체 BE-006을 완료 처리하지 않는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

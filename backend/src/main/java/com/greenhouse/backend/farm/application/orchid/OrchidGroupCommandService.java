@@ -17,9 +17,12 @@ import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.work.application.target.WorkOrchidGroupUsageInspector;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -33,7 +36,11 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrchidGroupCommandService {
 
+  private static final int ID_BATCH_SIZE = 500;
+
   private final OrchidGroupRepository orchidGroupRepository;
+
+  private final BedZoneRepository bedZoneRepository;
 
   private final WorkOrchidGroupUsageInspector workUsageInspector;
 
@@ -66,32 +73,58 @@ public class OrchidGroupCommandService {
   }
 
   public OrchidGroupResponse update(Long orchidGroupId, OrchidGroupUpdateRequest request) {
-    return update(orchidGroupId, request, "SINGLE");
+    return update(lockForUpdate(List.of(orchidGroupId)).get(orchidGroupId), request, "SINGLE");
   }
 
   public List<OrchidGroupResponse> updateBatch(OrchidGroupBatchUpdateRequest request) {
+    var groups =
+        lockForUpdate(request.orchidGroups().stream().map(item -> item.orchidGroupId()).toList());
     return request.orchidGroups().stream()
-        .map(item -> update(item.orchidGroupId(), item.update(), "BATCH"))
+        .map(item -> update(groups.get(item.orchidGroupId()), item.update(), "BATCH"))
         .toList();
   }
 
+  private Map<Long, OrchidGroup> lockForUpdate(Collection<Long> orchidGroupIds) {
+    var ids = orchidGroupIds.stream().distinct().sorted().toList();
+    var groups = new HashMap<Long, OrchidGroup>();
+    // Complete the group lock set before taking any zone lock or loading audit/response details.
+    for (int start = 0; start < ids.size(); start += ID_BATCH_SIZE) {
+      var batch = ids.subList(start, Math.min(start + ID_BATCH_SIZE, ids.size()));
+      var locked = orchidGroupRepository.findAllForUpdateByIdIn(batch);
+      if (locked.size() != batch.size()) {
+        throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
+      }
+      locked.forEach(group -> groups.put(group.getId(), group));
+    }
+    var zoneIds =
+        groups.values().stream()
+            .map(group -> group.getBedZone().getId())
+            .distinct()
+            .sorted()
+            .toList();
+    for (int start = 0; start < zoneIds.size(); start += ID_BATCH_SIZE) {
+      var batch = zoneIds.subList(start, Math.min(start + ID_BATCH_SIZE, zoneIds.size()));
+      if (bedZoneRepository.findAllForUpdateByIdIn(batch).size() != batch.size()) {
+        throw new NotFoundException("구역을 찾을 수 없습니다.");
+      }
+    }
+    for (int start = 0; start < ids.size(); start += ID_BATCH_SIZE) {
+      orchidGroupRepository.findDetailsByIds(
+          ids.subList(start, Math.min(start + ID_BATCH_SIZE, ids.size())));
+    }
+    return groups;
+  }
+
   private OrchidGroupResponse update(
-      Long orchidGroupId, OrchidGroupUpdateRequest request, String correctionMode) {
+      OrchidGroup orchidGroup, OrchidGroupUpdateRequest request, String correctionMode) {
+    Long orchidGroupId = orchidGroup.getId();
     var businessDate = TimeConfig.farmToday(clock);
-    OrchidGroup orchidGroup =
-        orchidGroupRepository
-            .findById(orchidGroupId)
-            .orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
     OrchidGroupAuditSnapshot before = auditSupport.snapshot(orchidGroup);
     OrchidGroupMutationDetails details = mutationDetails(request);
     if (!hasSameDetails(orchidGroup, details)) {
       mutationEngine.updateDetails(updateCommand(orchidGroupId, details));
     }
-    OrchidGroup updated =
-        orchidGroupRepository
-            .findById(orchidGroupId)
-            .orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
-    OrchidGroupAuditSnapshot after = auditSupport.snapshot(updated);
+    OrchidGroupAuditSnapshot after = auditSupport.snapshot(orchidGroup);
     auditSupport.record(
         orchidGroupId,
         auditSupport.actionForCorrection(before, after),
@@ -99,7 +132,7 @@ public class OrchidGroupCommandService {
         before,
         after,
         Map.of("correctionMode", correctionMode));
-    return OrchidGroupResponse.from(updated, businessDate);
+    return OrchidGroupResponse.from(orchidGroup, businessDate);
   }
 
   public void delete(Long orchidGroupId) {
