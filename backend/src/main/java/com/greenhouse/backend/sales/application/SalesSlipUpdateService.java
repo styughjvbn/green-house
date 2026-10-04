@@ -68,6 +68,9 @@ public class SalesSlipUpdateService {
     partnerBalanceService.lockPartners(List.of(previousPartnerId, partner.id()));
     var expectedPaymentDate = paymentDateCalculator.calculate(partner.id(), request.saleDate());
 
+    // Lock old/new allocations together before releasing stock. Per-mutation sorting is too late.
+    salesSlipAllocationFactory.lockForReplacement(salesSlip, request.items());
+
     // Child-only edits need a new identity even when JPA does not increment the slip version.
     UUID editId = UUID.randomUUID();
     salesSlipInventoryService.releaseForEdit(salesSlip, editId);

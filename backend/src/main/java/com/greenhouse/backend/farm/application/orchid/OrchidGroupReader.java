@@ -36,6 +36,15 @@ public class OrchidGroupReader {
     return loadStates(orchidGroupIds, true);
   }
 
+  /** Lock the complete use-case ID set without loading state/association snapshots. */
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void lockGroups(Collection<Long> orchidGroupIds) {
+    var ids = orchidGroupIds.stream().distinct().sorted().toList();
+    for (int start = 0; start < ids.size(); start += ID_BATCH_SIZE) {
+      lockBatch(ids.subList(start, Math.min(start + ID_BATCH_SIZE, ids.size())));
+    }
+  }
+
   public Map<Long, OrchidGroupState> getStates(Collection<Long> orchidGroupIds) {
     return loadStates(orchidGroupIds, false);
   }
@@ -45,9 +54,7 @@ public class OrchidGroupReader {
     var states = new HashMap<Long, OrchidGroupState>();
     for (int start = 0; start < ids.size(); start += ID_BATCH_SIZE) {
       var batch = ids.subList(start, Math.min(start + ID_BATCH_SIZE, ids.size()));
-      if (lock && orchidGroupRepository.findAllForUpdateByIdIn(batch).size() != batch.size()) {
-        throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
-      }
+      if (lock) lockBatch(batch);
       for (var group : orchidGroupRepository.findDetailsByIds(batch)) {
         states.put(group.getId(), OrchidGroupState.from(group));
       }
@@ -56,6 +63,12 @@ public class OrchidGroupReader {
       throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
     }
     return Map.copyOf(states);
+  }
+
+  private void lockBatch(List<Long> ids) {
+    if (orchidGroupRepository.findAllForUpdateByIdIn(ids).size() != ids.size()) {
+      throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
+    }
   }
 
   public List<OrchidGroupState> searchSellable(String keyword, Long varietyId, String status) {

@@ -6,6 +6,7 @@ import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.application.command.SalesSlipAllocationInput;
 import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;
+import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import java.time.Clock;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -24,19 +26,30 @@ public class SalesSlipAllocationFactory {
 
   private final Clock clock;
 
+  public void lockForReplacement(SalesSlip current, List<SalesSlipItemInput> requests) {
+    requests.forEach(this::validateAllocationSum);
+    orchidGroupReader.lockGroups(
+        Stream.concat(
+                SalesSlipAllocationBatch.from(current).orchidGroupIds().stream(),
+                allocationGroupIds(requests).stream())
+            .toList());
+  }
+
   public List<SalesSlipItem> createItems(List<SalesSlipItemInput> requests) {
     requests.forEach(this::validateAllocationSum);
-    List<Long> orchidGroupIds =
-        requests.stream()
-            .flatMap(request -> request.allocations().stream())
-            .map(SalesSlipAllocationInput::orchidGroupId)
-            .distinct()
-            .sorted()
-            .toList();
-    var orchidGroups = orchidGroupReader.lockStates(orchidGroupIds);
+    var orchidGroups = orchidGroupReader.lockStates(allocationGroupIds(requests));
 
     LocalDateTime capturedAt = TimeConfig.utcNow(clock);
     return requests.stream().map(request -> createItem(request, orchidGroups, capturedAt)).toList();
+  }
+
+  private List<Long> allocationGroupIds(List<SalesSlipItemInput> requests) {
+    return requests.stream()
+        .flatMap(request -> request.allocations().stream())
+        .map(SalesSlipAllocationInput::orchidGroupId)
+        .distinct()
+        .sorted()
+        .toList();
   }
 
   private SalesSlipItem createItem(
