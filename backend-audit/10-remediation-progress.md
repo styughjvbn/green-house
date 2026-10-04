@@ -285,6 +285,45 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 프론트엔드 `npm run check`: 포맷·생성 타입 drift·전체 순수 로직 시험·lint·production build 성공.
 - `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 뒤에는 진행 문서의 상태·결과만 갱신했다. 실행 코드·테스트는 바꾸지 않았다.
 
+## 8차 변경 — BE-006 Work 구조 변경 기록 배치 선잠금
+
+작업일: 2026-10-04. 상태: Work·Farm 경쟁·멱등 처리 수정과 정책 문서 갱신 및 최종 전체 검증 완료. 일반 품종별 계획·폐기 기록의 누적 잠금 경로는 후속 검증 후보다.
+
+### 수정 전 재현
+
+- 기존 코드에 PostgreSQL 경쟁 6건을 먼저 실행했다. Work 배치의 반대 원본 순서 2건, 서로 다른 원본 집합이 같은 두 구역을 반대 순서로 사용하는 2건, Work 선행/Farm 일괄 수정 후행 1건에서 실제 `deadlock detected`를 확인했다. 묶음 또는 구역 tuple lock의 두 backend PID 순환 대기였다.
+- Farm 수정 선행/Work 배치 후행 1건은 교착이 아니라 `WORK_TARGET_CHANGED`로 실패했다. Work가 계획 대상 Entity를 잠금 전에 로딩해 보유한 version과 수정 이후 상태가 충돌했다. 이 결과를 데이터 손상이나 lost update의 증거로 사용하지 않는다.
+- 첫 `MOVE` 또는 Farm 상세 수정의 실제 Engine 실행·flush 직후를 barrier로 고정하고 `pg_blocking_pids`로 후행 요청의 대기를 확인했다. timeout이 아닌 실제 PG 교착과 상태 충돌을 근거로 삼았다.
+
+### 구현과 원인 차단
+
+- [StructureChangeRecordService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/StructureChangeRecordService.java)는 Receipt 검증 후 최초 실행 callback 안에서만 전체 원본·결과 구역 ID를 수집해 [StructureChangeRecordLockPort](../backend/src/main/java/com/greenhouse/backend/work/application/operation/StructureChangeRecordLockPort.java)를 호출한다. 배치와 호환 단건 기록이 같은 경로를 사용한다. replay에는 이 잠금을 실행하지 않는다.
+- Farm 소유 [FarmStructureChangeRecordLockAdapter](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/FarmStructureChangeRecordLockAdapter.java)는 전체 원본 묶음 ID 순 → 잠금 뒤 확인한 현재 구역·요청 결과 구역 합집합 ID 순으로 잠근다. 각 집합을 전체 중복 제거·정렬 후 500개씩 취득하며 `MANDATORY`로 호출자의 트랜잭션 종료까지 유지한다. Work는 Farm Entity·Repository를 사용하지 않고 ID만 전달한다. adapter는 조회 DTO나 사전 snapshot을 만들지 않는다.
+- 명시적 root 순서는 Receipt → 전체 원본 → 현재·결과 구역 → 신규 Work·실행이다. 이 Work root들은 해당 요청에서 처음 생성하는 미확정 ID다. 기존 계획의 실행·취소는 기존 Inbound/Work/execution root 선잠금 경로를 사용한다. 모든 writer·FK·내부 fence 잠금의 무교착 증명으로 확대하지 않는다.
+- [WorkOperationPlanService.createStructureRecordPlan](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationPlanService.java)은 사전 잠금 후 대상과 수량을 해석한다. 기존의 `계획 대상 ID·전체 수량 = 실행 입력` validation을 aggregate 생성 앞으로 옮겼다. 이전 정의는 제거했다. 이 검증을 뒤에 두면 HOUSE/FARM 등 범위 요청이 실행 원본 밖의 묶음을 구역 잠금 후 추가로 잠글 수 있으므로, 사전 잠금만 추가하는 것으로는 충분하지 않았다.
+- 기록·응답·Receipt 지문의 배열 순서를 유지하고, 남은 원본의 배치 제외 집합과 같은 배치의 해제 위치 재사용도 기존 순서로 처리한다. Engine·Work 효과·계보·감사·Receipt가 최상위 트랜잭션에서 확정되거나 rollback한다. 같은 키의 대기 요청은 선행 성공 후 replay하며, 선행 실패 후에는 key claim부터 정상 입력을 적용한다.
+- 입력 원본 누락은 기존 `400 / VALIDATION_ERROR`, 목적 구역 누락은 기존 `404 / NOT_FOUND`를 유지한다. Controller·DTO·enum·DB schema·fingerprint 형식은 변경하지 않아 Flyway·OpenAPI·생성 TypeScript 갱신은 없다. 서로 다른 배치의 기록별 실행 키 목록은 기존처럼 별도 identity이며 의미 있는 입력 순서를 정렬하지 않는다.
+- 사전 잠금 쿼리와 잠금 보유 시간이 늘어난다. 기존 기록별 계획·응답·효과·Mutation 조회는 계속 실행하므로 전체 쓰기의 query count 고정이나 벤치마크 개선으로 주장하지 않는다. 범용 lock manager·자동 재시도·별도 메시징은 도입하지 않았다.
+
+### 회귀 방어와 남은 범위
+
+- [WorkRecordBatchLockOrderPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkRecordBatchLockOrderPostgresE2ETest.java): 18건. 역순 원본 2건·서로 다른 원본의 역순 구역 2건·Farm/Work 양방향 2건·병렬 동일 키 1건·키 충돌 1건·후행 실패와 같은 키 재시도 1건·선행 실패 후 다른 키 대기 배치 1건·원본 종료 후 replay 1건·선행 실패 후 동일 키 정상 입력 1건·대기 후 수량 불일치 1건·호환 단건/배치 1건·트랜잭션 필수 1건·계획 범위 불일치 1건·목적 구역 누락 1건·원본 누락 HTTP 회귀 1건이다.
+- 경쟁 11건은 실제 PID 대기를 확인한다. 후행 요청이 대기 전에 일부 Mutation을 실행하지 않는지, 입력 순서·완료 상태·수량·revision·효과/Mutation 연결·Receipt membership과 원장 reconciliation을 검증한다. 변경 전 칸 좌표는 Work 효과에 연결된 Mutation Entry의 `before_state`를, 계획의 최신 속성은 Work target의 snapshot을 확인한다. 계획의 위치 snapshot에 없는 칸 좌표를 있다고 가정하지 않는다.
+- 후행 기록 실패·충돌·대기 후 수량 불일치·누락 대상은 관련 13개 테이블의 JSON 값을 비교한다. 원본이 종료된 뒤의 replay에는 port가 호출되면 실패하는 spy를 설정해 최초 실행의 잠금이 재적용되지 않는 것도 검증한다. `MANDATORY`는 실제 Spring/PG 경계에서 확인했다.
+- [FarmStructureChangeRecordLockAdapterTest](../backend/src/test/java/com/greenhouse/backend/farm/application/transformation/FarmStructureChangeRecordLockAdapterTest.java): 2건. 역순·중복 원본 1,001개와 현재·결과 구역 1,003개 합집합에서 그룹 전체 후 구역 전체 정렬·500개 분할·누락 시 중단을 확인한다. 상태·연관 DTO 조회는 추가하지 않는다.
+- 이번 경쟁은 실제 Work 기록 접수·계획·실행·효과 저장과 Farm 수정 application을 끝까지 호출한다. 앞선 Engine 경계 시험과 달리 Receipt·Work·Mutation·감사의 함께 rollback하는 결과를 검증한다. API schema를 변경하거나 일반 계획·입고·포트 경로까지 새 잠금 순서로 이식한 변경은 아니다.
+- 일반 품종별 계획의 `WorkOperationPlanService.createBatch`는 여전히 품종 그룹별 대상 잠금을 누적한다. `DiscardRecordService.create`도 이 계획 경로를 사용한다. 해당 경로끼리 또는 이번 기록 경로와의 경쟁은 정적 후속 후보이며 이번에 실제 교착을 재현하지 않았다. 이 후보와 모듈 전체의 잠금 전 조회 정책까지 완료 처리하지 않는다.
+
+### 검증
+
+- 최초 신규 PostgreSQL 13건 중 10건 성공. 3건은 계획의 위치 snapshot에 없는 좌표 필드를 조회한 시험 오류였으며, 실제 좌표 보존 경계인 Mutation Entry로 수정했다. 이후 신규 17건과 기존 Work 멱등 회귀 8건, Movement 배치 integration 및 신규 adapter 단위 2건 성공.
+- 최초 백엔드 전체 561건 중 560건 성공. 원본 누락을 사전 잠금이 404로 반환해 기존 HTTP 400 계약 시험 1건이 실패했다. 운영 코드를 기존 `VALIDATION_ERROR` 계약에 맞게 수정하고 새 PostgreSQL HTTP 회귀를 추가했다. 이 실패로 최초 전체 PostgreSQL task는 실행되지 않았다.
+- 오류 응답 수정 뒤 기존 HTTP 회귀 1건·adapter 단위 2건과 신규 PostgreSQL HTTP 회귀 1건 모두 성공. 기존 400 계약을 완화하거나 테스트 기대값을 바꾸지 않았다.
+- 최종 백엔드 전체 `./gradlew test`: 118개 클래스, 561건 성공. 신규 adapter 단위 2건과 기존 architecture·query-count·도메인·integration 회귀를 포함한다.
+- 최종 PostgreSQL 전체 `./gradlew workE2eTest`: 44개 클래스, 325건 성공. 신규 Work 기록 18건과 기존 307건을 포함하며 실패·오류·생략은 없다.
+- 프론트엔드 `npm run check`: 포맷·생성 타입 drift·전체 순수 로직 시험·lint·production build 성공. 이후 수정은 백엔드 오류 응답 보존·회귀 추가와 진행 문서이며 프론트·API schema는 변경하지 않았다.
+- `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 뒤에는 진행 문서의 상태·결과만 갱신했다. 실행 코드·테스트는 바꾸지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -294,7 +333,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `7cd07446` — BE-004 판매 가능 상태·조회·회귀·관련 문서.
 - `8a1101e2` — BE-005 경매 요청·receipt·V36·화면 키·계약 생성물·회귀·정책 문서.
 - `0e803627` — BE-006 판매 수정 합집합 잠금·경쟁 회귀·정책 문서.
-- BE-006 Farm 수정 — `fix: lock farm correction batches before applying updates`. 묶음·구역 선잠금·집중 회귀·정책 문서를 별도 목적의 커밋으로 저장한다.
+- `6b12b411` — BE-006 Farm 단건·일괄 수정 묶음·구역 선잠금·경쟁 회귀·정책 문서.
+- BE-006 Work 기록 — `fix: prelock structure record batches before planning`. Work port·Farm adapter·계획 전 검증·경쟁 및 rollback 회귀·정책 문서를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -303,5 +343,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-003의 과거 잘못된 금액·잔액·입금은 별도 대사·복구 대상이다. V35 적용만으로 운영 자료의 정합성이 입증되거나 기존 위반 행이 모두 검증되는 것은 아니다.
 - BE-004 수정 전 확정된 판매 불가 상태의 예약은 자동 해제하지 않았다. 운영 영향과 기존 출고 여부는 별도 대사·업무 판단 대상이다.
 - BE-005의 기존 중복 결과·반환 및 정산 영향은 별도 대사 대상이다. 기존 기록을 중복으로 추정해 삭제하지 않는다.
-- BE-006의 판매 교차 수정과 Farm 단건·일괄 수정의 묶음·구역 교착을 수정했다. 다음 변경은 Work 다품종 구조 기록의 누적 잠금과 관련 구역 순서, Farm과의 교차 경로 경쟁 검증이다. 전체 BE-006을 완료 처리하지 않는다.
+- BE-006의 판매 교차 수정, Farm 단건·일괄 수정, Work 다품종 구조 기록과 Farm의 교차 경로에서 재현한 교착을 수정했다. 일반 품종별 계획/폐기 기록의 대상 잠금 누적과 다른 경로의 잠금 전 조회는 후속 검증 후보이며, 전체 BE-006을 완료 처리하지 않는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

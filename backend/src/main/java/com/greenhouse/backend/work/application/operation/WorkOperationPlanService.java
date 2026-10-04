@@ -60,6 +60,21 @@ public class WorkOperationPlanService {
     return queryService.get(createOperation(request, workType, resolveIncluded(request)).getId());
   }
 
+  WorkOperationView createStructureRecordPlan(
+      WorkOperationCreateRequest request, Map<Long, Integer> inputQuantities) {
+    WorkType workType = workTypeService.getActiveForPlan(request.workTypeId());
+    ResolvedSelection selection = resolveIncluded(request);
+    var currentQuantities =
+        selection.included().stream()
+            .collect(
+                Collectors.toMap(ResolvedWorkTarget::orchidGroupId, ResolvedWorkTarget::quantity));
+    // Reject unexpected targets before the creator can acquire locks outside the record lock set.
+    if (!currentQuantities.equals(inputQuantities)) {
+      throw new IllegalArgumentException("작업 기록은 선택한 모든 원본의 전체 수량을 한 번에 처리해야 합니다.");
+    }
+    return queryService.get(createOperation(request, workType, selection).getId());
+  }
+
   public List<WorkOperationView> createBatch(WorkOperationBatchCreateRequest request) {
     WorkOperationCreateRequest operationRequest = request.operation();
     WorkType workType = workTypeService.getActiveForPlan(operationRequest.workTypeId());

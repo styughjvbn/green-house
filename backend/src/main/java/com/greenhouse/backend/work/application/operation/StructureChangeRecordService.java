@@ -36,6 +36,8 @@ public class StructureChangeRecordService {
 
   private final WorkRequestFingerprint fingerprints;
 
+  private final StructureChangeRecordLockPort recordLocks;
+
   /**
    * @deprecated Use {@link #createStructureChangeRecords(StructureChangeRecordBatchCreateRequest)}.
    */
@@ -46,22 +48,15 @@ public class StructureChangeRecordService {
             "STRUCTURE_RECORD",
             request.execution().idempotencyKey(),
             request,
-            () -> List.of(createStructureChangeRecord(request, Set.of()).id()));
+            () -> {
+              lockRecords(List.of(request));
+              return List.of(createStructureChangeRecord(request, Set.of()).id());
+            });
     return queryService.get(ids.getFirst());
   }
 
   private WorkOperationView createStructureChangeRecord(
       StructureChangeRecordCreateRequest request, Set<Long> placementExclusionOrchidGroupIds) {
-    WorkOperationView planned = planService.create(request.operation());
-    if (!WorkTypeDefinition.forCode(planned.workTypeCode()).supportsStructureExecution()) {
-      throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업 기록만 이 방식으로 저장할 수 있습니다.");
-    }
-    Map<Long, Integer> plannedQuantities =
-        planned.targets().stream()
-            .filter(target -> target.orchidGroupId() != null)
-            .collect(
-                Collectors.toMap(
-                    target -> target.orchidGroupId(), target -> target.quantitySnapshot()));
     Map<Long, Integer> inputQuantities =
         request.execution().sources().stream()
             .collect(
@@ -71,8 +66,10 @@ public class StructureChangeRecordService {
                     (left, right) -> {
                       throw new IllegalArgumentException("작업 기록의 원본 난 묶음은 중복될 수 없습니다.");
                     }));
-    if (!plannedQuantities.equals(inputQuantities)) {
-      throw new IllegalArgumentException("작업 기록은 선택한 모든 원본의 전체 수량을 한 번에 처리해야 합니다.");
+    WorkOperationView planned =
+        planService.createStructureRecordPlan(request.operation(), inputQuantities);
+    if (!WorkTypeDefinition.forCode(planned.workTypeCode()).supportsStructureExecution()) {
+      throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업 기록만 이 방식으로 저장할 수 있습니다.");
     }
     progressService.start(planned.id());
     WorkOperationView completed =
@@ -104,6 +101,7 @@ public class StructureChangeRecordService {
             key,
             request,
             () -> {
+              lockRecords(request.records());
               Set<Long> remainingSourceIds = new HashSet<>(placementExclusionOrchidGroupIds);
               List<Long> operationIds = new ArrayList<>();
               for (StructureChangeRecordCreateRequest record : request.records()) {
@@ -118,6 +116,18 @@ public class StructureChangeRecordService {
         queryService.getAll(ids).stream()
             .collect(Collectors.toMap(WorkOperationView::id, operation -> operation));
     return ids.stream().map(byId::get).toList();
+  }
+
+  private void lockRecords(List<StructureChangeRecordCreateRequest> requests) {
+    recordLocks.lock(
+        requests.stream()
+            .flatMap(record -> record.execution().sources().stream())
+            .map(source -> source.sourceOrchidGroupId())
+            .toList(),
+        requests.stream()
+            .flatMap(record -> record.execution().results().stream())
+            .map(result -> result.bedZoneId())
+            .toList());
   }
 
   public List<WorkOperationView> createDiscardRecord(DiscardRecordCreateRequest request) {
