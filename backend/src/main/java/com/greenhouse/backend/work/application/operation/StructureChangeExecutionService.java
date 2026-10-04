@@ -26,6 +26,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -109,10 +110,12 @@ public class StructureChangeExecutionService {
   }
 
   public WorkOperationView execute(Long operationId, StructureChangeCommand request) {
-    return execute(operationId, request, Set.of());
+    executeOperation(operationId, request, Set.of());
+    return queryService.get(operationId);
   }
 
-  WorkOperationView execute(
+  @Transactional(propagation = Propagation.MANDATORY)
+  WorkOperation executeOperation(
       Long operationId,
       StructureChangeCommand request,
       Set<Long> placementExclusionOrchidGroupIds) {
@@ -138,7 +141,7 @@ public class StructureChangeExecutionService {
         appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey);
     if (existing.isPresent()) {
       effectStore.validateReplay(existing.get(), command);
-      return queryService.get(operationId);
+      return operation;
     }
     validateInProgress(operation);
 
@@ -210,7 +213,7 @@ public class StructureChangeExecutionService {
                   completedResultDetails);
             });
     progressService.completeIfAllTargetsClosed(operation, executedAt);
-    return queryService.get(operationId);
+    return operation;
   }
 
   private Map<Long, Integer> movementDiscardQuantities(StructureChangeCommand request) {

@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -78,7 +79,8 @@ public class WorkOperationPlanService {
     return queryService.get(createOperation(request, workType, resolveIncluded(request)).getId());
   }
 
-  WorkOperationView createStructureRecordPlan(
+  @Transactional(propagation = Propagation.MANDATORY)
+  WorkOperation createStructureRecordPlan(
       WorkOperationCreateRequest request, Map<Long, Integer> inputQuantities) {
     WorkType workType = workTypeService.getActiveForPlan(request.workTypeId());
     ResolvedSelection selection = resolveIncluded(request);
@@ -90,7 +92,7 @@ public class WorkOperationPlanService {
     if (!currentQuantities.equals(inputQuantities)) {
       throw new IllegalArgumentException("작업 기록은 선택한 모든 원본의 전체 수량을 한 번에 처리해야 합니다.");
     }
-    return queryService.get(createOperation(request, workType, selection).getId());
+    return createOperation(request, workType, selection);
   }
 
   public List<WorkOperationView> createBatch(WorkOperationBatchCreateRequest request) {

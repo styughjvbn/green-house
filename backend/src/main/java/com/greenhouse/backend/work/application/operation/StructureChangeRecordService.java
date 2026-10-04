@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
@@ -50,12 +51,12 @@ public class StructureChangeRecordService {
             request,
             () -> {
               lockRecords(List.of(request));
-              return List.of(createStructureChangeRecord(request, Set.of()).id());
+              return List.of(createStructureChangeRecord(request, Set.of()));
             });
     return queryService.get(ids.getFirst());
   }
 
-  private WorkOperationView createStructureChangeRecord(
+  private Long createStructureChangeRecord(
       StructureChangeRecordCreateRequest request, Set<Long> placementExclusionOrchidGroupIds) {
     Map<Long, Integer> inputQuantities =
         request.execution().sources().stream()
@@ -66,19 +67,19 @@ public class StructureChangeRecordService {
                     (left, right) -> {
                       throw new IllegalArgumentException("작업 기록의 원본 난 묶음은 중복될 수 없습니다.");
                     }));
-    WorkOperationView planned =
+    WorkOperation planned =
         planService.createStructureRecordPlan(request.operation(), inputQuantities);
-    if (!WorkTypeDefinition.forCode(planned.workTypeCode()).supportsStructureExecution()) {
+    if (!planned.getWorkType().definition().supportsStructureExecution()) {
       throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업 기록만 이 방식으로 저장할 수 있습니다.");
     }
-    progressService.start(planned.id());
-    WorkOperationView completed =
-        structureChangeExecutionService.execute(
-            planned.id(), request.execution(), placementExclusionOrchidGroupIds);
-    if (!"COMPLETED".equals(completed.status().name())) {
+    progressService.startOperation(planned.getId());
+    WorkOperation completed =
+        structureChangeExecutionService.executeOperation(
+            planned.getId(), request.execution(), placementExclusionOrchidGroupIds);
+    if (completed.getStatus() != WorkOperationStatus.COMPLETED) {
       throw new IllegalStateException("구조 변경 작업 기록의 모든 대상을 완료하지 못했습니다.");
     }
-    return completed;
+    return completed.getId();
   }
 
   public List<WorkOperationView> createStructureChangeRecords(
@@ -105,7 +106,7 @@ public class StructureChangeRecordService {
               Set<Long> remainingSourceIds = new HashSet<>(placementExclusionOrchidGroupIds);
               List<Long> operationIds = new ArrayList<>();
               for (StructureChangeRecordCreateRequest record : request.records()) {
-                operationIds.add(createStructureChangeRecord(record, remainingSourceIds).id());
+                operationIds.add(createStructureChangeRecord(record, remainingSourceIds));
                 record.execution().sources().stream()
                     .map(source -> source.sourceOrchidGroupId())
                     .forEach(remainingSourceIds::remove);

@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -64,8 +65,13 @@ public class WorkOperationProgressService {
   }
 
   public WorkOperationView start(Long operationId) {
-    findOperation(operationId).start(support.now());
+    startOperation(operationId);
     return queryService.get(operationId);
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  void startOperation(Long operationId) {
+    findOperation(operationId).start(support.now());
   }
 
   public WorkOperationView pause(Long operationId) {

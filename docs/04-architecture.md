@@ -309,6 +309,7 @@ Persistence 조회 규칙:
 - Work 구조 변경·포트·보정 입력과 실행·계보 조회값도 application 계약이며 Farm이 Work의 HTTP DTO를 직접 소비하지 않는다. 기존 타입을 이식하고 JSON·OpenAPI 이름을 유지한다.
 - 수동 입금처럼 HTTP 입력과 유스케이스 입력의 의미·필드가 같으면 application 명령을 그대로 바인딩하고 표준 validation도 해당 명령에 둔다. 값만 복사하는 Request·변환 메서드는 두지 않는다. 기존 OpenAPI 이름은 명시적으로 유지하며, 입력 의미나 변환이 달라지는 경우에만 HTTP DTO를 분리한다.
 - 쓰기 유스케이스는 하나의 public application method를 원자 경계로 삼는다. 중간 service 호출이 별도 트랜잭션을 암묵적으로 만들거나 self invocation에 의존하지 않게 한다.
+- 구조 변경 즉시 기록은 계획·시작·실행의 내부 결과를 같은 Work 모듈과 트랜잭션 안에서 전달하고, 최종 상세 응답만 조립한다. 내부 쓰기는 호출 트랜잭션을 필수로 요구한다. 상태 전이·전체 대상 완료 확인·잠금 후 재검증·효과와 Mutation의 snapshot 저장은 실행 단계에 유지하며, 단독 계획/시작/실행 API는 기존 상세 응답을 반환한다. Receipt의 ID 기반 replay와 입력 순서를 보존하고 최종 응답 조립 실패도 전체 기록과 함께 rollback한다.
 - 품종·자재 코드는 각 저장소의 PostgreSQL sequence에서 원자적으로 발급한다. 엔티티 ID와 코드의 sequence는 분리하며, 입고 신규 품종도 같은 품종 발급 경로를 사용한다. 코드는 유일한 식별값이며 삭제·rollback에 따른 번호 공백을 허용한다.
 - PostgreSQL 엔티티 ID는 테이블별 sequence와 `allocationSize = 50`을 사용한다. Hibernate JDBC batch와 insert 정렬을 활성화하며, 대량 저장은 같은 트랜잭션에서 동일 엔티티를 연속 저장해 JDBC batch가 유지되게 한다.
 - Entity는 자기 상태의 불변식과 전이를 지키고 application service는 aggregate 조회, 순서 제어, 모듈 간 조율을 담당한다. 여러 Service에서 같은 상태 조건을 검사하면 Domain Policy 또는 상태 전이 메서드로 모은다.

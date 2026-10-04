@@ -827,6 +827,37 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-014의 현재 분류 중복과 저장 이름/유형 결합은 이번 범위로 완료한다. 운영의 unknown 저장 code 유무와 복구는 대사하지 않았고 임의 backfill하지 않는다. 미래의 새 유형은 동일 등록·저장 이름·strategy·전체 흐름 회귀를 추가해야 하며 모든 미래 확장을 자동 구현하는 계약은 아니다. 일반 사용자 기록 template나 보류 기능을 새로 활성화하지 않는다.
 
+## 23차 변경 — BE-015 구조 변경 기록의 중간 상세 조회 제거
+
+작업일: 2026-10-04. 상태: 구조 변경 단건·배치 기록 수정·query-count/rollback/replay 회귀·정책 문서 및 최종 전체 검증 완료.
+
+### 원인과 범위
+
+- 기존 Work benchmark는 목록·상세·이력 GET의 query count와 응답 시간을 측정한다. 일반 완료 기록의 120 target query-count 회귀도 확인했지만, 구조 변경 기록의 계획→시작→실행→최종 응답 경로는 포함하지 않는다. 기존 검증의 통과를 이 쓰기 경로의 조회 비용 보장으로 취급하지 않는다.
+- 구조 기록의 계획은 Work 내부 aggregate를, 실행은 완료 상태를 가진 같은 모듈의 aggregate를 반환한다. 시작은 상태 전이만 수행하고 기록은 ID만 모아 최종 상세를 한 번 조립한다. Entity를 다른 모듈에 공개하거나 새 반환 wrapper/framework를 추가하지 않는다. 단독 계획·시작·실행 API의 상세 응답은 유지한다.
+- 내부 쓰기는 호출 트랜잭션을 필수로 요구한다. 최상위 기록 트랜잭션, Receipt → 전체 원본 → 현재/결과 구역 → 새 Work 잠금 순서, source 전체 수량 검증, 실행 잠금과 replay 지문 검증, 실행 후 전체 대상 완료 확인은 유지한다. 효과·대상·Mutation·계보·감사와 역사적 snapshot 생성도 기존 쓰기 지점에서 수행한다.
+- 배치의 남은 원본 제외 집합을 입력 순서대로 갱신하고 Receipt의 ID 순서를 최종 응답에 유지한다. 완료 접수는 원본이 비활성화됐어도 새 기록 잠금을 취득하지 않는다. ID 기반 replay는 현재 상세를 반환하는 기존 계약이며 일반 Work 생성의 최초 응답 snapshot 계약으로 바꾸지 않는다.
+
+### 측정과 회귀 방어
+
+- 제품 수정 전에 PostgreSQL 신규 시험 5건을 기존 구현에서 통과시켰다. 실제 기록 1건·8건의 HTTP 쓰기를 측정하며 Fixture의 baseline 원장을 만든 뒤 통계를 초기화한다. 시각은 주입된 Clock을 고정하여 DB의 microsecond 반올림과 JVM nanosecond 표현 차이로 응답 비교가 실패하지 않게 했다. 제품의 시각 정책은 바꾸지 않는다.
+- 상세 보정 집계와 상세 target 일괄 조회는 1건에서 각각 4→1회, 8건에서 각각 25→1회다. 중간 조립 3회 × 기록 수를 제거하고 최종 일괄 조회만 남긴다. 실제 Hibernate query 실행 횟수를 검사하며 service mock 호출 횟수로 대체하지 않는다.
+- 같은 고정 시각·seed·요청에서 전체 prepared statement는 1건 117→81회, 8건 958→586회다. 이 값은 SELECT뿐 아니라 flush의 DML·sequence 접근도 포함하므로 제거한 조회 개수나 운영 지연 개선율로 해석하지 않는다. 전체 쓰기는 기록 건수에 따라 증가하며 일정한 query count를 주장하지 않는다. 측정 실행마다 `backend/build/work-query-count/structure-record-{1,8}.json`에 전체 prepared statement와 Hibernate query별 실행 횟수를 생성한다. 이 자료는 완전한 native SQL trace나 응답 시간 benchmark가 아니다.
+- 신규 5건은 1/8건의 상세 조회 상한·완료 진행률·입력 역순 보존·별도 상세 GET 비교·replay 응답/업무 행 불변성, 호환 단건 기록, 미지원 유형의 계획/접수 rollback, 최종 응답 실패 후 전체 rollback·동일 key 재시도를 보호한다. fault injection은 최종 응답 단계에만 사용하고 실제 수량·Mutation·Work 쓰기를 실행한다.
+- 기존 PostgreSQL 구조 기록/Farm 경쟁·역순 구역 잠금·원본 변경 후 재검증·후행 실패 rollback·같은 key 대기/재시도·비활성 원본 replay 및 구조 실행 회귀를 함께 실행했다. 기존 이동의 연계 폐기·분갈이/분주/합식·단건 조회 계약 integration과 architecture 회귀도 포함한다.
+
+### 검증
+
+- 수정 전 PostgreSQL 신규 5건 성공. 최초 실행의 신규 응답 비교 실패는 고정 Clock fixture로 수정한 뒤 제품 변경 전에 재검증했다.
+- 집중 일반/integration/architecture 5개 클래스 32건·PostgreSQL 3개 클래스 27건, 총 59건 성공. 실패·오류·생략은 없다. 1분 10초 소요했다.
+- 백엔드 전체 `./gradlew test`: 131개 클래스 662건 성공. PostgreSQL 전체 `./gradlew workE2eTest`: 58개 클래스 570건 성공. 실패·오류·생략은 없다. 전체 백엔드 검증은 9분 4초 소요했다.
+- 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. `python3 scripts/generate_openapi.py`도 성공했고 전체 명세·slice와 생성 타입에 diff가 없다. 공개 API·DB schema 변경이 없어 TypeScript 재생성과 Flyway 추가는 필요하지 않다. 기존 응답 시간 benchmark·브라우저 E2E·운영 DB 대사는 실행하지 않았다.
+- 전체 검증 이후에는 진행 문서의 완료 상태와 검증 결과만 갱신했다. 제품 코드·시험·HTTP/저장 계약은 변경하지 않았다.
+
+### 남은 범위
+
+- BE-015는 부분 완료다. 입고 포트의 중간 target/progress 응답과 중복 최종 조회, 이동에 연결된 폐기 기록의 응답 조립, Sales의 재잠금·snapshot/최종 조회, 정산 snapshot과 현재 표시 참조 조회는 별도 경로 분석·회귀가 남는다. 이 중 잠금 후 재확인과 역사적 snapshot 보존에 필요한 조회는 비용만으로 제거하지 않는다. 운영 잠금 대기·지연·대규모 쓰기 benchmark는 미측정이다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -851,7 +882,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `4ea56293` — BE-012 공통 명령 집합·구형 입력/receipt 호환·rollback 회귀.
 - `2c35562a` — BE-013 Mutation 중첩 v1 지문·schema guard·snapshot/replay 회귀·전환 정책.
 - `c0aeb120` — BE-013 Sales·일반 Work 생성 지문·schema guard·구형 접수 replay 회귀.
-- BE-014 계보 — `fix: align stored structure effects with lineage strategies`. 저장 handler·정의·strategy 계보 연결과 rollback/replay 회귀를 별도 커밋으로 저장한다.
+- `4df04833` — BE-014 저장 handler·정의·strategy 계보 연결과 rollback/replay 회귀.
+- BE-015 구조 기록 — `refactor: assemble structure record responses once`. 중간 상세 조회 제거·실제 경로 query-count·rollback/replay 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -870,4 +902,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-013의 Mutation 중첩 v1 지문 고정·필드 변경 검출·snapshot/구형 지문 replay·배포 기준은 20차 범위다. 실제 format version 전환과 Work/Sales 등 다른 접수 계약·운영 과거 요청 corpus 검증은 남는다.
 - BE-013의 Sales 생성과 일반 Work 3생성 경로 v1 지문·필드 변경 검출·구형 접수 replay는 21차 범위다. 그 밖의 명령/응답과 실제 version 전환·운영 corpus 검증은 남는다.
 - BE-014의 저장 구조 handler와 계보 분류 계약·strategy 관계 재사용·새 결과 검사·전체 흐름 회귀는 22차 범위다. 신규 유형의 미래 확장 회귀와 운영 unknown code 대사는 별도다.
+- BE-015의 구조 변경 기록 계획/시작/실행의 중간 상세 조회 제거와 단건·배치 query-count·rollback/replay 회귀는 23차 범위다. 포트·연계 폐기·Sales·정산 경로와 운영 지연 측정은 남는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
