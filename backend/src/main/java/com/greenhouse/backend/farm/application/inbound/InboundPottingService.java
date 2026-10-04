@@ -6,8 +6,8 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,10 +31,7 @@ public class InboundPottingService {
   private final InboundRecordResponseAssembler responseAssembler;
 
   public InboundPottingResult potting(
-      Long inboundRecordId,
-      InboundRecordPottingRequest request,
-      Long workOperationId,
-      String effectKey) {
+      Long inboundRecordId, InboundPottingCommand request, Long workOperationId, String effectKey) {
     var inboundRecord = inboundRecordFinder.find(inboundRecordId);
     inboundRecord.requirePottingAllowed();
 

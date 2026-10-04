@@ -1,15 +1,13 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
-import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.util.LinkedHashMap;
@@ -42,7 +40,7 @@ public class InboundPottingOperationService {
 
   private final WorkOperationLockService operationLocks;
 
-  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+  private final InboundPottingCommandCodec commandCodec;
 
   public WorkOperationView executeNow(InboundPottingCommand request) {
     var ids =
@@ -158,7 +156,7 @@ public class InboundPottingOperationService {
   private Long validatedOperationId(WorkAppliedEffect effect, InboundPottingCommand request) {
     if (!fingerprints
         .calculate(effect.getCommandDetails())
-        .equals(fingerprints.calculate(commandDetails(request)))) {
+        .equals(fingerprints.calculate(commandCodec.encode(request)))) {
       throw new ConflictException("IDEMPOTENCY_KEY_REUSED", "같은 멱등 키를 다른 포트 작업 요청에 사용할 수 없습니다.");
     }
     return effect.getWorkOperation().getId();
@@ -219,13 +217,8 @@ public class InboundPottingOperationService {
 
   private WorkOperationView executeTarget(
       WorkOperationView operation, Long targetId, InboundPottingCommand request) {
-    Map<String, Object> resultDetails = commandDetails(request);
     WorkOperationView updated =
-        progressService.completeTarget(
-            operation.id(),
-            targetId,
-            new WorkTargetExecutionRequest(request.worker(), resultDetails, request.pottingDate()),
-            request.inboundRecordId() + ":" + request.idempotencyKey());
+        progressService.completePottingTarget(operation.id(), targetId, request);
     if (updated.progress().pending() == 0
         && updated.progress().inProgress() == 0
         && updated.progress().partial() == 0
@@ -233,15 +226,6 @@ public class InboundPottingOperationService {
       return progressService.complete(updated.id(), request.pottingDate());
     }
     return updated;
-  }
-
-  private Map<String, Object> commandDetails(InboundPottingCommand request) {
-    Map<String, Object> details =
-        new LinkedHashMap<>(
-            objectMapper.convertValue(request, new TypeReference<Map<String, Object>>() {}));
-    details.remove("idempotencyKey");
-    details.remove("inboundRecordId");
-    return details;
   }
 
   private List<String> keys(InboundPottingCommand request) {

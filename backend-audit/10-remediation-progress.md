@@ -603,6 +603,39 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 프론트엔드 전체 `npm run check`: 성공. 운영 백업/primary 대사·실제 validation·대용량 scan benchmark와 브라우저 E2E는 실행하지 않았다.
 - `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 이후에는 진행·운영 문서의 상태/결과·표현만 갱신했으며 SQL·실행 코드·테스트·API 생성물은 바꾸지 않았다.
 
+## 16차 변경 — BE-012 포트 실행의 typed command 유지
+
+작업일: 2026-10-04. 상태: 포트 실행 범위 구현·회귀·정책 문서 및 최종 전체 검증 완료. BE-012의 다른 효과/JSON 경계는 후속 범위다.
+
+### 원인과 범위
+
+- 포트 전용 API는 이미 `InboundPottingCommand`·`InboundPottingResultInput`을 받지만 내부에서 Map → 범용 HTTP 요청 DTO → Farm HTTP DTO로 재변환했다. 저장 JSON 형식이 실행 계약을 대신해, 필드 변경을 compiler가 검증할 수 없는 것이 이번 범위의 원인이다. 포트와 일반 대상 완료가 서로 다른 호환 입력을 제공하는 의미는 유지한다.
+- `InboundPottingOperationService` → `WorkOperationProgressService` → 효과 processor/handler → Farm 실행까지 기존 application 명령을 전달한다. Farm 실행 service는 HTTP DTO를 소비하지 않고 기존 result 필드를 직접 사용한다. handler에서 명령의 입고 ID와 실제 작업 대상 일치를 확인한 뒤 Mutation을 적용한다.
+- 포트의 저장·지문 비교와 구형 Map 대상 완료 해석은 조회 없는 `InboundPottingCommandCodec`에 둔다. 전용 실행은 저장용 Map을 실행 입력으로 다시 읽지 않는다. 날짜의 기존 array 표현·null 키·결과 배열 순서·제외되는 identity 필드를 유지하며 구형 ISO 날짜·누락 optional 필드·알 수 없는 키의 거절도 보존한다.
+- 새로운 범용 handler framework나 저장 schema version을 추가하지 않았다. HTTP/OpenAPI·Flyway·효과 identity·조회 응답·트랜잭션 경계·잠금 순서를 바꾸지 않는다. 기존 receipt·효과 지문과 legacy 효과 키를 재사용한다.
+
+### 회귀 방어
+
+- codec 신규 8건: rich/nullable 저장 JSON fixture와 고정 SHA-256 golden 2개, 결과 모든 필드·순서, array/ISO 날짜, optional 부재, identity/미등록 키의 기존 거절.
+- handler 신규 2건: typed payload를 직접 소비하며 저장 Map을 다시 해석하지 않음, 다른 입고 ID의 typed 명령을 Mutation 이전 거절.
+- PostgreSQL 신규 9건: 전용 실행의 필드·순서·효과/Mutation link·JSON/지문, receipt 없는 현재/legacy 효과 키 replay, 구형 대상 완료의 fingerprint 유무와 완료일 생략 replay, 다른 내용 거절, 전용/구형 경로의 두 번째 배치 실패와 효과 저장 CHECK 실패 시 전체 public 행 보존·같은 요청 재실행.
+- JSON fixture는 이번 변경 이전 포트 저장 계약을 고정한 시험 자료이며 운영 DB의 실제 이력을 추출한 자료가 아니다. legacy 키/지문 부재 회귀도 격리 DB의 호환 fixture다. rollback은 행·이력을 비교하며 sequence 번호 공백을 실패로 취급하지 않는다.
+- 기존 포트 단건·일괄 기록·계획 재사용·조회·수량/Mutation routing 및 형제 입고 병렬 실행·취소 회귀를 최종 전체 검증에 포함한다.
+
+### 검증
+
+- 초기 시험의 AssertJ generic 추론 모호성을 명시적인 JSON tree 비교로 수정했다. PostgreSQL receipt 삭제 fixture는 실제 `receipt_key`로 수정했다. 제품 코드의 실패는 관찰하지 않았다.
+- 최종 집중 단위 신규 10건·PostgreSQL 신규 9건과 기존 형제 입고 병렬 실행·취소 6건, 총 25건 성공. 기존 `InboundPottingPlanIntegrationTests`·효과 processor/store 집중 검증도 성공했다.
+- 백엔드 전체 `./gradlew test`: 122개 클래스, 583건 성공. 기존 architecture·query-count·도메인·integration 회귀를 포함한다.
+- 최종 PostgreSQL 전체 `./gradlew workE2eTest`: 56개 클래스, 543건 성공. 신규 9건과 기존 534건을 포함하며 실패·오류·생략은 없다.
+- 프론트엔드 전체 `npm run check`, `./gradlew spotlessCheck`, `git diff --check`: 성공. 전체 백엔드 검증은 8분 12초 소요했다. 새 benchmark와 브라우저 E2E는 실행하지 않았다.
+- 최종 전체 검증 이후에는 진행 문서의 완료 상태·검증 결과만 갱신했다. 실행 코드·테스트·저장 fixture·HTTP/API 계약은 바꾸지 않았다.
+
+### 남은 범위
+
+- BE-012 전체를 완료로 판정하지 않는다. 공통 `WorkEffectCommand.payload`의 Object 경계, `WorkExecutionResult`의 Map 결과, 구조 변경/상세/수량/계보 JSON reader의 중복과 format별 precedence는 후속 범위다. 이번 포트 refactor로 다른 handler의 타입 안전성이 함께 개선되었다고 판단하지 않는다.
+- BE-013의 schema version·과거 지문 corpus·rolling writer 정책은 이번 변경과 별도다. 신규 golden은 포트의 현재 저장 계약만 고정하며 다른 유형이나 운영 과거 버전 전체의 호환성을 증명하지 않는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -620,7 +653,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `275f8f00` — BE-008 Farm 입고 접수·V39·HTTP 계약·공통 화면 키·경쟁/rollback/migration 회귀·관련 문서.
 - `b137360e` — BE-008 일반 Work 응답 snapshot·V40·HTTP 계약·화면 키·경쟁/rollback/migration 회귀·관련 문서.
 - `26691ad8` — BE-010 전표 생성·묶음 metadata 감사 주체·최종 상태·원문 제외·rollback/중복 방어 회귀·정책 문서.
-- BE-011 대사·검증 절차 — `chore: add domain constraint audit and validation tools`. 실제 CHECK 기반 대사·제약별 validation·PostgreSQL 회귀·운영 정책을 별도 커밋으로 저장한다.
+- `69fd5348` — BE-011 실제 CHECK 기반 대사·제약별 validation·PostgreSQL 회귀·운영 정책.
+- BE-012 포트 실행 — `refactor: preserve typed potting commands through execution`. JSON·지문 호환과 rollback 회귀를 함께 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -635,4 +669,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-009는 일반 metadata·수량·상태·위치 수정의 허용 범위와 보정/실사 제한의 정책 일치가 남는다. 이번 감사 보강은 기존 현장 수정 기능을 임의로 차단하지 않는다.
 - BE-010의 전표 최초 생성과 난 묶음 metadata 누락은 14차 범위다. 과거 감사의 복원·입고/inline 품종 등의 필수 생성 감사 범위는 별도 판단이며, 자체 업무 이력을 일반 감사 부재만으로 무기록으로 취급하지 않는다.
 - BE-011의 운영 대사·제약별 validation 도구와 rehearsal 회귀는 15차 범위다. 운영 DB의 `convalidated`, 위반 행과 교차 불변식은 조회하지 않았다. 운영 적용·승인된 복구·실제 validation 완료와 그 증적이 남으며 이번 커밋을 운영 데이터 검증 완료로 취급하지 않는다.
+- BE-012 포트 실행의 typed command 유지와 JSON·지문 호환/rollback 회귀는 16차 범위다. 공통 Object/Map 효과 계약과 구조 변경·상세·수량·계보 reader의 중복은 후속 변경이며, BE-013의 저장 version과 과거 지문 호환 정책도 남는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

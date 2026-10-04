@@ -1,0 +1,23 @@
+{
+  "pottingDate": [
+    2026,
+    7,
+    18
+  ],
+  "results": [
+    {
+      "bedZoneId": 9,
+      "quantity": 17,
+      "potSize": null,
+      "ageYear": null,
+      "placementType": null,
+      "trayCount": null,
+      "splitPlacementAllowed": null,
+      "startPosition": 15.25,
+      "endPosition": 17.75,
+      "memo": null
+    }
+  ],
+  "worker": null,
+  "memo": null
+}

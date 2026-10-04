@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.application.inbound;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingRequest;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
@@ -18,7 +18,7 @@ public class InboundPottingExecutor implements WorkEffectHandler {
 
   private final InboundPottingService inboundPottingService;
 
-  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+  private final InboundPottingCommandCodec commandCodec;
 
   @Override
   public String supports() {
@@ -36,8 +36,13 @@ public class InboundPottingExecutor implements WorkEffectHandler {
     if (target == null || target.referenceType() != WorkTargetReferenceType.INBOUND_RECORD) {
       throw new IllegalArgumentException("포트 작업에는 입고 기록 대상이 필요합니다.");
     }
-    InboundRecordPottingRequest request =
-        objectMapper.convertValue(command.resultDetails(), InboundRecordPottingRequest.class);
+    InboundPottingCommand request =
+        command.payload() == null
+            ? commandCodec.decode(target.inboundRecordId(), command.resultDetails())
+            : command.payloadAs(InboundPottingCommand.class);
+    if (!target.inboundRecordId().equals(request.inboundRecordId())) {
+      throw new IllegalArgumentException("포트 작업 명령의 입고 기록이 대상과 일치해야 합니다.");
+    }
     var result =
         inboundPottingService.potting(
             target.inboundRecordId(), request, context.operationId(), command.effectKey());

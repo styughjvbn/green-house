@@ -2,6 +2,8 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.application.effect.WorkEffectStore;
@@ -36,6 +38,8 @@ public class WorkOperationProgressService {
   private final WorkEffectProcessor workEffectProcessor;
 
   private final WorkEffectStore effectStore;
+
+  private final InboundPottingCommandCodec pottingCommandCodec;
 
   private final WorkAppliedEffectRepository appliedEffectRepository;
 
@@ -102,11 +106,36 @@ public class WorkOperationProgressService {
 
   public WorkOperationView completeTarget(
       Long operationId, Long targetId, WorkTargetExecutionRequest request) {
-    return completeTarget(operationId, targetId, request, null);
+    return completeTarget(
+        operationId,
+        targetId,
+        request.completedDate(),
+        request.worker(),
+        request.resultDetails(),
+        null,
+        null);
   }
 
-  WorkOperationView completeTarget(
-      Long operationId, Long targetId, WorkTargetExecutionRequest request, String executionKey) {
+  WorkOperationView completePottingTarget(
+      Long operationId, Long targetId, InboundPottingCommand request) {
+    return completeTarget(
+        operationId,
+        targetId,
+        request.pottingDate(),
+        request.worker(),
+        pottingCommandCodec.encode(request),
+        request,
+        request.inboundRecordId() + ":" + request.idempotencyKey());
+  }
+
+  private WorkOperationView completeTarget(
+      Long operationId,
+      Long targetId,
+      LocalDate completedDate,
+      String requestedWorker,
+      Map<String, Object> details,
+      InboundPottingCommand pottingCommand,
+      String executionKey) {
     findOperation(operationId);
     WorkTargetExecution execution = findExecutionForUpdate(operationId, targetId);
     if (execution.isEffectApplied()) {
@@ -119,13 +148,11 @@ public class WorkOperationProgressService {
                       new ConflictException(
                           "IDEMPOTENCY_REPLAY_UNAVAILABLE", "완료된 대상은 원래 실행 API로 재요청해야 합니다."));
       var completedAt =
-          request.completedDate() == null
-              ? existing.getAppliedAt()
-              : support.completionTime(request.completedDate());
+          completedDate == null ? existing.getAppliedAt() : support.completionTime(completedDate);
       effectStore.validateReplay(
           existing,
           new WorkEffectCommand(
-              completedAt, support.actor(request.worker()), request.resultDetails(), null));
+              completedAt, support.actor(requestedWorker), details, pottingCommand));
       return queryService.get(operationId);
     }
     WorkOperation operation = execution.getTarget().getWorkOperation();
@@ -133,10 +160,9 @@ public class WorkOperationProgressService {
       throw new IllegalArgumentException("진행 중인 작업에서만 대상을 처리할 수 있습니다.");
     }
     refreshInboundSnapshot(operation, execution.getTarget());
-    LocalDateTime completedAt = support.completionTime(request.completedDate());
-    String worker = support.actor(request.worker());
-    WorkEffectCommand command =
-        new WorkEffectCommand(completedAt, worker, request.resultDetails(), null);
+    LocalDateTime completedAt = support.completionTime(completedDate);
+    String worker = support.actor(requestedWorker);
+    WorkEffectCommand command = new WorkEffectCommand(completedAt, worker, details, pottingCommand);
     var result =
         executionKey == null
             ? workEffectProcessor.apply(operation, execution.getTarget(), command)
