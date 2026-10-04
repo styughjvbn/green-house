@@ -6162,7 +6162,10 @@ export interface operations {
     create_5: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 생성 재전송은 같은 키와 입력을 유지합니다. 키 생략 시 별도 신규 입고를 생성합니다. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };

@@ -13,6 +13,7 @@ import {
   voidInboundPotting,
 } from "../api/inventoryApi";
 import { createUuid } from "@/shared/lib/id";
+import { createPendingCreationRequestKey } from "@/shared/lib/pendingCreationRequestKey";
 import type { InboundRouteState } from "../lib/inventoryRouteState";
 import {
   createEmptyInboundFilters,
@@ -38,6 +39,13 @@ export function useInboundRecords({
   routeState: InboundRouteState;
 }) {
   const queryClient = useQueryClient();
+  const [creationRequestKey] = useState(() =>
+    createPendingCreationRequestKey(
+      "greenhouse:inbound-create-request:v1",
+      createUuid,
+      () => window.sessionStorage,
+    ),
+  );
   const query = useQuery(inboundPageQueryOptions(routeState));
   const listState = useUrlPagedListState({
     emptyFilters: createEmptyInboundFilters,
@@ -81,7 +89,13 @@ export function useInboundRecords({
   }
 
   const createMutation = useMutation({
-    mutationFn: createInboundRecord,
+    mutationFn: async (payload: InboundRecordPayload) => {
+      const key = creationRequestKey.get();
+      const created = await createInboundRecord(payload, key);
+      // Acknowledgment precedes cache refresh, which may fail independently of the write.
+      creationRequestKey.complete(key);
+      return created;
+    },
     onSuccess: async (created) => {
       setSelectedId(created.id);
       await invalidateRelatedInventory();

@@ -1,7 +1,12 @@
 package com.greenhouse.backend.farm.application.inbound;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.application.RequestActorProvider;
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
@@ -20,6 +25,7 @@ import com.greenhouse.backend.farm.dto.inbound.InboundRecordCancelRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingVoidRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
+import com.greenhouse.backend.farm.repository.inbound.InboundCreationReceiptRepository;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
@@ -27,6 +33,10 @@ import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService;
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder;
 import com.greenhouse.backend.work.application.operation.WorkCommandReceipts;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -40,6 +50,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class InboundRecordService {
 
   private static final String DEFAULT_ORCHID_STATUS = "정상";
+  private static final JsonMapper RECEIPT_MAPPER =
+      JsonMapper.builder()
+          .findAndAddModules()
+          .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+          .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+          .build();
+
+  private final InboundCreationReceiptRepository creationReceiptRepository;
+  private final Clock clock;
 
   private final InboundRecordRepository inboundRecordRepository;
 
@@ -70,6 +89,46 @@ public class InboundRecordService {
   private final WorkCommandReceipts commandReceipts;
 
   public InboundRecordResponse create(InboundRecordCreateCommand request) {
+    return createNew(request);
+  }
+
+  public InboundRecordResponse create(InboundRecordCreateCommand request, String idempotencyKey) {
+    if (idempotencyKey == null) return createNew(request);
+    if (idempotencyKey.isBlank() || idempotencyKey.length() > 100) {
+      throw new IllegalArgumentException("입고 생성 요청 키는 1~100자의 공백이 아닌 값이 필요합니다.");
+    }
+    String fingerprint = creationFingerprint(request);
+    int inserted =
+        creationReceiptRepository.claim(idempotencyKey, fingerprint, TimeConfig.utcNow(clock));
+    var receipt = creationReceiptRepository.findForUpdate(idempotencyKey);
+    receipt.validate(fingerprint);
+    try {
+      if (receipt.getResponseSnapshot() != null) {
+        return RECEIPT_MAPPER.readValue(receipt.getResponseSnapshot(), InboundRecordResponse.class);
+      }
+      if (inserted != 1) throw new IllegalStateException("완료되지 않은 입고 생성 요청 기록입니다.");
+      var response = createNew(request);
+      receipt.complete(response.id(), RECEIPT_MAPPER.writeValueAsString(response));
+      creationReceiptRepository.flush();
+      return response;
+    } catch (JsonProcessingException exception) {
+      throw new IllegalStateException("입고 생성 요청의 저장된 응답을 처리할 수 없습니다.", exception);
+    }
+  }
+
+  private String creationFingerprint(InboundRecordCreateCommand request) {
+    try {
+      // Preserve explicit input values, including decimal scale and null/default distinctions.
+      return HexFormat.of()
+          .formatHex(
+              MessageDigest.getInstance("SHA-256")
+                  .digest(RECEIPT_MAPPER.writeValueAsBytes(request)));
+    } catch (JsonProcessingException | NoSuchAlgorithmException exception) {
+      throw new IllegalStateException("입고 생성 요청의 지문을 계산할 수 없습니다.", exception);
+    }
+  }
+
+  private InboundRecordResponse createNew(InboundRecordCreateCommand request) {
     InboundStatus status = resolveCreateStatus(request);
     validateCreate(request);
     Variety variety =
@@ -130,6 +189,8 @@ public class InboundRecordService {
     }
     inboundWorkOperationRecorder.record(
         workOperationRequestFactory.create(saved, createdGroups), mutationLink);
+    // Final timestamps and cascaded IDs belong to the first response, not a later replay read.
+    inboundRecordRepository.flush();
     return responseAssembler.assemble(inboundRecordFinder.find(saved.getId()));
   }
 

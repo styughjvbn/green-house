@@ -445,6 +445,42 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 최종 PostgreSQL 전체 `./gradlew workE2eTest`: 49개 클래스, 381건 성공. 신규 판매 생성 26건·V38 migration 1건과 기존 354건을 포함하며 실패·오류·생략은 없다.
 - `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 이후에는 진행 문서의 상태·결과만 갱신했으며 실행 코드·테스트·API 생성물은 바꾸지 않았다.
 
+## 12차 변경 — BE-008 입고 생성의 요청 재전송 방어
+
+작업일: 2026-10-04. 상태: 입고 생성·V39·화면 키·API 계약·정책 문서 및 최종 전체 검증 완료. 일반 Work 계획·기록 생성은 이번 범위가 아니다.
+
+### 수정 전 재현과 계약
+
+- [InboundCreationIdempotencyPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/InboundCreationIdempotencyPostgresE2ETest.java)의 HTTP 신규 2건을 기존 코드에 먼저 실행했고 모두 실패했다. 같은 키·입력은 다른 입고 ID·완료 작업을 만들었고 같은 키의 변경 입력도 201로 신규 생성됐다. 성공 응답을 무시하고 재전송한 서버 처리 재현이며 실제 transport timeout 주입 시험은 아니다.
+- 신규 품종은 기존 `속 + 품종명` 조회로 재사용될 수 있어 품종이 항상 중복된다는 근거로 확대하지 않는다. 내부 Mutation identity는 새 입고 ID를 사용하므로 HTTP 생성을 dedup하지 못한다. 즉시 배치 입고는 같은 위치의 재전송을 별도 생성으로 검증하므로 기존 위치 충돌도 반환할 수 있었다.
+- `POST /api/inbound-records`만 선택형 `Idempotency-Key` header를 추가했다. 같은 키·입력은 최초 응답을 `201`로 반환하고 다른 입력은 `409 / INBOUND_CREATE_REQUEST_KEY_CONFLICT`다. 빈/공백/100자 초과 키는 `400 / VALIDATION_ERROR`다. 키 생략과 키 없는 application 생성은 기존 독립 생성 계약을 유지한다. 모든 입고 유형의 생성 namespace는 같고 Sales·Work 접수와는 독립적이다.
+
+### 구현과 원자성
+
+- [InboundRecordService](../backend/src/main/java/com/greenhouse/backend/farm/application/inbound/InboundRecordService.java)는 Farm 소유 접수 PK의 원자 claim → 접수 root 잠금 → 지문 확인 → 완료 응답 재조회 → 최초 생성 순으로 처리한다. 현재 품종·배치·입고 상태·Work 유형의 validation과 actor 해석은 최초 업무에만 적용한다. 기존 public application 트랜잭션 진입점을 유지하고 private 생성 코어를 호출해 self invocation에 의존하지 않는다.
+- 지문은 typed 입력의 JSON property를 정렬한 SHA-256이며 null/명시값과 배치 BigDecimal의 소수 자릿수를 구분한다. Work 실행 지문이나 과거 Mutation hash 계약을 변경하지 않는다. 최초 업무는 기존 품종 해석 → 입고 → 즉시 배치 Mutation/묶음 → 완료 Work/대상/효과 → flush/응답 → 접수 완료 순이다. 새로운 역방향 Work·원본 묶음 잠금을 추가하지 않았다.
+- 신규 품종·입고·묶음·Mutation·Work/효과·기존 감사·접수를 한 트랜잭션에서 확정하거나 rollback한다. 키 대기는 품종 생성·배치·Work 처리 전에 일어난다. 실패하면 같은 키로 재시도할 수 있으며 품종 코드·Entity sequence의 공백은 기존처럼 허용한다. 유리병 입고·신규 품종에 별도 생성 AuditEvent를 추가한 변경은 아니므로 BE-010의 감사 범위까지 완료 처리하지 않는다.
+- 최초 응답의 ID·timestamp와 당시 capability·결과 묶음을 보존한다. 수정·취소·포트 완료 이후의 replay도 이 응답을 반환하며 최신 상태로 덮어쓰지 않는다. 이후 업무 판단에는 현재 상세를 조회한다. 현재 조회 mapper를 replay에 호출하지 않는다.
+- [V39](../backend/src/main/resources/db/migration/V39__inbound_creation_receipts.sql)는 PK, 입고 FK/삭제 제한, 키/지문 CHECK, 완료 ID/응답 쌍과 응답 ID의 일치 CHECK를 추가한다. claim 중인 쌍은 둘 다 null이며 application은 응답을 확정한 뒤 commit한다. 수동 commit한 미완료 접수를 DB 자체가 금지하지는 않으며 이 행은 자동 재실행하지 않는다. 기존 입고·품종·Work·묶음·Mutation을 변경하거나 identity를 추정 backfill하지 않는다.
+
+### 화면·계약과 회귀 방어
+
+- Controller·시험을 기준으로 전체 OpenAPI·Inventory slice와 생성 TypeScript를 갱신했고 프론트 생성 키 타입은 생성된 header 계약을 사용한다. 신규 endpoint나 기존 body/응답 schema 변경은 없다.
+- 입고 생성은 성공 응답 직후 키를 해제하고 이후 query 무효화와 선택 처리를 수행한다. cache 갱신 실패를 새로운 생성으로 취급하지 않는다. 오류·폼 닫기·같은 탭 재진입/새로고침에서 키를 유지하며, 폼·서버 응답은 sessionStorage에 복제하지 않는다. 수정·취소·포트 경로에는 생성 키를 전달하지 않는다.
+- 판매 화면의 키 보존 코드를 [공통 local transport helper](../frontend/src/shared/lib/pendingCreationRequestKey.ts)로 이동했다. 기존 Sales sessionStorage namespace·수명과 5개 회귀를 보존하고 입고 namespace를 분리했다. backend receipt와 fingerprint를 공통 framework로 이식하지 않았다. 신규 frontend 2건은 두 업무의 namespace/재진입 독립성과 입고의 미확인/늦은 응답 수명을 확인하며 기존 5건도 함께 성공했다.
+- 신규 PostgreSQL 생성 43건: 기본/변경 재전송 2건, 5개 입고 유형×기존/신규 품종 10건, 유리병/즉시 배치 취소 후 replay 2건, 수정/포트 후 replay 2건, 입력 필드 변경 10건, 키 validation 3건, 성공 키의 잘못된 body 뒤 정상 replay 1건, 새 키/키 생략 2건, 접수 완료 CHECK 실패 2건, 비활성 Work 유형에 의한 후행 실패 1건, replay query/entity count 2건, 유리병/즉시 배치 commit·다른 입력·rollback 경쟁 6건이다.
+- 경쟁은 `pg_blocking_pids`와 후행 `pg_stat_activity.query`로 접수 행에서 선행 PID를 기다리는지 확인한다. 같은 입력은 최초 결과를 받고 다른 입력은 stable code로 거절된다. 선행 rollback 시 대기 요청이 새 claim을 확보해 한 입고·품종·완료 Work·대상/효과·묶음만 만든다.
+- 거절·late rollback·replay는 관련 17개 테이블 JSON을 비교한다. 후행 Work 비활성 실패와 접수 완료 CHECK 실패는 앞선 신규 품종·입고·Mutation/묶음·Work/효과까지 원복하며 같은 키 재시도 성공을 확인한다. replay는 유리병/즉시 배치 모두 2 SQL 이하·Entity 1개만 로딩한다. 최초 쓰기와 큰 snapshot의 비용 benchmark는 실행하지 않았다.
+- [InboundCreationReceiptMigrationPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/InboundCreationReceiptMigrationPostgresE2ETest.java): 별도 PostgreSQL DB에서 V38→V39 upgrade, 기존 입고/품종 보존과 신규 identity 미생성, PK/FK/삭제 제한·키/지문·불완전/잘못된 응답 제약, 재실행 0건과 Flyway validate를 확인한다.
+
+### 검증
+
+- 수정 전 HTTP 2건 실패, 수정 후 같은 2건 성공. 확장 PostgreSQL 생성 43건과 V39 migration 1건, 총 44건 집중 검증 성공.
+- 프론트 신규 2건·기존 Sales 5건 집중 성공. 전체 `npm run check`의 포맷·생성 타입 drift·전체 순수 로직 시험·lint·production build 성공. 브라우저 dialog/HTTP E2E는 실행하지 않았다.
+- 최종 백엔드 전체 `./gradlew test`: 120개 클래스, 573건 성공. 기존 architecture·query-count·도메인·integration 회귀를 포함한다.
+- 최종 PostgreSQL 전체 `./gradlew workE2eTest`: 51개 클래스, 425건 성공. 신규 입고 생성 43건·V39 migration 1건과 기존 381건을 포함하며 실패·오류·생략은 없다.
+- `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 이후에는 진행 문서의 상태·결과만 갱신했으며 실행 코드·테스트·API 생성물은 바꾸지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -458,7 +494,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `270750ea` — BE-006 Work 구조 기록 전체 원본·구역 선잠금·계획 전 검증·경쟁 및 rollback 회귀·정책 문서.
 - `dd69ddc9` — BE-006 일반 계획 전체 대상 잠금·500개 분할·계획/폐기 경쟁 및 rollback 회귀·정책 문서.
 - `a5acf3f3` — BE-007 수량 snapshot·V37·보정 정책·capability·계약 생성물·회귀·화면·관련 문서.
-- BE-008 판매 생성 — `fix: deduplicate sales slip creation retries`. Sales 접수·V38·HTTP 계약·화면 키·경쟁/rollback/migration 회귀·관련 문서를 별도 커밋으로 저장한다.
+- `32ebe83b` — BE-008 Sales 접수·V38·HTTP 계약·화면 키·경쟁/rollback/migration 회귀·관련 문서.
+- BE-008 입고 생성 — `fix: deduplicate inbound creation retries`. Farm 접수·V39·HTTP 계약·공통 화면 키·경쟁/rollback/migration 회귀·관련 문서를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -469,5 +506,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-005의 기존 중복 결과·반환 및 정산 영향은 별도 대사 대상이다. 기존 기록을 중복으로 추정해 삭제하지 않는다.
 - BE-006의 예정 수정 범위는 완료했다. 판매 교차 수정, Farm 단건·일괄 수정, Work 구조 기록과 Farm 경쟁, 일반 품종별 계획·폐기/Farm·구조 기록·겹치는 계획 경쟁을 검증했다. 경로별 전체 잠금 순서와 기존 대상 변경 거절 계약을 유지한다. 모든 writer·FK·내부 fence의 무교착을 증명한 것은 아니며 새 writer에는 같은 경로별 순서와 경쟁 회귀가 필요하다.
 - BE-007의 신규 수량 이력과 경매 시도·반환 확인 이후 직접 보정 제한을 완료했다. 과거 누락된 이력과 수량 불일치는 자동 복원하지 않았으며 운영 데이터 대사가 남는다. 결과 이후의 보상·정정 이벤트는 별도 업무 계약과 구현이 필요한 후속 범위다.
-- BE-008의 키가 있는 판매 생성 재전송 방어를 완료 대상으로 삼는다. 기존 전표의 중복 대사, 키 없는 연동의 재시도 정책, 입고·일반 Work 생성의 요청 identity는 남는다. 다음 우선 대상은 입고 생성이며 기존 생성 Mutation·완료 Work·품종 생성과 함께 보존할 결과 계약을 먼저 확인한다.
+- BE-008의 키가 있는 판매·입고 생성 재전송 방어를 완료 대상으로 삼는다. 기존 자료의 중복 대사, 키 없는 연동의 재시도 정책, 일반 Work 계획·기록 생성의 요청 identity는 남는다. 다음 우선 대상은 일반 Work 생성이며 기존 유형별 Receipt·membership·품종별 일괄 생성 계약부터 확인한다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

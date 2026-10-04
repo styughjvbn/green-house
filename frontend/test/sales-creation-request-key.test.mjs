@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSalesCreationRequestKey } from "../src/features/sales/lib/salesCreationRequestKey.ts";
+import { createPendingCreationRequestKey } from "../src/shared/lib/pendingCreationRequestKey.ts";
+
+const createSalesCreationRequestKey = (...args) =>
+  createPendingCreationRequestKey(
+    "greenhouse:sales-create-request:v1",
+    ...args,
+  );
 
 test("lost responses and repeated submits keep one creation identity", () => {
   let count = 0;

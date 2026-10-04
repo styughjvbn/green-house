@@ -1,11 +1,11 @@
 type RequestStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 // Keep an unresolved creation identity even when its form is closed or the screen reloads.
-export function createSalesCreationRequestKey(
+export function createPendingCreationRequestKey(
+  scope: string,
   createKey: () => string,
   storage: () => RequestStorage | null = () => null,
 ) {
-  const scope = "greenhouse:sales-create-request:v1";
   let pending: string | null = null;
   return {
     get() {

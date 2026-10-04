@@ -15,6 +15,8 @@ import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
 import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -63,8 +66,13 @@ public class InboundRecordController {
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
   public ApiResponse<InboundRecordResponse> create(
-      @Valid @RequestBody InboundRecordCreateCommand request) {
-    return ApiResponse.ok(inboundRecordService.create(request));
+      @Valid @RequestBody InboundRecordCreateCommand request,
+      @Parameter(
+              description = "생성 재전송은 같은 키와 입력을 유지합니다. 키 생략 시 별도 신규 입고를 생성합니다.",
+              schema = @Schema(minLength = 1, maxLength = 100))
+          @RequestHeader(name = "Idempotency-Key", required = false)
+          String idempotencyKey) {
+    return ApiResponse.ok(inboundRecordService.create(request, idempotencyKey));
   }
 
   @PatchMapping("/{inboundRecordId}")

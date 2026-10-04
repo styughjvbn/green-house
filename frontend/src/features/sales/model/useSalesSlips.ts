@@ -30,7 +30,7 @@ import {
   toCreateSalesSlipPayload,
   toSalesSlipForm,
 } from "../lib/salesForm";
-import { createSalesCreationRequestKey } from "../lib/salesCreationRequestKey";
+import { createPendingCreationRequestKey } from "@/shared/lib/pendingCreationRequestKey";
 import type { SalesSlipsRouteState } from "../lib/salesRouteParams";
 import {
   createInitialSalesFilters,
@@ -78,7 +78,8 @@ export function useSalesSlips({
   const [updatingSlipStatus, setUpdatingSlipStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [creationRequestKey] = useState(() =>
-    createSalesCreationRequestKey(
+    createPendingCreationRequestKey(
+      "greenhouse:sales-create-request:v1",
       () => crypto.randomUUID(),
       () => window.sessionStorage,
     ),

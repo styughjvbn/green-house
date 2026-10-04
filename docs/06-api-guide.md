@@ -190,6 +190,10 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 
 신규 입고 등록은 입고 기록 대상을 가진 완료 상태의 `WorkOperation`을 생성한다.
 
+`POST /api/inbound-records`의 재전송에는 `Idempotency-Key` header와 입력을 그대로 유지한다. 모든 입고 유형에서 같은 키·입력은 최초 응답을 `201`로 반환하고, 다른 입력은 `409 / INBOUND_CREATE_REQUEST_KEY_CONFLICT`다. JSON property 순서는 비교에 영향이 없지만 null/명시값과 배치 좌표의 소수 자릿수는 구분한다. 키의 길이·validation은 Inventory slice와 Controller를 기준으로 확인한다. 판매 생성과 namespace가 독립적이며 각 입고 생성에는 UUID를 권장한다. 키 생략 호출은 재전송 중복 방어 대상이 아니다.
+
+응답 유실·오류 뒤에는 키를 바꾸지 않는다. rollback 뒤에는 같은 키로 수정된 입력을 접수할 수 있지만 앞선 성공이 있으면 거절한다. 생성 재조회는 현재 수정·취소·포트 상태를 반영한 상세가 아니라 최초 응답이므로 이후 업무 판단은 현재 상세에서 확인한다. 생성 키는 수정·취소·포트 실행 키와 독립적이다.
+
 자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 자리 이동·분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 같은 품종의 계획 대상 일부와 원본별 투입 수량을 하나의 풀로 합친 뒤 복수 결과를 생성하고 누적 작업 수량을 갱신한다. 결과 요청은 직접 원본 ID를 받지 않으며 기존 `sourceOrchidGroupIds` 입력은 호환상 무시한다. `attributeSourceOrchidGroupId`는 기존 결과 속성 상속 기준만 전달하며 수량 배분이나 직접 계보를 뜻하지 않는다. 기존 단일 대상 분갈이·분주 요청은 내부 변환 후 같은 N:M 실행 코어를 사용하고, 기존 합식 완료 API는 이전 클라이언트 호환용이다.
 
 `GET /api/orchid-groups/{orchidGroupId}/lineage`의 `transformations`는 저장된 실행 회차별 원본 목록·결과 목록·총 투입·총 결과·손실을 반환한다. `sources`와 `results`는 단일 원본 및 기존 직접 계보 호환 필드다.
