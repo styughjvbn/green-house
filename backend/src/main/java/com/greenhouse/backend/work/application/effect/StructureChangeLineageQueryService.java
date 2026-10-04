@@ -60,7 +60,7 @@ public class StructureChangeLineageQueryService {
   }
 
   private boolean isStructureChangeExecution(WorkAppliedEffect effect) {
-    return WorkTypeDefinition.forCode(effect.getHandlerCode()).supportsStructureExecution()
+    return WorkTypeDefinition.forStoredStructureHandler(effect.getHandlerCode()).isPresent()
         && (effect.getEffectKey().startsWith("EXECUTION:")
             || hasSourceRows(effect.getCommandDetails()));
   }

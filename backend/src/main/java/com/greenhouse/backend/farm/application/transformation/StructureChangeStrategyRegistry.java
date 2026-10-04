@@ -23,8 +23,14 @@ public class StructureChangeStrategyRegistry {
   @PostConstruct
   void validateDefinitions() {
     for (WorkTypeDefinition definition : WorkTypeDefinition.values()) {
-      if (definition.supportsStructureExecution() && !strategies.containsKey(definition.name())) {
-        throw new IllegalStateException("작업 정의에 필요한 구조 변경 Strategy가 없습니다: " + definition.name());
+      if (definition.supportsStructureExecution()) {
+        var strategy = strategies.get(definition.name());
+        if (strategy == null) {
+          throw new IllegalStateException("작업 정의에 필요한 구조 변경 Strategy가 없습니다: " + definition.name());
+        }
+        if (strategy.lineageType() == null) {
+          throw new IllegalStateException("구조 변경 Strategy의 계보 관계가 없습니다: " + definition.name());
+        }
       }
     }
   }

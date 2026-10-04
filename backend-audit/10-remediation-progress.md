@@ -795,6 +795,38 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-013은 부분 완료다. 일반 생성 이외 Work 실행·구조 기록·포트·취소·보정·효과와 Farm 입고·Auction 접수의 형식 고정, 저장 응답의 필드 확장, 실제 신규 형식의 version dispatcher/upgrade와 구버전 writer 병행·rollback 실행 시험, 운영 과거 요청 corpus 검증은 남는다. 기존 응답 reader와 저장 자료를 추정 보정하지 않는다.
 
+## 22차 변경 — BE-014 구조 변경 효과와 계보 분류 계약
+
+작업일: 2026-10-04. 상태: 분류 계약·strategy 연결·rollback/replay 회귀·정책 문서 및 최종 전체 검증 완료.
+
+### 원인과 범위
+
+- Work 계보 조회가 저장 handler를 현재 WorkType code로 해석했고, Farm 조회는 실행 strategy와 별도의 문자열 switch로 관계를 선택했다. handler와 작업 유형 이름이 다르면 계보에서 누락될 수 있었고 신규 구조 정의가 실행돼도 조회의 switch가 빠질 수 있었다.
+- Work 정의에 저장 구조 handler 해석 계약을 분리한다. 현재 구조 정의의 이름은 자동 연결하며 이동의 역사적인 `MOVE`·`MOVEMENT` 이름은 같은 정의로 연결한다. 일반 작업 유형 해석·template fallback·effectKind는 바꾸지 않는다. 신규 정의/저장 이름은 이 계약으로 확장하며 새 enum/범용 handler framework를 추가하지 않는다.
+- Work 계보 application 값이 저장 handler에서 해석한 구조 정의를 제공한다. Farm은 그 정의에 대응하는 기존 strategy의 `lineageType`을 사용한다. 관계의 두 번째 switch를 제거하고 strategy의 계보 관계 누락도 기동 시 거절한다. 현재 Entity metadata에서 과거 관계를 재구성하지 않는다.
+- 새 구조 실행 결과의 저장 handler가 해당 정의와 일치하지 않으면 효과 저장 전에 실패한다. 앞선 Farm 변경은 최상위 트랜잭션에서 rollback한다. 기존 효과 replay는 현재 handler를 실행하거나 새 검사를 거쳐 다시 저장하지 않는다. 기존 target 효과·회차 key/원본 행이 있는 효과의 조회 범위, 취소 이력 보존, DB/JSON 지문과 잠금 순서는 유지한다.
+
+### 회귀 방어
+
+- 저장 이름 5종과 비구조/unknown/null 분류, 현재 WorkType 이름 해석의 독립성을 확인한다. 기존 capability·template·system/active 조합 회귀도 실행한다.
+- 네 실행 strategy와 저장 이름 5종의 계보 관계를 대조하며 필수 strategy/계보 관계 누락을 기동 전에 거절한다. Processor는 두 이동 이름을 받아도 ATTRIBUTE_CHANGE를 바꾸지 않으며 unknown/다른 구조/기록 전용 결과는 저장 전에 거절한다.
+- Work 조회는 효과 1/20건 모두 두 번의 Repository 일괄 호출만 수행하고 현재 WorkType을 읽지 않는다. 이는 Repository 호출 회귀이며 실제 SQL query-count benchmark로 주장하지 않는다. 일반 target 효과와 원본 행이 있는 구형 operation 효과의 포함/제외 및 수량을 보존한다.
+- PostgreSQL 신규 7건: 실제 seed의 이동/분갈이/분주/합식과 이동의 다른 저장 이름을 실행→상세/양방향 계보→취소→실행·취소 replay까지 확인한다. 작업 이름·활성이 바뀌어도 저장 분류를 보존하고 replay가 업무 행을 늘리지 않는다. 실제 Mutation 적용 후 잘못된 결과 이름을 주입한 2건은 난 묶음·원장·계보·Work/효과·접수·감사를 모두 rollback하고 같은 실행 key로 재시도한다.
+- 최초 PostgreSQL 시험에서 기존 seed 유형 중복 생성·비활성 상태 잔존·Hibernate 할당 중 sequence 재시작을 수정했다. 신규 클래스는 기존 seed를 재사용하고 sequence를 유지한다. 해당 fixture 실패를 제품의 분류·rollback 결함으로 판정하지 않는다.
+
+### 검증
+
+- 집중 단위/integration/architecture 6개 클래스 54건·PostgreSQL 2개 클래스 11건, 총 65건 성공. PostgreSQL은 41초 소요했으며 기존 구조 실행·수량/이력·병렬 완료 회귀도 포함한다.
+- `python3 scripts/generate_openapi.py`: 성공. 전체 명세·slice에 diff가 없다. 공개 요청/응답·enum·capability와 생성 타입 계약은 유지하므로 TypeScript 타입 재생성은 필요하지 않다.
+- 백엔드 전체 `./gradlew test`: 131개 클래스 662건 성공. 기존 architecture·capability·지문·query-count·integration 회귀를 포함하며 실패·오류·생략은 없다.
+- PostgreSQL 전체 `./gradlew workE2eTest`: 57개 클래스 565건 성공. 기존 수량/금액·DB 제약·병렬 실행·취소·rollback·멱등성 회귀를 포함하며 실패·오류·생략은 없다.
+- 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. 전체 백엔드 검증은 8분 47초 소요했다. DB schema 변경은 없어 Flyway는 추가하지 않았다. 새 benchmark·브라우저 E2E·운영 unknown handler 대사는 실행하지 않았다.
+- 전체 검증 이후에는 진행 문서의 완료 상태와 검증 결과만 갱신했다. 제품 코드·시험·저장/HTTP 계약은 변경하지 않았다.
+
+### 남은 범위
+
+- BE-014의 현재 분류 중복과 저장 이름/유형 결합은 이번 범위로 완료한다. 운영의 unknown 저장 code 유무와 복구는 대사하지 않았고 임의 backfill하지 않는다. 미래의 새 유형은 동일 등록·저장 이름·strategy·전체 흐름 회귀를 추가해야 하며 모든 미래 확장을 자동 구현하는 계약은 아니다. 일반 사용자 기록 template나 보류 기능을 새로 활성화하지 않는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -818,7 +850,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `8288c839` — BE-012 공통 효과 reader·형식별 정책·호환 fixture·query-count 회귀.
 - `4ea56293` — BE-012 공통 명령 집합·구형 입력/receipt 호환·rollback 회귀.
 - `2c35562a` — BE-013 Mutation 중첩 v1 지문·schema guard·snapshot/replay 회귀·전환 정책.
-- BE-013 생성 접수 — `refactor: freeze sales and work creation fingerprints`. 두 모듈의 생성 지문·schema guard·구형 접수 replay 회귀를 별도 커밋으로 저장한다.
+- `c0aeb120` — BE-013 Sales·일반 Work 생성 지문·schema guard·구형 접수 replay 회귀.
+- BE-014 계보 — `fix: align stored structure effects with lineage strategies`. 저장 handler·정의·strategy 계보 연결과 rollback/replay 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -836,4 +869,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-012 포트 입력 타입 유지와 JSON·지문 호환/rollback은 16차, 고정 결과 타입 유지와 JSON 저장 회귀는 17차, 대상·상세·계보·수량의 공통 효과 reader와 형식별 정책 보존은 18차 범위다. 공통 명령 Object/구형 구조 변경·현장 동기화 HTTP DTO 경계 이식과 receipt 호환은 19차 범위다. 자유 JSON·보정 이벤트 해석은 남으며, BE-013의 실제 저장 version 전환과 운영 과거 요청 corpus 검증도 후속 범위다.
 - BE-013의 Mutation 중첩 v1 지문 고정·필드 변경 검출·snapshot/구형 지문 replay·배포 기준은 20차 범위다. 실제 format version 전환과 Work/Sales 등 다른 접수 계약·운영 과거 요청 corpus 검증은 남는다.
 - BE-013의 Sales 생성과 일반 Work 3생성 경로 v1 지문·필드 변경 검출·구형 접수 replay는 21차 범위다. 그 밖의 명령/응답과 실제 version 전환·운영 corpus 검증은 남는다.
+- BE-014의 저장 구조 handler와 계보 분류 계약·strategy 관계 재사용·새 결과 검사·전체 흐름 회귀는 22차 범위다. 신규 유형의 미래 확장 회귀와 운영 unknown code 대사는 별도다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

@@ -236,4 +236,38 @@ class WorkEffectProcessorTest {
     verify(store).find(11L, "OPERATION", command);
     verifyNoMoreInteractions(store);
   }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"MOVE", "MOVEMENT"})
+  void structureExecutionAcceptsStoredMovementAliasWithoutChangingEffectKind(String storedHandler) {
+    when(workType.getCode()).thenReturn("MOVEMENT");
+    var moved =
+        new WorkExecutionResult(storedHandler, result.details(), result.resultOrchidGroupIds());
+    when(handler.execute(any(), any())).thenReturn(moved);
+    assertThat(processor.applyBatch(operation, "movement", List.of(31L), command)).isSameAs(moved);
+    verify(store)
+        .save(
+            eq(operation),
+            eq(null),
+            any(),
+            eq("EXECUTION:movement"),
+            eq(List.of(31L)),
+            eq(WorkEffectKind.ATTRIBUTE_CHANGE),
+            eq(moved));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"UNKNOWN", "MERGE", "RECORD_ONLY"})
+  void rejectsUnclassifiedOrMismatchedStructureResultBeforeSavingEffect(String storedHandler) {
+    when(workType.getCode()).thenReturn("REPOT");
+    when(handler.execute(any(), any()))
+        .thenReturn(
+            new WorkExecutionResult(
+                storedHandler, result.details(), result.resultOrchidGroupIds()));
+    assertThatThrownBy(() -> processor.applyBatch(operation, "invalid", List.of(31L), command))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining(storedHandler);
+    verify(store).find(11L, "EXECUTION:invalid", command);
+    verifyNoMoreInteractions(store);
+  }
 }

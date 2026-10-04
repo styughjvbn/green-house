@@ -4,6 +4,7 @@ import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -27,6 +28,14 @@ public enum WorkTypeDefinition {
       Arrays.stream(values())
           .collect(Collectors.toUnmodifiableMap(Enum::name, Function.identity()));
 
+  private static final Map<String, WorkTypeDefinition> STRUCTURE_BY_STORED_HANDLER =
+      Arrays.stream(values())
+          .flatMap(
+              definition ->
+                  definition.storedStructureHandlerCodes().stream()
+                      .map(code -> Map.entry(code, definition)))
+          .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+
   private final String handlerOverride;
 
   private final WorkTypeWorkflow workflow;
@@ -37,6 +46,21 @@ public enum WorkTypeDefinition {
 
   public static WorkTypeDefinition forCode(String code) {
     return code == null ? GENERIC : BY_CODE.getOrDefault(code, GENERIC);
+  }
+
+  /** Stored effect codes are a historical contract, independent of current WorkType metadata. */
+  public static Optional<WorkTypeDefinition> forStoredStructureHandler(String handlerCode) {
+    return handlerCode == null
+        ? Optional.empty()
+        : Optional.ofNullable(STRUCTURE_BY_STORED_HANDLER.get(handlerCode));
+  }
+
+  public Set<String> storedStructureHandlerCodes() {
+    if (!supportsStructureExecution()) {
+      return Set.of();
+    }
+    // MOVE is the handler name; pooled execution results have used MOVEMENT.
+    return this == MOVEMENT ? Set.of(name(), "MOVE") : Set.of(name());
   }
 
   public String handlerCode(WorkTypeTemplate template) {

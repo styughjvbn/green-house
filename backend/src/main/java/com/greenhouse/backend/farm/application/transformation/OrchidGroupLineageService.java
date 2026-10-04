@@ -33,6 +33,8 @@ public class OrchidGroupLineageService {
 
   private final StructureChangeLineageQueryService structureChangeLineageQueryService;
 
+  private final StructureChangeStrategyRegistry strategyRegistry;
+
   @Transactional
   public OrchidGroupLineage record(
       OrchidGroup source,
@@ -67,7 +69,7 @@ public class OrchidGroupLineageService {
                 view ->
                     new OrchidGroupLineageTransformationResponse(
                         view.id(),
-                        relationType(view.handlerCode()),
+                        strategyRegistry.get(view.structureType().name()).lineageType(),
                         view.workOperationId(),
                         view.sources().stream().mapToInt(group -> value(group.quantity())).sum(),
                         view.results().stream().mapToInt(group -> value(group.quantity())).sum(),
@@ -110,15 +112,5 @@ public class OrchidGroupLineageService {
 
   private int value(Integer quantity) {
     return quantity == null ? 0 : quantity;
-  }
-
-  private OrchidGroupLineageRelationType relationType(String handlerCode) {
-    return switch (handlerCode) {
-      case "MOVEMENT" -> OrchidGroupLineageRelationType.MOVED_TO;
-      case "REPOT" -> OrchidGroupLineageRelationType.REPOTTED_TO;
-      case "DIVIDE" -> OrchidGroupLineageRelationType.SPLIT_TO;
-      case "MERGE" -> OrchidGroupLineageRelationType.MERGED_TO;
-      default -> throw new IllegalArgumentException("지원하지 않는 구조 변경 계보 유형입니다: " + handlerCode);
-    };
   }
 }

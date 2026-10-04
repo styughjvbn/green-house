@@ -107,8 +107,15 @@ public class WorkEffectProcessor {
     WorkEffectKind effectKind = handler.effectKind();
 
     WorkEffectCommand routedCommand = command.withEffectKey(effectKey);
-    WorkExecutionResult result =
-        handler.execute(WorkEffectContext.from(operation, target), routedCommand);
+    var context = WorkEffectContext.from(operation, target);
+    WorkExecutionResult result = handler.execute(context, routedCommand);
+    var definition = WorkTypeDefinition.forCode(context.workTypeCode());
+    if (definition.supportsStructureExecution()
+        && WorkTypeDefinition.forStoredStructureHandler(result.handlerCode()).orElse(null)
+            != definition) {
+      throw new IllegalStateException(
+          "구조 변경 결과 handler와 작업 정의가 일치하지 않습니다: " + result.handlerCode());
+    }
     return effectStore.save(
         operation, target, routedCommand, effectKey, sourceOrchidGroupIds, effectKind, result);
   }

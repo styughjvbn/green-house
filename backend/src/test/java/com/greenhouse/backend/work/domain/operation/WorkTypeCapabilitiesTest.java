@@ -13,6 +13,23 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 class WorkTypeCapabilitiesTest {
 
+  @ParameterizedTest
+  @CsvSource({"MOVEMENT,MOVEMENT", "MOVE,MOVEMENT", "REPOT,REPOT", "DIVIDE,DIVIDE", "MERGE,MERGE"})
+  void storedStructureHandlersResolveIndependentlyOfWorkTypeNames(
+      String handler, WorkTypeDefinition expected) {
+    assertThat(WorkTypeDefinition.forStoredStructureHandler(handler)).contains(expected);
+  }
+
+  @Test
+  void nonStructureAndUnknownHandlersDoNotAcquireLineageFromCurrentMetadata() {
+    for (String handler :
+        List.of("DISCARD", "POTTING", "RECORD_ONLY", "RECONCILIATION", "CUSTOM_CARE", "UNKNOWN")) {
+      assertThat(WorkTypeDefinition.forStoredStructureHandler(handler)).isEmpty();
+    }
+    assertThat(WorkTypeDefinition.forStoredStructureHandler(null)).isEmpty();
+    assertThat(WorkTypeDefinition.forCode("MOVE")).isEqualTo(WorkTypeDefinition.GENERIC);
+  }
+
   private static final Map<WorkTypeTemplate, String> TEMPLATE_HANDLERS =
       Map.ofEntries(
           Map.entry(WorkTypeTemplate.PESTICIDE, "RECORD_ONLY"),
