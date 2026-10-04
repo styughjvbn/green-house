@@ -163,6 +163,7 @@ public class AuctionTrackingService {
         requestActorProvider.resolve(request.worker()),
         normalize(request.memo()),
         TimeConfig.utcNow(clock));
+    lotRepository.flush();
     return AuctionLotResponse.from(
         lot, partnerReader.getInfo(lot.getShipment().getAuctionHouseId()).name());
   }
@@ -250,6 +251,7 @@ public class AuctionTrackingService {
         requestActorProvider.resolve(request.worker()),
         normalize(request.memo()),
         TimeConfig.utcNow(clock));
+    lotRepository.flush();
     return AuctionLotResponse.from(
         lot, partnerReader.getInfo(lot.getShipment().getAuctionHouseId()).name());
   }

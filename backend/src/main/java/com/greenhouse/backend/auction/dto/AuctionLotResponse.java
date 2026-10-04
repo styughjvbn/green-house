@@ -5,6 +5,7 @@ import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.domain.AuctionLotStatusHistory;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -30,7 +31,8 @@ public record AuctionLotResponse(
     AuctionInspectionStatus inspectionStatus,
     String memo,
     List<AuctionAttemptResponse> attempts,
-    List<AuctionStatusHistoryResponse> statusHistory) {
+    List<AuctionStatusHistoryResponse> statusHistory,
+    @Schema(nullable = true) Boolean quantityAdjustmentAllowed) {
 
   public static AuctionLotResponse from(AuctionShipmentLot lot, String auctionMarket) {
     return from(lot, auctionMarket, lot.getAttempts(), lot.getStatusHistory());
@@ -74,6 +76,7 @@ public record AuctionLotResponse(
         inspection,
         lot.getMemo(),
         attempts.stream().map(AuctionAttemptResponse::from).toList(),
-        statusHistory.stream().map(AuctionStatusHistoryResponse::from).toList());
+        statusHistory.stream().map(AuctionStatusHistoryResponse::from).toList(),
+        lot.isQuantityAdjustmentAllowed(!attempts.isEmpty()));
   }
 }

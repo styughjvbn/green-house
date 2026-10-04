@@ -3210,6 +3210,7 @@ export interface components {
             /** Format: date */
             latestAuctionDate?: string;
             memo?: string;
+            quantityAdjustmentAllowed?: boolean | null;
             /** Format: int32 */
             returnConfirmableQuantity?: number;
             /** Format: date */
@@ -3252,10 +3253,22 @@ export interface components {
             /** Format: int64 */
             id?: number;
             memo?: string;
+            /** Format: int32 */
+            newReturnedQuantity?: number | null;
+            /** Format: int32 */
+            newSoldQuantity?: number | null;
             /** @enum {string} */
             newStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            /** Format: int32 */
+            newWaitingQuantity?: number | null;
+            /** Format: int32 */
+            previousReturnedQuantity?: number | null;
+            /** Format: int32 */
+            previousSoldQuantity?: number | null;
             /** @enum {string} */
             previousStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            /** Format: int32 */
+            previousWaitingQuantity?: number | null;
             reason?: string;
             worker?: string;
         };

@@ -652,7 +652,15 @@ export type AuctionStatusHistory = {
   reason: string;
   worker: string | null;
   memo: string | null;
-};
+} & Pick<
+  ApiSchemas["AuctionStatusHistoryResponse"],
+  | "previousSoldQuantity"
+  | "newSoldQuantity"
+  | "previousWaitingQuantity"
+  | "newWaitingQuantity"
+  | "previousReturnedQuantity"
+  | "newReturnedQuantity"
+>;
 
 export type AuctionLot = {
   id: number;
@@ -676,6 +684,7 @@ export type AuctionLot = {
   memo: string | null;
   attempts: AuctionAttempt[];
   statusHistory: AuctionStatusHistory[];
+  quantityAdjustmentAllowed: ApiSchemas["AuctionLotResponse"]["quantityAdjustmentAllowed"];
 };
 
 export type AuctionLotPage = Page<AuctionLot>;

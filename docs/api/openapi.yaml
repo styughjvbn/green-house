@@ -6527,6 +6527,10 @@ components:
           format: date
         memo:
           type: string
+        quantityAdjustmentAllowed:
+          type:
+          - boolean
+          - 'null'
         returnConfirmableQuantity:
           type: integer
           format: int32
@@ -6603,6 +6607,16 @@ components:
           format: int64
         memo:
           type: string
+        newReturnedQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        newSoldQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
         newStatus:
           type: string
           enum:
@@ -6619,6 +6633,21 @@ components:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+        newWaitingQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        previousReturnedQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        previousSoldQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
         previousStatus:
           type: string
           enum:
@@ -6635,6 +6664,11 @@ components:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+        previousWaitingQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
         reason:
           type: string
         worker:

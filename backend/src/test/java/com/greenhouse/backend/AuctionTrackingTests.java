@@ -1,6 +1,7 @@
 package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -22,6 +23,7 @@ import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
@@ -113,11 +115,12 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
     assertThat(returned.currentStatus()).isEqualTo(AuctionLotStatus.RETURNED);
     assertThat(returned.returnedQuantity()).isEqualTo(50);
 
-    var adjusted =
-        trackingService.adjust(
-            lot.getId(), new AuctionLotAdjustmentRequest(10, 0, 40, "관리자", "수량 보정"));
-    assertThat(adjusted.soldQuantity()).isEqualTo(10);
-    assertThat(adjusted.statusHistory()).hasSizeGreaterThanOrEqualTo(2);
+    assertThatThrownBy(
+            () ->
+                trackingService.adjust(
+                    lot.getId(), new AuctionLotAdjustmentRequest(10, 0, 40, "관리자", "수량 보정")))
+        .isInstanceOf(ConflictException.class);
+    assertThat(returned.quantityAdjustmentAllowed()).isFalse();
   }
 
   @Test

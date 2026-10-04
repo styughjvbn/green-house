@@ -364,6 +364,51 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 프론트엔드 `npm run check`: 포맷·생성 타입 drift·전체 순수 로직 시험·lint·production build 성공.
 - `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 뒤에는 진행 문서의 상태·결과만 갱신했다. 실행 코드·테스트는 바꾸지 않았다.
 
+## 10차 변경 — BE-007 경매 수량 변경의 이력과 직접 보정 제한
+
+작업일: 2026-10-04. 상태: 수량 이력·보정 정책·V37·화면·계약 문서 및 최종 전체 검증 완료.
+
+### 수정 전 재현
+
+- [AuctionQuantityHistoryPolicyTest](../backend/src/test/java/com/greenhouse/backend/auction/domain/AuctionQuantityHistoryPolicyTest.java)의 신규 4건을 기존 코드에 먼저 실행했고 모두 실패했다. 두 번째 부분 반환과 같은 상태의 수량 보정에서 이력이 추가되지 않았고, 경매 결과 또는 반환 확인 뒤 직접 보정으로 기존 수량을 덮어쓸 수 있었다.
+- 정산 금액 자체가 잘못 갱신됐다는 근거로 확대하지 않는다. 정산은 결과 행을 snapshot으로 보존하지만 lot 현재 수량이 그 사실과 달라지는 원인·보정 계약이 없었다.
+
+### 구현과 정책
+
+- [AuctionShipmentLot](../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java)는 결과 반영·반환 확인·직접 수량 보정 전에 판매·대기·반환 수량을 포착하고, 상태 또는 수량이 달라지면 기존 [AuctionLotStatusHistory](../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionLotStatusHistory.java)에 6개 전후값을 함께 저장한다. 상태 전이와 수량 변경의 판단은 한 내부 단계로 모았다. 같은 상태의 부분 반환·부분 낙찰·수량 보정을 모두 남기며 같은 상태·같은 수량은 새 history를 만들지 않는다.
+- 직접 보정은 경매 시도가 없고 반환 확인일도 없는 lot에만 허용한다. 유찰·반환 추정도 시도이며 상태 수동 보정으로 제한을 우회할 수 없다. 실제 변경은 `409 / AUCTION_QUANTITY_ADJUSTMENT_LOCKED`다. 이미 저장된 값 그대로인 요청은 변경 없이 반환한다. null·음수·합계 overflow도 변경 전에 거절한다. 합계는 long으로 비교해 int overflow로 출하 수량과 같아지는 입력을 허용하지 않는다.
+- 결과·정산·입금 및 확인된 반환을 직접 수정으로 덮어쓰지 않는 정책이다. 결과/반환 이후의 보상·정정 이벤트는 후속 기능 범위이며 이번에 구현하지 않는다. 정산 모듈의 Entity·Repository를 Auction에서 조회하거나 lot→partner/정산의 역방향 잠금을 추가하지 않았다. 실제 정산은 결과 행에서만 생성되므로 경매 시도 존재가 정산보다 앞선 변경 금지 경계다.
+- 쓰기는 기존 lot root 잠금·최상위 application transaction을 유지한다. 이력 생성 실패는 lot 수량·시도·결과·반환·Receipt와 함께 rollback한다. 직접 보정·상태 변경 응답도 flush 후 history ID를 반환한다. 기존 결과·반환 Receipt key/fingerprint와 replay-before-validation 순서는 유지한다.
+- 목록·상세는 `quantityAdjustmentAllowed`를 제공하며 화면은 그 값으로 보정 버튼을 제어한다. 목록 mapper는 이미 일괄 조회한 시도의 존재를 같은 lot 정책에 전달해 lazy collection 쿼리를 추가하지 않는다. UI는 이력에 보존된 수량 전후값을 표시하고 과거 null 값은 추정하지 않는다. 서버 상태는 기존 cache에 두고 dialog의 열림만 local UI state로 유지한다.
+- 작업자는 반환·보정·상태 요청에서 기존 `RequestActorProvider`를 사용한다. 결과 입력에는 작업자 필드가 없어 해당 이력은 기존처럼 null이다. 새 인증/actor 정책이나 AuditEvent 이중 저장은 도입하지 않는다. 고정 사유와 입력 메모·처리 시점은 같은 history에 보존한다.
+
+### V37과 영속 계약 호환
+
+- [V37](../backend/src/main/resources/db/migration/V37__auction_history_quantity_snapshots.sql)은 history에 nullable 정수 6개를 추가한다. 기존 이력·현재 lot·결과·정산·입금·Receipt를 backfill 또는 재계산하지 않는다. 과거 수량 시점을 현재 lot에서 복원할 근거가 없기 때문이다.
+- CHECK는 전부 null인 과거 행 또는 6개 모두 존재하는 비음수 snapshot을 허용한다. SQL CHECK의 null 통과를 피하도록 `num_nonnulls`로 완전성을 검사한다. snapshot은 수량 불일치 사실도 기록하므로 전후 합계를 DB CHECK로 같게 강제하지 않는다. 직접 보정의 출하 수량 수지는 domain이 검증한다. 신규 application이 완전한 snapshot을 만들지만 nullable legacy 행을 DB에서 완전히 금지한 것은 아니다.
+- HTTP 응답에 nullable 수량 snapshot·보정 capability를 추가했다. Controller/DTO·테스트를 기준으로 `python3 scripts/generate_openapi.py`, `npm run api:types`를 실행해 전체 OpenAPI·Auction slice·생성 TypeScript를 갱신했다. API index의 위치나 endpoint 목록은 바뀌지 않았다.
+- 기존 receipt JSON은 그대로 유지한다. 새 mapper는 신규 필드가 없는 기존 receipt를 읽고 해당 값은 null로 반환하며 현재 상태를 끼워 넣지 않는다. 이후 최초 실행 receipt에는 새 필드가 포함된다. 과거 이력과 과거 receipt의 미상 값은 최신 상세 값과 구분한다.
+
+### 회귀 방어
+
+- 신규 도메인 단위 6건: 같은 상태의 두 번째 부분 반환·보정, 경매 결과/반환 확인 이후 보정 거절, 무변경 요청의 중복 이력 방지, null·음수·int overflow 입력의 변경 전 거절.
+- [AuctionQuantityHistoryPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/AuctionQuantityHistoryPostgresE2ETest.java): 16건. 반환·보정·부분 낙찰의 전후값과 ID·actor·메모·timeline HTTP, 네 종류의 결과 뒤 보정 HTTP 409, 시도 없는 반환 확인 뒤 보정, 정산/완납 양쪽 보존, 이력 저장 실패 시 반환·Receipt 및 직접 보정 rollback, 병렬 반환, 결과/보정 양방향 경쟁, 구형 receipt 재조회다.
+- 경쟁 3건은 root 잠금을 보유한 선행 요청과 후행 PID의 실제 `pg_blocking_pids` 대기를 확인한다. 후행 snapshot은 선행 commit 뒤 수량을 사용하며, 결과 선행 시 기다린 보정은 최신 시도 사실로 거절한다. 보정 선행 시 결과는 보정 이후 대기 수량을 사용한다.
+- 반환·보정 실패 및 거절은 관련 10개 테이블 JSON 값을 비교한다. 반환 이력 저장 실패는 receipt key를 소비하지 않고 같은 키의 정상 재시도가 성공한다. 정산·입금 검증은 실제 rebuild·수동 입금 application을 호출해 결과·정산 행·잔액·이벤트·감사의 보존을 확인한다.
+- [AuctionQuantityHistoryMigrationPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/AuctionQuantityHistoryMigrationPostgresE2ETest.java): 1건. 별도 PostgreSQL DB에서 V36→V37 upgrade, legacy history/lot/receipt 값 보존, 수량 미상 유지, 불완전·음수 snapshot 거절, 수량 불일치 기록 허용, 재실행 0건과 Flyway validate를 확인한다.
+- 기존 [CoreQueryRegressionTest](../backend/src/test/java/com/greenhouse/backend/CoreQueryRegressionTest.java)의 경매 페이지 회귀를 1·10·50개로 확대했다. 실제 이력 snapshot·capability를 조립해도 5회 이하 조회를 유지한다. 기존 query-count를 느슨하게 바꾸지 않았다.
+
+### 검증과 남은 범위
+
+- 수정 전 단위 4건 모두 실패. 수정 후 신규 6건과 기존 경매 tracking·목록 query 회귀를 포함한 집중 일반 테스트 35건 성공.
+- PostgreSQL 신규 quantity 15건·migration 1건과 기존 경매 Receipt 40건, 총 56건 집중 성공. 이후 직접 보정의 history 저장 실패 rollback 1건을 추가했으며 최종 전체 검증에서 함께 확인한다.
+- 기존 integration의 확인 반환 뒤 직접 수량 보정 기대값은 이력 보존 정책에 맞춰 거절과 capability 검증으로 변경했다. 초기 테스트 import 누락 컴파일 오류는 추가 후 재실행했다. 도메인 정책·DB 제약을 완화하지 않았다.
+- 최종 백엔드 전체 `./gradlew test`: 120개 클래스, 573건 성공. 신규 도메인 6건과 확대된 1·10·50개 query-count 회귀를 포함한다.
+- 최종 PostgreSQL 전체 `./gradlew workE2eTest`: 47개 클래스, 354건 성공. 신규 수량 이력 16건·V37 migration 1건과 기존 337건을 포함하며 실패·오류·생략은 없다. 마지막에 추가한 직접 보정 이력 저장 실패 rollback도 성공했다.
+- 프론트엔드 `npm run check`: 포맷·생성 타입 drift·전체 순수 로직 시험·lint·production build 성공. 브라우저 E2E는 실행하지 않았다.
+- `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 뒤에는 진행 문서의 상태·결과만 갱신했다. 실행 코드·테스트·API 생성물은 바꾸지 않았다.
+- V37 이전 누락된 수량 이력과 과거 보정으로 달라진 lot/result/정산은 자동 복원·보정하지 않는다. 운영 데이터 영향은 아직 대사하지 않았다. 같은 상태의 신규 쓰기 보호와 기존 정산·입금 보존 범위를 완료 대상으로 삼는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -375,7 +420,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `0e803627` — BE-006 판매 수정 합집합 잠금·경쟁 회귀·정책 문서.
 - `6b12b411` — BE-006 Farm 단건·일괄 수정 묶음·구역 선잠금·경쟁 회귀·정책 문서.
 - `270750ea` — BE-006 Work 구조 기록 전체 원본·구역 선잠금·계획 전 검증·경쟁 및 rollback 회귀·정책 문서.
-- BE-006 일반 계획 — `fix: lock complete work selections before variety batches`. 전체 대상 잠금·500개 분할·계획/폐기 경쟁 및 rollback 회귀·정책 문서를 별도 커밋으로 저장한다.
+- `dd69ddc9` — BE-006 일반 계획 전체 대상 잠금·500개 분할·계획/폐기 경쟁 및 rollback 회귀·정책 문서.
+- BE-007 — `fix: preserve auction quantity history and restrict corrections`. 수량 snapshot·V37·보정 정책·capability·계약 생성물·회귀·화면·관련 문서를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -385,5 +431,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-004 수정 전 확정된 판매 불가 상태의 예약은 자동 해제하지 않았다. 운영 영향과 기존 출고 여부는 별도 대사·업무 판단 대상이다.
 - BE-005의 기존 중복 결과·반환 및 정산 영향은 별도 대사 대상이다. 기존 기록을 중복으로 추정해 삭제하지 않는다.
 - BE-006의 예정 수정 범위는 완료했다. 판매 교차 수정, Farm 단건·일괄 수정, Work 구조 기록과 Farm 경쟁, 일반 품종별 계획·폐기/Farm·구조 기록·겹치는 계획 경쟁을 검증했다. 경로별 전체 잠금 순서와 기존 대상 변경 거절 계약을 유지한다. 모든 writer·FK·내부 fence의 무교착을 증명한 것은 아니며 새 writer에는 같은 경로별 순서와 경쟁 회귀가 필요하다.
-- 다음 우선 대상은 BE-007의 같은 상태에서 발생하는 경매 수량 변경 기록과 결과·정산 이후 보정 계약이다. 이번 커밋에서는 이 정책·schema를 변경하지 않았다.
+- BE-007의 신규 수량 이력과 경매 시도·반환 확인 이후 직접 보정 제한을 완료했다. 과거 누락된 이력과 수량 불일치는 자동 복원하지 않았으며 운영 데이터 대사가 남는다. 결과 이후의 보상·정정 이벤트는 별도 업무 계약과 구현이 필요한 후속 범위다.
+- 다음 우선 대상은 BE-008의 생성 요청 재전송과 식별자·멱등 계약이다. 기존 기능별 Receipt와 재시도 정책을 먼저 확인해 실제 중복 생성 경로부터 다룬다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

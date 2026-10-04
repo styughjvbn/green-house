@@ -1,6 +1,7 @@
 package com.greenhouse.backend.auction.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
+import com.greenhouse.backend.common.exception.ConflictException;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -86,7 +87,7 @@ public class AuctionShipmentLot extends BaseEntity {
   private List<AuctionAttempt> attempts = new ArrayList<>();
 
   @OneToMany(mappedBy = "shipmentLot", cascade = CascadeType.ALL, orphanRemoval = true)
-  @OrderBy("changedAt ASC")
+  @OrderBy("changedAt ASC, id ASC")
   private List<AuctionLotStatusHistory> statusHistory = new ArrayList<>();
 
   public AuctionShipmentLot(
@@ -117,6 +118,9 @@ public class AuctionShipmentLot extends BaseEntity {
       boolean failed,
       boolean returnInferred,
       LocalDateTime changedAt) {
+    int previousSold = soldQuantity;
+    int previousWaiting = waitingQuantity;
+    int previousReturned = returnedQuantity;
     soldQuantity += sold;
     returnedQuantity += returned;
     waitingQuantity = Math.max(0, shippedQuantity - soldQuantity - returnedQuantity);
@@ -136,7 +140,8 @@ public class AuctionShipmentLot extends BaseEntity {
     } else {
       next = AuctionLotStatus.IN_PROGRESS;
     }
-    changeStatus(next, "경매 결과 반영", null, null, changedAt);
+    recordChange(
+        next, "경매 결과 반영", null, null, changedAt, previousSold, previousWaiting, previousReturned);
   }
 
   public void recordResult(
@@ -294,6 +299,9 @@ public class AuctionShipmentLot extends BaseEntity {
     if (quantity > confirmableQuantity) {
       throw new IllegalArgumentException("반환 확인 수량이 확인 가능한 수량보다 많습니다.");
     }
+    int previousSold = soldQuantity;
+    int previousWaiting = waitingQuantity;
+    int previousReturned = returnedQuantity;
     if (currentStatus == AuctionLotStatus.RETURN_INFERRED && returnedQuantity > 0) {
       int unconfirmedQuantity = returnedQuantity - quantity;
       returnedQuantity = quantity;
@@ -305,8 +313,15 @@ public class AuctionShipmentLot extends BaseEntity {
     returnConfirmedDate = returnDate;
     AuctionLotStatus next =
         waitingQuantity == 0 ? AuctionLotStatus.RETURNED : AuctionLotStatus.PARTIALLY_RETURNED;
-    changeStatus(
-        next, next == AuctionLotStatus.RETURNED ? "반환 완료" : "부분반환 확인", worker, memo, changedAt);
+    recordChange(
+        next,
+        next == AuctionLotStatus.RETURNED ? "반환 완료" : "부분반환 확인",
+        worker,
+        memo,
+        changedAt,
+        previousSold,
+        previousWaiting,
+        previousReturned);
   }
 
   public Integer getReturnConfirmableQuantity() {
@@ -323,9 +338,29 @@ public class AuctionShipmentLot extends BaseEntity {
       String worker,
       String memo,
       LocalDateTime changedAt) {
-    if (sold + waiting + returned != shippedQuantity) {
+    if (sold == null
+        || waiting == null
+        || returned == null
+        || sold < 0
+        || waiting < 0
+        || returned < 0) {
+      throw new IllegalArgumentException("판매/대기/반환 수량은 0 이상의 값이 필요합니다.");
+    }
+    if ((long) sold + waiting + returned != shippedQuantity) {
       throw new IllegalArgumentException("판매/대기/반환 수량 합계가 출하 수량과 일치해야 합니다.");
     }
+    if (sold.equals(soldQuantity)
+        && waiting.equals(waitingQuantity)
+        && returned.equals(returnedQuantity)) {
+      return;
+    }
+    if (!isQuantityAdjustmentAllowed()) {
+      throw new ConflictException(
+          "AUCTION_QUANTITY_ADJUSTMENT_LOCKED", "경매 결과 또는 반환 확인 이력이 있는 lot의 수량은 직접 보정할 수 없습니다.");
+    }
+    int previousSold = soldQuantity;
+    int previousWaiting = waitingQuantity;
+    int previousReturned = returnedQuantity;
     soldQuantity = sold;
     waitingQuantity = waiting;
     returnedQuantity = returned;
@@ -333,16 +368,51 @@ public class AuctionShipmentLot extends BaseEntity {
         waiting > 0
             ? (sold > 0 ? AuctionLotStatus.PARTIALLY_SOLD : AuctionLotStatus.REAUCTION_WAITING)
             : returned > 0 ? AuctionLotStatus.RETURNED : AuctionLotStatus.SOLD;
-    changeStatus(next, "수량 보정", worker, memo, changedAt);
+    recordChange(
+        next, "수량 보정", worker, memo, changedAt, previousSold, previousWaiting, previousReturned);
+  }
+
+  public boolean isQuantityAdjustmentAllowed() {
+    return isQuantityAdjustmentAllowed(!attempts.isEmpty());
+  }
+
+  public boolean isQuantityAdjustmentAllowed(boolean hasRecordedAttempts) {
+    return !hasRecordedAttempts && returnConfirmedDate == null;
   }
 
   public void changeStatus(
       AuctionLotStatus next, String reason, String worker, String memo, LocalDateTime changedAt) {
-    if (currentStatus == next) {
+    recordChange(
+        next, reason, worker, memo, changedAt, soldQuantity, waitingQuantity, returnedQuantity);
+  }
+
+  private void recordChange(
+      AuctionLotStatus next,
+      String reason,
+      String worker,
+      String memo,
+      LocalDateTime changedAt,
+      int previousSold,
+      int previousWaiting,
+      int previousReturned) {
+    if (currentStatus == next
+        && previousSold == soldQuantity
+        && previousWaiting == waitingQuantity
+        && previousReturned == returnedQuantity) {
       return;
     }
     var history =
-        new AuctionLotStatusHistory(this, currentStatus, next, reason, worker, memo, changedAt);
+        new AuctionLotStatusHistory(
+            this,
+            currentStatus,
+            next,
+            reason,
+            worker,
+            memo,
+            changedAt,
+            previousSold,
+            previousWaiting,
+            previousReturned);
     statusHistory.add(history);
     currentStatus = next;
   }

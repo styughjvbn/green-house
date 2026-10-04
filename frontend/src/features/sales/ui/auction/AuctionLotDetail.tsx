@@ -101,6 +101,9 @@ export function AuctionLotDetail({
               </DetailActionButton>
               <DetailActionButton
                 icon={SlidersHorizontal}
+                disabled={
+                  loading || currentLot.quantityAdjustmentAllowed !== true
+                }
                 onClick={() => setShowQuantityAdjustment(true)}
               >
                 수량 보정
@@ -260,14 +263,49 @@ export function AuctionLotDetail({
                   />
                 );
               })}
-              {currentLot.statusHistory.map((history) => (
-                <TimelineItem
-                  key={`history-${history.id}`}
-                  date={history.changedAt.slice(0, 10)}
-                  title={`상태 변경 · ${history.reason}`}
-                  description={history.memo || history.worker || "변경 이력"}
-                />
-              ))}
+              {currentLot.statusHistory.map((history) => {
+                const quantities = [
+                  [
+                    "낙찰",
+                    history.previousSoldQuantity,
+                    history.newSoldQuantity,
+                  ],
+                  [
+                    "대기",
+                    history.previousWaitingQuantity,
+                    history.newWaitingQuantity,
+                  ],
+                  [
+                    "반환",
+                    history.previousReturnedQuantity,
+                    history.newReturnedQuantity,
+                  ],
+                ] as const;
+                const quantityChange = quantities
+                  .filter(
+                    ([, before, after]) =>
+                      typeof before === "number" &&
+                      typeof after === "number" &&
+                      before !== after,
+                  )
+                  .map(
+                    ([label, before, after]) =>
+                      `${label} ${before} → ${after}분`,
+                  )
+                  .join(" · ");
+                return (
+                  <TimelineItem
+                    key={`history-${history.id}`}
+                    date={history.changedAt.slice(0, 10)}
+                    title={`${quantityChange ? "수량 변경" : "상태 변경"} · ${history.reason}`}
+                    description={
+                      [quantityChange, history.memo, history.worker]
+                        .filter(Boolean)
+                        .join(" · ") || "변경 이력"
+                    }
+                  />
+                );
+              })}
             </ol>
             <div className="mt-3 flex justify-end gap-8 border-t border-[#e5e9e3] pt-3">
               <Money label="낙찰금액" value={soldAmount} />
@@ -287,7 +325,8 @@ export function AuctionLotDetail({
         />
       ) : null}
 
-      {showQuantityAdjustment ? (
+      {showQuantityAdjustment &&
+      currentLot.quantityAdjustmentAllowed === true ? (
         <AuctionQuantityAdjustDialog
           key={currentLot.id}
           lot={currentLot}

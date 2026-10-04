@@ -14,7 +14,7 @@ public interface AuctionLotStatusHistoryRepository
       """
 			select history from AuctionLotStatusHistory history
 			where history.shipmentLot.id in :lotIds
-			order by history.shipmentLot.id asc, history.changedAt asc
+			order by history.shipmentLot.id asc, history.changedAt asc, history.id asc
 			""")
   List<AuctionLotStatusHistory> findAllByLotIdIn(@Param("lotIds") Collection<Long> lotIds);
 }

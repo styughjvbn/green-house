@@ -57,6 +57,24 @@ public class AuctionLotStatusHistory {
   @Column(columnDefinition = "text")
   private String memo;
 
+  @Column(name = "previous_sold_quantity")
+  private Integer previousSoldQuantity;
+
+  @Column(name = "new_sold_quantity")
+  private Integer newSoldQuantity;
+
+  @Column(name = "previous_waiting_quantity")
+  private Integer previousWaitingQuantity;
+
+  @Column(name = "new_waiting_quantity")
+  private Integer newWaitingQuantity;
+
+  @Column(name = "previous_returned_quantity")
+  private Integer previousReturnedQuantity;
+
+  @Column(name = "new_returned_quantity")
+  private Integer newReturnedQuantity;
+
   public AuctionLotStatusHistory(
       AuctionShipmentLot lot,
       AuctionLotStatus previous,
@@ -64,7 +82,10 @@ public class AuctionLotStatusHistory {
       String reason,
       String worker,
       String memo,
-      LocalDateTime changedAt) {
+      LocalDateTime changedAt,
+      Integer previousSoldQuantity,
+      Integer previousWaitingQuantity,
+      Integer previousReturnedQuantity) {
     shipmentLot = lot;
     previousStatus = previous;
     newStatus = next;
@@ -72,6 +93,12 @@ public class AuctionLotStatusHistory {
     this.reason = reason;
     this.worker = worker;
     this.memo = memo;
+    this.previousSoldQuantity = previousSoldQuantity;
+    this.previousWaitingQuantity = previousWaitingQuantity;
+    this.previousReturnedQuantity = previousReturnedQuantity;
+    this.newSoldQuantity = lot.getSoldQuantity();
+    this.newWaitingQuantity = lot.getWaitingQuantity();
+    this.newReturnedQuantity = lot.getReturnedQuantity();
   }
 
   public Long getShipmentLotId() {

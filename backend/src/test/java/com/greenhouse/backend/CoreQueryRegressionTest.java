@@ -134,15 +134,16 @@ class CoreQueryRegressionTest {
     assertThat(queries).isEqualTo(1L);
   }
 
-  @Test
-  void auctionLotPageUsesFixedQueryCount() {
+  @ParameterizedTest
+  @ValueSource(ints = {1, 10, 50})
+  void auctionLotPageUsesFixedQueryCount(int count) {
     BusinessPartner auctionHouse =
         partnerRepository.save(
             new BusinessPartner("회귀 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
     AuctionShipment shipment =
         new AuctionShipment(
             LocalDate.of(2030, 2, 1), auctionHouse.getId(), auctionHouse.getPartnerType());
-    for (int index = 0; index < 3; index++) {
+    for (int index = 0; index < count; index++) {
       AuctionShipmentLot lot = new AuctionShipmentLot("난", "품종 " + index, "특", 1, 10);
       AuctionAttempt attempt =
           new AuctionAttempt(LocalDate.of(2030, 2, 2), 1, AuctionAttemptStatus.SOLD, null, null);
@@ -163,9 +164,19 @@ class CoreQueryRegressionTest {
 
     long queryCount =
         measure(
-            () ->
-                auctionTrackingService.getLots(
-                    null, null, null, null, null, null, false, false, false, null, 0, 10));
+            () -> {
+              var page =
+                  auctionTrackingService.getLots(
+                      null, null, null, null, null, null, false, false, false, null, 0, count);
+              assertThat(page.content()).hasSize(count);
+              assertThat(page.content())
+                  .allSatisfy(
+                      lot -> {
+                        assertThat(lot.quantityAdjustmentAllowed()).isFalse();
+                        assertThat(lot.statusHistory().getFirst().previousSoldQuantity()).isZero();
+                        assertThat(lot.statusHistory().getFirst().newSoldQuantity()).isEqualTo(10);
+                      });
+            });
 
     // One bulk lookup supplies current auction house names.
     assertThat(queryCount).isLessThanOrEqualTo(5L);
