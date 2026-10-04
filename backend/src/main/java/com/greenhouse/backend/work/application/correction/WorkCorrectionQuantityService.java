@@ -3,7 +3,7 @@ package com.greenhouse.backend.work.application.correction;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.work.application.effect.WorkEffectResults;
+import com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec;
 import com.greenhouse.backend.work.domain.correction.WorkQuantityBalancePolicy;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
@@ -62,8 +62,9 @@ public class WorkCorrectionQuantityService {
     var balances = new LinkedHashMap<Long, WorkQuantityBalance>();
     for (var effect : effects.findByWorkOperationIdOrderByIdAsc(workId)) {
       var details = effect.getResultDetails();
-      Map<Long, Integer> results = WorkEffectResults.resultQuantities(details);
-      Map<Long, Integer> inputs = quantities(details.get("sourceInputQuantities"));
+      Map<Long, Integer> results = WorkEffectJsonCodec.resultQuantities(details);
+      Map<Long, Integer> inputs =
+          WorkEffectJsonCodec.inputQuantities(details.get("sourceInputQuantities"));
       if (type == WorkTypeDefinition.MOVEMENT
           && inputs.isEmpty()
           && effect.getTarget() != null
@@ -79,18 +80,10 @@ public class WorkCorrectionQuantityService {
       if (type == WorkTypeDefinition.POTTING
           && details.get("actualQuantity") instanceof Number quantity) {
         inputs = Map.of(effect.getId(), quantity.intValue());
-        if (results.isEmpty()
-            && details.get("createdOrchidGroupIds") instanceof List<?> ids
-            && effect.getCommandDetails().get("results") instanceof List<?> rows
-            && ids.size() == rows.size()) {
-          var recordedResults = new LinkedHashMap<Long, Integer>();
-          for (int i = 0; i < ids.size(); i++) {
-            if (ids.get(i) instanceof Number id
-                && rows.get(i) instanceof Map<?, ?> row
-                && row.get("quantity") instanceof Number amount)
-              recordedResults.put(id.longValue(), amount.intValue());
-          }
-          if (recordedResults.size() == ids.size()) results = recordedResults;
+        if (results.isEmpty() && details.get("createdOrchidGroupIds") instanceof List<?> ids) {
+          results =
+              WorkEffectJsonCodec.pottingResultQuantities(
+                  ids, effect.getCommandDetails().get("results"));
         }
       }
       if (!results.isEmpty() && !inputs.isEmpty())
@@ -212,15 +205,6 @@ public class WorkCorrectionQuantityService {
       if (!Objects.equals(before, after)) changes.add(new WorkQuantityBalanceChange(before, after));
     }
     return List.copyOf(changes);
-  }
-
-  private Map<Long, Integer> quantities(Object value) {
-    if (!(value instanceof Map<?, ?> map)) return Map.of();
-    var result = new LinkedHashMap<Long, Integer>();
-    map.forEach(
-        (key, quantity) ->
-            result.put(Long.valueOf(key.toString()), ((Number) quantity).intValue()));
-    return result;
   }
 
   private int number(Object value) {

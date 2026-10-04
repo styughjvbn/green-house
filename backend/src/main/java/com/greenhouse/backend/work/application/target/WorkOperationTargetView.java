@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.target;
 
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetAction;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
@@ -9,9 +10,7 @@ import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -104,38 +103,8 @@ public record WorkOperationTargetView(
         TimeConfig.toFarmTime(execution.getEffectAppliedAt()),
         execution.getWorker(),
         execution.getResultDetails(),
-        resultOrchidGroupIds(execution.getResultDetails()),
+        WorkEffectJsonCodec.targetResultIds(execution.getResultDetails()),
         availableActions);
-  }
-
-  private static List<Long> resultOrchidGroupIds(Map<String, Object> details) {
-    if (details == null || details.isEmpty()) {
-      return List.of();
-    }
-    var ids = new LinkedHashSet<Long>();
-    addLong(ids, details.get("resultOrchidGroupId"));
-    addLongs(ids, details.get("resultOrchidGroupIds"));
-    addLongs(ids, details.get("createdOrchidGroupIds"));
-    if (details.get("results") instanceof List<?> results) {
-      for (Object result : results) {
-        if (result instanceof Map<?, ?> row) {
-          addLong(ids, row.get("orchidGroupId"));
-        }
-      }
-    }
-    return new ArrayList<>(ids);
-  }
-
-  private static void addLongs(LinkedHashSet<Long> ids, Object value) {
-    if (value instanceof List<?> values) {
-      values.forEach(item -> addLong(ids, item));
-    }
-  }
-
-  private static void addLong(LinkedHashSet<Long> ids, Object value) {
-    if (value instanceof Number number) {
-      ids.add(number.longValue());
-    }
   }
 
   private static Map<String, Object> inboundLocation(InboundPottingPlanTarget inbound) {

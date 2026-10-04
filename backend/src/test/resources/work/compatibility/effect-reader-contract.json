@@ -1,0 +1,230 @@
+[
+  {
+    "name": "empty",
+    "result": {},
+    "targetIds": [],
+    "detailIds": [],
+    "quantities": {}
+  },
+  {
+    "name": "numeric-union-versus-preferred-list",
+    "result": {
+      "resultOrchidGroupId": 9,
+      "resultOrchidGroupIds": [
+        3,
+        "4",
+        3,
+        null,
+        "bad"
+      ],
+      "createdOrchidGroupIds": [
+        5,
+        9
+      ],
+      "results": [
+        {
+          "orchidGroupId": 6,
+          "quantity": 2
+        },
+        {
+          "orchidGroupId": "7",
+          "quantity": 4
+        }
+      ]
+    },
+    "targetIds": [
+      9,
+      3,
+      5,
+      6
+    ],
+    "detailIds": [
+      3,
+      4,
+      3
+    ],
+    "quantities": {
+      "6": 2
+    }
+  },
+  {
+    "name": "created-fallback",
+    "result": {
+      "resultOrchidGroupId": 9,
+      "resultOrchidGroupIds": [
+        "bad",
+        null
+      ],
+      "createdOrchidGroupIds": [
+        "5",
+        6,
+        6
+      ]
+    },
+    "targetIds": [
+      9,
+      6
+    ],
+    "detailIds": [
+      5,
+      6,
+      6
+    ],
+    "quantities": {}
+  },
+  {
+    "name": "single-string-fallback",
+    "result": {
+      "resultOrchidGroupId": "9",
+      "resultOrchidGroupIds": [
+        "bad"
+      ],
+      "createdOrchidGroupIds": [
+        null
+      ]
+    },
+    "targetIds": [],
+    "detailIds": [
+      9
+    ],
+    "quantities": {}
+  },
+  {
+    "name": "rows-do-not-supply-detail-fallback",
+    "result": {
+      "results": [
+        {},
+        null,
+        "bad",
+        {
+          "orchidGroupId": 2,
+          "quantity": 3
+        }
+      ]
+    },
+    "targetIds": [
+      2
+    ],
+    "detailIds": [],
+    "quantities": {
+      "2": 3
+    }
+  },
+  {
+    "name": "partial-results-beat-merge",
+    "result": {
+      "results": [
+        {
+          "orchidGroupId": 3,
+          "quantity": 4
+        },
+        {
+          "orchidGroupId": 2,
+          "quantity": 2
+        },
+        {
+          "orchidGroupId": 3,
+          "quantity": 5
+        },
+        {
+          "orchidGroupId": "4",
+          "quantity": 6
+        },
+        {
+          "orchidGroupId": 5,
+          "quantity": "7"
+        }
+      ],
+      "resultOrchidGroupId": 9,
+      "totalInputQuantity": 20,
+      "lossQuantity": 1
+    },
+    "targetIds": [
+      9,
+      3,
+      2,
+      5
+    ],
+    "detailIds": [
+      9
+    ],
+    "quantities": {
+      "3": 5,
+      "2": 2
+    }
+  },
+  {
+    "name": "invalid-results-use-merge",
+    "result": {
+      "results": [
+        {
+          "orchidGroupId": "3",
+          "quantity": 4
+        },
+        {
+          "orchidGroupId": 4,
+          "quantity": "5"
+        }
+      ],
+      "resultOrchidGroupId": 9,
+      "totalInputQuantity": 20,
+      "lossQuantity": 2
+    },
+    "targetIds": [
+      9,
+      4
+    ],
+    "detailIds": [
+      9
+    ],
+    "quantities": {
+      "9": 18
+    }
+  },
+  {
+    "name": "missing-loss-use-merge",
+    "result": {
+      "resultOrchidGroupId": 9,
+      "totalInputQuantity": 20
+    },
+    "targetIds": [
+      9
+    ],
+    "detailIds": [
+      9
+    ],
+    "quantities": {
+      "9": 20
+    }
+  },
+  {
+    "name": "string-merge-id-ignored",
+    "result": {
+      "resultOrchidGroupId": "9",
+      "totalInputQuantity": 20
+    },
+    "targetIds": [],
+    "detailIds": [
+      9
+    ],
+    "quantities": {}
+  },
+  {
+    "name": "untrimmed-string-and-fractional-number",
+    "result": {
+      "resultOrchidGroupIds": [
+        " 3 ",
+        3.9,
+        "4"
+      ]
+    },
+    "targetIds": [
+      3
+    ],
+    "detailIds": [
+      3,
+      4
+    ],
+    "quantities": {}
+  }
+]

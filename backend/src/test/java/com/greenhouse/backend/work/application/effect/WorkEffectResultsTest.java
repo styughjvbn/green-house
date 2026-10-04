@@ -104,9 +104,10 @@ class WorkEffectResultsTest {
   void lineageKeepsNumericOnlyIdsAndLegacyMergeQuantity() {
     var merged =
         new WorkEffectResults.Merged(List.of(1L, 2L), Map.of(1L, 4, 2L, 6), 10, 2, 3L).toMap();
-    assertThat(WorkEffectResults.resultQuantities(merged)).containsExactlyEntriesOf(Map.of(3L, 8));
+    assertThat(WorkEffectJsonCodec.resultQuantities(merged))
+        .containsExactlyEntriesOf(Map.of(3L, 8));
     assertThat(
-            WorkEffectResults.sourceQuantities(
+            WorkEffectJsonCodec.sourceQuantities(
                 Map.of(
                     "sources",
                     List.of(

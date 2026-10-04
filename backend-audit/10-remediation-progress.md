@@ -669,6 +669,39 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 고정 writer 결과의 Map 경계는 이번 범위에서 이식했다. BE-012의 공통 명령 `payload` Object 및 구조 변경/상세/수량/계보 JSON reader의 중복·format별 precedence는 남는다. 현장 동기화 snapshot 계약은 JSON으로 유지하며 Farm snapshot을 Work 모델에 복제하지 않았다.
 - 타입 유지가 handler와 payload/result의 모든 조합을 compiler로 검증한다는 뜻은 아니다. BE-014의 유형/handler/효과 분류 대응과 BE-013의 version·과거 지문 corpus·rolling writer 정책은 별도다. 기존 이력을 추정해 바꾸거나 누락된 field를 현재 값으로 채우지 않는다.
 
+## 18차 변경 — BE-012 저장 효과 JSON reader 통합
+
+작업일: 2026-10-04. 상태: 공통 효과 reader·형식별 호환·query-count 회귀·정책 문서 및 최종 전체 검증 완료.
+
+### 원인과 범위
+
+- 고정 writer의 타입 유지 이후에도 대상 응답·상세 응답·계보·수량 보정이 같은 저장 JSON을 각자 읽었다. 중복 제거 과정에서 대상의 합집합을 상세의 우선순위로 바꾸거나 문자열 ID를 계보의 수량 사실에 포함하면 과거 응답과 보정 의미가 달라진다. 이 차이가 기존 버그라는 재현은 없으므로 정책 차이를 유지한다.
+- `WorkEffectJsonCodec`에 조회 없는 해석을 모은다. 대상은 숫자 ID의 순서 있는 합집합·중복 제거, 상세는 문자열 ID도 허용하는 첫 유효 목록·중복 보존을 사용한다. 상세의 연결 행 fallback·적용 결과 행 우선순위·위치/품종 참조 조립은 기존 응답 조립 측에 유지한다.
+- 계보·보정은 숫자 ID/수량만 인정한다. 일부 유효한 결과 행이 있으면 구형 합식의 총량 fallback을 사용하지 않으며, 같은 ID의 마지막 수량과 처음 등장 순서를 유지한다. 투입 수량 object의 잘못된 키·수량은 기존처럼 예외를 발생시킨다.
+- 구형 포트의 생성 ID/요청 결과는 위치별로 대응시킨다. 크기 불일치·빠진 행·문자열 ID/수량·중복 ID에서는 부분 수량을 채택하지 않는다. 상세의 빈 행 압축 규칙을 이 경로에 공유하지 않는다. 생성 ID 목록이 없으면 command JSON을 읽지 않는 기존 단락 평가도 유지한다.
+- writer·저장 JSON·효과 지문·HTTP/OpenAPI·DB schema·트랜잭션·잠금 순서는 변경하지 않는다. codec은 Entity·Repository·현재 Farm 상태를 읽지 않으며 저장 값을 보정하거나 새 공통 handler framework를 도입하지 않는다.
+
+### 회귀 방어
+
+- reader JSON fixture 10종으로 서로 다른 대상/상세 ID 의미와 결과 수량을 동시에 고정한다. 대상 응답의 실제 `from` 경로도 같은 fixture로 검증한다. 구형 합식 fallback·부분/중복 결과·문자열/소수·null/잘못된 행을 포함한다. 운영 이력에서 추출한 corpus는 아니다.
+- 신규 codec 시험 21건, 수량 보정 service 시험 2건. 포트 위치별 수량·부분/중복 거절·저장 결과 우선·누락된 command·잘못된 투입 snapshot 거절과 null/순서/상세 행 압축을 검증한다.
+- 기존 상세 전체 응답 golden에 혼합 ID 우선순위와 빈 행 압축 2종을 추가해 총 18종을 비교한다. 새 대상·상세·수량 service 회귀는 변경 전 구현에도 실행해 기존 consumer 동작과 기대값의 일치를 확인했다.
+- PostgreSQL 상세 query-count에 1/10/50개 효과·서로 다른 참조 ID를 추가한다. 문자열 ID·우선순위·빈 행·미등록 품종/위치의 과거 표시를 실제 HTTP 경로에서 확인하면서 일괄 조회 비용을 고정한다. 기존 보정 개수 0/1/10/50 회귀도 유지한다.
+
+### 검증
+
+- 변경 전 consumer 구현으로 집중 4개 클래스 30건 성공. 신규 codec 자체 시험은 별도로 추가된 구현을 검증하며 모든 reader를 변경 전 구현과 대조했다는 뜻은 아니다.
+- 최종 집중 단위/integration 5개 클래스 32건·PostgreSQL 3개 클래스 14건, 총 46건 성공. 계보·수량 보정·이동의 기존 회귀와 신규 호환 reader를 포함한다. 집중 검증은 56초 소요했다.
+- 실제 PostgreSQL 상세 효과 1/10/50개에서 쿼리 6개, 보정 0/1/10/50개에서 4개를 확인했다. 이 범위를 넘어서는 모든 조회의 비용을 증명한 것은 아니다.
+- 백엔드 전체 `./gradlew test`: 125개 클래스, 625건 성공. 실패·오류·생략은 없다. 기존 architecture·query-count·도메인·integration 회귀를 포함한다.
+- PostgreSQL 전체 `./gradlew workE2eTest`: 56개 클래스, 546건 성공. 기존 rollback·동시성·취소·멱등성·수량/금액·DB 제약 회귀를 포함하며 실패·오류·생략은 없다.
+- 프론트엔드 전체 `npm run check`, `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 백엔드 전체 검증은 8분 32초 소요했다. 새 benchmark·브라우저 E2E·운영 DB 대사는 실행하지 않았다.
+- 최종 전체 검증 이후에는 진행 문서의 완료 상태·검증 결과만 갱신했다. 실행 코드·테스트·fixture·HTTP/API 계약은 변경하지 않았다.
+
+### 남은 범위
+
+- BE-012의 공통 `WorkEffectCommand.payload` Object, 구형 구조 변경 입력의 HTTP DTO 복원은 남는다. 보정 감사 이벤트의 수량 수지 fold와 현장 동기화 snapshot은 이번 공통 효과 reader 범위에 포함하지 않는다. BE-013의 저장 version·과거 지문 corpus·rolling writer 정책도 별도다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -688,7 +721,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `26691ad8` — BE-010 전표 생성·묶음 metadata 감사 주체·최종 상태·원문 제외·rollback/중복 방어 회귀·정책 문서.
 - `69fd5348` — BE-011 실제 CHECK 기반 대사·제약별 validation·PostgreSQL 회귀·운영 정책.
 - `3131f82d` — BE-012 포트 입력 타입 유지·저장 JSON/지문 호환·rollback 회귀.
-- BE-012 고정 결과 — `refactor: preserve typed work effect results until persistence`. 고정 결과 계약·JSON golden·효과/대상/보정 저장 회귀를 별도 커밋으로 저장한다.
+- `9843c9ea` — BE-012 고정 결과 타입 유지·JSON golden·효과/대상/보정 저장 회귀.
+- BE-012 효과 reader — `refactor: centralize work effect JSON decoding`. 형식별 해석 정책·호환 fixture·query-count 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -703,5 +737,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-009는 일반 metadata·수량·상태·위치 수정의 허용 범위와 보정/실사 제한의 정책 일치가 남는다. 이번 감사 보강은 기존 현장 수정 기능을 임의로 차단하지 않는다.
 - BE-010의 전표 최초 생성과 난 묶음 metadata 누락은 14차 범위다. 과거 감사의 복원·입고/inline 품종 등의 필수 생성 감사 범위는 별도 판단이며, 자체 업무 이력을 일반 감사 부재만으로 무기록으로 취급하지 않는다.
 - BE-011의 운영 대사·제약별 validation 도구와 rehearsal 회귀는 15차 범위다. 운영 DB의 `convalidated`, 위반 행과 교차 불변식은 조회하지 않았다. 운영 적용·승인된 복구·실제 validation 완료와 그 증적이 남으며 이번 커밋을 운영 데이터 검증 완료로 취급하지 않는다.
-- BE-012 포트 입력 타입 유지와 JSON·지문 호환/rollback은 16차, 고정 결과 타입 유지와 JSON 저장 회귀는 17차 범위다. 공통 명령 Object 계약과 구조 변경·상세·수량·계보 reader의 중복은 후속 변경이며, BE-013의 저장 version과 과거 지문 호환 정책도 남는다.
+- BE-012 포트 입력 타입 유지와 JSON·지문 호환/rollback은 16차, 고정 결과 타입 유지와 JSON 저장 회귀는 17차, 대상·상세·계보·수량의 공통 효과 reader와 형식별 정책 보존은 18차 범위다. 공통 명령 Object 계약·구형 구조 변경 HTTP DTO 복원·보정 이벤트 해석은 남으며, BE-013의 저장 version과 과거 지문 호환 정책도 후속 범위다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

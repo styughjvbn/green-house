@@ -208,47 +208,4 @@ public final class WorkEffectResults {
       return value;
     }
   }
-
-  static Map<Long, Integer> sourceQuantities(Map<String, Object> commandDetails) {
-    return quantityMap(commandDetails.get("sources"), "sourceOrchidGroupId", "inputQuantity");
-  }
-
-  public static Map<Long, Integer> resultQuantities(Map<String, Object> resultDetails) {
-    Map<Long, Integer> quantities =
-        quantityMap(resultDetails.get("results"), "orchidGroupId", "quantity");
-    if (!quantities.isEmpty()) {
-      return quantities;
-    }
-    Long resultId = longValue(resultDetails.get("resultOrchidGroupId"));
-    Integer totalInput = integerValue(resultDetails.get("totalInputQuantity"));
-    Integer loss = integerValue(resultDetails.get("lossQuantity"));
-    if (resultId != null && totalInput != null) {
-      quantities.put(resultId, totalInput - (loss == null ? 0 : loss));
-    }
-    return quantities;
-  }
-
-  static Map<Long, Integer> quantityMap(Object value, String idKey, String quantityKey) {
-    Map<Long, Integer> quantities = new LinkedHashMap<>();
-    if (!(value instanceof List<?> rows)) {
-      return quantities;
-    }
-    for (Object rowValue : rows) {
-      if (!(rowValue instanceof Map<?, ?> row)) continue;
-      Long id = longValue(row.get(idKey));
-      Integer quantity = integerValue(row.get(quantityKey));
-      if (id != null && quantity != null) {
-        quantities.put(id, quantity);
-      }
-    }
-    return quantities;
-  }
-
-  static Long longValue(Object value) {
-    return value instanceof Number number ? number.longValue() : null;
-  }
-
-  static Integer integerValue(Object value) {
-    return value instanceof Number number ? number.intValue() : null;
-  }
 }

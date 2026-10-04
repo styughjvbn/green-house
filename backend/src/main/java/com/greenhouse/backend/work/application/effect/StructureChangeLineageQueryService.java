@@ -1,8 +1,8 @@
 package com.greenhouse.backend.work.application.effect;
 
-import static com.greenhouse.backend.work.application.effect.WorkEffectResults.integerValue;
-import static com.greenhouse.backend.work.application.effect.WorkEffectResults.resultQuantities;
-import static com.greenhouse.backend.work.application.effect.WorkEffectResults.sourceQuantities;
+import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.integerValue;
+import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.resultQuantities;
+import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.sourceQuantities;
 
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;

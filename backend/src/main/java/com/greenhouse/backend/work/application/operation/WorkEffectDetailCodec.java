@@ -1,5 +1,13 @@
 package com.greenhouse.backend.work.application.operation;
 
+import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.decimalValue;
+import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.detailResultIds;
+import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.integerValue;
+import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.longValue;
+import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.map;
+import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.mapList;
+import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.stringValue;
+
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
@@ -10,7 +18,6 @@ import com.greenhouse.backend.work.dto.operation.WorkExecutionResultResponse;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionSourceResponse;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +25,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** Reads persisted effect JSON, including legacy field precedence and numeric coercion. */
+/** Assembles detail rows from saved facts, links and batched display references. */
 final class WorkEffectDetailCodec {
 
   static WorkExecutionDetailResponse execution(
@@ -205,10 +212,7 @@ final class WorkEffectDetailCodec {
   }
 
   static List<Long> resultIds(Map<String, Object> result, List<WorkEffectOrchidGroup> links) {
-    List<Long> ids = longList(result.get("resultOrchidGroupIds"));
-    if (ids.isEmpty()) ids = longList(result.get("createdOrchidGroupIds"));
-    Long singleId = longValue(result.get("resultOrchidGroupId"));
-    if (ids.isEmpty() && singleId != null) ids = List.of(singleId);
+    List<Long> ids = detailResultIds(result);
     if (!ids.isEmpty()) return ids;
     return links.stream()
         .filter(link -> link.getRelationType() != WorkEffectOrchidGroupRelationType.SOURCE)
@@ -216,34 +220,9 @@ final class WorkEffectDetailCodec {
         .toList();
   }
 
-  static Map<String, Object> map(Object value) {
-    if (!(value instanceof Map<?, ?> source)) return Map.of();
-    Map<String, Object> result = new LinkedHashMap<>();
-    source.forEach((key, nested) -> result.put(String.valueOf(key), nested));
-    return result;
-  }
-
-  private static List<Map<String, Object>> mapList(Object value) {
-    if (!(value instanceof List<?> list)) return List.of();
-    return list.stream().map(WorkEffectDetailCodec::map).filter(row -> !row.isEmpty()).toList();
-  }
-
-  private static List<Long> longList(Object value) {
-    if (!(value instanceof List<?> list)) return List.of();
-    return list.stream().map(WorkEffectDetailCodec::longValue).filter(Objects::nonNull).toList();
-  }
-
-  private static String stringValue(Object value) {
-    return value == null ? null : String.valueOf(value);
-  }
-
   private static String firstString(Object first, Object second) {
     String value = stringValue(first);
     return value != null ? value : stringValue(second);
-  }
-
-  private static Integer integerValue(Object value) {
-    return value instanceof Number number ? number.intValue() : null;
   }
 
   private static Integer firstInteger(Object first, Object second) {
@@ -251,34 +230,9 @@ final class WorkEffectDetailCodec {
     return value != null ? value : integerValue(second);
   }
 
-  private static Long longValue(Object value) {
-    if (value instanceof Number number) return number.longValue();
-    if (value instanceof String text) {
-      try {
-        return Long.parseLong(text);
-      } catch (NumberFormatException ignored) {
-        return null;
-      }
-    }
-    return null;
-  }
-
   private static Long firstLong(Object first, Object second) {
     Long value = longValue(first);
     return value != null ? value : longValue(second);
-  }
-
-  private static BigDecimal decimalValue(Object value) {
-    if (value instanceof BigDecimal decimal) return decimal;
-    if (value instanceof Number number) return new BigDecimal(number.toString());
-    if (value instanceof String text) {
-      try {
-        return new BigDecimal(text);
-      } catch (NumberFormatException ignored) {
-        return null;
-      }
-    }
-    return null;
   }
 
   private static BigDecimal firstDecimal(Object first, Object second) {

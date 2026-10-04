@@ -1,5 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
+import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.map;
+
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.target.WorkExecutionReferenceGateway;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
@@ -76,7 +78,7 @@ public class WorkOperationDetailService {
             .flatMap(
                 effect ->
                     WorkEffectDetailCodec.resultIds(
-                        WorkEffectDetailCodec.map(effect.getResultDetails()),
+                        map(effect.getResultDetails()),
                         linksByEffectId.getOrDefault(effect.getId(), List.of()))
                         .stream())
             .collect(Collectors.toCollection(LinkedHashSet::new));

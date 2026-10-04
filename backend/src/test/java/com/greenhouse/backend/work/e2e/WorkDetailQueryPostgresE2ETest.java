@@ -24,18 +24,7 @@ class WorkDetailQueryPostgresE2ETest extends WorkE2ETestBase {
   @ValueSource(ints = {0, 1, 10, 50})
   void correctionDetailsUseBoundedQueriesAndKeepMissingHistory(int count) throws Exception {
     seeder.reset();
-    List<Long> operations =
-        jdbc.queryForList(
-            """
-				INSERT INTO work_operations (work_type_id, title, status, planned_start_date,
-				 source_scope_type, target_snapshot_at, worker, version, created_at, updated_at)
-				SELECT (SELECT id FROM work_types WHERE code = 'REPOT'), '상세 ' || n, 'COMPLETED',
-				 DATE '2026-08-20', 'MANUAL_SELECTION', TIMESTAMP '2026-08-20 00:00:00', '담당자', 0,
-				 TIMESTAMP '2026-08-20 00:00:00', TIMESTAMP '2026-08-20 00:00:00'
-				FROM generate_series(0, ?) n RETURNING id
-				""",
-            Long.class,
-            count);
+    List<Long> operations = createOperations(count);
     for (int index = 1; index <= count; index++) {
       jdbc.update(
           """
@@ -63,5 +52,61 @@ class WorkDetailQueryPostgresE2ETest extends WorkE2ETestBase {
       assertThat(corrections.get(index).path("reason").asText()).isEqualTo("보정 " + (index + 1));
       assertThat(corrections.get(index).path("adjustments")).hasSize(index >= count - 2 ? 0 : 1);
     }
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {1, 10, 50})
+  void legacyEffectDetailsKeepPrecedenceAndBatchDistinctReferences(int count) throws Exception {
+    seeder.reset();
+    Long operationId = createOperations(0).getFirst();
+    jdbc.update(
+        """
+        INSERT INTO work_applied_effects
+         (work_operation_id, effect_key, effect_kind, handler_code, applied_at, worker,
+          command_details, result_details, created_at, updated_at)
+        SELECT ?, 'EXECUTION:legacy:' || n, 'STRUCTURE_CHANGE', 'REPOT',
+         TIMESTAMP '2026-08-20 00:00:00', '담당자',
+         jsonb_build_object('results', jsonb_build_array(null, '{}'::jsonb,
+          jsonb_build_object('quantity', 2, 'bedZoneId', (40000 + n)::text))),
+         jsonb_build_object('resultOrchidGroupIds', jsonb_build_array((10000 + n)::text),
+          'createdOrchidGroupIds', jsonb_build_array(20000 + n),
+          'resultOrchidGroupId', 30000 + n,
+          'results', jsonb_build_array(jsonb_build_object('quantity', '2'))),
+         TIMESTAMP '2026-08-20 00:00:00', TIMESTAMP '2026-08-20 00:00:00'
+        FROM generate_series(1, ?) n
+        """,
+        operationId,
+        count);
+    var stats = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+    stats.clear();
+    var response = get("/api/work-operations/" + operationId + "/details");
+    assertThat(response.status()).as(response.body().toString()).isEqualTo(200);
+    assertThat(stats.getPrepareStatementCount()).isEqualTo(6);
+    var executions = response.data().path("executions");
+    assertThat(executions).hasSize(count);
+    for (int i = 0; i < count; i++) {
+      var rows = executions.get(i).path("results");
+      assertThat(rows).hasSize(1);
+      var row = rows.get(0);
+      assertThat(row.path("orchidGroupId").asLong()).isEqualTo(10001L + i);
+      assertThat(row.path("quantity").asInt()).isEqualTo(2);
+      assertThat(row.path("bedZoneId").asLong()).isEqualTo(40001L + i);
+      assertThat(row.path("varietyName").isNull()).isTrue();
+      assertThat(row.path("location").isNull()).isTrue();
+    }
+  }
+
+  private List<Long> createOperations(int count) {
+    return jdbc.queryForList(
+        """
+				INSERT INTO work_operations (work_type_id, title, status, planned_start_date,
+				 source_scope_type, target_snapshot_at, worker, version, created_at, updated_at)
+				SELECT (SELECT id FROM work_types WHERE code = 'REPOT'), '상세 ' || n, 'COMPLETED',
+				 DATE '2026-08-20', 'MANUAL_SELECTION', TIMESTAMP '2026-08-20 00:00:00', '담당자', 0,
+				 TIMESTAMP '2026-08-20 00:00:00', TIMESTAMP '2026-08-20 00:00:00'
+				FROM generate_series(0, ?) n RETURNING id
+				""",
+        Long.class,
+        count);
   }
 }
