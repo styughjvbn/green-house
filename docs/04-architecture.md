@@ -385,6 +385,7 @@ Persistence 조회 규칙:
 - 난 묶음 응답의 나이 계산은 application에서 한 번 구한 업무일을 전달받는다. 목록 조립 도중 날짜가 바뀌거나 DTO가 시스템 시계를 직접 읽지 않게 한다.
 - 경매 정산의 결과 수신·입금 확인 시각은 application service가 `Clock`에서 UTC 값으로 정해 domain에 전달한다. 일괄 재구성은 같은 처리 시각을 사용하고, 정산에 이미 연결된 결과는 다시 재구성하지 않는다.
 - Flyway migration은 `nullable 추가 → backfill → 제약 적용`처럼 기존 운영 데이터가 통과할 수 있는 순서를 사용한다. 대용량 table 변경은 lock 범위와 운영 적용 시간을 별도로 검토한다.
+- `NOT VALID` CHECK의 신규/갱신 행 보호와 기존 행 검증 완료를 구분한다. 설치된 CHECK 식·DB 검증 상태·기존 위반을 같은 read-only snapshot에서 확인하고, 이력을 보존한 복구·재대사 후 제약별 validation을 수행한다. 운영 절차는 [배포 문서](07-deployment.md#기존-데이터의-check-제약-대사와-검증)를 따른다. 위반 0건이나 Flyway 성공을 원장·예약·금액의 모든 교차 불변식 검증으로 취급하지 않는다.
 - 수량·금액·정산·migration 변경은 정상 흐름뿐 아니라 rollback과 중복 요청을 검증한다. 동시성 보강은 병렬 실행 테스트, N+1 보강은 query count 상한 테스트를 둔다.
 - PostgreSQL 문법, lock, constraint, 원자 갱신은 H2 결과만 신뢰하지 않고 Testcontainers 또는 실제 PostgreSQL 검증을 수행한다.
 

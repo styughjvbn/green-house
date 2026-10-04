@@ -561,6 +561,48 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 프론트엔드 전체 `npm run check`: 성공. 브라우저 E2E와 신규 쓰기 비용 benchmark는 실행하지 않았다.
 - `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 이후에는 진행 문서의 상태·결과만 갱신했으며 실행 코드·테스트·API 생성물은 바꾸지 않았다.
 
+## 15차 변경 — BE-011 기존 CHECK 제약의 대사·검증 절차
+
+작업일: 2026-10-04. 상태: 운영 도구·정책 문서 및 최종 전체 검증 완료. 운영 DB의 제약 상태·위반 행은 확인하지 않았다.
+
+### 범위와 구현
+
+- V14·V21의 4개 미검증 CHECK와 BE-003에서 추가한 V35의 금액 CHECK 2개를 대상으로 삼는다. 기존 데이터 보존을 위한 `NOT VALID`는 유지하며, 미확인 운영 자료 때문에 자동 Flyway validation이나 임의 수량/금액 backfill을 추가하지 않는다.
+- [공유 inventory](../scripts/data-audit/domain-constraint-catalog.sql)는 대상 테이블·제약 이름만 선언하고, 설치된 정의·CHECK 식·종류·`convalidated`를 PostgreSQL catalog에서 읽는다. 업무 predicate를 운영 도구에 다시 작성하지 않는다. 같은 이름의 다른 종류나 누락된 제약을 실제 정상 0건과 구별한다.
+- [read-only 대사](../scripts/data-audit/audit-domain-constraints.sql)는 `REPEATABLE READ / READ ONLY` 한 트랜잭션에서 DB·계정·트랜잭션 시작 시각·snapshot ID와 6개 보고를 JSONL로 반환한다. 실제 CHECK 식의 FALSE를 위반으로 세고 NULL 허용 의미를 유지한다. 전체 위반 건수와 정렬한 최대 50개 ID만 반환하며 메모·품목 원문은 읽기 결과에 포함하지 않는다. RLS로 일부 행만 보이는 연결은 오류로 실패한다.
+- 보고 상태는 `MISSING`, `NOT_CHECK`, `VIOLATIONS`, `UNVALIDATED`, `VALIDATED`다. 누락/종류 불일치의 위반 건수는 null이다. 명령 종료 0은 대사 완료이며 DB 검증 완료와 다르다. 이 보고는 allocation 합계·Mutation head·전표/품목 합계·입금/잔액의 교차 불변식을 대신하지 않는다.
+- [제약별 validation](../scripts/data-audit/validate-domain-constraint.sql)은 명시한 inventory의 실제 CHECK 하나만 독립 트랜잭션에서 검증한다. 값은 psql literal로 처리하고 식별자는 DB metadata에서 quote해 미지정·알 수 없는 이름·SQL 문자열·다른 종류를 DDL 대상으로 사용하지 않는다. 이미 검증한 제약은 DDL을 반복하지 않으며 결과는 commit 이후의 catalog를 다시 읽는다.
+- 대사·검증 SQL은 잠금 대기 3초, 각 statement 5분 상한을 둔다. 위반 또는 잠금 실패 시 해당 validation과 제약 상태를 원복하고 기존 행·이력은 보존한다. 한 제약의 성공이 이후 다른 호출의 실패로 원복되는 전체 배치 계약은 아니다. 마지막 read-only 보고로 6개 전체 상태를 다시 판단한다.
+- 배포 문서에 최신 백업 사본 rehearsal→위반/원장 대사→이력 보존 복구→재대사→제약별 validation→최종 상태 확인을 추가하고 backend migration 기준에도 연결했다. 운영 primary의 실제 scan 비용·잠금 시간과 기존 불량 행은 별도 확인 대상이다. runtime application·HTTP/API·기존 Flyway 파일·저장 snapshot/지문은 변경하지 않는다.
+
+### 회귀 방어
+
+- [DomainConstraintOperationsPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/DomainConstraintOperationsPostgresE2ETest.java) 신규 24건은 현재 release 전체 Flyway를 적용한 격리 PostgreSQL 18 DB에서 실제 psql 파일을 실행한다. read-only role, 부분 validation, 해당 CHECK의 위반으로 실패하는 validation과 전체 public 테이블의 행·기존 CHECK metadata 보존을 확인한다. legacy 위반 fixture는 설치된 CHECK 정의를 보존하고 테스트 안에서 잠시 제거·재등록한 상태이며 실제 운영 위반을 발견했다는 의미는 아니다.
+
+| 시나리오 | 건수 | 보호 결과 |
+| --- | --- | --- |
+| SELECT 전용 계정의 정상 행 대사 | 1 | 실제 read-only/isolation·snapshot, 미검증 상태, inventory와 현재 미검증 CHECK의 일치 |
+| 6개 CHECK별 legacy 위반과 validation 실패 | 6 | 정확한 위반 건수/ID·대상 제약 오류, 새 변경 보호와 행/metadata 보존 |
+| 6개 CHECK별 정상 validation 및 반복 | 6 | 해당 제약만 검증, 이력 보존, Flyway validate·재실행 0건 |
+| 제약 누락·다른 종류 | 2 | 정상 0건으로 오인하지 않고 validation 거절 |
+| 미지정·빈·미등록·SQL 문자열 입력 | 4 | 임의 DDL 대상 선택과 데이터 변경 방지 |
+| 위반 105행 | 1 | 전체 건수와 50개 표본 상한·정렬 |
+| 다른 설치 CHECK 식과 NULL | 1 | predicate 복제 없이 실제 식 평가, CHECK의 NULL 의미 유지 |
+| 행을 숨기는 RLS | 1 | 불완전한 가시성으로 false clean 보고 방지 |
+| 다른 트랜잭션의 exclusive lock | 1 | validation 잠금 timeout·미검증 상태 보존 |
+| 일반 유효 UPDATE의 잠금과 validation | 1 | 일반 쓰기가 열려 있어도 validation 완료, commit 이후 위반 0건 |
+
+- `workE2eTest`의 Gradle 입력에 실제 SQL 3개를 포함했다. SQL만 수정해도 시험이 이전 결과를 `UP-TO-DATE`로 재사용하지 않는다. 현재 Docker Compose와 기존 PostgreSQL suite의 18 버전을 사용하며 다른 PostgreSQL 버전은 이번에 실행하지 않았다.
+
+### 검증
+
+- 최초 시험 컴파일의 Testcontainers import 경로는 설치된 2.0.5 jar의 실제 경로로 바로잡았다. 신규 22건, 일반 쓰기 경쟁을 포함한 확장 23건과 기존 V35 upgrade 2건 성공.
+- 최종 집중 PostgreSQL 신규 24건·기존 V35 migration 2건, 총 26건 성공. H2 결과로 제약·잠금·psql 동작을 판정하지 않는다.
+- 백엔드 전체 `./gradlew test`: 120개 클래스, 573건 성공. 기존 architecture·query-count·도메인·integration 회귀를 포함한다.
+- 최종 PostgreSQL 전체 `./gradlew workE2eTest`: 55개 클래스, 534건 성공. 신규 운영 제약 24건과 기존 510건을 포함하며 실패·오류·생략은 없다.
+- 프론트엔드 전체 `npm run check`: 성공. 운영 백업/primary 대사·실제 validation·대용량 scan benchmark와 브라우저 E2E는 실행하지 않았다.
+- `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 이후에는 진행·운영 문서의 상태/결과·표현만 갱신했으며 SQL·실행 코드·테스트·API 생성물은 바꾸지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -577,7 +619,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `32ebe83b` — BE-008 Sales 접수·V38·HTTP 계약·화면 키·경쟁/rollback/migration 회귀·관련 문서.
 - `275f8f00` — BE-008 Farm 입고 접수·V39·HTTP 계약·공통 화면 키·경쟁/rollback/migration 회귀·관련 문서.
 - `b137360e` — BE-008 일반 Work 응답 snapshot·V40·HTTP 계약·화면 키·경쟁/rollback/migration 회귀·관련 문서.
-- BE-010 전표 생성·묶음 metadata 감사 — `fix: record sales creation and orchid metadata audits`. 감사 주체·최종 상태·원문 제외·rollback/중복 방어 회귀·정책 문서를 별도 커밋으로 저장한다.
+- `26691ad8` — BE-010 전표 생성·묶음 metadata 감사 주체·최종 상태·원문 제외·rollback/중복 방어 회귀·정책 문서.
+- BE-011 대사·검증 절차 — `chore: add domain constraint audit and validation tools`. 실제 CHECK 기반 대사·제약별 validation·PostgreSQL 회귀·운영 정책을 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -591,4 +634,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-008의 키가 있는 판매·입고·일반 Work 계획/완료 기록 생성 재전송 방어를 완료 대상으로 삼는다. 기존 자료의 중복 대사와 키 없는 연동의 재시도 정책은 남는다. 입고 포트 계획·폐기 기록 같은 별도 생성 경로는 이번 일반 생성 계약에 포함하지 않으며 필요 시 업무별 재시도 의미부터 정의한다. 후속 작업은 감사 우선순위에 따른 정책 일치·감사 완전성·DB 제약 상태·조회 비용 보강이다.
 - BE-009는 일반 metadata·수량·상태·위치 수정의 허용 범위와 보정/실사 제한의 정책 일치가 남는다. 이번 감사 보강은 기존 현장 수정 기능을 임의로 차단하지 않는다.
 - BE-010의 전표 최초 생성과 난 묶음 metadata 누락은 14차 범위다. 과거 감사의 복원·입고/inline 품종 등의 필수 생성 감사 범위는 별도 판단이며, 자체 업무 이력을 일반 감사 부재만으로 무기록으로 취급하지 않는다.
+- BE-011의 운영 대사·제약별 validation 도구와 rehearsal 회귀는 15차 범위다. 운영 DB의 `convalidated`, 위반 행과 교차 불변식은 조회하지 않았다. 운영 적용·승인된 복구·실제 validation 완료와 그 증적이 남으며 이번 커밋을 운영 데이터 검증 완료로 취급하지 않는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

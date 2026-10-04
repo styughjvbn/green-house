@@ -791,6 +791,73 @@ blue/green rename과 자동 rollback을 수행하는 별도 systemd timer 절차
 최근 변경과 연속 보정 후보를 확인한다. `request_id`는 API 응답의
 `X-Request-Id`와 서버 로그에도 같이 남으므로 장애 추적 키로 사용한다.
 
+### 기존 데이터의 CHECK 제약 대사와 검증
+
+V14·V21·V35의 재고 수량·예약·revision·판매 상태·금액 CHECK는 기존 행을
+보존하기 위해 `NOT VALID`로 추가했다. Flyway 성공과 과거 행 검증 완료를
+구분한다. 설치된 CHECK의 정의와 `convalidated`는 아래 도구로 확인한다.
+신규·갱신 행의 CHECK 적용과 validation의 잠금 의미는
+[PostgreSQL ALTER TABLE](https://www.postgresql.org/docs/18/sql-altertable.html)을 따른다.
+
+먼저 최신 백업을 복원한 격리 DB에서 대사·검증을 rehearsal한다. libpq service의
+`greenhouse-audit`는 해당 DB와 SELECT 권한 계정에, `greenhouse-maintenance`는
+같은 DB의 테이블 소유자/DDL 계정에 연결한다. 인증 설정은 기존 DB 접속 정책을
+따른다. 운영 적용은 대상 DB·백업·대사 결과와 작업 시간을
+확인한 후 같은 release의 스크립트로 수행한다.
+
+```bash
+mkdir -p temp
+PGSERVICE=greenhouse-audit psql -XAtq \
+  -f scripts/data-audit/audit-domain-constraints.sql \
+  > temp/domain-constraints-report.jsonl
+```
+
+첫 JSON 행의 DB·계정·트랜잭션 시작 시각·snapshot 식별자를 확인한다.
+나머지 6행은 설치된 CHECK 식을
+직접 평가한 위반 건수와 ID 표본(최대 50개)을 포함한다. 설치된 정의가 해당 release의
+migration과 일치하는지도 함께 확인한다. read-only
+`REPEATABLE READ` 트랜잭션으로 같은 snapshot을 사용하며, 메모·품목 원문은
+출력하지 않는다. 전체 건수는 표본 상한과 무관하게 센다. RLS로 일부 행만
+보이는 계정은 정상 0건 대신 실행 오류가 발생한다.
+이 동작은 [PostgreSQL row_security](https://www.postgresql.org/docs/18/runtime-config-client.html#GUC-ROW-SECURITY)의 `off` 의미를 따른다.
+
+| 보고 상태 | 의미와 다음 단계 |
+| --- | --- |
+| `MISSING` / `NOT_CHECK` | 해당 제약 누락 또는 종류 불일치. schema drift를 조사한다. 위반 건수는 null이다. |
+| `VIOLATIONS` | 기존 위반 행이 있다. 원장·예약·판매·입금·이력을 대사하고 보존 가능한 복구 정책을 먼저 정한다. |
+| `UNVALIDATED` | 현재 snapshot에서 위반은 없지만 DB의 과거 행 검증은 미완료다. 개별 validation 대상으로 검토한다. |
+| `VALIDATED` | 설치된 CHECK의 DB 검증이 완료됐고 현재 snapshot에서도 위반이 없다. |
+
+대사 명령의 종료 코드 0은 조회 완료를 뜻한다. 보고된 6개 제약이 모두
+`VALIDATED`인지 별도로 판단한다. 권한·잠금·실행 시간 초과 등 SQL 오류는
+비정상 종료하며, 부분 보고만으로 전체 대사를 통과 처리하지 않는다.
+제약 식의 FALSE만 위반으로 세므로 CHECK가 허용하는 NULL을 위반으로 간주하지
+않는다. 이 결과는 allocation 합계·Mutation head·품목 합계·입금/잔액 등
+교차 불변식 대사를 대신하지 않는다.
+
+위반 복구와 재대사 후, 보고된 이름을 지정해 제약 하나씩 검증한다.
+
+```bash
+PGSERVICE=greenhouse-maintenance psql -XAtq \
+  -v constraint=ck_orchid_groups_reserved_quantity \
+  -f scripts/data-audit/validate-domain-constraint.sql
+```
+
+검증 도구는 공유 inventory의 6개 CHECK만 받는다. 제약 누락·다른 종류·미지정
+이름은 실패하며, 기존 데이터 수정이나 제약 재생성은 수행하지 않는다.
+이미 검증한 제약은 DDL을 반복하지 않는다. 한 번의 호출은 한 제약의 트랜잭션이며,
+검증 결과는 commit 후 다시 조회한다. 앞서 다른 제약을 검증한 결과는 이후 호출의
+실패로 취소되지 않으므로 최종 대사 보고에서 전체 상태를 재확인한다.
+
+`VALIDATE CONSTRAINT`는 실제 검증 시점에 다시 행을 검사한다. 대사 이후 변경이
+있어도 이전 보고만으로 validation을 생략하지 않는다. 대상 테이블의
+`SHARE UPDATE EXCLUSIVE` 잠금은 일반 조회·수량 쓰기와 호환되지만 다른 DDL·일부
+유지보수 작업과 경쟁한다. 잠금 대기는 3초, 각 SQL 실행은 5분 상한이다.
+데이터 규모에 따라 전체 스캔 비용이 발생하므로 rehearsal 결과로 작업 시간을 잡는다.
+실패 시 해당 호출의 validation은 rollback되고 기존 사실과 `NOT VALID` 보호는
+유지된다. 수량·예약·금액을 임의로 0으로 만들거나 과거 snapshot을 현재 값으로
+덮어쓰지 않는다. 이 운영 검증을 배포 시작 과정의 자동 Flyway migration에 넣지 않는다.
+
 ## 8. 난 묶음 관리 맵 성능 기준 측정
 
 맵 리팩터링 전후 기준값은 운영·개발 DB가 아닌 `_map_e2e` 접미사의 전용 DB에서

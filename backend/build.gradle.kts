@@ -126,6 +126,11 @@ tasks.register<JavaExec>("orchidLedgerStartupVerify") {
 
 tasks.register<Test>("workE2eTest") {
 	group = "verification"
+	inputs.files(
+		"../scripts/data-audit/domain-constraint-catalog.sql",
+		"../scripts/data-audit/audit-domain-constraints.sql",
+		"../scripts/data-audit/validate-domain-constraint.sql",
+	)
 	description = "Runs the Work API contract E2E tests against PostgreSQL."
 	testClassesDirs = sourceSets["test"].output.classesDirs
 	classpath = sourceSets["test"].runtimeClasspath
