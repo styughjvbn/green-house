@@ -981,6 +981,49 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-015는 부분 완료다. 정산 snapshot과 현재 표시 참조 조회는 별도 분석·회귀가 남는다. Sales의 Farm 재잠금과 시점별 snapshot/최종 현재 상태 조회는 필요한 정확성 경계로 유지한다. 큰 품목·서로 다른 난 묶음 수, 운영 lock 대기·지연·메모리 benchmark와 DB index 대사는 이번 범위에 포함하지 않는다. 조회 개수가 줄어도 반환 행과 실제 이력 쓰기는 입력 크기에 비례한다.
 
+## 27차 변경 — BE-015 정산 원본의 과다 Entity 적재와 무제한 ID 조회 제거
+
+작업일: 2026-10-04. 상태: 경매 결과 projection·ID 분할·snapshot/query-count/rollback/replay 회귀·정책 문서 및 최종 전체 검증 완료. BE-015 코드 개선 범위 완료.
+
+### 원인과 범위
+
+- 기존 정산 query-count는 목록·page와 이미 연결된 초기화 fast path, H2 금융 snapshot 보존을 보호한다. 검색·Work benchmark는 정산 재계산·입금·표시 참조의 적재량을 측정하지 않는다. PostgreSQL의 동시 초기화·재계산/입금 시험을 먼저 확인하고 신규 27건을 제품 수정 전 통과시켰다.
+- 정산 재계산의 금융 snapshot과 응답의 표시 참조는 다른 계약이라 두 조회를 하나로 합칠 수 없다. 기존 경매 조회는 scalar application 값만 반환하면서도 결과 → 시도 → lot → 출하 Entity 그래프 전체를 로딩한다. ID 기반 조회도 전달받은 전체 ID를 단일 IN으로 읽었다. query-count가 일정해도 원본 Entity 적재가 결과 수에 비례한다.
+- 경매 소유 Repository가 동일한 값과 부모 ID·날짜·표시 참조를 scalar projection으로 조회하고 기존 application `Result`로 변환한다. 모듈 외부 응답·DTO와 필드 타입은 유지하며 Repository row나 Entity를 외부 계약으로 노출하지 않는다. 두 쿼리의 공통 projection은 같은 소유 저장소에 두고 기존 Entity graph 조회를 대체한다.
+- 결과 ID의 중복을 제거하고 최대 500개씩 읽는다. 빈 입력은 쿼리 없이, 없는 ID는 이전처럼 결과 Map에서 제외한다. 낙찰 수지 조회의 양수 금액 조건·경매장/경매일 필터·ID 순서와 ID 기반 참조 조회의 전체 결과 범위를 유지한다. 금융 snapshot과 최종 표시 참조의 조회 단계는 유지하며 기존 snapshot을 현재 원본 값으로 덮어쓰지 않는다.
+- 거래처 → 정산 잠금 순서, 초기화의 잠금 획득 후 연결 ID 재검증, 정산 행 merge와 입금액 보존, 입금 접수·이벤트·잔액·감사의 최상위 atomicity를 유지한다. projection이 JPQL의 기존 flush를 우회하거나 별도 transaction/외부 시스템을 도입하지 않는다.
+- 표시용 참조의 분할 조회는 여러 SQL 시점을 갖는다. 기본 isolation을 올리거나 모든 표시 행이 한 시점의 snapshot이라고 약속하지 않는다. 금융 snapshot은 기존 반영 경계에 저장하며 응답의 수량·단가·금액은 정산 저장값, 품종명·출하등급·출하일은 현재 참조를 사용한다. 초기화의 전체 메모리 누적과 transaction 크기는 이번 변경으로 줄이거나 분할 commit하지 않는다.
+
+### 측정과 회귀 방어
+
+| 실제 application 트랜잭션 경로 | prepared statement 기존 → 수정 (1 / 8 / 501 결과) |
+| --- | --- |
+| 새 정산 재계산 | 9 / 9 / 19 → 9 / 9 / 20 |
+| 기존 정산 재계산 | 8 / 8 / 8 → 8 / 8 / 9 |
+| 상세 조회 | 3 / 3 / 3 → 3 / 3 / 4 |
+| 입금 확인 | 14 / 14 / 14 → 14 / 14 / 15 |
+| 같은 입금 재요청 | 7 / 7 / 7 → 7 / 7 / 8 |
+| 미연결 결과 초기화 | 9 / 9 / 23 → 9 / 9 / 23 |
+
+- 각 경로의 경매 결과/시도/lot/출하 Entity load는 4 / 25 / 1,504 → 각각 0이다. fixture는 결과별 별도 lot·시도와 공통 출하 하나로 구성한다. 정산·거래처·설정·입금 Entity까지 0이라고 주장하지 않는다.
+- 501행 상세·입금·재계산에서는 ID 조회를 2회로 분할하므로 SQL이 1회 증가한다. 이미 500개씩 원본을 대조하는 초기화는 SQL 수가 유지된다. 성능 개선은 불필요한 Entity 그래프 적재 제거와 SQL 인자 상한이며, 전체 query-count 감소나 latency 개선율로 해석하지 않는다. 실제 정산 행 쓰기와 sequence 할당도 prepared statement에 포함된다.
+- `backend/build/work-query-count/settlement-read-*.json`에 prepared statement·경매 Entity load·query별 실행 횟수를 저장한다. 고정 Clock·동일 seed와 application 트랜잭션을 비교하며 mock 호출 횟수를 대신 세지 않는다. native SQL 전체 trace·peak heap·운영 latency benchmark는 아니다.
+- 18개 경로 조합은 정산 생성/기존 재계산·상세·입금/같은 key replay·초기화를 1/8/501 결과에서 검사한다. 정산 행 ID와 수량/금액/단가·현재 출하 표시·합계·입금액을 확인하며, 전부 연결된 초기화는 업무 행을 바꾸지 않고 기존 2/4회 fast path만 실행한다. 상세와 입금 replay도 각각 `2 + ceil(N/500)`, `6 + ceil(N/500)` SQL로 고정한다.
+- 기존 원본 수량/단가/금액과 품종/등급·경매장 이름을 바꾼 3건은 재계산·초기화·입금 replay가 금융 snapshot과 기존 입금액을 보존하면서 현재 표시를 읽는지 검사한다. 정산 재계산과 입금의 최종 응답 실패 2건은 정산/행·입금 이벤트·잔액·감사의 전체 rollback 및 재시도를 확인한다. ID 조회 0/1/500/501건은 중복·없는 ID·빈 입력·정확한 분할 수와 원본 Entity load 0을 보호한다.
+- 기존 PostgreSQL 동시 재계산/입금·초기화·같은 입금 key 경쟁과 거래처 잠금, H2 금융 snapshot·고정 Clock·page/summary/filter 및 query-count 회귀도 함께 실행한다.
+
+### 검증
+
+- 수정 전 신규 PostgreSQL 27건 성공. 수정 후 집중 일반/integration/architecture 5개 클래스 47건·PostgreSQL 2개 클래스 38건, 총 85건 성공. 실패·오류·생략은 없고 1분 3초 소요했다. 이후 상세·입금 replay·연결 완료 초기화의 query-count 상한을 추가했다.
+- 백엔드 전체 `./gradlew test`: 131개 클래스 662건 성공. PostgreSQL 전체 `./gradlew workE2eTest`: 62개 클래스 651건 성공. 신규 27건을 포함해 실패·오류·생략은 없고 전체 백엔드 검증은 9분 32초 소요했다.
+- 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. `python3 scripts/generate_openapi.py`도 성공했고 전체 명세·slice와 생성 타입에 diff가 없다. 공개 API·DB schema 변경이 없어 TypeScript 재생성과 Flyway 추가는 필요하지 않다. 응답 시간 benchmark·브라우저 E2E·운영 DB 대사는 실행하지 않았다.
+- 전체 검증 이후에는 진행 문서의 완료 상태와 검증 결과만 갱신했다. 제품 코드·시험·HTTP/저장 계약은 변경하지 않았다.
+
+### 남은 범위와 BE-015 판단
+
+- BE-015의 중간 상세 응답 제거는 23~25차, Sales의 쓰기 aggregate/중복 재조회는 26차, 정산의 불필요한 경매 Entity 적재는 27차다. 최종 전체 검증을 통과해 감사에서 추적한 코드 개선 범위를 완료 처리한다. Farm의 잠금 후 재확인·시점별 snapshot과 정산 금융/현재 표시의 별도 조회는 정확성에 필요한 경계로 유지한다.
+- 운영 부하·lock 대기·peak heap, 매우 큰 미연결 초기화의 transaction/메모리와 기존 index 대사는 남는다. 이는 BE-015의 임의 조회 삭제로 해결하지 않으며 별도의 성능·조회량·index finding 범위에서 다룬다. 500개 ID 분할이 전체 메모리 적재 상한이나 정산 단위 commit을 의미하지 않는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1009,7 +1052,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `5d2786f8` — BE-015 구조 기록 중간 상세 조회 제거·실제 경로 query-count·rollback/replay 회귀.
 - `372efc20` — BE-015 포트 중간 상세/중복 완료 제거·경로별 query-count·snapshot/rollback/replay 회귀.
 - `95f594fa` — BE-015 품종별 계획/폐기 중간 상세 제거·query-count·연계 취소/replay·rollback 회귀.
-- BE-015 판매 — `refactor: bulk load sales write aggregates`. 소유 배분/snapshot 일괄 로딩·중복 재조회 제거·query-count·snapshot/replay/rollback 회귀를 별도 커밋으로 저장한다.
+- `8ac145d7` — BE-015 판매 소유 배분/snapshot 일괄 로딩·중복 재조회 제거·query-count·snapshot/replay/rollback 회귀.
+- BE-015 정산 — `refactor: project auction result reads for settlement`. 원본 Entity graph 대체·500 ID 분할·snapshot/query-count/rollback/replay 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1031,5 +1075,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-015의 구조 변경 기록 계획/시작/실행의 중간 상세 조회 제거와 단건·배치 query-count·rollback/replay 회귀는 23차 범위다. 포트는 24차 범위로 이어졌으며 연계 폐기·Sales·정산 경로와 운영 지연 측정은 남는다.
 - BE-015의 포트 신규/활성 계획·단독 실행/기록의 중간 상세/중복 완료 제거와 query-count·snapshot·완료 판정·rollback/replay 회귀는 24차 범위다.
 - BE-015의 연계/독립 폐기·품종별 일반 계획 중간 상세 제거와 query-count·수량 배분·공동 취소/replay·rollback 회귀는 25차 범위다.
-- BE-015의 판매 수정·상태 전환·입금의 소유 배분/snapshot N+1과 수정 후 재조회 제거는 26차 범위다. Farm 재잠금·snapshot 시점·최종 현재 상태 조회는 유지하며 정산과 운영 지연 측정은 남는다.
+- BE-015의 판매 수정·상태 전환·입금의 소유 배분/snapshot N+1과 수정 후 재조회 제거는 26차 범위다.
+- BE-015의 정산 원본 Entity graph 제거·500 ID 분할과 snapshot/query-count/rollback/replay 회귀는 27차 범위다. Farm 재잠금·snapshot 시점·최종 현재 상태와 정산의 금융/표시 별도 조회는 유지한다. 운영 실측·큰 초기화의 전체 적재/transaction·index는 별도 후속 범위다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

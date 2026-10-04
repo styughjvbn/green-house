@@ -1,14 +1,15 @@
 package com.greenhouse.backend.auction.application;
 
-import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.auction.repository.AuctionResultLineRepository;
+import com.greenhouse.backend.auction.repository.AuctionResultReadRow;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository.LotShipmentIdRow;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class AuctionDataReader {
+
+  private static final int RESULT_BATCH_SIZE = 500;
 
   private final BusinessPartnerReader partnerReader;
 
@@ -80,7 +83,7 @@ public class AuctionDataReader {
   }
 
   public List<Result> getSoldResultLines(Long auctionHouseId, LocalDate auctionDate) {
-    return resultLineRepository.findSoldLines(auctionHouseId, auctionDate).stream()
+    return resultLineRepository.findSoldReadRows(auctionHouseId, auctionDate).stream()
         .map(Result::from)
         .toList();
   }
@@ -94,9 +97,15 @@ public class AuctionDataReader {
     if (resultIds.isEmpty()) {
       return Map.of();
     }
-    return resultLineRepository.findAllByIdIn(resultIds).stream()
-        .map(Result::from)
-        .collect(Collectors.toMap(Result::id, result -> result));
+    var ids = resultIds.stream().distinct().toList();
+    var results = new HashMap<Long, Result>();
+    for (int start = 0; start < ids.size(); start += RESULT_BATCH_SIZE) {
+      var batch = ids.subList(start, Math.min(start + RESULT_BATCH_SIZE, ids.size()));
+      resultLineRepository
+          .findReadRowsByIdIn(batch)
+          .forEach(row -> results.put(row.id(), Result.from(row)));
+    }
+    return results;
   }
 
   public Map<Long, Long> getLotShipmentIds(Collection<Long> shipmentIds) {
@@ -132,20 +141,18 @@ public class AuctionDataReader {
       Integer quantity,
       Integer unitPrice,
       Long amount) {
-    static Result from(AuctionResultLine line) {
-      var lot = line.getAuctionAttempt().getShipmentLot();
-      var shipment = lot.getShipment();
+    static Result from(AuctionResultReadRow row) {
       return new Result(
-          line.getId(),
-          lot.getId(),
-          shipment.getAuctionHouseId(),
-          line.getAuctionDate(),
-          shipment.getShipmentDate(),
-          lot.getVarietyName(),
-          lot.getShipmentGrade(),
-          line.getQuantity(),
-          line.getUnitPrice(),
-          line.getAmount().longValue());
+          row.id(),
+          row.lotId(),
+          row.auctionHouseId(),
+          row.auctionDate(),
+          row.shipmentDate(),
+          row.varietyName(),
+          row.shipmentGrade(),
+          row.quantity(),
+          row.unitPrice(),
+          row.amount().longValue());
     }
   }
 }
