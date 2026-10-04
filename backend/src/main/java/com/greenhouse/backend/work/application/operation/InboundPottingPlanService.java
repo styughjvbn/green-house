@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -45,6 +46,11 @@ public class InboundPottingPlanService {
   }
 
   public WorkOperationView create(InboundPottingPlanCreateRequest request) {
+    return queryService.get(createPlan(request).getId());
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  WorkOperation createPlan(InboundPottingPlanCreateRequest request) {
     WorkType workType = validatePlan(request);
     List<Long> requestedIds = request.inboundRecordIds().stream().distinct().toList();
     List<InboundPottingPlanTarget> records =
@@ -57,10 +63,15 @@ public class InboundPottingPlanService {
     }
     WorkOperation operation = createResolved(request, requestedIds, records, workType);
     inboundPottingPlanGateway.markPottingPlanned(requestedIds);
-    return queryService.get(operation.getId());
+    return operation;
   }
 
   public List<WorkOperationView> createBatch(InboundPottingPlanBatchCreateRequest request) {
+    return queryService.getAll(createBatchPlans(request));
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  List<Long> createBatchPlans(InboundPottingPlanBatchCreateRequest request) {
     InboundPottingPlanCreateRequest planRequest = request.plan();
     List<Long> requestedIds = planRequest.inboundRecordIds().stream().distinct().toList();
     if (requestedIds.isEmpty()) {
@@ -96,7 +107,7 @@ public class InboundPottingPlanService {
                 })
             .toList();
     inboundPottingPlanGateway.markPottingPlanned(requestedIds);
-    return queryService.getAll(operationIds);
+    return operationIds;
   }
 
   private WorkType validatePlan(InboundPottingPlanCreateRequest request) {

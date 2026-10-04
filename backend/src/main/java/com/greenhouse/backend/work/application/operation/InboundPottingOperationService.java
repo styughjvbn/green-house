@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -52,12 +53,13 @@ public class InboundPottingOperationService {
               operationLocks.lockInboundPlans(List.of(request.inboundRecordId()));
               return List.of(
                   findExistingOperationId(request)
-                      .orElseGet(() -> executeActiveOrNewPlan(request).id()));
+                      .orElseGet(() -> executeActiveOrNewPlan(request)));
             });
     return queryService.get(ids.getFirst());
   }
 
-  public List<WorkOperationView> executeRecord(
+  @Transactional(propagation = Propagation.MANDATORY)
+  List<Long> executeRecord(
       InboundPottingPlanCreateRequest plan, List<InboundPottingCommand> executions) {
     List<Long> inboundRecordIds =
         executions.stream()
@@ -83,12 +85,12 @@ public class InboundPottingOperationService {
       if (activeExecution == null) {
         throw new IllegalStateException("실행할 포트 작업 계획을 찾을 수 없습니다.");
       }
-      operationIds.add(executeActivePlan(activeExecution, request).id());
+      operationIds.add(executeActivePlan(activeExecution, request));
     }
-    return queryService.getAll(operationIds);
+    return List.copyOf(operationIds);
   }
 
-  private WorkOperationView executeActiveOrNewPlan(InboundPottingCommand request) {
+  private Long executeActiveOrNewPlan(InboundPottingCommand request) {
     Long inboundRecordId = request.inboundRecordId();
     List<WorkTargetExecution> activeExecutions =
         workTargetExecutionRepository.findActiveInboundPottingForUpdate(inboundRecordId);
@@ -98,10 +100,10 @@ public class InboundPottingOperationService {
     return executeNewPlan(request);
   }
 
-  private WorkOperationView executeNewPlan(InboundPottingCommand request) {
+  private Long executeNewPlan(InboundPottingCommand request) {
     Long inboundRecordId = request.inboundRecordId();
-    WorkOperationView planned =
-        planService.create(
+    var planned =
+        planService.createPlan(
             new InboundPottingPlanCreateRequest(
                 "입고 #" + inboundRecordId + " 포트 작업",
                 request.pottingDate(),
@@ -109,14 +111,17 @@ public class InboundPottingOperationService {
                 List.of(inboundRecordId),
                 request.worker(),
                 request.memo()));
-    WorkOperationView started = progressService.start(planned.id());
+    progressService.startOperation(planned.getId());
     Long targetId =
-        started.targets().stream()
-            .filter(target -> inboundRecordId.equals(target.inboundRecordId()))
+        workTargetExecutionRepository
+            .findByTargetWorkOperationIdOrderByIdAsc(planned.getId())
+            .stream()
+            .map(WorkTargetExecution::getTarget)
+            .filter(target -> inboundRecordId.equals(target.getInboundRecordId()))
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("포트 작업 대상을 찾을 수 없습니다."))
-            .id();
-    return executeTarget(started, targetId, request);
+            .getId();
+    return progressService.completePottingTarget(planned.getId(), targetId, request).getId();
   }
 
   private Optional<Long> findExistingOperationId(InboundPottingCommand request) {
@@ -175,7 +180,7 @@ public class InboundPottingOperationService {
             .filter(id -> !executionsByInboundRecordId.containsKey(id))
             .toList();
     if (!unplannedIds.isEmpty()) {
-      planService.createBatch(
+      planService.createBatchPlans(
           new InboundPottingPlanBatchCreateRequest(copyPlan(plan, unplannedIds)));
       indexExecutions(workTargetExecutionRepository.findActiveInboundPottingForUpdate(unplannedIds))
           .forEach(executionsByInboundRecordId::putIfAbsent);
@@ -201,31 +206,18 @@ public class InboundPottingOperationService {
         plan.memo());
   }
 
-  private WorkOperationView executeActivePlan(
-      WorkTargetExecution execution, InboundPottingCommand request) {
+  private Long executeActivePlan(WorkTargetExecution execution, InboundPottingCommand request) {
     Long operationId = execution.getTarget().getWorkOperation().getId();
     WorkOperationStatus status = execution.getTarget().getWorkOperation().getStatus();
-    WorkOperationView active =
-        switch (status) {
-          case PLANNED -> progressService.start(operationId);
-          case PAUSED -> progressService.resume(operationId);
-          case IN_PROGRESS -> queryService.get(operationId);
-          default -> throw new IllegalStateException("실행할 수 없는 포트 작업 계획입니다.");
-        };
-    return executeTarget(active, execution.getTarget().getId(), request);
-  }
-
-  private WorkOperationView executeTarget(
-      WorkOperationView operation, Long targetId, InboundPottingCommand request) {
-    WorkOperationView updated =
-        progressService.completePottingTarget(operation.id(), targetId, request);
-    if (updated.progress().pending() == 0
-        && updated.progress().inProgress() == 0
-        && updated.progress().partial() == 0
-        && updated.progress().failed() == 0) {
-      return progressService.complete(updated.id(), request.pottingDate());
+    switch (status) {
+      case PLANNED -> progressService.startOperation(operationId);
+      case PAUSED -> progressService.resumeOperation(operationId);
+      case IN_PROGRESS -> {}
+      default -> throw new IllegalStateException("실행할 수 없는 포트 작업 계획입니다.");
     }
-    return updated;
+    return progressService
+        .completePottingTarget(operationId, execution.getTarget().getId(), request)
+        .getId();
   }
 
   private List<String> keys(InboundPottingCommand request) {

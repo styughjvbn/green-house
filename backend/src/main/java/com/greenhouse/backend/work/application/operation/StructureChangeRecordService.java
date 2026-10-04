@@ -166,11 +166,7 @@ public class StructureChangeRecordService {
             key,
             request,
             () ->
-                inboundPottingOperationService
-                    .executeRecord(request.plan(), request.executions())
-                    .stream()
-                    .map(WorkOperationView::id)
-                    .toList());
+                inboundPottingOperationService.executeRecord(request.plan(), request.executions()));
     return queryService.getAll(ids);
   }
 }

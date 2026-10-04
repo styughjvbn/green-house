@@ -80,8 +80,13 @@ public class WorkOperationProgressService {
   }
 
   public WorkOperationView resume(Long operationId) {
-    findOperation(operationId).resume();
+    resumeOperation(operationId);
     return queryService.get(operationId);
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  void resumeOperation(Long operationId) {
+    findOperation(operationId).resume();
   }
 
   public WorkOperationView endRemaining(Long operationId) {
@@ -112,7 +117,7 @@ public class WorkOperationProgressService {
 
   public WorkOperationView completeTarget(
       Long operationId, Long targetId, WorkTargetExecutionRequest request) {
-    return completeTarget(
+    completeTargetExecution(
         operationId,
         targetId,
         request.completedDate(),
@@ -120,11 +125,13 @@ public class WorkOperationProgressService {
         request.resultDetails(),
         null,
         null);
+    return queryService.get(operationId);
   }
 
-  WorkOperationView completePottingTarget(
+  @Transactional(propagation = Propagation.MANDATORY)
+  WorkOperation completePottingTarget(
       Long operationId, Long targetId, InboundPottingCommand request) {
-    return completeTarget(
+    return completeTargetExecution(
         operationId,
         targetId,
         request.pottingDate(),
@@ -134,7 +141,7 @@ public class WorkOperationProgressService {
         request.inboundRecordId() + ":" + request.idempotencyKey());
   }
 
-  private WorkOperationView completeTarget(
+  private WorkOperation completeTargetExecution(
       Long operationId,
       Long targetId,
       LocalDate completedDate,
@@ -144,6 +151,7 @@ public class WorkOperationProgressService {
       String executionKey) {
     findOperation(operationId);
     WorkTargetExecution execution = findExecutionForUpdate(operationId, targetId);
+    WorkOperation operation = execution.getTarget().getWorkOperation();
     if (execution.isEffectApplied()) {
       String effectKey = executionKey == null ? "TARGET:" + targetId : "POTTING:" + executionKey;
       var existing =
@@ -159,9 +167,8 @@ public class WorkOperationProgressService {
           existing,
           new WorkEffectCommand(
               completedAt, support.actor(requestedWorker), details, pottingCommand));
-      return queryService.get(operationId);
+      return operation;
     }
-    WorkOperation operation = execution.getTarget().getWorkOperation();
     if (operation.getStatus() != WorkOperationStatus.IN_PROGRESS) {
       throw new IllegalArgumentException("진행 중인 작업에서만 대상을 처리할 수 있습니다.");
     }
@@ -176,7 +183,7 @@ public class WorkOperationProgressService {
                 operation, execution.getTarget(), executionKey, command);
     execution.completeWithEffect(completedAt, worker, result.storedDetails());
     completeIfAllTargetsClosed(operation, completedAt);
-    return queryService.get(operationId);
+    return operation;
   }
 
   public WorkOperationView skipTarget(
