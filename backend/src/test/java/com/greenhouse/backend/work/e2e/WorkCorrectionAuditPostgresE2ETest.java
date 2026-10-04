@@ -238,6 +238,19 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 				{"idempotencyKey":"date-only","workDate":"2026-07-14","reason":"날짜 정정","orchidGroupAdjustments":[]}
 				""";
     assertThat(post(path(), request).status()).isEqualTo(201);
+    String stored =
+        jdbc.queryForObject(
+            "select result_details::text from work_operation_corrections", String.class);
+    var details = objectMapper.readTree(stored);
+    assertThat(details.has("quantityBalances")).isFalse();
+    assertThat(details.path("adjustments").size()).isZero();
+    assertThat(details.has("beforeWorkDate")).isTrue();
+    assertThat(details.has("afterWorkDate")).isTrue();
+    assertThat(post(path(), request).status()).isEqualTo(201);
+    assertThat(
+            jdbc.queryForObject(
+                "select result_details::text from work_operation_corrections", String.class))
+        .isEqualTo(stored);
     assertThat(
             jdbc.queryForObject("SELECT mutation_id FROM work_operation_corrections", Long.class))
         .isNull();

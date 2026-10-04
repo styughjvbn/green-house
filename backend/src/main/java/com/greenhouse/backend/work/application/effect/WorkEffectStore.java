@@ -75,7 +75,7 @@ public class WorkEffectStore {
             command.executedAt(),
             command.worker(),
             command.resultDetails(),
-            result.resultDetails());
+            result.storedDetails());
     appliedEffect.recordFingerprint(
         fingerprint(result.handlerCode(), target == null ? null : target.getId(), command));
     if (result.mutationLink() != null) {
@@ -131,7 +131,7 @@ public class WorkEffectStore {
         effect.getMutationId() == null && effect.getCorrelationId() == null
             ? null
             : new WorkMutationLink(effect.getMutationId(), effect.getCorrelationId());
-    return new WorkExecutionResult(
+    return WorkExecutionResult.fromStored(
         effect.getHandlerCode(), effect.getResultDetails(), resultIds, mutationLink);
   }
 }

@@ -101,8 +101,9 @@ public class StructureChangeExecutionService {
             "LEGACY_MERGE",
             sourceOrchidGroupIds,
             new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
+    Map<String, Object> storedDetails = result.storedDetails();
     executions.forEach(
-        execution -> execution.completeWithEffect(completedAt, worker, result.resultDetails()));
+        execution -> execution.completeWithEffect(completedAt, worker, storedDetails));
     progressService.completeIfAllTargetsClosed(operation, completedAt);
     return queryService.get(operationId);
   }
@@ -190,7 +191,7 @@ public class StructureChangeExecutionService {
               inputQuantities,
               movementDiscardQuantities(request));
     }
-    Map<String, Object> resultDetails = result.resultDetails();
+    Map<String, Object> resultDetails = result.storedDetails();
     if (discardOperation != null) {
       resultDetails = new LinkedHashMap<>(resultDetails);
       resultDetails.put("discardWorkOperationId", discardOperation.id());

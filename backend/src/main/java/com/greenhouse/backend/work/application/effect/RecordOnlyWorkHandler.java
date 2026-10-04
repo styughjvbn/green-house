@@ -21,6 +21,7 @@ public class RecordOnlyWorkHandler implements WorkEffectHandler {
 
   @Override
   public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
-    return new WorkExecutionResult(CODE, command.resultDetails(), List.of());
+    return new WorkExecutionResult(
+        CODE, new WorkEffectResults.Json(command.resultDetails()), List.of());
   }
 }

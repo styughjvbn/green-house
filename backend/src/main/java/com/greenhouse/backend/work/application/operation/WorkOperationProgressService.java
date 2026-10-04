@@ -168,7 +168,7 @@ public class WorkOperationProgressService {
             ? workEffectProcessor.apply(operation, execution.getTarget(), command)
             : workEffectProcessor.applyTargetExecution(
                 operation, execution.getTarget(), executionKey, command);
-    execution.completeWithEffect(completedAt, worker, result.resultDetails());
+    execution.completeWithEffect(completedAt, worker, result.storedDetails());
     completeIfAllTargetsClosed(operation, completedAt);
     return queryService.get(operationId);
   }

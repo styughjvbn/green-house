@@ -333,6 +333,21 @@ class InboundPottingContractPostgresE2ETest extends WorkE2ETestBase {
     var ids =
         objectMapper.readTree((String) effect.get("result_details")).path("createdOrchidGroupIds");
     assertThat(ids.size()).isEqualTo(2);
+    var expectedDetails = objectMapper.createObjectNode();
+    expectedDetails.put("inboundRecordId", inboundId);
+    expectedDetails.set("createdOrchidGroupIds", ids);
+    expectedDetails.put("actualQuantity", 30);
+    expectedDetails.put("resultCount", 2);
+    assertThat(objectMapper.readTree((String) effect.get("result_details")))
+        .isEqualTo(objectMapper.readTree(expectedDetails.toString()));
+    assertThat(
+            objectMapper.readTree(
+                jdbc.queryForObject(
+                    "select execution.result_details::text from work_target_executions execution join work_operation_targets target on target.id = execution.work_operation_target_id where target.work_operation_id = ?",
+                    String.class,
+                    operationId)))
+        .isEqualTo(objectMapper.readTree(expectedDetails.toString()));
+
     var rows =
         jdbc.queryForList(
             "select id, quantity, age_year, tray_count, split_placement_allowed, start_position, end_position, memo from orchid_groups where inbound_record_id = ? order by id",

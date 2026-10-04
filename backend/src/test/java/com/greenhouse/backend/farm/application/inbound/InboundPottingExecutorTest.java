@@ -12,6 +12,7 @@ import com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec
 import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import java.math.BigDecimal;
@@ -38,9 +39,10 @@ class InboundPottingExecutorTest {
     var result = executor.execute(context(), command(request));
 
     verify(service).potting(51L, request, 11L, "POTTING:51:key");
+    assertThat(result.details()).isInstanceOf(WorkEffectResults.Potted.class);
     assertThat(result.resultOrchidGroupIds()).containsExactly(71L);
     assertThat(result.mutationLink()).isEqualTo(mutation);
-    assertThat(result.resultDetails())
+    assertThat(result.storedDetails())
         .containsEntry("inboundRecordId", 51L)
         .containsEntry("actualQuantity", 13)
         .containsEntry("createdOrchidGroupIds", List.of(71L));

@@ -55,7 +55,7 @@ class WorkEffectProcessorTest {
   private final WorkExecutionResult result =
       new WorkExecutionResult(
           "TEST_EFFECT",
-          Map.of("remainingQuantity", 70),
+          new WorkEffectResults.Discarded(31L, 100, 30, 70, "정상", "정상", null),
           List.of(31L),
           new WorkMutationLink(91L, UUID.randomUUID()));
 

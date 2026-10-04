@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkEffectStore;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
@@ -90,7 +91,10 @@ public class InboundWorkOperationRecorder {
         List.of(),
         WorkEffectKind.RECORD_ONLY,
         new WorkExecutionResult(
-            workType.handlerCode(), details, request.createdOrchidGroupIds(), mutationLink));
+            workType.handlerCode(),
+            new WorkEffectResults.Json(details),
+            request.createdOrchidGroupIds(),
+            mutationLink));
     execution.completeWithEffect(executedAt, worker, details);
     operation.complete(executedAt);
   }

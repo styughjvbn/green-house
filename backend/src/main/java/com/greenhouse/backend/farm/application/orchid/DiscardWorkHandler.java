@@ -63,14 +63,13 @@ public class DiscardWorkHandler implements WorkEffectHandler {
         command.resultDetails() == null ? null : command.resultDetails().get("reason");
     var details =
         new WorkEffectResults.Discarded(
-                orchidGroup.getId(),
-                beforeQuantity,
-                discardQuantity,
-                orchidGroup.getQuantity(),
-                beforeStatus,
-                orchidGroup.getStatus(),
-                requestedReason instanceof String value ? value : null)
-            .toMap();
+            orchidGroup.getId(),
+            beforeQuantity,
+            discardQuantity,
+            orchidGroup.getQuantity(),
+            beforeStatus,
+            orchidGroup.getStatus(),
+            requestedReason instanceof String value ? value : null);
     return new WorkExecutionResult("DISCARD", details, List.of(orchidGroup.getId()), mutationLink);
   }
 

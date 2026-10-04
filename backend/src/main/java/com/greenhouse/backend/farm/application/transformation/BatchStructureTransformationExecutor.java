@@ -158,13 +158,12 @@ public class BatchStructureTransformationExecutor {
             .toList();
     var details =
         new WorkEffectResults.Transformation(
-                request.idempotencyKey(),
-                inputBySourceId,
-                lossQuantity,
-                increaseQuantity,
-                resultRows,
-                sourceIds.size() == 1 ? sources.get(sourceIds.getFirst()).getQuantity() : null)
-            .toMap();
+            request.idempotencyKey(),
+            inputBySourceId,
+            lossQuantity,
+            increaseQuantity,
+            resultRows,
+            sourceIds.size() == 1 ? sources.get(sourceIds.getFirst()).getQuantity() : null);
     return new WorkExecutionResult(strategy.supports(), details, resultIds, mutationLink);
   }
 
@@ -236,11 +235,9 @@ public class BatchStructureTransformationExecutor {
             .toList();
     Integer remainingQuantity =
         resultIds.size() == 1 ? sources.get(resultIds.getFirst()).getQuantity() : null;
-    Map<String, Object> details =
+    var details =
         new WorkEffectResults.Transformation(
-                request.idempotencyKey(), inputBySourceId, 0, 0, resultRows, remainingQuantity)
-            .toMap();
-    details.put("identityPreserved", true);
+            request.idempotencyKey(), inputBySourceId, 0, 0, resultRows, remainingQuantity, true);
     return new WorkExecutionResult(
         WorkTypeDefinition.MOVEMENT.name(),
         details,

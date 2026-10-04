@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.application.effect;
 
+import com.greenhouse.backend.work.application.correction.WorkQuantityBalanceChange;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -7,7 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Typed results at the JSON write boundary. Field presence is part of the persisted contract. */
+/** Typed execution results. JSON field presence remains part of the persisted contract. */
 public final class WorkEffectResults {
 
   private WorkEffectResults() {}
@@ -26,7 +27,26 @@ public final class WorkEffectResults {
       int lossQuantity,
       int increaseQuantity,
       List<ResultGroup> results,
-      Integer remainingQuantity) {
+      Integer remainingQuantity,
+      boolean identityPreserved)
+      implements WorkEffectResultDetails {
+    public Transformation(
+        String executionKey,
+        Map<Long, Integer> sourceInputQuantities,
+        int lossQuantity,
+        int increaseQuantity,
+        List<ResultGroup> results,
+        Integer remainingQuantity) {
+      this(
+          executionKey,
+          sourceInputQuantities,
+          lossQuantity,
+          increaseQuantity,
+          results,
+          remainingQuantity,
+          false);
+    }
+
     public Map<String, Object> toMap() {
       var json = new LinkedHashMap<String, Object>();
       json.put("executionKey", executionKey);
@@ -41,6 +61,7 @@ public final class WorkEffectResults {
         json.put("remainingQuantity", remainingQuantity);
         json.put("resultOrchidGroupIds", results.stream().map(ResultGroup::orchidGroupId).toList());
       }
+      if (identityPreserved) json.put("identityPreserved", true);
       return json;
     }
   }
@@ -50,7 +71,8 @@ public final class WorkEffectResults {
       Map<Long, Integer> sourceInputQuantities,
       int totalInputQuantity,
       int lossQuantity,
-      Long resultOrchidGroupId) {
+      Long resultOrchidGroupId)
+      implements WorkEffectResultDetails {
     public Map<String, Object> toMap() {
       return Map.of(
           "sourceOrchidGroupIds",
@@ -66,7 +88,7 @@ public final class WorkEffectResults {
     }
   }
 
-  public record Created(List<Long> createdOrchidGroupIds) {
+  public record Created(List<Long> createdOrchidGroupIds) implements WorkEffectResultDetails {
     public Map<String, Object> toMap() {
       return Map.of(
           "createdCount",
@@ -76,7 +98,8 @@ public final class WorkEffectResults {
     }
   }
 
-  public record Potted(Long inboundRecordId, List<Long> createdOrchidGroupIds, int actualQuantity) {
+  public record Potted(Long inboundRecordId, List<Long> createdOrchidGroupIds, int actualQuantity)
+      implements WorkEffectResultDetails {
     public Map<String, Object> toMap() {
       return Map.of(
           "inboundRecordId",
@@ -97,7 +120,8 @@ public final class WorkEffectResults {
       Object fromBedZoneId,
       Long toBedZoneId,
       BigDecimal startPosition,
-      BigDecimal endPosition) {
+      BigDecimal endPosition)
+      implements WorkEffectResultDetails {
     public Map<String, Object> toMap() {
       var json = new LinkedHashMap<String, Object>();
       json.put("orchidGroupId", orchidGroupId);
@@ -116,7 +140,8 @@ public final class WorkEffectResults {
       int remainingQuantity,
       String beforeStatus,
       String status,
-      String reason) {
+      String reason)
+      implements WorkEffectResultDetails {
     public Map<String, Object> toMap() {
       var json = new LinkedHashMap<String, Object>();
       json.put("orchidGroupId", orchidGroupId);
@@ -155,14 +180,32 @@ public final class WorkEffectResults {
       Long originalWorkOperationId,
       LocalDate beforeWorkDate,
       LocalDate afterWorkDate,
-      List<Adjustment> adjustments) {
+      List<Adjustment> adjustments,
+      List<WorkQuantityBalanceChange> quantityBalances)
+      implements WorkEffectResultDetails {
+    public Corrected(
+        Long originalWorkOperationId,
+        LocalDate beforeWorkDate,
+        LocalDate afterWorkDate,
+        List<Adjustment> adjustments) {
+      this(originalWorkOperationId, beforeWorkDate, afterWorkDate, adjustments, List.of());
+    }
+
     public Map<String, Object> toMap() {
       var json = new LinkedHashMap<String, Object>();
       json.put("originalWorkOperationId", originalWorkOperationId);
       json.put("beforeWorkDate", beforeWorkDate);
       json.put("afterWorkDate", afterWorkDate);
       json.put("adjustments", adjustments.stream().map(Adjustment::toMap).toList());
+      if (!quantityBalances.isEmpty()) json.put("quantityBalances", quantityBalances);
       return json;
+    }
+  }
+
+  /** Free-form records and replayed JSON retain unknown fields without reconstruction. */
+  public record Json(Map<String, Object> value) implements WorkEffectResultDetails {
+    public Map<String, Object> toMap() {
+      return value;
     }
   }
 

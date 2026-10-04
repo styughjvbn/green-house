@@ -62,7 +62,7 @@ public class WorkOperationCorrectionService {
             originalId, () -> correctionRepository.save(correction).getId(), request);
     var link = result.mutationLink();
     correction.complete(
-        result.resultDetails(),
+        result.storedDetails(),
         link == null ? null : link.mutationId(),
         link == null ? null : link.correlationId());
     receipt.complete(correction.getId());

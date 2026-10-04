@@ -159,7 +159,7 @@ public class WorkOperationPlanService {
               operation,
               execution.getTarget(),
               new WorkEffectCommand(executedAt, worker, request.details(), null));
-      execution.completeWithEffect(executedAt, worker, result.resultDetails());
+      execution.completeWithEffect(executedAt, worker, result.storedDetails());
     }
     operation.complete(executedAt);
     return queryService.get(operation.getId());

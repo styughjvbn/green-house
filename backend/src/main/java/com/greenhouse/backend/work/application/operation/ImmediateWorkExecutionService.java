@@ -164,7 +164,7 @@ public class ImmediateWorkExecutionService {
             operation,
             execution.getTarget(),
             new WorkEffectCommand(executedAt, worker, details, payload));
-    execution.completeWithEffect(executedAt, worker, result.resultDetails());
+    execution.completeWithEffect(executedAt, worker, result.storedDetails());
     operation.complete(executedAt);
     return operation.getId();
   }

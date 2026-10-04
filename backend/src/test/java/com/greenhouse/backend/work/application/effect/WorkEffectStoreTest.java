@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
+import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
@@ -35,12 +36,24 @@ class WorkEffectStoreTest {
           appliedEffectRepository, effectOrchidGroupRepository, new WorkRequestFingerprint());
 
   @Test
-  void persistsAndReplaysTheMutationLinkWithoutFarmDomainDependency() {
+  void persistsTypedFactsAndReplaysJsonWithTheMutationLink() {
     WorkOperation operation = mock(WorkOperation.class);
     UUID correlationId = UUID.randomUUID();
     WorkMutationLink mutationLink = new WorkMutationLink(91L, correlationId);
     WorkExecutionResult executionResult =
-        new WorkExecutionResult("REPOT", Map.of("result", "ok"), List.of(201L), mutationLink);
+        new WorkExecutionResult(
+            "REPOT",
+            new WorkEffectResults.Transformation(
+                "round-1",
+                Map.of(101L, 10),
+                2,
+                0,
+                List.of(
+                    new WorkEffectResults.ResultGroup(
+                        201L, 8, StructureChangeResultPurpose.NORMAL)),
+                0),
+            List.of(201L),
+            mutationLink);
     WorkEffectCommand command =
         new WorkEffectCommand(
             LocalDateTime.of(2026, 8, 20, 9, 0), "worker", Map.of("command", "value"), null);
@@ -60,6 +73,8 @@ class WorkEffectStoreTest {
         ArgumentCaptor.forClass(WorkAppliedEffect.class);
     verify(appliedEffectRepository).save(effectCaptor.capture());
     WorkAppliedEffect savedEffect = effectCaptor.getValue();
+    assertThat(executionResult.details()).isInstanceOf(WorkEffectResults.Transformation.class);
+    assertThat(savedEffect.getResultDetails()).isEqualTo(executionResult.storedDetails());
     assertThat(savedEffect.getMutationId()).isEqualTo(91L);
     assertThat(savedEffect.getCorrelationId()).isEqualTo(correlationId);
 
@@ -75,6 +90,8 @@ class WorkEffectStoreTest {
 
     WorkExecutionResult replayed = store.find(11L, "EXECUTION:round-1", command).orElseThrow();
 
+    assertThat(replayed.details()).isInstanceOf(WorkEffectResults.Json.class);
+    assertThat(replayed.storedDetails()).isEqualTo(savedEffect.getResultDetails());
     assertThat(replayed.resultOrchidGroupIds()).containsExactly(201L);
     assertThat(replayed.mutationLink()).isEqualTo(mutationLink);
   }

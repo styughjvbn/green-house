@@ -9,6 +9,7 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
@@ -69,7 +70,7 @@ public class ReconciliationWorkHandler implements WorkEffectHandler {
     details.put("after", after);
     return new WorkExecutionResult(
         "RECONCILIATION",
-        details,
+        new WorkEffectResults.Json(details),
         List.of(groupId),
         new WorkMutationLink(mutation.mutationId(), mutation.correlationId()));
   }

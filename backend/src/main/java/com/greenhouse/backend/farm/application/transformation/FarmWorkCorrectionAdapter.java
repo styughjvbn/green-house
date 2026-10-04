@@ -196,9 +196,11 @@ public class FarmWorkCorrectionAdapter implements WorkCorrectionPort {
         workOperationDateCorrectionService.correct(originalOperationId, request.workDate());
     var resultDetails =
         new WorkEffectResults.Corrected(
-                originalOperationId, dateCorrection.before(), dateCorrection.after(), auditRows)
-            .toMap();
-    if (!quantityChanges.isEmpty()) resultDetails.put("quantityBalances", quantityChanges);
+            originalOperationId,
+            dateCorrection.before(),
+            dateCorrection.after(),
+            auditRows,
+            quantityChanges);
     return new WorkExecutionResult(
         "CORRECTION", resultDetails, List.copyOf(changedAdjustmentIds), mutationLink);
   }

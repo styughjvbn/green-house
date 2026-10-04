@@ -48,8 +48,7 @@ public class InboundPottingExecutor implements WorkEffectHandler {
             target.inboundRecordId(), request, context.operationId(), command.effectKey());
     var details =
         new WorkEffectResults.Potted(
-                target.inboundRecordId(), result.createdOrchidGroupIds(), result.actualQuantity())
-            .toMap();
+            target.inboundRecordId(), result.createdOrchidGroupIds(), result.actualQuantity());
     return new WorkExecutionResult(
         "POTTING", details, result.createdOrchidGroupIds(), result.mutationLink());
   }
