@@ -46,6 +46,8 @@ public class WorkOperationPlanService {
 
   private final WorkOperationSupport support;
 
+  private final WorkCommandReceipts receipts;
+
   @Transactional(readOnly = true)
   public WorkTargetPreviewResponse preview(WorkTargetPreviewRequest request) {
     WorkTargetSelection selection = WorkTargetSelection.from(request);
@@ -56,6 +58,18 @@ public class WorkOperationPlanService {
   }
 
   public WorkOperationView create(WorkOperationCreateRequest request) {
+    return createNew(request);
+  }
+
+  public WorkOperationView create(WorkOperationCreateRequest request, String key) {
+    return key == null
+        ? createNew(request)
+        : receipts
+            .executeCreation("GENERAL_PLAN", key, request, () -> List.of(createNew(request)))
+            .getFirst();
+  }
+
+  private WorkOperationView createNew(WorkOperationCreateRequest request) {
     WorkType workType = workTypeService.getActiveForPlan(request.workTypeId());
     return queryService.get(createOperation(request, workType, resolveIncluded(request)).getId());
   }
@@ -76,6 +90,17 @@ public class WorkOperationPlanService {
   }
 
   public List<WorkOperationView> createBatch(WorkOperationBatchCreateRequest request) {
+    return createBatchNew(request);
+  }
+
+  public List<WorkOperationView> createBatch(WorkOperationBatchCreateRequest request, String key) {
+    return key == null
+        ? createBatchNew(request)
+        : receipts.executeCreation(
+            "GENERAL_PLAN_BATCH", key, request, () -> createBatchNew(request));
+  }
+
+  private List<WorkOperationView> createBatchNew(WorkOperationBatchCreateRequest request) {
     WorkOperationCreateRequest operationRequest = request.operation();
     WorkType workType = workTypeService.getActiveForPlan(operationRequest.workTypeId());
     ResolvedSelection resolvedSelection = resolveIncluded(operationRequest);
@@ -108,6 +133,19 @@ public class WorkOperationPlanService {
   }
 
   public WorkOperationView createCompletedRecord(WorkOperationCreateRequest request) {
+    return createCompletedRecordNew(request);
+  }
+
+  public WorkOperationView createCompletedRecord(WorkOperationCreateRequest request, String key) {
+    return key == null
+        ? createCompletedRecordNew(request)
+        : receipts
+            .executeCreation(
+                "GENERAL_RECORD", key, request, () -> List.of(createCompletedRecordNew(request)))
+            .getFirst();
+  }
+
+  private WorkOperationView createCompletedRecordNew(WorkOperationCreateRequest request) {
     WorkType workType = workTypeService.getActiveForCreate(request.workTypeId());
     WorkOperation operation = createOperation(request, workType, resolveIncluded(request));
     LocalDateTime executedAt = support.completionTime(request.plannedStartDate());

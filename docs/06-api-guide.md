@@ -177,6 +177,10 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 
 `POST /api/work-operations/record`는 농장 전체, 동, 물리 배드, 논리 구역, 난 묶음 범위의 기록형 작업을 대상 스냅샷과 함께 즉시 완료한다. 직접 자리 이동도 완료된 `WorkOperation`과 작업 효과로 기록하며 모든 작업 이력 API는 `WorkOperation` 계약을 사용한다.
 
+일반 계획 생성의 `POST /api/work-operations`와 `/api/work-operations/batch`, 일반 완료 기록의 `/api/work-operations/record`는 선택형 `Idempotency-Key` header를 지원한다. 세 경로의 키 범위는 독립적이므로 재전송은 경로·키·입력을 그대로 유지한다. 같은 요청은 최초 응답을 `201`로 반환하고 다른 입력은 `409 / IDEMPOTENCY_KEY_REUSED`다. Work의 기존 지문 규칙대로 JSON object 순서와 숫자 소수 자릿수는 정규화하고 배열 순서·문자열·null/명시값은 구분한다. 키는 기존 Work 규칙대로 앞뒤 공백 제거 후 1~100자이며 빈/공백/초과 길이는 `400 / VALIDATION_ERROR`다. 키 생략 생성은 재전송 중복 방어 대상이 아니다.
+
+일반 생성의 replay는 최초 대상·진행 상태·capability를 보존하며 현재 유형 비활성화나 작업명·상태·취소를 반영한 최신 상세가 아니다. 이후 업무 판단에는 현재 상세를 조회한다. 기존 실행·구조 변경·포트 Receipt는 저장한 작업 ID의 현재 상세를 반환하는 계약을 유지한다. 응답 유실·오류 뒤에는 키를 임의 변경하지 않으며 rollback 뒤에는 같은 키로 입력을 수정해 접수할 수 있다. 일반 등록 화면의 계획/완료 기록 키는 별도로 유지하고 성공 응답 확인 직후 해제한다.
+
 구조 변경 작업 기록은 유형별 전체 결과 요청을 사용한다.
 
 - `POST /api/work-operations/structure-change-records`: 분갈이·분주·합식의 전체 원본과 N:M 결과를 즉시 완료

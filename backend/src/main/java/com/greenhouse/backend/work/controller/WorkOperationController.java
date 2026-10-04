@@ -42,6 +42,8 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationTitleUpdateRequest
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
@@ -52,6 +54,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -98,22 +101,37 @@ public class WorkOperationController {
   @PostMapping("/work-operations")
   @ResponseStatus(HttpStatus.CREATED)
   public ApiResponse<WorkOperationView> create(
-      @Valid @RequestBody WorkOperationCreateRequest request) {
-    return ApiResponse.ok(planService.create(request));
+      @Valid @RequestBody WorkOperationCreateRequest request,
+      @Parameter(
+              description = "일반 단건 계획 생성의 재전송 키. 같은 키·입력은 최초 응답을 반환한다.",
+              schema = @Schema(minLength = 1, maxLength = 100))
+          @RequestHeader(name = "Idempotency-Key", required = false)
+          String key) {
+    return ApiResponse.ok(planService.create(request, key));
   }
 
   @PostMapping("/work-operations/batch")
   @ResponseStatus(HttpStatus.CREATED)
   public ApiResponse<List<WorkOperationView>> createBatch(
-      @Valid @RequestBody WorkOperationBatchCreateRequest request) {
-    return ApiResponse.ok(planService.createBatch(request));
+      @Valid @RequestBody WorkOperationBatchCreateRequest request,
+      @Parameter(
+              description = "일반 일괄 계획 생성의 재전송 키. 품종별 전체 결과의 최초 응답을 반환한다.",
+              schema = @Schema(minLength = 1, maxLength = 100))
+          @RequestHeader(name = "Idempotency-Key", required = false)
+          String key) {
+    return ApiResponse.ok(planService.createBatch(request, key));
   }
 
   @PostMapping("/work-operations/record")
   @ResponseStatus(HttpStatus.CREATED)
   public ApiResponse<WorkOperationView> createCompletedRecord(
-      @Valid @RequestBody WorkOperationCreateRequest request) {
-    return ApiResponse.ok(planService.createCompletedRecord(request));
+      @Valid @RequestBody WorkOperationCreateRequest request,
+      @Parameter(
+              description = "일반 완료 기록 생성의 재전송 키. 같은 키·입력은 최초 응답을 반환한다.",
+              schema = @Schema(minLength = 1, maxLength = 100))
+          @RequestHeader(name = "Idempotency-Key", required = false)
+          String key) {
+    return ApiResponse.ok(planService.createCompletedRecord(request, key));
   }
 
   /**

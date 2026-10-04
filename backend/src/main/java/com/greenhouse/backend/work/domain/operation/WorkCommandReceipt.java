@@ -30,6 +30,10 @@ public class WorkCommandReceipt {
   @Column(name = "result_operation_ids", columnDefinition = "jsonb")
   private List<Long> resultOperationIds;
 
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "response_snapshot", columnDefinition = "jsonb")
+  private String responseSnapshot;
+
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
 
@@ -48,5 +52,13 @@ public class WorkCommandReceipt {
       throw new IllegalStateException("요청 결과는 작업 식별자로 한 번만 확정해야 합니다.");
     }
     resultOperationIds = List.copyOf(operationIds);
+  }
+
+  public void completeCreation(List<Long> operationIds, String snapshot) {
+    if (snapshot == null) {
+      throw new IllegalStateException("신규 작업 요청의 최초 응답이 필요합니다.");
+    }
+    complete(operationIds);
+    responseSnapshot = snapshot;
   }
 }

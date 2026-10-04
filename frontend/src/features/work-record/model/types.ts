@@ -3,9 +3,15 @@
   OrchidGroup,
   WorkOperationStatus,
 } from "@/entities/farm/types";
-import type { components } from "@/shared/api/generated/openapi";
+import type { components, operations } from "@/shared/api/generated/openapi";
 
 type ApiSchemas = components["schemas"];
+
+export type WorkCreationRequestKey = NonNullable<
+  NonNullable<
+    operations["createBatch"]["parameters"]["header"]
+  >["Idempotency-Key"]
+>;
 
 export type WorkOperationFilterState = {
   from: string;

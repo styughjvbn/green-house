@@ -19,6 +19,7 @@ import type {
   WorkOperationGraph,
   WorkOperationGraphDetail,
   WorkTargetPreviewPayload,
+  WorkCreationRequestKey,
 } from "../model/types";
 import type { WorkOperationRelationKind } from "../lib/workOperationRelations";
 import { manualWorkTargetSource } from "../model/workTargetSource";
@@ -61,6 +62,7 @@ export function getOrchidGroups(): Promise<OrchidGroup[]> {
 
 export async function createCompletedWorkOperation(
   payload: CompletedWorkOperationPayload,
+  key: WorkCreationRequestKey,
   workTypeName: string,
   title?: string | null,
 ): Promise<WorkOperation> {
@@ -80,6 +82,7 @@ export async function createCompletedWorkOperation(
       worker: payload.worker,
       memo: payload.memo,
     },
+    key,
   );
 }
 
@@ -95,11 +98,13 @@ export async function previewWorkOperationTargets(
 
 export async function createWorkOperationsBatch(
   payload: CreateWorkOperationPayload,
+  key: WorkCreationRequestKey,
 ): Promise<WorkOperation[]> {
   return requestWorkOperation<WorkOperation[]>(
     "/work-operations/batch",
     "POST",
     { operation: payload },
+    key,
   );
 }
 
@@ -390,12 +395,16 @@ async function requestWorkOperation<T>(
   path: string,
   method: "POST" | "PATCH",
   payload?: unknown,
+  creationKey?: WorkCreationRequestKey,
 ): Promise<T> {
   return requestApi<T>(
     path,
     {
       method,
-      headers: payload ? { "Content-Type": "application/json" } : undefined,
+      headers: {
+        ...(payload ? { "Content-Type": "application/json" } : {}),
+        ...(creationKey ? { "Idempotency-Key": creationKey } : {}),
+      },
       body: payload ? JSON.stringify(payload) : undefined,
     },
     "작업을 처리하지 못했습니다.",

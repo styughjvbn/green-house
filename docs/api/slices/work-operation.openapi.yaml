@@ -103,6 +103,15 @@ paths:
       tags:
       - work-operation-controller
       operationId: create
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: 일반 단건 계획 생성의 재전송 키. 같은 키·입력은 최초 응답을 반환한다.
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 1
       requestBody:
         content:
           application/json:
@@ -511,6 +520,15 @@ paths:
       tags:
       - work-operation-controller
       operationId: createCompletedRecord
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: 일반 완료 기록 생성의 재전송 키. 같은 키·입력은 최초 응답을 반환한다.
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 1
       requestBody:
         content:
           application/json:
@@ -639,6 +657,15 @@ paths:
       tags:
       - work-operation-controller
       operationId: createBatch
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: 일반 일괄 계획 생성의 재전송 키. 품종별 전체 결과의 최초 응답을 반환한다.
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 1
       requestBody:
         content:
           application/json:

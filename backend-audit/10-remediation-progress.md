@@ -481,6 +481,42 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 최종 PostgreSQL 전체 `./gradlew workE2eTest`: 51개 클래스, 425건 성공. 신규 입고 생성 43건·V39 migration 1건과 기존 381건을 포함하며 실패·오류·생략은 없다.
 - `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 이후에는 진행 문서의 상태·결과만 갱신했으며 실행 코드·테스트·API 생성물은 바꾸지 않았다.
 
+## 13차 변경 — BE-008 일반 Work 계획·완료 기록 생성의 재전송 방어
+
+작업일: 2026-10-04. 상태: 일반 Work 생성·V40·화면 키·계약·정책 문서 및 최종 전체 검증 완료.
+
+### 재현과 범위
+
+- [WorkCreationIdempotencyPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkCreationIdempotencyPostgresE2ETest.java)의 HTTP 2건을 기존 코드에서 먼저 실행했다. 같은 header·입력은 다른 계획 ID를 만들었고 같은 키의 변경 입력도 201로 별도 생성됐다. 최초 fixture의 없는 accessor는 실제 `pesticideWorkTypeId`로 고쳐 컴파일한 뒤 위 결함을 재현했다. 실제 HTTP timeout을 주입한 시험은 아니며 성공 응답을 무시하고 재전송한 서버 처리다.
+- 범위는 [WorkOperationPlanService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationPlanService.java)의 일반 단건 계획·품종별 일괄 계획·일반 완료 기록이다. 선택형 `Idempotency-Key`를 세 HTTP 경로에 추가하고 기존 키 없는 application 호출·내부 구조 기록 조합·body·응답 schema는 유지한다. 입고 포트 계획과 키 없는 폐기 기록, 기존 실행/구조 변경/포트 body 키는 이번 범위가 아니다.
+- 같은 경로·키·typed 입력은 최초 응답을 201로 반환하고 변경 입력은 기존 Work 오류인 `409 / IDEMPOTENCY_KEY_REUSED`다. 앞뒤 공백 제거 후 빈/공백/100자 초과 키는 `400 / VALIDATION_ERROR`다. 경로별 독립 scope이므로 재전송은 endpoint도 유지하고 실제 같은 내용의 새 작업에는 새 키를 사용한다. 키 없는 생성은 별도 작업으로 처리한다.
+
+### 접수·잠금·snapshot·원자성
+
+- [WorkCommandReceipts](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkCommandReceipts.java)에 Work 생성 응답 전용 경로를 추가했다. 기존 Work 소유 접수 PK claim → 접수 root 잠금 → 지문 확인 → 완료 snapshot 재조회 → 최초 업무 순이며 대상 해석·활성 유형/actor 검증·묶음 잠금은 최초 실행에만 적용한다. `GENERAL_PLAN`, `GENERAL_PLAN_BATCH`, `GENERAL_RECORD`는 기존 즉시/구조 변경/포트/보상 scope와 독립적이다. Farm·Sales 접수나 범용 멱등 framework를 공유하지 않는다.
+- Work의 기존 canonical 지문을 사용한다. JSON object 순서와 숫자 소수 자릿수는 정규화하고 배열 순서·문자열·null/명시값은 구분한다. 현재 actor·Entity 값으로 입력을 다시 만들지 않는다. 기존 public application 진입점의 트랜잭션과 private 생성 코어를 사용하며 self invocation에 별도 트랜잭션을 기대하지 않는다.
+- 최초 실행의 전체 품종별 작업·대상·실행·일반 완료 효과·기존 감사, 결과 ID·응답 snapshot·생성 membership을 같은 트랜잭션에 확정한다. 접수 완료와 membership을 명시적으로 flush하며 어느 후행 저장이 실패해도 앞선 업무·접수를 rollback한다. 이 일반 기록은 기록형 효과이며 새 수량 Mutation이나 새로운 계획 AuditEvent를 추가한 변경은 아니다. 기존 구조 변경·폐기·Mutation 동작은 유지한다.
+- 신규 일반 생성은 최초 시각·대상·진행 상태·capability를 snapshot에 보존한다. 작업명 변경·계획 시작·유형 비활성·취소 뒤에도 이 응답을 반환하고 현재 Work/대상을 재조회하지 않는다. 이후 업무 판단은 최신 상세를 사용한다. 기존 ID-only Receipt의 현재 상세 조회 계약은 바꾸지 않는다.
+- 기존 생성 membership을 사용하므로 혼합 품종 계획은 동일 생성 묶음으로 조회할 수 있다. 응답/작업 ID 배열 순서를 보존하고 replay에서 membership을 재추가하지 않는다. 기존 실행·취소의 비생성 접수 의미도 유지한다.
+- [V40](../backend/src/main/resources/db/migration/V40__work_creation_response_snapshots.sql)은 기존 Receipt에 nullable JSONB snapshot과 신규 일반 생성의 완료 쌍 CHECK를 추가한다. snapshot은 비어 있지 않은 object 배열·양수 숫자 ID·결과 ID의 순서 일치를 검사한다. 기존 지문/ID-only/미상 원문·membership·업무 행을 수정하거나 과거 응답을 추정 backfill하지 않는다. DB가 수동 commit한 미완료 claim 자체를 금지하지는 않으며 application은 이를 자동 재실행하지 않는다. snapshot 없는 완료 요청의 생성 재조회는 기존 `IDEMPOTENCY_REPLAY_UNAVAILABLE`로 실패한다.
+
+### 화면·API·회귀 방어
+
+- 일반 등록 화면은 공통 pending-key helper로 계획/완료 기록의 독립 sessionStorage scope을 유지한다. 오류·폼 닫기·새로고침·입력 변경에서 키를 바꾸지 않고 성공 응답 직후 해제한 뒤 기존 저장 callback/닫기를 수행한다. 폼·서버 응답은 storage에 복제하지 않으며 storage 차단 시 mounted 화면 안에서만 유지한다. 전용 결과 입력 dialog·포트 계획은 기존 호출을 유지한다.
+- Controller·시험을 기준으로 전체 OpenAPI·Work slice·생성 TypeScript를 갱신했다. 프론트 생성 키는 생성된 header 타입을 사용하고 기존 공통 `requestApi`로 전달한다. 공유 helper의 신규 1건은 일반 계획/완료 기록 키의 독립성과 폼 재진입 수명을 확인하며 기존 Sales/Inbound 7건도 유지한다. 브라우저 dialog/HTTP E2E는 실행하지 않았다.
+- 신규 PostgreSQL 생성 55건: 수정 전 재현 2건, 세 경로의 동일 요청/현재 변경/취소/접수 완료 실패/membership 실패/조회 증폭/키 없는 호환 각 3건(21건), 입력 필드 변경 9건, 키 validation 9건, 새 키/경로 scope 독립 1건, 혼합 품종 결과 순서/생성 관계 1건, 혼합 품종 membership 실패 rollback 1건, validation rollback 뒤 수정 재시도 1건, object 순서/숫자 표기 지문 1건, 세 경로×commit/다른 입력/rollback 경쟁 9건이다.
+- 경쟁은 `pg_blocking_pids`와 후행 `pg_stat_activity.query`로 접수 행에서 선행 PID를 기다리는지 확인한다. 선행 commit의 같은 입력은 최초 응답, 다른 입력은 안정적인 409 code이며 선행 rollback 시 후행이 새 claim을 확보해 한 작업·대상·실행/효과·membership만 만든다. thread barrier/timeout을 사용하고 business lock 대기를 접수 대기로 오인하지 않는다.
+- 후행 저장 실패와 replay/거절은 관련 13개 테이블 JSON을 비교한다. Receipt 저장 이후 membership 실패도 completed receipt·Work·효과·감사까지 원복한다. 혼합 품종은 모든 작업을 원복하고 같은 키로 전체 재시도 성공을 확인한다. replay는 세 경로 모두 2 SQL 이하·Entity 1개 로딩이다. 큰 대상/최초 응답 snapshot의 저장·heap 비용 benchmark는 실행하지 않았다.
+- [WorkCreationSnapshotMigrationPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkCreationSnapshotMigrationPostgresE2ETest.java)는 별도 PostgreSQL DB의 V39→V40 upgrade에서 과거 원문 미상/알려진 ID-only Receipt·실제 Work·membership 보존, snapshot 미생성, 세 신규 scope의 완료 쌍·잘못된 JSON·ID 배열 순서·필수 지문 CHECK, 재실행 0건과 Flyway validate를 확인한다. 기존 PK/FK/UNIQUE를 변경하지 않는다.
+
+### 검증
+
+- 수정 전 HTTP 2건 실패, 수정 후 동일 2건 성공. 확장 실행의 6건은 application Map의 Long/Integer를 `valueToTree`로 비교한 시험 표현 차이였다. 실제 wire JSON round-trip 비교로 고쳤으며 HTTP 최초/재전송 비교와 DB/query 조건은 완화하지 않았다. 확장 생성 55건·V40 migration 1건, 총 PostgreSQL 56건 집중 성공.
+- 프론트 신규 1건·기존 7건 집중 성공. 전체 `npm run check`의 포맷·생성 타입 drift·전체 순수 로직 시험·lint·production build 성공.
+- 최종 백엔드 전체 `./gradlew test`: 120개 클래스, 573건 성공. 기존 architecture·query-count·도메인·integration 회귀를 포함한다.
+- 최종 PostgreSQL 전체 `./gradlew workE2eTest`: 53개 클래스, 481건 성공. 신규 일반 Work 생성 55건·V40 migration 1건과 기존 425건을 포함하며 실패·오류·생략은 없다.
+- `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 이후에는 진행 문서의 상태·결과만 갱신했으며 실행 코드·테스트·API 생성물은 바꾸지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -495,7 +531,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `dd69ddc9` — BE-006 일반 계획 전체 대상 잠금·500개 분할·계획/폐기 경쟁 및 rollback 회귀·정책 문서.
 - `a5acf3f3` — BE-007 수량 snapshot·V37·보정 정책·capability·계약 생성물·회귀·화면·관련 문서.
 - `32ebe83b` — BE-008 Sales 접수·V38·HTTP 계약·화면 키·경쟁/rollback/migration 회귀·관련 문서.
-- BE-008 입고 생성 — `fix: deduplicate inbound creation retries`. Farm 접수·V39·HTTP 계약·공통 화면 키·경쟁/rollback/migration 회귀·관련 문서를 별도 커밋으로 저장한다.
+- `275f8f00` — BE-008 Farm 입고 접수·V39·HTTP 계약·공통 화면 키·경쟁/rollback/migration 회귀·관련 문서.
+- BE-008 일반 Work 생성 — `fix: deduplicate general work creation retries`. Work 응답 snapshot·V40·HTTP 계약·화면 키·경쟁/rollback/migration 회귀·관련 문서를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -506,5 +543,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-005의 기존 중복 결과·반환 및 정산 영향은 별도 대사 대상이다. 기존 기록을 중복으로 추정해 삭제하지 않는다.
 - BE-006의 예정 수정 범위는 완료했다. 판매 교차 수정, Farm 단건·일괄 수정, Work 구조 기록과 Farm 경쟁, 일반 품종별 계획·폐기/Farm·구조 기록·겹치는 계획 경쟁을 검증했다. 경로별 전체 잠금 순서와 기존 대상 변경 거절 계약을 유지한다. 모든 writer·FK·내부 fence의 무교착을 증명한 것은 아니며 새 writer에는 같은 경로별 순서와 경쟁 회귀가 필요하다.
 - BE-007의 신규 수량 이력과 경매 시도·반환 확인 이후 직접 보정 제한을 완료했다. 과거 누락된 이력과 수량 불일치는 자동 복원하지 않았으며 운영 데이터 대사가 남는다. 결과 이후의 보상·정정 이벤트는 별도 업무 계약과 구현이 필요한 후속 범위다.
-- BE-008의 키가 있는 판매·입고 생성 재전송 방어를 완료 대상으로 삼는다. 기존 자료의 중복 대사, 키 없는 연동의 재시도 정책, 일반 Work 계획·기록 생성의 요청 identity는 남는다. 다음 우선 대상은 일반 Work 생성이며 기존 유형별 Receipt·membership·품종별 일괄 생성 계약부터 확인한다.
+- BE-008의 키가 있는 판매·입고·일반 Work 계획/완료 기록 생성 재전송 방어를 완료 대상으로 삼는다. 기존 자료의 중복 대사와 키 없는 연동의 재시도 정책은 남는다. 입고 포트 계획·폐기 기록 같은 별도 생성 경로는 이번 일반 생성 계약에 포함하지 않으며 필요 시 업무별 재시도 의미부터 정의한다. 후속 작업은 감사 우선순위에 따른 정책 일치·감사 완전성·DB 제약 상태·조회 비용 보강이다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

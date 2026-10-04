@@ -5075,7 +5075,10 @@ export interface operations {
     create: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 일반 단건 계획 생성의 재전송 키. 같은 키·입력은 최초 응답을 반환한다. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5542,7 +5545,10 @@ export interface operations {
     createCompletedRecord: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 일반 완료 기록 생성의 재전송 키. 같은 키·입력은 최초 응답을 반환한다. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5710,7 +5716,10 @@ export interface operations {
     createBatch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 일반 일괄 계획 생성의 재전송 키. 품종별 전체 결과의 최초 응답을 반환한다. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
