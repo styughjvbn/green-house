@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.application.orchid;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupReconciliationRequest;
+import com.greenhouse.backend.work.application.effect.WorkReconciliationCommand;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
@@ -37,6 +38,17 @@ public class OrchidGroupReconciliationService {
         request.memo(),
         orchidGroupId,
         Map.of("reason", request.reason().trim()),
-        request);
+        new WorkReconciliationCommand(
+            request.idempotencyKey(),
+            request.title(),
+            request.workDate(),
+            request.worker(),
+            request.memo(),
+            request.reason(),
+            request.actualQuantity(),
+            request.actualStatus(),
+            request.actualBedZoneId(),
+            request.actualStartPosition(),
+            request.actualEndPosition()));
   }
 }

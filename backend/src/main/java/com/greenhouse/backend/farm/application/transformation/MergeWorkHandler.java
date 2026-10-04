@@ -1,9 +1,8 @@
 package com.greenhouse.backend.farm.application.transformation;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.dto.transformation.MergeSourceInputRequest;
-import com.greenhouse.backend.farm.dto.transformation.MergeWorkOperationRequest;
+import com.greenhouse.backend.farm.application.transformation.LegacyStructureChangeRequestMapper.Merge;
+import com.greenhouse.backend.farm.application.transformation.LegacyStructureChangeRequestMapper.MergeSource;
 import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
 import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.application.effect.StructureChangeResultInput;
@@ -28,7 +27,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 
   private final StructureChangeExecutor structureChangeExecutor;
 
-  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+  private final LegacyStructureChangeRequestMapper legacyRequestMapper;
 
   @Override
   public String supports() {
@@ -50,14 +49,13 @@ public class MergeWorkHandler implements WorkEffectHandler {
     if (target != null) {
       throw new IllegalArgumentException("합식은 작업 전체 대상을 한 번에 실행해야 합니다.");
     }
-    MergeWorkOperationRequest request =
-        objectMapper.convertValue(command.resultDetails(), MergeWorkOperationRequest.class);
+    Merge request = legacyRequestMapper.readMerge(command.resultDetails());
     validateRequest(context, request);
     return structureChangeExecutor.execute(context, toStructureChangeRequest(command, request));
   }
 
   private StructureChangeCommand toStructureChangeRequest(
-      WorkEffectCommand command, MergeWorkOperationRequest request) {
+      WorkEffectCommand command, Merge request) {
     String executionKey =
         command.effectKey().startsWith("EXECUTION:")
             ? command.effectKey().substring("EXECUTION:".length())
@@ -90,7 +88,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
                 result.memo())));
   }
 
-  private void validateRequest(WorkEffectContext context, MergeWorkOperationRequest request) {
+  private void validateRequest(WorkEffectContext context, Merge request) {
     if (request == null || request.sources() == null || request.sources().isEmpty()) {
       throw new IllegalArgumentException("합식 원본 난 묶음이 필요합니다.");
     }
@@ -118,7 +116,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
     }
     Set<Long> requestedIds =
         request.sources().stream()
-            .map(MergeSourceInputRequest::sourceOrchidGroupId)
+            .map(MergeSource::sourceOrchidGroupId)
             .collect(Collectors.toSet());
     if (requestedIds.size() != request.sources().size()) {
       throw new IllegalArgumentException("합식 원본 난 묶음은 중복될 수 없습니다.");

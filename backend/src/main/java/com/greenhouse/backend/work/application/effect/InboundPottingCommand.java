@@ -16,7 +16,8 @@ public record InboundPottingCommand(
     @NotNull LocalDate pottingDate,
     @NotEmpty @Size(max = 100) List<@Valid InboundPottingResultInput> results,
     @Size(max = 50) String worker,
-    @Size(max = 1000) String memo) {
+    @Size(max = 1000) String memo)
+    implements WorkEffectPayload {
   public InboundPottingCommand {
     idempotencyKey = idempotencyKey == null ? null : idempotencyKey.trim();
   }

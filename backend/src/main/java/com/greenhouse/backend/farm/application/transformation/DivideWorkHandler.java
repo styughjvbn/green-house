@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.application.transformation;
 
-import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
+import com.greenhouse.backend.work.application.effect.LegacyRepotCommand;
 import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
@@ -38,7 +38,7 @@ public class DivideWorkHandler implements WorkEffectHandler {
           context, request, command.placementExclusionOrchidGroupIds());
     }
     if (target == null) throw new IllegalArgumentException("분주 작업에는 원본 난 묶음이 필요합니다.");
-    RepotWorkOperationRequest request = legacyRequestMapper.read(command);
+    LegacyRepotCommand request = legacyRequestMapper.read(command);
     if (!target.orchidGroupId().equals(request.sourceOrchidGroupId())) {
       throw new IllegalArgumentException("분주 작업 대상과 원본 난 묶음이 일치하지 않습니다.");
     }

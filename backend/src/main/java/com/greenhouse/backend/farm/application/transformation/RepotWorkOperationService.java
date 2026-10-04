@@ -24,6 +24,8 @@ public class RepotWorkOperationService {
 
   private final Clock clock;
 
+  private final LegacyStructureChangeRequestMapper legacyRequestMapper;
+
   private final ImmediateWorkExecutionService immediateWorkExecutionService;
 
   private final WorkOperationQueryService queryService;
@@ -37,11 +39,13 @@ public class RepotWorkOperationService {
       WorkOperationQueryService queryService,
       OrchidGroupRepository orchidGroupRepository,
       Clock clock,
-      WorkOperationSupport workOperationSupport) {
+      WorkOperationSupport workOperationSupport,
+      LegacyStructureChangeRequestMapper legacyRequestMapper) {
     this.immediateWorkExecutionService = immediateWorkExecutionService;
     this.queryService = queryService;
     this.orchidGroupRepository = orchidGroupRepository;
     this.clock = clock;
+    this.legacyRequestMapper = legacyRequestMapper;
     this.workOperationSupport = workOperationSupport;
   }
 
@@ -72,7 +76,7 @@ public class RepotWorkOperationService {
             normalize(request.memo()),
             request.sourceOrchidGroupId(),
             details,
-            request);
+            legacyRequestMapper.fromRequest(request));
     return response(operation.id());
   }
 

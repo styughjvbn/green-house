@@ -49,7 +49,8 @@ class WorkEffectProcessorTest {
           LocalDateTime.of(2026, 8, 20, 9, 0),
           "담당자",
           Map.of("quantity", 30),
-          "typed payload",
+          new StructureChangeCommand(
+              "typed payload", LocalDate.of(2026, 8, 20), "담당자", null, List.of(), List.of()),
           Set.of(31L));
 
   private final WorkExecutionResult result =

@@ -86,7 +86,7 @@ public class InboundWorkOperationRecorder {
     workEffectStore.save(
         operation,
         target,
-        new WorkEffectCommand(executedAt, worker, details, request),
+        new WorkEffectCommand(executedAt, worker, details, null),
         "TARGET:" + target.getId(),
         List.of(),
         WorkEffectKind.RECORD_ONLY,

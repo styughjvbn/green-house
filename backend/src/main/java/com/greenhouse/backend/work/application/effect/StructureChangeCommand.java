@@ -18,7 +18,8 @@ public record StructureChangeCommand(
     @Size(max = 100) String worker,
     @Size(max = 1000) String memo,
     @NotEmpty @Size(max = 100) List<@Valid StructureChangeSourceInput> sources,
-    @NotEmpty @Size(max = 100) List<@Valid StructureChangeResultInput> results) {
+    @NotEmpty @Size(max = 100) List<@Valid StructureChangeResultInput> results)
+    implements WorkEffectPayload {
   public StructureChangeCommand {
     idempotencyKey = idempotencyKey == null ? null : idempotencyKey.trim();
   }

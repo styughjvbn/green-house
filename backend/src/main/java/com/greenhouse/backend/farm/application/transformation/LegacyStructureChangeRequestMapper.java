@@ -1,13 +1,16 @@
 package com.greenhouse.backend.farm.application.transformation;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
+import com.greenhouse.backend.work.application.effect.LegacyRepotCommand;
 import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.application.effect.StructureChangeResultInput;
 import com.greenhouse.backend.work.application.effect.StructureChangeSourceInput;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,13 +18,49 @@ public class LegacyStructureChangeRequestMapper {
 
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-  public RepotWorkOperationRequest read(WorkEffectCommand command) {
+  public LegacyRepotCommand read(WorkEffectCommand command) {
     return command.payload() == null
-        ? objectMapper.convertValue(command.resultDetails(), RepotWorkOperationRequest.class)
-        : command.payloadAs(RepotWorkOperationRequest.class);
+        ? objectMapper.convertValue(command.resultDetails(), LegacyRepotCommand.class)
+        : command.payloadAs(LegacyRepotCommand.class);
   }
 
-  public StructureChangeCommand from(RepotWorkOperationRequest request) {
+  public LegacyRepotCommand fromRequest(RepotWorkOperationRequest request) {
+    return new LegacyRepotCommand(
+        request.idempotencyKey(),
+        request.title(),
+        request.workDate(),
+        request.worker(),
+        request.memo(),
+        request.sourceOrchidGroupId(),
+        request.inputQuantity(),
+        request.results().stream()
+            .map(
+                result ->
+                    new LegacyRepotCommand.Result(
+                        result.bedZoneId(),
+                        result.quantity(),
+                        result.potSize(),
+                        result.ageYear(),
+                        result.placementType(),
+                        result.trayCount(),
+                        result.splitPlacementAllowed(),
+                        result.startPosition(),
+                        result.endPosition(),
+                        result.memo()))
+            .toList(),
+        request.inheritCollectionIds());
+  }
+
+  Merge readMerge(Map<String, Object> details) {
+    return objectMapper.convertValue(details, Merge.class);
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  record Merge(List<MergeSource> sources, LegacyRepotCommand.Result result) {}
+
+  record MergeSource(Long sourceOrchidGroupId, Integer inputQuantity) {}
+
+  public StructureChangeCommand from(LegacyRepotCommand request) {
     Long sourceId = request.sourceOrchidGroupId();
     return new StructureChangeCommand(
         request.idempotencyKey(),

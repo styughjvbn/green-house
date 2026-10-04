@@ -4,7 +4,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.ReconcileOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupReconciliationRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
@@ -12,6 +11,7 @@ import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
+import com.greenhouse.backend.work.application.effect.WorkReconciliationCommand;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,8 +41,7 @@ public class ReconciliationWorkHandler implements WorkEffectHandler {
     if (context.target() == null || context.target().orchidGroupId() == null) {
       throw new IllegalArgumentException("현장 동기화에는 난 묶음 대상이 필요합니다.");
     }
-    OrchidGroupReconciliationRequest request =
-        command.payloadAs(OrchidGroupReconciliationRequest.class);
+    WorkReconciliationCommand request = command.payloadAs(WorkReconciliationCommand.class);
     Long groupId = context.target().orchidGroupId();
     var before =
         orchidGroupRepository

@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.application.operation;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectPayload;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
 import com.greenhouse.backend.work.application.target.WorkTargetResolver;
@@ -58,7 +59,7 @@ public class ImmediateWorkExecutionService {
       String memo,
       Long orchidGroupId,
       Map<String, Object> details,
-      Object payload) {
+      WorkEffectPayload payload) {
     String key = WorkCommandReceipts.normalizeKey(requestKey);
     String actor = support.actor(worker);
     var command =
@@ -92,7 +93,7 @@ public class ImmediateWorkExecutionService {
       String worker,
       String memo,
       Map<String, Object> details,
-      Object payload) {
+      WorkEffectPayload payload) {
     String key = WorkCommandReceipts.normalizeKey(requestKey);
     String actor = support.actor(worker);
     var command =
@@ -116,7 +117,7 @@ public class ImmediateWorkExecutionService {
       String memo,
       Long orchidGroupId,
       Map<String, Object> details,
-      Object payload) {}
+      WorkEffectPayload payload) {}
 
   private Long executeNewForTarget(
       String requestKey,
@@ -127,7 +128,7 @@ public class ImmediateWorkExecutionService {
       String memo,
       Long orchidGroupId,
       Map<String, Object> details,
-      Object payload) {
+      WorkEffectPayload payload) {
     worker = support.actor(worker);
     if (operationRepository.findByRequestKey(requestKey).isPresent()) {
       throw new ConflictException(
@@ -177,7 +178,7 @@ public class ImmediateWorkExecutionService {
       String worker,
       String memo,
       Map<String, Object> details,
-      Object payload) {
+      WorkEffectPayload payload) {
     worker = support.actor(worker);
     if (operationRepository.findByRequestKey(requestKey).isPresent()) {
       throw new ConflictException(

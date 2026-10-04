@@ -8,12 +8,15 @@ public record WorkEffectCommand(
     LocalDateTime executedAt,
     String worker,
     Map<String, Object> resultDetails,
-    Object payload,
+    WorkEffectPayload payload,
     Set<Long> placementExclusionOrchidGroupIds,
     String effectKey) {
 
   public WorkEffectCommand(
-      LocalDateTime executedAt, String worker, Map<String, Object> resultDetails, Object payload) {
+      LocalDateTime executedAt,
+      String worker,
+      Map<String, Object> resultDetails,
+      WorkEffectPayload payload) {
     this(executedAt, worker, resultDetails, payload, Set.of(), null);
   }
 
@@ -21,7 +24,7 @@ public record WorkEffectCommand(
       LocalDateTime executedAt,
       String worker,
       Map<String, Object> resultDetails,
-      Object payload,
+      WorkEffectPayload payload,
       Set<Long> placementExclusionOrchidGroupIds) {
     this(executedAt, worker, resultDetails, payload, placementExclusionOrchidGroupIds, null);
   }
@@ -44,7 +47,7 @@ public record WorkEffectCommand(
         executedAt, worker, resultDetails, payload, placementExclusionOrchidGroupIds, effectKey);
   }
 
-  public <T> T payloadAs(Class<T> payloadType) {
+  public <T extends WorkEffectPayload> T payloadAs(Class<T> payloadType) {
     if (!payloadType.isInstance(payload)) {
       throw new IllegalArgumentException("작업 효과 명령 형식이 올바르지 않습니다.");
     }
