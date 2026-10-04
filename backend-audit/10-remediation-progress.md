@@ -517,6 +517,50 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 최종 PostgreSQL 전체 `./gradlew workE2eTest`: 53개 클래스, 481건 성공. 신규 일반 Work 생성 55건·V40 migration 1건과 기존 425건을 포함하며 실패·오류·생략은 없다.
 - `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 이후에는 진행 문서의 상태·결과만 갱신했으며 실행 코드·테스트·API 생성물은 바꾸지 않았다.
 
+## 14차 변경 — BE-010 전표 생성·묶음 metadata 감사 완전성
+
+작업일: 2026-10-04. 상태: 전표 생성·묶음 metadata 감사 코드·정책 문서 및 최종 전체 검증 완료.
+
+### 범위와 원인
+
+- 수정 전 PostgreSQL HTTP 시험에서 전표 생성은 성공했지만 `SALES_SLIP / CREATED` 감사가 없었다. 묶음 메모 변경도 업무 데이터에는 반영됐지만 감사의 변경 필드에 메모가 없었다. 기존 fixture의 비표준 화분 표시값까지 보정되는 혼입은 cutover 전 표준 표시값으로 바로잡아 metadata 단독 변경을 검증한다.
+- [SalesSlipCreationService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipCreationService.java)는 최초 생성 코어의 예약·필요한 출고/출하·잔액 처리와 flush 뒤 최종 전표를 `CREATED / SALES_MANAGEMENT`로 기록한다. 기존 Sales 소유 snapshot과 Audit 값 계약을 사용하며, actor·세션·요청·브라우저 식별자는 기존 인증 요청 맥락에서 읽는다. HTTP 맥락 없는 application 호출의 actor는 추정하지 않는다.
+- 생성 접수 replay는 최초 생성 코어에 진입하지 않아 새 감사나 실행자 덮어쓰기가 없다. 키 없는 별도 생성은 각각 감사한다. 감사·전표·예약/차감·Mutation·이동·경매 출하·잔액·접수는 기존 최상위 생성 트랜잭션에 참여하며 감사 저장 실패도 전체를 rollback한다.
+- [OrchidGroupAuditSupport](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupAuditSupport.java)의 필드명 목록과 값 배열은 동일 속성을 위치로 맞추고 있었으며 배치 유형·트레이 수·분할 배치 허용·메모가 모두 빠져 있었다. 필드명/값 Map 한 곳에서 기존 공통 comparator로 변경 여부를 계산한다. 기존 필드명·순서·source·비활성 action 분류를 유지하며, metadata 단독 변경도 단건/일괄 보정 감사에 포함한다.
+- 메모는 비교용 snapshot에만 포함하고 영속 감사 전후 값에서 제외한다. 실제 변경 필드 `memo`와 맥락의 `redactedFields`만 보존해 메모 교체·삭제도 감지하며 원문을 복제하지 않는다. 원본 메모와 Mutation 업무 사실은 기존대로 보존한다. 이 제외 정책을 기존 Sales 전표/품목 메모 정책까지 확대하는 변경은 아니다.
+- Farm의 전체 묶음→전체 구역 선잠금과 잠금 이후 snapshot 시점은 유지한다. 동일 값 요청은 Mutation·감사를 추가하지 않으며, 감사 실패나 후행 일괄 항목 실패는 선행 변경까지 원복한다. 과거 누락된 감사의 값·실행자를 추정 backfill하지 않는다.
+
+### 회귀 방어와 계약
+
+- [DomainAuditCompletenessPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/DomainAuditCompletenessPostgresE2ETest.java) 신규 29건은 실제 PostgreSQL·Spring MVC/security filter·서비스 트랜잭션을 사용한다. application 실패 주입은 테스트 바깥의 독립 트랜잭션으로 검증하며, 비교에는 관련 21개 테이블의 전체 행 JSON을 사용한다.
+
+| 시나리오 | 건수 | 보호 결과 |
+| --- | --- | --- |
+| 최초 HTTP 재현 회귀 | 2 | 전표 생성 주체·요청 맥락과 메모 단독 변경 필드 |
+| 4개 metadata × 단건/일괄 수정 및 동일 값 재요청 | 8 | 실제 변경 필드·전후 값·실행자·맥락, 중복 감사/Mutation 방지 |
+| 메모 교체/삭제 | 2 | 변경 감지와 전후 감사·맥락의 원문 제외 |
+| 일반/경매 × 작성중/출고·출하 완료 생성 및 다른 실행자의 replay | 4 | 최종 전표 snapshot과 최초 실행자·응답 보존 |
+| 4종 생성 × 키 유무의 감사 CHECK 실패 및 재시도 | 8 | 예약·출고/출하·Mutation·출하 이력·잔액·접수의 전체 rollback |
+| 단건/일괄 metadata 감사 CHECK 실패 | 2 | 원본·Mutation·감사의 전체 rollback |
+| 후행 일괄 항목 배치 충돌 | 1 | 선행 metadata와 감사까지 rollback |
+| 감사 저장이 불가능한 상황의 무변경 요청 | 1 | 불필요한 감사·Mutation 미생성 |
+| 키 없는 두 신규 전표 | 1 | 각각의 생성·실행자 감사와 접수 미생성 |
+
+- 기존 [SalesCreationIdempotencyPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/SalesCreationIdempotencyPostgresE2ETest.java)의 4종 생성과 실제 commit/입력 충돌/rollback 경쟁에도 생성 감사 1건을 명시 검증한다. 기존 접수 완료 CHECK 실패의 전체 rollback 비교는 새 생성 감사까지 포함한다. Farm 기존 잠금 경쟁 회귀는 전체 PostgreSQL 검증에서 유지한다.
+- 기존 경매 취소 회귀의 전체 행 비교는 JDBC 배열 객체의 동등성에 의존하고 있었다. 새 생성 감사의 `changed_fields`가 포함되도록 snapshot을 행 전체의 JSON 문자열로 바꾸며, 감사·배분·Mutation·재고와 기존 13개 비교 테이블 및 rollback/거절 조건은 유지한다.
+- 도메인·기능 요약·판매/작업 기능 문서와 API 도메인 규칙에 생성 주체·최종 상태·메모 제외·재전송·rollback 정책을 갱신했다. HTTP body/응답/header·enum·capability·DB schema·저장 지문은 변경하지 않아 OpenAPI/생성 TypeScript와 Flyway는 갱신하지 않는다. 신규 감사 조회 화면/API도 추가하지 않는다.
+- BE-009의 일반 수정 허용 범위는 감사 보강과 다른 정책 판단이다. 기존 일반 수량·상태·배치 보정 계약은 유지하며, 이 변경으로 보정/실사 gate와의 정책 차이를 해결했다고 판정하지 않는다. Auction 자체 이력·WorkEffect·Mutation도 계속 업무 사실의 원장이며 모든 경로를 일반 AuditEvent로 중복 수집하지 않는다. 입고/inline 신규 품종 생성 주체 등 다른 감사 범위의 필요성은 별도 판단한다.
+
+### 검증
+
+- 기존 일반 감사 unit/integration/rollback·Sales 수정 감사 집중 검증 10건과 신규 PostgreSQL 최초 2건 성공.
+- 확장 PostgreSQL 신규 29건·기존 판매 생성 26건, 총 55건 성공. 첫 확장 실행의 DB 비교 fixture 테이블명 오류는 실제 migration의 저장 테이블 21개로 바로잡았으며 전체 행 비교와 rollback 조건을 유지했다.
+- 최초 PostgreSQL 전체 510건 중 기존 JDBC 배열 snapshot 비교 7건이 실패했다. 행 전체 JSON 값 비교로 수정한 경매 취소 10건 집중 성공 후 PostgreSQL 전체를 재실행했다. 마지막 실행 코드/시험 변경은 PostgreSQL 전용 helper이며 일반 실행 코드와 프론트 코드는 그대로다.
+- 백엔드 전체 `./gradlew test`: 120개 클래스, 573건 성공. 기존 architecture·query-count·도메인·integration 회귀를 포함한다.
+- 최종 PostgreSQL 전체 `./gradlew workE2eTest`: 54개 클래스, 510건 성공. 신규 감사 29건과 기존 481건을 포함하며 실패·오류·생략은 없다.
+- 프론트엔드 전체 `npm run check`: 성공. 브라우저 E2E와 신규 쓰기 비용 benchmark는 실행하지 않았다.
+- `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 이후에는 진행 문서의 상태·결과만 갱신했으며 실행 코드·테스트·API 생성물은 바꾸지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -532,7 +576,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `a5acf3f3` — BE-007 수량 snapshot·V37·보정 정책·capability·계약 생성물·회귀·화면·관련 문서.
 - `32ebe83b` — BE-008 Sales 접수·V38·HTTP 계약·화면 키·경쟁/rollback/migration 회귀·관련 문서.
 - `275f8f00` — BE-008 Farm 입고 접수·V39·HTTP 계약·공통 화면 키·경쟁/rollback/migration 회귀·관련 문서.
-- BE-008 일반 Work 생성 — `fix: deduplicate general work creation retries`. Work 응답 snapshot·V40·HTTP 계약·화면 키·경쟁/rollback/migration 회귀·관련 문서를 별도 커밋으로 저장한다.
+- `b137360e` — BE-008 일반 Work 응답 snapshot·V40·HTTP 계약·화면 키·경쟁/rollback/migration 회귀·관련 문서.
+- BE-010 전표 생성·묶음 metadata 감사 — `fix: record sales creation and orchid metadata audits`. 감사 주체·최종 상태·원문 제외·rollback/중복 방어 회귀·정책 문서를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -544,4 +589,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-006의 예정 수정 범위는 완료했다. 판매 교차 수정, Farm 단건·일괄 수정, Work 구조 기록과 Farm 경쟁, 일반 품종별 계획·폐기/Farm·구조 기록·겹치는 계획 경쟁을 검증했다. 경로별 전체 잠금 순서와 기존 대상 변경 거절 계약을 유지한다. 모든 writer·FK·내부 fence의 무교착을 증명한 것은 아니며 새 writer에는 같은 경로별 순서와 경쟁 회귀가 필요하다.
 - BE-007의 신규 수량 이력과 경매 시도·반환 확인 이후 직접 보정 제한을 완료했다. 과거 누락된 이력과 수량 불일치는 자동 복원하지 않았으며 운영 데이터 대사가 남는다. 결과 이후의 보상·정정 이벤트는 별도 업무 계약과 구현이 필요한 후속 범위다.
 - BE-008의 키가 있는 판매·입고·일반 Work 계획/완료 기록 생성 재전송 방어를 완료 대상으로 삼는다. 기존 자료의 중복 대사와 키 없는 연동의 재시도 정책은 남는다. 입고 포트 계획·폐기 기록 같은 별도 생성 경로는 이번 일반 생성 계약에 포함하지 않으며 필요 시 업무별 재시도 의미부터 정의한다. 후속 작업은 감사 우선순위에 따른 정책 일치·감사 완전성·DB 제약 상태·조회 비용 보강이다.
+- BE-009는 일반 metadata·수량·상태·위치 수정의 허용 범위와 보정/실사 제한의 정책 일치가 남는다. 이번 감사 보강은 기존 현장 수정 기능을 임의로 차단하지 않는다.
+- BE-010의 전표 최초 생성과 난 묶음 metadata 누락은 14차 범위다. 과거 감사의 복원·입고/inline 품종 등의 필수 생성 감사 범위는 별도 판단이며, 자체 업무 이력을 일반 감사 부재만으로 무기록으로 취급하지 않는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

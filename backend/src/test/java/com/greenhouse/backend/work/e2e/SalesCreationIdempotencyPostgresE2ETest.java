@@ -124,6 +124,12 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     String body = objectMapper.writeValueAsString(request);
     var first = post("/api/sales-slips", body, Map.of("Idempotency-Key", "lifecycle"));
     assertThat(first.status()).isEqualTo(201);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from audit_events where entity_type = 'SALES_SLIP' and entity_id = ? and action = 'CREATED'",
+                Integer.class,
+                first.data().path("id").asLong()))
+        .isEqualTo(1);
     var before = snapshot();
     var retry = post("/api/sales-slips", body, Map.of("Idempotency-Key", "lifecycle"));
     assertThat(retry.status()).isEqualTo(201);
@@ -395,6 +401,11 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
           assertThat(second.document()).isEqualTo(first.document());
         }
         assertThat(jdbc.queryForObject("select count(*) from sales_slips", Integer.class))
+            .isEqualTo(1);
+        assertThat(
+                jdbc.queryForObject(
+                    "select count(*) from audit_events where entity_type = 'SALES_SLIP' and action = 'CREATED'",
+                    Integer.class))
             .isEqualTo(1);
         assertThat(
                 jdbc.queryForObject("select count(*) from sales_creation_receipts", Integer.class))

@@ -12,4 +12,8 @@ public record OrchidGroupAuditSnapshot(
     Long zoneId,
     BigDecimal startPosition,
     BigDecimal endPosition,
-    String status) {}
+    String status,
+    String placementType,
+    Integer trayCount,
+    Boolean splitPlacementAllowed,
+    String memo) {}

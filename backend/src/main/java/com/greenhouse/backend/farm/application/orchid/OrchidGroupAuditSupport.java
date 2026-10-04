@@ -6,29 +6,15 @@ import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class OrchidGroupAuditSupport {
-
-  private static final List<String> FIELDS =
-      List.of(
-          "varietyId",
-          "ageYear",
-          "potSize",
-          "quantity",
-          "houseId",
-          "physicalBedId",
-          "zoneId",
-          "startPosition",
-          "endPosition",
-          "status");
 
   private final AuditEventWriter auditWriter;
 
@@ -45,18 +31,16 @@ public class OrchidGroupAuditSupport {
         zone.getId(),
         group.getStartPosition(),
         group.getEndPosition(),
-        group.getStatus());
+        group.getStatus(),
+        group.getPlacementType(),
+        group.getTrayCount(),
+        group.getSplitPlacementAllowed(),
+        group.getMemo());
   }
 
   public List<String> detectChanges(
       OrchidGroupAuditSnapshot before, OrchidGroupAuditSnapshot after) {
-    var changes = new ArrayList<String>();
-    Object[] left = values(before);
-    Object[] right = values(after);
-    for (int index = 0; index < FIELDS.size(); index++) {
-      if (!Objects.equals(left[index], right[index])) changes.add(FIELDS.get(index));
-    }
-    return List.copyOf(changes);
+    return auditWriter.detectChanges(values(before), values(after));
   }
 
   public AuditAction actionForCorrection(
@@ -80,6 +64,9 @@ public class OrchidGroupAuditSupport {
     List<String> changedFields = detectChanges(before, after);
     if (changedFields.isEmpty()) return null;
     var location = after != null ? after : before;
+    var context = new LinkedHashMap<String, Object>();
+    if (contextData != null) context.putAll(contextData);
+    context.put("redactedFields", changedFields.contains("memo") ? List.of("memo") : List.of());
     return auditWriter.recordChanges(
         action,
         source,
@@ -91,24 +78,34 @@ public class OrchidGroupAuditSupport {
             location.zoneId(),
             location.varietyId()),
         changedFields,
-        before,
-        after,
-        contextData);
+        safeData(before),
+        safeData(after),
+        context);
   }
 
-  private Object[] values(OrchidGroupAuditSnapshot value) {
-    if (value == null) return new Object[FIELDS.size()];
-    return new Object[] {
-      value.varietyId(),
-      value.ageYear(),
-      value.potSize(),
-      value.quantity(),
-      value.houseId(),
-      value.physicalBedId(),
-      value.zoneId(),
-      value.startPosition(),
-      value.endPosition(),
-      value.status()
-    };
+  private Map<String, Object> values(OrchidGroupAuditSnapshot value) {
+    if (value == null) return null;
+    var data = new LinkedHashMap<String, Object>();
+    data.put("varietyId", value.varietyId());
+    data.put("ageYear", value.ageYear());
+    data.put("potSize", value.potSize());
+    data.put("quantity", value.quantity());
+    data.put("houseId", value.houseId());
+    data.put("physicalBedId", value.physicalBedId());
+    data.put("zoneId", value.zoneId());
+    data.put("startPosition", value.startPosition());
+    data.put("endPosition", value.endPosition());
+    data.put("status", value.status());
+    data.put("placementType", value.placementType());
+    data.put("trayCount", value.trayCount());
+    data.put("splitPlacementAllowed", value.splitPlacementAllowed());
+    data.put("memo", value.memo());
+    return data;
+  }
+
+  private Map<String, Object> safeData(OrchidGroupAuditSnapshot value) {
+    var data = values(value);
+    if (data != null) data.remove("memo");
+    return data;
   }
 }

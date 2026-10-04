@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.PartnerType;
@@ -55,6 +56,8 @@ public class SalesSlipCreationService {
   private final SalesSlipOutboundService salesSlipOutboundService;
 
   private final SalesSlipDocumentAssembler responseAssembler;
+
+  private final SalesSlipAuditSupport auditSupport;
 
   public SalesSlipDocument create(SalesSlipCommand request) {
     return createNew(request);
@@ -148,6 +151,7 @@ public class SalesSlipCreationService {
     }
     // Cascaded IDs must be present in both the first response and its stored replay snapshot.
     salesSlipRepository.flush();
+    auditSupport.record(AuditAction.CREATED, saved, null, auditSupport.snapshot(saved));
     return responseAssembler.assemble(saved);
   }
 }

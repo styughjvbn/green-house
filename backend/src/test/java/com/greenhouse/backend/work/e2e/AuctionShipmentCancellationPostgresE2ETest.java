@@ -221,8 +221,8 @@ class AuctionShipmentCancellationPostgresE2ETest extends WorkE2ETestBase {
     assertThat(reconciliation.reconcile().ready()).isTrue();
   }
 
-  private Map<String, List<Map<String, Object>>> snapshot() {
-    var rows = new LinkedHashMap<String, List<Map<String, Object>>>();
+  private Map<String, List<String>> snapshot() {
+    var rows = new LinkedHashMap<String, List<String>>();
     for (String table :
         List.of(
             "sales_slips",
@@ -238,7 +238,10 @@ class AuctionShipmentCancellationPostgresE2ETest extends WorkE2ETestBase {
             "orchid_group_mutation_entries",
             "sales_inventory_movements",
             "audit_events")) {
-      rows.put(table, jdbc.queryForList("SELECT * FROM " + table + " ORDER BY id"));
+      rows.put(
+          table,
+          jdbc.queryForList(
+              "SELECT to_jsonb(row)::text FROM " + table + " row ORDER BY id", String.class));
     }
     return rows;
   }

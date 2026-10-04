@@ -2,13 +2,15 @@ package com.greenhouse.backend.farm.application.orchid;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.audit.application.AuditEventWriter;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
 class OrchidGroupAuditSupportTest {
 
-  private final OrchidGroupAuditSupport support = new OrchidGroupAuditSupport(null);
+  private final OrchidGroupAuditSupport support =
+      new OrchidGroupAuditSupport(new AuditEventWriter(null, null));
 
   @Test
   void identicalSnapshotsHaveNoChanges() {
@@ -24,8 +26,12 @@ class OrchidGroupAuditSupportTest {
 
   @Test
   void detectsNullToValueChange() {
-    var before = new OrchidGroupAuditSnapshot(1L, null, null, 10, 1L, 2L, 3L, null, null, "정상");
-    var after = new OrchidGroupAuditSnapshot(1L, 2, "4인치", 10, 1L, 2L, 3L, null, null, "정상");
+    var before =
+        new OrchidGroupAuditSnapshot(
+            1L, null, null, 10, 1L, 2L, 3L, null, null, "정상", null, null, false, null);
+    var after =
+        new OrchidGroupAuditSnapshot(
+            1L, 2, "4인치", 10, 1L, 2L, 3L, null, null, "정상", null, null, false, null);
     assertThat(support.detectChanges(before, after)).containsExactly("ageYear", "potSize");
   }
 
@@ -40,7 +46,20 @@ class OrchidGroupAuditSupportTest {
     var before = snapshot(1L, 10, 1L, 2L, 3L);
     var after =
         new OrchidGroupAuditSnapshot(
-            9L, 3, "5인치", 20, 1L, 2L, 3L, BigDecimal.ONE, BigDecimal.TWO, "주의");
+            9L,
+            3,
+            "5인치",
+            20,
+            1L,
+            2L,
+            3L,
+            BigDecimal.ONE,
+            BigDecimal.TWO,
+            "주의",
+            null,
+            null,
+            false,
+            null);
     assertThat(support.detectChanges(before, after))
         .containsExactly("varietyId", "ageYear", "potSize", "quantity", "status");
   }
@@ -76,7 +95,11 @@ class OrchidGroupAuditSupportTest {
         zoneId,
         BigDecimal.ONE,
         BigDecimal.TWO,
-        "정상");
+        "정상",
+        null,
+        null,
+        false,
+        null);
   }
 
   private OrchidGroupAuditSnapshot withStatus(OrchidGroupAuditSnapshot snapshot, String status) {
@@ -90,6 +113,10 @@ class OrchidGroupAuditSupportTest {
         snapshot.zoneId(),
         snapshot.startPosition(),
         snapshot.endPosition(),
-        status);
+        status,
+        snapshot.placementType(),
+        snapshot.trayCount(),
+        snapshot.splitPlacementAllowed(),
+        snapshot.memo());
   }
 }
