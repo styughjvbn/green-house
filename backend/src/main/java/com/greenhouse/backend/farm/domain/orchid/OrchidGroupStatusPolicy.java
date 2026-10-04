@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.domain.orchid;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 public final class OrchidGroupStatusPolicy {
 
@@ -24,7 +25,7 @@ public final class OrchidGroupStatusPolicy {
       List.of(CLOSED, DISCARDED, SOLD_OUT, CREATION_CANCELED);
 
   private static final List<String> UNAVAILABLE_FOR_SALE_STATUSES =
-      List.of(WARNING, ABNORMAL, PEST_DISEASE, CLOSED, DISCARDED, SOLD_OUT, CREATION_CANCELED);
+      Stream.concat(WARNING_STATUSES.stream(), INACTIVE_STATUSES.stream()).toList();
 
   private OrchidGroupStatusPolicy() {}
 

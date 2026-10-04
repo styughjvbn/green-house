@@ -108,6 +108,32 @@ class CoreQueryRegressionTest {
     assertThat(queryCount).isEqualTo(expectedQueries);
   }
 
+  @ParameterizedTest
+  @ValueSource(ints = {1, 10, 50})
+  void salesSelectionFiltersBlockedStockWithoutAmplifyingQueries(int count) {
+    var expectedIds = new ArrayList<Long>();
+    for (int index = 0; index < count; index++) {
+      expectedIds.add(createOrchidGroup(20_000 + index * 2, "판매 선택 회귀", 20).getId());
+      var blocked = createOrchidGroup(20_001 + index * 2, "판매 선택 회귀", 20);
+      blocked.correctQuantityAndStatus(20, "병해충");
+    }
+    long queries =
+        measure(
+            () -> {
+              var selected = orchidGroupReader.searchSellable("판매 선택 회귀", null, "");
+              assertThat(selected)
+                  .extracting(row -> row.id())
+                  .containsExactlyInAnyOrderElementsOf(expectedIds);
+              assertThat(selected)
+                  .allSatisfy(
+                      row -> {
+                        assertThat(row.status()).isEqualTo("정상");
+                        assertThat(row.availableQuantity()).isEqualTo(20);
+                      });
+            });
+    assertThat(queries).isEqualTo(1L);
+  }
+
   @Test
   void auctionLotPageUsesFixedQueryCount() {
     BusinessPartner auctionHouse =

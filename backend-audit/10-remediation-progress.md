@@ -1,6 +1,6 @@
 # Backend 감사 개선 진행
 
-- 작업일: 2026-10-03
+- 작업일: 2026-10-03~2026-10-04
 - 브랜치: `fix/backend-sales-reservation-consistency`
 - 시작 기준: `80106917232a671b5a489ad8e59d37b63a06dffe` (`develop`)
 - 우선순위 기준: [08 통합 findings](08-findings.md), [09 최종 평가](09-final-assessment.md)의 P0. 기존 감사 문서는 수정 전 판단의 근거로 보존한다.
@@ -127,17 +127,54 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 프론트엔드 `npm run check`, `./gradlew spotlessCheck`, `git diff --check`: 성공.
 - 백엔드 전체 성공 이후 실행 코드 변경은 없다. 이후 변경은 PostgreSQL 전용 migration 시험의 조회 범위와 정책·결과 문서뿐이다. 해당 시험은 최종 PostgreSQL 전체 실행에 포함했고, 최종 전체 검증 뒤에는 이 문서의 결과만 갱신했다.
 
+## 4차 변경 — BE-004 판매 가능 상태 정책 통일
+
+작업일: 2026-10-04. 상태: 코드·정책 문서 수정 및 전체 회귀 검증 완료. 기존 운영 예약은 자동 변경하지 않았다.
+
+### 수정 전 재현
+
+- 도메인 13건 중 판매 불가 상태의 신규 예약 거절 7건이 실패했다. 주의·이상·병해충·종료·폐기·판매 완료·생성 취소 상태 모두 양수 가용 수량만 있으면 예약했다.
+- PostgreSQL 조회 7건·HTTP 생성 7건도 모두 실패했다. 판매 불가 상태가 선택 목록에 포함되고, 해당 ID를 직접 지정한 생성 요청이 `201`로 전표와 예약을 확정했다. 조회·writer와 이미 정책을 적용하는 판매 가능 수량 집계가 서로 다른 재고를 대상으로 삼았다.
+
+### 구현과 정책 구분
+
+- `OrchidGroup.reserve`는 신규 예약 수량을 변경하기 전에 `OrchidGroupStatusPolicy.isSaleable`을 검증한다. 실제 쓰기는 기존 Mutation Engine의 난 묶음 ID 순 잠금 안에서 검증한다. Sales에서 별도의 상태 문자열 목록이나 가용 수량 보정 규칙을 추가하지 않았다.
+- 판매 불가 목록은 정책의 경고·비활성 목록을 합쳐 정의한다. 검색·집계는 같은 정책 목록을 JPQL 조건으로 받고, 상태 필터도 판매 제한과 함께 적용한다. Farm application의 기존 상태 DTO와 Sales 선택 schema를 유지한다.
+- Work의 농장·동·다이·구역·ID 대상 조회와 잠금 후 활성 재검증, 자동 그룹 조회도 같은 정책의 비활성 목록을 받는다. Repository의 중복 상태 문자열 4곳을 제거했다. 주의·이상·병해충과 양수 실물 수량이 있는 전량 예약 묶음은 작업 대상에 계속 포함한다. 판매 가능 수량과 실제 작업 투입 가능 수량은 서로 다른 판단이다.
+- 수정의 해제·재예약 중 신규 예약 단계도 현재 상태를 검증한다. 판매 불가 묶음에 그대로 재예약하는 수정은 전체 rollback한다. 기존 예약을 해제하고 다른 판매 가능 묶음으로 배분을 옮기는 수정은 허용한다. 같은 묶음의 상태를 정상으로 바꾼 뒤 정상 재시도하는 흐름도 검증했다.
+- 기존 예약의 해제·출고·출고 취소 복구는 기존 예약 수지로 처리한다. 신규 예약 금지 때문에 이미 확정된 예약을 자동 해제하지 않는다. 이미 적용한 예약 Mutation은 상태 변경 후에도 같은 key·내용의 replay로 반환하고 새 side effect를 남기지 않는다.
+- `availableActions`의 수정은 다른 묶음으로 재배분할 수 있다는 의미로 유지한다. 수정 payload의 현재 배분이 모두 유효하다는 보장은 아니며 쓰기에서 새 예약 대상을 잠그고 검증한다. 조회 이후 상태 변경도 이 검증을 우회하지 못한다.
+- DB의 현재 상태가 판매 불가여도 기존 예약은 남을 수 있으므로, 상태별 예약 수량을 항상 0으로 강제하는 CHECK는 추가하지 않았다. 이번 변경은 도메인 신규 예약 자격을 바로잡으며 기존 불변식·트랜잭션·DB 스키마를 유지한다. 운영 과거 예약의 건강 상태·업무 판단은 별도 검토 대상이다.
+- 도메인 모델, 판매·작업 정책, API 도메인 규칙과 백엔드 구현 기준을 갱신했다. Controller·DTO·enum·OpenAPI schema 변경은 없어 생성물을 갱신하지 않았다.
+
+### 회귀 방어
+
+- [OrchidGroupReservationStatusTest](../backend/src/test/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroupReservationStatusTest.java): 13건. 판매 불가 7종의 신규 예약 거절과 상태·수량 보존, 정상/기존 사용자 상태 허용, 경고 전환 후 기존 예약 해제·출고·복구를 검증한다.
+- [SalesSaleabilityPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/SalesSaleabilityPostgresE2ETest.java): 26건. 판매 불가 7종의 선택·직접 생성 제한, 집계 및 Work/자동 그룹 membership 구분, 기존 정상 수정 후 실패 시 14개 테이블·상세·스냅샷·감사 rollback, 건강한 묶음으로 배분 이동/상태 정상화 후 재시도, 경고 전환 후 출고 snapshot과 취소 수지, 상태 변경 후 예약 Mutation replay, 전량 예약 및 사용자 상태 호환을 검증한다.
+- 경쟁 2건은 Sales 생성과 Farm Engine 상태 변경의 PostgreSQL backend PID·`pg_blocking_pids`로 실제 대기를 확인한다. 상태 변경이 먼저 잠그면 기다린 신규 예약이 최신 상태로 거절되고 side effect는 0이다. 예약이 먼저 잠그면 확정 예약을 보존한 채 이후 상태를 변경한다. 상태 writer 시험의 상세 값은 먼저 잠근 행에서 구성한다. 이는 Engine 경계의 경쟁 검증이며 다른 최상위 서비스의 잠금 전 Entity 로딩까지 해결했다고 판정하지 않는다.
+- [CoreQueryRegressionTest](../backend/src/test/java/com/greenhouse/backend/CoreQueryRegressionTest.java): 정상·불가 묶음 각각 1·10·50개에서 SQL 1회로 정상 선택만 반환하는 3건을 추가했다. lazy mapper 또는 반복 정책 조회를 새로 만들지 않는다.
+
+### 검증
+
+- 집중 검증: 도메인 예약·불변식, 자동 그룹, 기존 Sales Mutation 및 query-count 성공. 새 query-count 3건과 PostgreSQL 26건 모두 성공.
+- 백엔드 전체 `./gradlew test`: 115개 클래스, 555건 성공. 새 도메인 13건·query-count 3건과 기존 architecture·정합성 회귀 포함.
+- PostgreSQL 전체 `./gradlew workE2eTest`: 39개 클래스, 239건 성공. 새 상태 정책 26건과 BE-001~BE-003을 포함한 기존 213건 모두 성공.
+- 프론트엔드 `npm run check`, `./gradlew spotlessCheck`, `git diff --check`: 성공.
+- 최종 전체 검증 뒤에는 이 진행 문서의 결과만 갱신했다. 실행 코드와 테스트는 바꾸지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
 - `d0a661d6` — BE-001 판매 수정 예약 identity와 회귀·정책 문서.
 - `1509e55f` — BE-002 경매 이력 보존과 rollback·경쟁 회귀·정책 문서.
-- BE-003 — `fix: reject overflowing sales amounts`. 금액 보호 코드·migration·회귀와 이 진행 문서를 한 목적의 별도 커밋으로 저장한다.
+- `3a5114cc` — BE-003 금액 보호·V35·회귀·정책 문서.
+- BE-004 — `fix: enforce orchid saleability for new reservations`. 상태 정책·조회·회귀·관련 문서를 한 목적의 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
 - BE-001의 기존 운영 데이터 대사·복구는 별도 작업이다. 수정 코드가 기존 allocation/예약/이력을 자동 보정하지 않는다. 기존 read-only 대사로 영향 전표를 확인하고, 이력 보존 및 원장과 일치하는 복구 정책을 정해야 한다.
 - BE-002의 과거 삭제 이력은 코드 수정으로 복원되지 않는다. 운영 영향과 복원 가능한 백업·자료의 존재 여부는 확인하지 않았다.
 - BE-003의 과거 잘못된 금액·잔액·입금은 별도 대사·복구 대상이다. V35 적용만으로 운영 자료의 정합성이 입증되거나 기존 위반 행이 모두 검증되는 것은 아니다.
-- 다음 P0는 BE-004 판매 가능 상태 정책의 조회·예약 통일, BE-005 경매 부분 결과·반환 재전송의 중복 반영 방지다.
+- BE-004 수정 전 확정된 판매 불가 상태의 예약은 자동 해제하지 않았다. 운영 영향과 기존 출고 여부는 별도 대사·업무 판단 대상이다.
+- 다음 P0는 BE-005 경매 부분 결과·반환 재전송의 중복 반영 방지다.
 - BE-006의 전역 lock ordering, 성능·추상화·테스트 체계의 나머지 finding은 후속 변경으로 남긴다. 이번 변경으로 전체 P0 또는 운영 정합성이 해결됐다고 판정하지 않는다.

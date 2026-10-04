@@ -5,6 +5,7 @@ import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionStatus;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
@@ -83,7 +84,10 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
     var ids = orchidGroupIds.stream().distinct().sorted().toList();
     try {
       if (orchidGroupRepository.findAllForUpdateByIdIn(ids).size() != ids.size()
-          || orchidGroupRepository.findActiveWorkTargetsByIds(ids).size() != ids.size()) {
+          || orchidGroupRepository
+                  .findActiveWorkTargetsByIds(ids, OrchidGroupStatusPolicy.inactiveStatuses())
+                  .size()
+              != ids.size()) {
         throw targetChanged();
       }
     } catch (ObjectOptimisticLockingFailureException exception) {
@@ -112,7 +116,9 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
     if (houseId == null || !houseRepository.existsById(houseId)) {
       throw new NotFoundException("동을 찾을 수 없습니다.");
     }
-    return orchidGroupRepository.findActiveWorkTargetsByHouseId(houseId).stream()
+    return orchidGroupRepository
+        .findActiveWorkTargetsByHouseId(houseId, OrchidGroupStatusPolicy.inactiveStatuses())
+        .stream()
         .map(this::toResolvedTarget)
         .toList();
   }
@@ -132,7 +138,9 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
   }
 
   private List<ResolvedWorkTarget> resolveLocation(Long physicalBedId, Long bedZoneId) {
-    return orchidGroupRepository.findActiveWorkTargets(physicalBedId, bedZoneId).stream()
+    return orchidGroupRepository
+        .findActiveWorkTargets(physicalBedId, bedZoneId, OrchidGroupStatusPolicy.inactiveStatuses())
+        .stream()
         .map(this::toResolvedTarget)
         .toList();
   }
@@ -170,7 +178,9 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
     if (ids.isEmpty()) {
       return List.of();
     }
-    return orchidGroupRepository.findActiveWorkTargetsByIds(ids).stream()
+    return orchidGroupRepository
+        .findActiveWorkTargetsByIds(ids, OrchidGroupStatusPolicy.inactiveStatuses())
+        .stream()
         .map(this::toResolvedTarget)
         .toList();
   }

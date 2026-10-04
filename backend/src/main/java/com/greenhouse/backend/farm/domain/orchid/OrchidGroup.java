@@ -312,6 +312,9 @@ public class OrchidGroup extends BaseEntity {
 
   public void reserve(Integer reserveQuantity) {
     validatePositiveQuantity(reserveQuantity, "예약 수량");
+    if (!OrchidGroupStatusPolicy.isSaleable(status)) {
+      throw new IllegalArgumentException("판매 불가 상태의 난 묶음은 새로 예약할 수 없습니다.");
+    }
     if (getAvailableQuantity() < reserveQuantity) {
       throw new IllegalArgumentException("난 묶음 가용 수량이 부족합니다.");
     }

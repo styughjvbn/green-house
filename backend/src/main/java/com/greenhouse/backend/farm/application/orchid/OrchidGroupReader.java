@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.application.orchid;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import java.util.Collection;
 import java.util.HashMap;
@@ -58,7 +59,10 @@ public class OrchidGroupReader {
   }
 
   public List<OrchidGroupState> searchSellable(String keyword, Long varietyId, String status) {
-    return orchidGroupRepository.searchSellable(keyword, varietyId, status).stream()
+    return orchidGroupRepository
+        .searchSellable(
+            keyword, varietyId, status, OrchidGroupStatusPolicy.unavailableForSaleStatuses())
+        .stream()
         .map(OrchidGroupState::from)
         .toList();
   }

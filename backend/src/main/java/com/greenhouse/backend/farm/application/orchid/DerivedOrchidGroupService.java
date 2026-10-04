@@ -3,6 +3,7 @@ package com.greenhouse.backend.farm.application.orchid;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import com.greenhouse.backend.farm.dto.orchid.DerivedOrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
@@ -78,7 +79,12 @@ public class DerivedOrchidGroupService {
       return List.of();
     }
     return orchidGroupRepository.findDerivedGroupCandidates(
-        varietyId, potSizeCode, houseId, normalize(status), normalize(keyword));
+        varietyId,
+        potSizeCode,
+        houseId,
+        normalize(status),
+        normalize(keyword),
+        OrchidGroupStatusPolicy.inactiveStatuses());
   }
 
   private DerivedOrchidGroupResponse toResponse(GroupKey key, List<OrchidGroupResponse> members) {
