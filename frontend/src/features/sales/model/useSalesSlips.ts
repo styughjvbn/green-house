@@ -30,6 +30,7 @@ import {
   toCreateSalesSlipPayload,
   toSalesSlipForm,
 } from "../lib/salesForm";
+import { createSalesCreationRequestKey } from "../lib/salesCreationRequestKey";
 import type { SalesSlipsRouteState } from "../lib/salesRouteParams";
 import {
   createInitialSalesFilters,
@@ -76,6 +77,12 @@ export function useSalesSlips({
   const [savingSlip, setSavingSlip] = useState(false);
   const [updatingSlipStatus, setUpdatingSlipStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [creationRequestKey] = useState(() =>
+    createSalesCreationRequestKey(
+      () => crypto.randomUUID(),
+      () => window.sessionStorage,
+    ),
+  );
 
   const totalAmount = useMemo(
     () => calculateSalesTotal(salesForm.items),
@@ -274,10 +281,14 @@ export function useSalesSlips({
 
     try {
       const payload = toCreateSalesSlipPayload(salesForm);
-      const salesSlip =
-        editingSlipId == null
-          ? await createSalesSlip(payload)
-          : await requestUpdateSalesSlip(editingSlipId, payload);
+      let salesSlip: SalesSlip;
+      if (editingSlipId == null) {
+        const key = creationRequestKey.get();
+        salesSlip = await createSalesSlip(payload, key);
+        creationRequestKey.complete(key);
+      } else {
+        salesSlip = await requestUpdateSalesSlip(editingSlipId, payload);
+      }
       updateSalesSlip(salesSlip);
       writeUrlParams((params) => {
         params.set("slipId", String(salesSlip.id));

@@ -51,6 +51,10 @@ npm run api:types
 
 ## 3. 판매/경매 API 규칙
 
+`POST /api/sales-slips`의 재전송에는 `Idempotency-Key` header와 입력을 그대로 유지한다. 일반·경매 생성 모두 같은 키의 최초 응답을 `201`로 재조회하며, 입력 변경은 `409 / SALES_CREATE_REQUEST_KEY_CONFLICT`다. JSON 필드 순서는 비교에 영향이 없지만 품목·배분 배열 순서와 null/명시 기본값은 구분한다. 생성 namespace 전체에서 유일한 키를 사용하며 UUID를 권장한다. 키의 길이·validation은 Sales slice와 Controller를 기준으로 확인한다. 키 생략 호출은 호환용이며 재전송 때 신규 전표가 추가된다.
+
+응답 유실·오류 뒤에는 키를 바꾸지 않는다. 서버 rollback 뒤에는 같은 키로 수정된 입력을 다시 접수할 수 있지만, 앞선 성공이 있으면 입력 변경을 거절한다. 최초 응답은 생성 당시 snapshot이며 현재 상태·업무 가능 여부는 상세로 다시 확인한다. 생성 키는 수정·상태 변경·입금 키와 독립적이다.
+
 일반 판매 전표:
 
 - `salesType = DIRECT`

@@ -409,6 +409,42 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 뒤에는 진행 문서의 상태·결과만 갱신했다. 실행 코드·테스트·API 생성물은 바꾸지 않았다.
 - V37 이전 누락된 수량 이력과 과거 보정으로 달라진 lot/result/정산은 자동 복원·보정하지 않는다. 운영 데이터 영향은 아직 대사하지 않았다. 같은 상태의 신규 쓰기 보호와 기존 정산·입금 보존 범위를 완료 대상으로 삼는다.
 
+## 11차 변경 — BE-008 판매 전표 생성의 요청 재전송 방어
+
+작업일: 2026-10-04. 상태: 판매 생성 수정·V38·화면 키·API 계약·정책 문서 및 최종 전체 검증 완료. 입고·일반 Work 생성은 이번 범위가 아니다.
+
+### 수정 전 재현과 범위
+
+- [SalesCreationIdempotencyPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/SalesCreationIdempotencyPostgresE2ETest.java)의 HTTP 신규 2건을 기존 코드에서 실행했다. 같은 `Idempotency-Key`와 입력의 재전송은 다른 전표·예약을 만들었고, 같은 키의 입력 변경도 201로 별도 생성됐다. 실제 HTTP timeout을 주입한 시험은 아니며 성공 응답을 무시하고 같은 요청을 재전송해 응답 유실 뒤의 서버 처리를 재현했다.
+- 초기 시험의 없는 거래처 enum과 원장 cutover 누락은 fixture 오류였다. 실제 write fence를 활성화한 후 위 두 결함을 재현했으며 운영 guard를 완화하지 않았다. 기존 Mutation source key는 새 전표 ID를 기준으로 하므로 다른 생성 요청을 dedup하지 못한다.
+- 입고 생성과 일반 Work 계획에는 요청 식별자가 여전히 없다. 기존 Work 접수는 구조 기록·실행·보상 등의 의미와 membership을 소유하므로 Sales 생성에 공유하지 않는다. 범용 멱등 framework나 모든 POST의 강제 키 요구를 추가하지 않았다.
+
+### 생성 계약과 원자성
+
+- [SalesSlipCreationService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipCreationService.java)는 키가 있는 생성에서 접수 PK를 원자적으로 claim하고 해당 행을 잠근다. 최초 입력 지문 확인 → 완료 응답 재조회 → 최초 업무 순이며 최신 거래처·재고·상태 validation은 최초 실행에만 적용한다. 기존 public application 진입점의 트랜잭션을 유지하고 두 진입점은 private 생성 코어를 사용해 self invocation에 의존하지 않는다.
+- 키는 판매 생성 전체 namespace에서 유일하다. 같은 키·같은 입력은 당시 응답을 `201`로 반환하고 다른 입력은 `409 / SALES_CREATE_REQUEST_KEY_CONFLICT`다. 공백/초과 길이 키는 `400 / VALIDATION_ERROR`다. 키 생략은 과거의 독립 생성 계약을 유지하며 신규 접수를 만들지 않는다. 실제 동일 입력의 새 전표는 새 키를 사용한다.
+- 요청 지문은 typed 입력의 정렬된 JSON property를 SHA-256으로 계산한다. 품목·배분 배열 순서와 null/명시 기본값은 그대로 구분하고 현재 Entity 값·인증 actor를 지문에 끼워 넣지 않는다. 초기 영속 계약이며 추후 필드 변경은 기존 지문과 최초 응답의 호환을 함께 검토해야 한다.
+- 접수 → 기존 거래처·일별 번호·묶음 → 신규 전표/출하 순으로 수행한다. 접수 대기 전에 재고·거래처 잠금을 잡지 않는다. 최초 응답 전 cascade ID를 flush하고 생성 응답을 JSONB로 보존한다. 전표·예약/출고·Mutation·이동·snapshot·잔액·감사·접수를 한 트랜잭션에서 확정한다. 실패하면 일별 번호와 접수도 rollback하며, sequence ID의 공백은 허용한다.
+- [V38](../backend/src/main/resources/db/migration/V38__sales_creation_receipts.sql)은 PK, 전표 FK/삭제 제한, 키/지문 CHECK, 전표 ID와 응답 ID의 일치·완료 쌍 CHECK를 추가한다. claim 중인 행은 ID/응답 모두 null이며 application이 결과를 확정한 뒤 commit한다. DB 자체가 수동으로 commit한 미완료 claim을 금지하는 것은 아니며 이 경우 자동 재실행하지 않고 실패한다. 기존 전표·재고·출하·Receipt는 수정하거나 요청 키를 backfill하지 않는다.
+
+### 화면·API와 회귀 방어
+
+- `POST /api/sales-slips`만 선택형 header를 추가했다. 생성/수정 공용 body와 수정 API는 바꾸지 않았다. Controller·테스트를 기준으로 전체 OpenAPI·Sales slice와 TypeScript를 재생성했으며 프론트 요청 키 타입은 생성된 header 계약을 사용한다.
+- 판매 생성 화면은 성공 응답을 받기 전까지 하나의 요청 키를 유지하고, 성공 직후에만 해제한다. 오류·폼 닫기·입력 변경·같은 탭 재진입/새로고침에서 자동 새 키를 만들지 않는다. 수정 저장에는 생성 키를 보내지 않는다. 키는 local transport state로 관리하고 서버 응답은 기존 React Query cache에 유지한다. 폼 내용은 sessionStorage에 저장하지 않으며 저장소를 사용할 수 없으면 현재 mounted 화면에서만 키를 보존한다.
+- PostgreSQL 신규 생성 26건: 최초/변경 재전송, 일반·경매 작성중/완료 4개 조합, 취소·거래처 비활성 후 replay, 전량 출고 후 replay, 새 키의 동일 입력 생성, 키 없는 호환 생성, 주요 입력 변경 6개, 잘못된 키 3개, 수량 validation 실패, 직접/경매 완료 후 Receipt 저장 실패 rollback 2개, replay query/entity count, commit/다른 입력/rollback 경쟁 3개다.
+- 경쟁은 `pg_blocking_pids`로 접수 키를 보유한 선행 PID를 후행 PID가 기다리는지 확인한다. commit 시 같은 입력은 같은 최초 결과를 받고 다른 입력은 거절된다. 선행 rollback 시 대기 요청이 키를 새로 확보하고 한 전표·예약·이동만 저장한다.
+- 생성·거절·late rollback은 19개 관련 테이블 JSON을 비교한다. late 실패는 실제 완료 전표·출하/lot·재고 차감·잔액 조율 이후 접수 완료 CHECK를 실패시키며 같은 키 재시도 성공까지 확인한다. replay는 접수 조회 2 SQL 이하·Entity 1개만 로딩하며 현재 전표 응답을 재조립하지 않는다. 최초 쓰기의 비용·큰 응답 snapshot 저장 비용에 대한 benchmark는 실행하지 않았다.
+- [SalesCreationReceiptMigrationPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/SalesCreationReceiptMigrationPostgresE2ETest.java): PostgreSQL 별도 DB에서 V37→V38 upgrade, 기존 전표/품목 보존과 미상 identity 유지, PK/FK/삭제 제한·키/지문·불완전/잘못된 응답 제약, 재실행 0건과 Flyway validate를 확인한다.
+- 프론트 순수 로직 신규 5건은 응답 유실/반복 submit·성공 이후 새 업무·늦은 응답·재진입/새로고침·브라우저 저장소 실패의 키 수명을 확인한다. 브라우저 dialog/HTTP E2E는 실행하지 않았다.
+
+### 검증
+
+- 수정 뒤 최초 HTTP 2건 성공. 확장 PostgreSQL 26건 중 2건은 시험 ObjectMapper의 날짜 배열/HTTP 문자열 비교 오류였다. 실제 최초 HTTP 응답을 기준으로 비교를 고쳤고, 확장 26건과 V38 migration 1건 모두 성공했다.
+- 프론트 신규 순수 로직 5건과 전체 `npm run check`의 포맷·생성 타입 drift·전체 순수 로직 시험·lint·production build 성공.
+- 최종 백엔드 전체 `./gradlew test`: 120개 클래스, 573건 성공. 기존 architecture·query-count·도메인·integration 회귀를 포함한다.
+- 최종 PostgreSQL 전체 `./gradlew workE2eTest`: 49개 클래스, 381건 성공. 신규 판매 생성 26건·V38 migration 1건과 기존 354건을 포함하며 실패·오류·생략은 없다.
+- `./gradlew spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 이후에는 진행 문서의 상태·결과만 갱신했으며 실행 코드·테스트·API 생성물은 바꾸지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -421,7 +457,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `6b12b411` — BE-006 Farm 단건·일괄 수정 묶음·구역 선잠금·경쟁 회귀·정책 문서.
 - `270750ea` — BE-006 Work 구조 기록 전체 원본·구역 선잠금·계획 전 검증·경쟁 및 rollback 회귀·정책 문서.
 - `dd69ddc9` — BE-006 일반 계획 전체 대상 잠금·500개 분할·계획/폐기 경쟁 및 rollback 회귀·정책 문서.
-- BE-007 — `fix: preserve auction quantity history and restrict corrections`. 수량 snapshot·V37·보정 정책·capability·계약 생성물·회귀·화면·관련 문서를 별도 커밋으로 저장한다.
+- `a5acf3f3` — BE-007 수량 snapshot·V37·보정 정책·capability·계약 생성물·회귀·화면·관련 문서.
+- BE-008 판매 생성 — `fix: deduplicate sales slip creation retries`. Sales 접수·V38·HTTP 계약·화면 키·경쟁/rollback/migration 회귀·관련 문서를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -432,5 +469,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-005의 기존 중복 결과·반환 및 정산 영향은 별도 대사 대상이다. 기존 기록을 중복으로 추정해 삭제하지 않는다.
 - BE-006의 예정 수정 범위는 완료했다. 판매 교차 수정, Farm 단건·일괄 수정, Work 구조 기록과 Farm 경쟁, 일반 품종별 계획·폐기/Farm·구조 기록·겹치는 계획 경쟁을 검증했다. 경로별 전체 잠금 순서와 기존 대상 변경 거절 계약을 유지한다. 모든 writer·FK·내부 fence의 무교착을 증명한 것은 아니며 새 writer에는 같은 경로별 순서와 경쟁 회귀가 필요하다.
 - BE-007의 신규 수량 이력과 경매 시도·반환 확인 이후 직접 보정 제한을 완료했다. 과거 누락된 이력과 수량 불일치는 자동 복원하지 않았으며 운영 데이터 대사가 남는다. 결과 이후의 보상·정정 이벤트는 별도 업무 계약과 구현이 필요한 후속 범위다.
-- 다음 우선 대상은 BE-008의 생성 요청 재전송과 식별자·멱등 계약이다. 기존 기능별 Receipt와 재시도 정책을 먼저 확인해 실제 중복 생성 경로부터 다룬다.
+- BE-008의 키가 있는 판매 생성 재전송 방어를 완료 대상으로 삼는다. 기존 전표의 중복 대사, 키 없는 연동의 재시도 정책, 입고·일반 Work 생성의 요청 identity는 남는다. 다음 우선 대상은 입고 생성이며 기존 생성 Mutation·완료 Work·품종 생성과 함께 보존할 결과 계약을 먼저 확인한다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

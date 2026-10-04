@@ -15,6 +15,8 @@ import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesOrchidGroupSearchResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -96,8 +99,13 @@ public class SalesController {
   @PostMapping("/sales-slips")
   @ResponseStatus(HttpStatus.CREATED)
   public ApiResponse<SalesSlipDocument> createSalesSlip(
-      @Valid @RequestBody SalesSlipCommand request) {
-    return ApiResponse.ok(salesSlipCreationService.create(request));
+      @Valid @RequestBody SalesSlipCommand request,
+      @Parameter(
+              description = "생성 재전송은 같은 키와 입력을 유지합니다. 키 생략 시 별도 신규 전표를 생성합니다.",
+              schema = @Schema(minLength = 1, maxLength = 100))
+          @RequestHeader(name = "Idempotency-Key", required = false)
+          String idempotencyKey) {
+    return ApiResponse.ok(salesSlipCreationService.create(request, idempotencyKey));
   }
 
   @PutMapping("/sales-slips/{salesSlipId}")

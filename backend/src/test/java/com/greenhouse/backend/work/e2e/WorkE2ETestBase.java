@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Map;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -36,11 +37,14 @@ abstract class WorkE2ETestBase {
   }
 
   protected ApiResult post(String path, String body) throws IOException, InterruptedException {
-    return exchange(
-        HttpRequest.newBuilder(uri(path))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(body))
-            .build());
+    return post(path, body, Map.of());
+  }
+
+  protected ApiResult post(String path, String body, Map<String, String> headers)
+      throws IOException, InterruptedException {
+    var builder = HttpRequest.newBuilder(uri(path)).header("Content-Type", "application/json");
+    headers.forEach(builder::header);
+    return exchange(builder.POST(HttpRequest.BodyPublishers.ofString(body)).build());
   }
 
   private ApiResult exchange(HttpRequest request) throws IOException, InterruptedException {

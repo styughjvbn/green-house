@@ -34,6 +34,7 @@ import type {
   CreateSalesSlipPayload,
   ManualPaymentPayload,
   PartnerSettlementSettingsPayload,
+  SalesCreationRequestKey,
   UpdateBusinessPartnerPayload,
 } from "./types";
 
@@ -368,12 +369,16 @@ export function updatePartnerSettlementSettings(
 
 export function createSalesSlip(
   payload: CreateSalesSlipPayload,
+  idempotencyKey: SalesCreationRequestKey,
 ): Promise<SalesSlip> {
   return requestJson<SalesSlip>(
     "/sales-slips",
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
       body: JSON.stringify(payload),
     },
     "판매 전표를 저장하지 못했습니다.",

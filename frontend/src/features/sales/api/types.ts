@@ -5,7 +5,13 @@ import type {
   PartnerSettlementSettings,
   PartnerType,
 } from "@/entities/farm/types";
-import type { components } from "@/shared/api/generated/openapi";
+import type { components, operations } from "@/shared/api/generated/openapi";
+
+export type SalesCreationRequestKey = NonNullable<
+  NonNullable<
+    operations["createSalesSlip"]["parameters"]["header"]
+  >["Idempotency-Key"]
+>;
 
 export type BusinessPartnerPayload = {
   name: string;
