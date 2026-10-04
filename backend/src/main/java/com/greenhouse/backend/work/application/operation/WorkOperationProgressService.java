@@ -117,7 +117,14 @@ public class WorkOperationProgressService {
 
   public WorkOperationView completeTarget(
       Long operationId, Long targetId, WorkTargetExecutionRequest request) {
-    completeTargetExecution(
+    completeTargetForRecord(operationId, targetId, request);
+    return queryService.get(operationId);
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  WorkOperation completeTargetForRecord(
+      Long operationId, Long targetId, WorkTargetExecutionRequest request) {
+    return completeTargetExecution(
         operationId,
         targetId,
         request.completedDate(),
@@ -125,7 +132,6 @@ public class WorkOperationProgressService {
         request.resultDetails(),
         null,
         null);
-    return queryService.get(operationId);
   }
 
   @Transactional(propagation = Propagation.MANDATORY)

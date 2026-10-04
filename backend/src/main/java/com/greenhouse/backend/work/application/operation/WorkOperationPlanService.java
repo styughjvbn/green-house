@@ -110,12 +110,17 @@ public class WorkOperationPlanService {
   }
 
   private List<WorkOperationView> createBatchNew(WorkOperationBatchCreateRequest request) {
+    return queryService.getAll(
+        createBatchOperations(request).stream().map(WorkOperation::getId).toList());
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  List<WorkOperation> createBatchOperations(WorkOperationBatchCreateRequest request) {
     WorkOperationCreateRequest operationRequest = request.operation();
     WorkType workType = workTypeService.getActiveForPlan(operationRequest.workTypeId());
     ResolvedSelection resolvedSelection = resolveIncluded(operationRequest);
     if (!workType.definition().requiresVarietySpecificOperation()) {
-      return List.of(
-          queryService.get(createOperation(operationRequest, workType, resolvedSelection).getId()));
+      return List.of(createOperation(operationRequest, workType, resolvedSelection));
     }
     List<VarietyTargetGroup> varietyGroups = groupTargetsByVariety(resolvedSelection.included());
     if (varietyGroups.size() > 1) {
@@ -126,18 +131,14 @@ public class WorkOperationPlanService {
     return varietyGroups.stream()
         .map(
             group ->
-                queryService.get(
-                    createOperation(
-                            batchOperationRequest(operationRequest),
-                            workType,
-                            new ResolvedSelection(
-                                resolvedSelection.selection(),
-                                resolvedSelection.included().stream()
-                                    .filter(
-                                        target ->
-                                            group.targetIds().contains(target.orchidGroupId()))
-                                    .toList()))
-                        .getId()))
+                createOperation(
+                    batchOperationRequest(operationRequest),
+                    workType,
+                    new ResolvedSelection(
+                        resolvedSelection.selection(),
+                        resolvedSelection.included().stream()
+                            .filter(target -> group.targetIds().contains(target.orchidGroupId()))
+                            .toList())))
         .toList();
   }
 

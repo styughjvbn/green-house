@@ -899,6 +899,45 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-015는 부분 완료다. 이동에 연결된 폐기 기록, Sales의 재잠금과 예약/출고 snapshot·최종 조회, 정산 snapshot과 표시 참조 재조회는 남는다. 포트의 기존 효과 matching 메모리 순회, 실행별 필수 입고 재검증·전체 대상 완료 조회, 큰 batch 입력과 운영 잠금 대기는 이번 변경으로 일괄 최적화하거나 측정하지 않았다. 현재 상세를 반환하는 ID 기반 Receipt와 최초 생성 응답 snapshot을 혼합하지 않는다.
 
+## 25차 변경 — BE-015 폐기 기록과 품종별 계획의 중간 상세 조회 제거
+
+작업일: 2026-10-04. 상태: 일반 계획/폐기 내부 쓰기 경계 수정·query-count/연계 취소/rollback/replay 회귀·정책 문서 및 최종 전체 검증 완료.
+
+### 원인과 범위
+
+- 기존 Work benchmark는 읽기 경로를, 일반 완료 기록 query-count 검사는 해당 쓰기 경로만 측정한다. 이동 연계 폐기의 계획·시작·대상별 완료·연결 후 상세 조립과 독립 폐기·품종별 계획의 반복 조회는 포함하지 않았다. 기존 이동/폐기 integration과 전체 대상 잠금·생성 Receipt 회귀를 확인하고 신규 PostgreSQL 16건을 수정 전 컴파일된 제품 코드에서 통과시켰다.
+- 품종별 일반 계획은 내부 managed aggregate 목록을 반환하고 공개 API는 전체 생성 후 상세를 한 번 조립한다. 독립 폐기는 전체 계획 ID로 대상을 일괄 조회하고 내부 시작·대상 완료를 사용해 최종 상세만 조립한다. 반복문에 새 Repository 조회를 추가하지 않는다.
+- 이동 연계 폐기는 외부용 폐기 응답을 생성하지 않고 이동 실행에 연결 작업 ID만 전달한다. 완료 후 부모 연결과 제목을 확정하는 시점은 유지하며 제목은 생성된 대상의 품종 snapshot을 사용한다. 현재 품종을 다시 조회하거나 새로운 반환 wrapper·framework를 도입하지 않는다.
+- 내부 계획·대상 완료·연계 폐기는 호출 트랜잭션을 필수로 요구한다. 최상위 트랜잭션, 전체 대상/구역 선잠금, 실행 대상 잠금과 완료 직전 현재 상태 재검증, 효과 저장·감사·Mutation·수량 변경을 유지한다. 이동 효과 저장 후 대상 결과에 연결 폐기 ID를 넣는 기존 저장 경계도 유지한다.
+- 수량의 입력 비례 배분·최대 나머지와 낮은 ID 동률 우선, 품종별 작업 분할과 대상 순서, 연결 폐기 단독 취소 거절과 부모 공동 취소를 유지한다. 일반 생성 Receipt는 최초 응답 snapshot, 구조 실행 Receipt는 기존 ID 기반 replay 계약을 유지한다. 독립 폐기 endpoint에 새 멱등 계약을 추가하지 않는다.
+
+### 측정과 회귀 방어
+
+| 실제 HTTP 실행 경로 | 상세 보정 집계 기존 → 수정 | 전체 prepared statement 기존 → 수정 |
+| --- | --- | --- |
+| 전체 이동 + 연계 폐기, 1 / 8 대상 | 5 / 12 → 각각 1 | 185 / 562 → 131 / 396 |
+| 부분 이동 + 연계 폐기, 1 / 8 대상 | 5 / 12 → 각각 1 | 151 / 512 → 97 / 346 |
+| 독립 폐기, 1 / 8 대상 | 3 / 10 → 각각 1 | 77 / 427 → 60 / 298 |
+| 2품종 독립 폐기, 8 대상 | 12 → 1 | 472 → 314 |
+| 공개 2품종 계획, 8 대상 | 2 → 1 | 46 → 33 |
+
+- 고정 Clock·같은 seed와 HTTP 요청으로 1/8 대상, 전체/부분 이동, 독립 폐기·복수 품종과 공개 계획을 비교한다. `backend/build/work-query-count/discard-record-*.json`에 전체 prepared statement와 Hibernate query별 실행 횟수를 기록하고 상세 보정 집계의 실제 실행을 한 번으로 검사한다. mock 호출 횟수로 query-count를 대체하지 않는다.
+- prepared statement에는 SELECT 외 flush DML·sequence 접근이 포함되며 ID allocation 상태에 따라 소수 차이가 날 수 있다. 운영 응답 시간·잠금 대기 개선율이나 완전한 native SQL trace로 해석하지 않는다. 실제 실행별 쓰기·잠금 재검증·전체 대상 종료 확인은 남는다.
+- 신규 회귀는 이동 전체/부분 완료의 연결·제목·수량·독립 상세·동일 요청 replay·단독 취소 거절·공동 취소 후 replay, 폐기 없음과 배분 동률, 독립 폐기의 품종 분할과 결과 정규화, 공개 품종별 계획의 현재 제목 변경 후 최초 snapshot replay를 확인한다.
+- 연결 폐기 효과 DB CHECK 실패와 이동/복수 품종 폐기의 최종 응답 실패는 모든 Work·효과·Mutation·난 묶음·계보·Receipt·감사 행의 rollback 및 재시도를 검사한다. 후행 독립 폐기 수량 초과와 중복/누락 결과·다른 작업 유형도 선행 쓰기를 rollback한다. 기존 전체 대상 잠금 경쟁과 Receipt 병렬/rollback, 구조 기록·포트 query-count 회귀도 함께 검증한다.
+- 초기 시험의 JDBC JSONB `?` 연산자 바인딩과 제목 endpoint의 HTTP method 오류, 단독 취소 거절 status 추측은 테스트에서 바로잡았다. 제품의 오류 응답·취소 정책은 변경하지 않았다.
+
+### 검증
+
+- 수정 전 PostgreSQL 신규 16건 성공. 수정 후 집중 일반/integration/architecture 6개 클래스 47건·PostgreSQL 5개 클래스 109건, 총 156건 성공. 실패·오류·생략은 없고 1분 39초 소요했다. 이후 복수 품종 독립 폐기의 최종 응답 실패 rollback 1건을 추가해 신규 회귀는 17건이다.
+- 백엔드 전체 `./gradlew test`: 131개 클래스 662건 성공. PostgreSQL 전체 `./gradlew workE2eTest`: 60개 클래스 605건 성공. 신규 17건을 포함해 실패·오류·생략은 없고 전체 백엔드 검증은 9분 18초 소요했다.
+- 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. `python3 scripts/generate_openapi.py`도 성공했고 전체 명세·slice와 생성 타입에 diff가 없다. 공개 API·DB schema 변경이 없어 TypeScript 재생성과 Flyway 추가는 필요하지 않다. 응답 시간 benchmark·브라우저 E2E·운영 DB 대사는 실행하지 않았다.
+- 전체 검증 이후에는 진행 문서의 완료 상태와 검증 결과만 갱신했다. 제품 코드·시험·HTTP/저장 계약은 변경하지 않았다.
+
+### 남은 범위
+
+- BE-015는 부분 완료다. Sales의 재잠금과 예약/출고 snapshot·최종 조회, 정산 snapshot과 표시 참조 조회는 후속 분석·회귀가 남는다. 필요 재검증과 과거 snapshot 보존에 쓰이는 조회는 비용만으로 제거하지 않는다. 큰 입력, 품종 분할의 기존 메모리 필터링과 운영 잠금 대기·지연 benchmark는 이번 범위에 포함하지 않는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -925,7 +964,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `c0aeb120` — BE-013 Sales·일반 Work 생성 지문·schema guard·구형 접수 replay 회귀.
 - `4df04833` — BE-014 저장 handler·정의·strategy 계보 연결과 rollback/replay 회귀.
 - `5d2786f8` — BE-015 구조 기록 중간 상세 조회 제거·실제 경로 query-count·rollback/replay 회귀.
-- BE-015 포트 — `refactor: assemble inbound potting responses once`. 중간 상세/중복 완료 제거·경로별 query-count·snapshot/rollback/replay 회귀를 별도 커밋으로 저장한다.
+- `372efc20` — BE-015 포트 중간 상세/중복 완료 제거·경로별 query-count·snapshot/rollback/replay 회귀.
+- BE-015 폐기 — `refactor: assemble discard record responses once`. 품종별 계획/폐기 중간 상세 제거·query-count·연계 취소/replay·rollback 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -945,5 +985,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-013의 Sales 생성과 일반 Work 3생성 경로 v1 지문·필드 변경 검출·구형 접수 replay는 21차 범위다. 그 밖의 명령/응답과 실제 version 전환·운영 corpus 검증은 남는다.
 - BE-014의 저장 구조 handler와 계보 분류 계약·strategy 관계 재사용·새 결과 검사·전체 흐름 회귀는 22차 범위다. 신규 유형의 미래 확장 회귀와 운영 unknown code 대사는 별도다.
 - BE-015의 구조 변경 기록 계획/시작/실행의 중간 상세 조회 제거와 단건·배치 query-count·rollback/replay 회귀는 23차 범위다. 포트는 24차 범위로 이어졌으며 연계 폐기·Sales·정산 경로와 운영 지연 측정은 남는다.
-- BE-015의 포트 신규/활성 계획·단독 실행/기록의 중간 상세/중복 완료 제거와 query-count·snapshot·완료 판정·rollback/replay 회귀는 24차 범위다. 연계 폐기·Sales·정산과 운영 지연 측정은 남는다.
+- BE-015의 포트 신규/활성 계획·단독 실행/기록의 중간 상세/중복 완료 제거와 query-count·snapshot·완료 판정·rollback/replay 회귀는 24차 범위다.
+- BE-015의 연계/독립 폐기·품종별 일반 계획 중간 상세 제거와 query-count·수량 배분·공동 취소/replay·rollback 회귀는 25차 범위다. Sales·정산과 운영 지연 측정은 남는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

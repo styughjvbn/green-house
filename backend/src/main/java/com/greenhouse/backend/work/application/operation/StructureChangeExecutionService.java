@@ -174,7 +174,7 @@ public class StructureChangeExecutionService {
     var result =
         workEffectProcessor.applyBatch(
             operation, request.idempotencyKey(), requestedIds.stream().sorted().toList(), command);
-    WorkOperationView discardOperation = null;
+    Long discardOperationId = null;
     if (WorkTypeDefinition.MOVEMENT.name().equals(operation.getWorkType().getCode())) {
       Map<Long, Integer> inputQuantities =
           request.sources().stream()
@@ -185,7 +185,7 @@ public class StructureChangeExecutionService {
                       source -> source.inputQuantity(),
                       (left, right) -> left,
                       LinkedHashMap::new));
-      discardOperation =
+      discardOperationId =
           discardRecordService.createForMovement(
               operation,
               request.completedDate(),
@@ -195,9 +195,9 @@ public class StructureChangeExecutionService {
               movementDiscardQuantities(request));
     }
     Map<String, Object> resultDetails = result.storedDetails();
-    if (discardOperation != null) {
+    if (discardOperationId != null) {
       resultDetails = new LinkedHashMap<>(resultDetails);
-      resultDetails.put("discardWorkOperationId", discardOperation.id());
+      resultDetails.put("discardWorkOperationId", discardOperationId);
     }
     Map<String, Object> completedResultDetails = resultDetails;
     request

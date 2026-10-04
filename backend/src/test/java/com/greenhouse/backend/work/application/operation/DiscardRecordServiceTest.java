@@ -7,11 +7,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordResultRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
-import com.greenhouse.backend.work.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +31,7 @@ class DiscardRecordServiceTest {
 
   @Mock WorkTypeService workTypeService;
 
-  @Mock WorkOperationRepository operationRepository;
+  @Mock WorkOperationTargetRepository targetRepository;
 
   @Mock WorkOperationQueryService queryService;
 
@@ -41,43 +43,25 @@ class DiscardRecordServiceTest {
   void setUp() {
     service =
         new DiscardRecordService(
-            planService,
-            progressService,
-            workTypeService,
-            operationRepository,
-            queryService,
-            support);
+            planService, progressService, workTypeService, targetRepository, queryService, support);
   }
 
   @Test
   void completesEachVarietySpecificDiscardOperationWithOnlyItsTargets() {
     WorkOperationCreateRequest operationRequest = mock(WorkOperationCreateRequest.class);
-    WorkOperationTargetView firstTarget = target(101L, 1L);
-    WorkOperationTargetView secondTarget = target(202L, 2L);
-    WorkOperationView firstPlan = operation(10L, List.of(firstTarget));
-    WorkOperationView secondPlan = operation(20L, List.of(secondTarget));
+    WorkOperation firstPlan = operation(10L);
+    WorkOperation secondPlan = operation(20L);
+    WorkOperationTarget firstTarget = target(101L, 1L, firstPlan);
+    WorkOperationTarget secondTarget = target(202L, 2L, secondPlan);
     WorkOperationView firstCompleted = mock(WorkOperationView.class);
     WorkOperationView secondCompleted = mock(WorkOperationView.class);
-    when(planService.createBatch(argThat(batch -> batch.operation() == operationRequest)))
+    when(planService.createBatchOperations(argThat(batch -> batch.operation() == operationRequest)))
         .thenReturn(List.of(firstPlan, secondPlan));
-    when(progressService.start(10L)).thenReturn(firstPlan);
-    when(progressService.start(20L)).thenReturn(secondPlan);
-    when(progressService.completeTarget(
-            eq(10L),
-            eq(101L),
-            argThat(
-                request ->
-                    Integer.valueOf(3).equals(request.resultDetails().get("discardQuantity"))
-                        && "상태 불량".equals(request.resultDetails().get("reason")))))
-        .thenReturn(firstCompleted);
-    when(progressService.completeTarget(
-            eq(20L),
-            eq(202L),
-            argThat(
-                request ->
-                    Integer.valueOf(4).equals(request.resultDetails().get("discardQuantity"))
-                        && request.resultDetails().get("reason") == null)))
-        .thenReturn(secondCompleted);
+    when(targetRepository.findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(
+            List.of(10L, 20L)))
+        .thenReturn(List.of(firstTarget, secondTarget));
+    when(queryService.getAll(List.of(10L, 20L)))
+        .thenReturn(List.of(firstCompleted, secondCompleted));
 
     var result =
         service.create(
@@ -90,22 +74,42 @@ class DiscardRecordServiceTest {
                     new DiscardRecordResultRequest(2L, 4, " "))));
 
     assertThat(result).containsExactly(firstCompleted, secondCompleted);
-    verify(progressService).start(10L);
-    verify(progressService).start(20L);
+    verify(progressService).startOperation(10L);
+    verify(progressService).startOperation(20L);
+    verify(progressService)
+        .completeTargetForRecord(
+            eq(10L),
+            eq(101L),
+            argThat(
+                request ->
+                    Integer.valueOf(3).equals(request.resultDetails().get("discardQuantity"))
+                        && "상태 불량".equals(request.resultDetails().get("reason"))
+                        && "작업자".equals(request.worker())
+                        && LocalDate.of(2026, 10, 1).equals(request.completedDate())));
+    verify(progressService)
+        .completeTargetForRecord(
+            eq(20L),
+            eq(202L),
+            argThat(
+                request ->
+                    Integer.valueOf(4).equals(request.resultDetails().get("discardQuantity"))
+                        && request.resultDetails().get("reason") == null));
   }
 
-  private WorkOperationView operation(Long id, List<WorkOperationTargetView> targets) {
-    WorkOperationView operation = mock(WorkOperationView.class);
-    when(operation.id()).thenReturn(id);
-    when(operation.workTypeCode()).thenReturn("DISCARD");
-    when(operation.targets()).thenReturn(targets);
+  private WorkOperation operation(Long id) {
+    WorkOperation operation = mock(WorkOperation.class);
+    WorkType workType = mock(WorkType.class);
+    when(operation.getId()).thenReturn(id);
+    when(operation.getWorkType()).thenReturn(workType);
+    when(workType.getCode()).thenReturn("DISCARD");
     return operation;
   }
 
-  private WorkOperationTargetView target(Long id, Long orchidGroupId) {
-    WorkOperationTargetView target = mock(WorkOperationTargetView.class);
-    when(target.id()).thenReturn(id);
-    when(target.orchidGroupId()).thenReturn(orchidGroupId);
+  private WorkOperationTarget target(Long id, Long orchidGroupId, WorkOperation operation) {
+    WorkOperationTarget target = mock(WorkOperationTarget.class);
+    when(target.getId()).thenReturn(id);
+    when(target.getOrchidGroupId()).thenReturn(orchidGroupId);
+    when(target.getWorkOperation()).thenReturn(operation);
     return target;
   }
 }
