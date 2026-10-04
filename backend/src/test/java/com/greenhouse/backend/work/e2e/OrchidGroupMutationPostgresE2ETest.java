@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
@@ -16,6 +17,7 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedger
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationFingerprint;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
@@ -27,9 +29,11 @@ import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGr
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -58,6 +62,8 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired private OrchidGroupRepository orchidGroupRepository;
 
+  @Autowired private OrchidGroupMutationEntryRepository mutationEntryRepository;
+
   @Autowired private PlatformTransactionManager transactionManager;
 
   @Autowired private JdbcTemplate jdbcTemplate;
@@ -75,6 +81,181 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
             "SELECT variety_id FROM orchid_groups WHERE id = ?",
             Long.class,
             scenario.orchidGroupId());
+  }
+
+  @Test
+  void replaysLegacyV1HashAndStoredSnapshotAfterTheCurrentGroupChanges() {
+    var source =
+        new OrchidGroupMutationSource(
+            OrchidGroupMutationSourceDomain.FARM,
+            "ORCHID_GROUP_COMMAND",
+            "legacy-v1-create",
+            "CREATE",
+            UUID.randomUUID());
+    var details =
+        new OrchidGroupMutationDetails(
+            varietyId,
+            10,
+            "2치",
+            1,
+            "정상",
+            "TRAY",
+            1,
+            false,
+            new BigDecimal("6.00"),
+            new BigDecimal("8.00"),
+            "original memo");
+    var command =
+        new CreateOrchidGroupMutationCommand(
+            source, scenario.bedZoneId(), details, LocalDate.of(2026, 8, 20), "legacy request");
+    // The previous writer serialized the application details directly inside this payload.
+    var legacyHash =
+        new OrchidGroupMutationFingerprint()
+            .calculate(
+                Map.of(
+                    "mutationType", "CREATE",
+                    "bedZoneId", command.bedZoneId(),
+                    "details", details,
+                    "effectiveBusinessDate", command.effectiveBusinessDate(),
+                    "reason", command.reason()));
+    var transaction = new TransactionTemplate(transactionManager);
+    var created = transaction.execute(status -> mutationEngine.create(command));
+    assertThat(created).isNotNull();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT command_fingerprint FROM orchid_group_mutations WHERE id = ?",
+                String.class,
+                created.mutationId()))
+        .isEqualTo(legacyHash);
+    jdbcTemplate.update(
+        "UPDATE orchid_group_mutations SET command_fingerprint = ? WHERE id = ?",
+        legacyHash,
+        created.mutationId());
+    var groupId = created.entries().getFirst().orchidGroupId();
+    var originalSnapshot = created.entries().getFirst().afterState().canonical();
+    var persistedSnapshot =
+        transaction.execute(
+            status ->
+                mutationEntryRepository
+                    .findByMutationIdOrderByIdAsc(created.mutationId())
+                    .getFirst()
+                    .getAfterState()
+                    .canonical());
+    assertThat(persistedSnapshot).isEqualTo(originalSnapshot);
+    transaction.executeWithoutResult(
+        status ->
+            mutationEngine.discard(
+                new DiscardOrchidGroupMutationCommand(
+                    new OrchidGroupMutationSource(
+                        OrchidGroupMutationSourceDomain.FARM,
+                        "ORCHID_GROUP_COMMAND",
+                        "later-discard",
+                        "DISCARD",
+                        UUID.randomUUID()),
+                    groupId,
+                    1,
+                    command.effectiveBusinessDate(),
+                    "later change")));
+    var mutationCount =
+        jdbcTemplate.queryForObject("SELECT COUNT(*) FROM orchid_group_mutations", Long.class);
+    var entryCount =
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM orchid_group_mutation_entries", Long.class);
+    var replayed = transaction.execute(status -> mutationEngine.create(command));
+    assertThat(replayed).isNotNull();
+    assertThat(replayed.replayed()).isTrue();
+    assertThat(replayed.mutationId()).isEqualTo(created.mutationId());
+    assertThat(replayed.entries().getFirst().afterState().canonical()).isEqualTo(originalSnapshot);
+    assertThat(replayed.entries().getFirst().afterState().quantity()).isEqualTo(10);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT quantity FROM orchid_groups WHERE id = ?", Integer.class, groupId))
+        .isEqualTo(9);
+    var changedDetails =
+        new OrchidGroupMutationDetails(
+            varietyId,
+            10,
+            "2치",
+            1,
+            "정상",
+            "TRAY",
+            1,
+            false,
+            new BigDecimal("6.00"),
+            new BigDecimal("8.00"),
+            "changed memo");
+    assertThatThrownBy(
+            () ->
+                transaction.execute(
+                    status ->
+                        mutationEngine.create(
+                            new CreateOrchidGroupMutationCommand(
+                                source,
+                                command.bedZoneId(),
+                                changedDetails,
+                                command.effectiveBusinessDate(),
+                                command.reason()))))
+        .isInstanceOf(ConflictException.class);
+    assertThat(
+            jdbcTemplate.queryForObject("SELECT COUNT(*) FROM orchid_group_mutations", Long.class))
+        .isEqualTo(mutationCount);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM orchid_group_mutation_entries", Long.class))
+        .isEqualTo(entryCount);
+  }
+
+  @Test
+  void readsMissingPersistedSnapshotFieldsWithoutInventingDefaults() {
+    var transaction = new TransactionTemplate(transactionManager);
+    var created =
+        transaction.execute(
+            status ->
+                mutationEngine.create(
+                    new CreateOrchidGroupMutationCommand(
+                        new OrchidGroupMutationSource(
+                            OrchidGroupMutationSourceDomain.FARM,
+                            "ORCHID_GROUP_COMMAND",
+                            "sparse-snapshot-fixture",
+                            "CREATE",
+                            UUID.randomUUID()),
+                        scenario.bedZoneId(),
+                        new OrchidGroupMutationDetails(
+                            varietyId,
+                            10,
+                            "2치",
+                            1,
+                            "정상",
+                            "TRAY",
+                            1,
+                            false,
+                            new BigDecimal("6.00"),
+                            new BigDecimal("8.00"),
+                            "original memo"),
+                        LocalDate.of(2026, 8, 20),
+                        "snapshot reader test")));
+    assertThat(created).isNotNull();
+    // Simulate historical persisted JSON; this is not a supported production backfill.
+    jdbcTemplate.update(
+        "UPDATE orchid_group_mutation_entries "
+            + "SET after_state = after_state - 'reservedQuantity' - 'splitPlacementAllowed' - 'memo' "
+            + "WHERE mutation_id = ?",
+        created.mutationId());
+    var snapshot =
+        transaction.execute(
+            status ->
+                mutationEntryRepository
+                    .findByMutationIdOrderByIdAsc(created.mutationId())
+                    .getFirst()
+                    .getAfterState()
+                    .canonical());
+    assertThat(snapshot).isNotNull();
+    assertThat(snapshot.reservedQuantity()).isNull();
+    assertThat(snapshot.splitPlacementAllowed()).isNull();
+    assertThat(snapshot.memo()).isNull();
+    assertThat(snapshot.quantity()).isEqualTo(10);
+    assertThat(snapshot.startPosition()).isEqualByComparingTo("6.00");
+    assertThat(snapshot).isNotEqualTo(created.entries().getFirst().afterState().canonical());
   }
 
   @Test

@@ -21,6 +21,113 @@ import org.junit.jupiter.api.Test;
 class MutationFingerprintCompatibilityTest {
 
   @Test
+  void keepsCorrectedCancellationAndCurrentCorrectionPayloads() {
+    var source =
+        new OrchidGroupMutationSource(
+            OrchidGroupMutationSourceDomain.WORK, "TEST", "12", "CORRECT", UUID.randomUUID());
+    var date = LocalDate.of(2026, 9, 8);
+    var related = RelatedOrchidGroupMutations.current(List.of(11L, 9L));
+    var fingerprint = new OrchidGroupMutationFingerprint();
+    var calculator = new OrchidGroupMutationCommandFingerprint(fingerprint);
+    assertThat(
+            calculator.calculate(
+                new CancelOrchidGroupCreationMutationCommand(source, 5L, related, date, "reason")))
+        .isEqualTo(
+            fingerprint.calculate(
+                Map.of(
+                    "mutationType",
+                    "CANCEL_CREATION",
+                    "orchidGroupId",
+                    5L,
+                    "correctedMutations",
+                    Map.of("legacySource", false, "mutationIds", List.of(9L, 11L)),
+                    "effectiveBusinessDate",
+                    date,
+                    "reason",
+                    "reason")));
+    assertThat(
+            calculator.calculate(
+                new CorrectOrchidGroupsMutationCommand(
+                    source,
+                    List.of(new CorrectOrchidGroupMutationItem(5L, 0, "폐기")),
+                    related,
+                    date,
+                    "reason")))
+        .isEqualTo(
+            fingerprint.calculate(
+                Map.of(
+                    "mutationType",
+                    "CORRECTION",
+                    "items",
+                    List.of(
+                        Map.of(
+                            "orchidGroupId", 5L, "correctedQuantity", 0, "correctedStatus", "폐기")),
+                    "correctedMutations",
+                    Map.of("legacySource", false, "mutationIds", List.of(9L, 11L)),
+                    "effectiveBusinessDate",
+                    date,
+                    "reason",
+                    "reason")));
+  }
+
+  @Test
+  void keepsPartialTransformReleasedPositionsInTheLegacyPayload() {
+    var source =
+        new OrchidGroupMutationSource(
+            OrchidGroupMutationSourceDomain.WORK, "TEST", "12", "EXECUTE", UUID.randomUUID());
+    var date = LocalDate.of(2026, 9, 8);
+    var details =
+        new OrchidGroupMutationDetails(
+            3L,
+            2,
+            "4치",
+            1,
+            "정상",
+            "TRAY",
+            1,
+            false,
+            new BigDecimal("6.00"),
+            new BigDecimal("8.00"),
+            null);
+    var command =
+        new TransformOrchidGroupsMutationCommand(
+            source,
+            List.of(
+                new TransformOrchidGroupMutationSource(
+                    5L, 2, new BigDecimal("1"), new BigDecimal("2"))),
+            List.of(new TransformOrchidGroupMutationResult(2L, details)),
+            date,
+            "reason",
+            Set.of(9L, 8L));
+    var fingerprint = new OrchidGroupMutationFingerprint();
+    assertThat(new OrchidGroupMutationCommandFingerprint(fingerprint).calculate(command))
+        .isEqualTo(
+            fingerprint.calculate(
+                Map.of(
+                    "mutationType",
+                    "TRANSFORM",
+                    "sources",
+                    List.of(
+                        Map.of(
+                            "orchidGroupId",
+                            5L,
+                            "transformedQuantity",
+                            2,
+                            "releasedStartPosition",
+                            new BigDecimal("1.00"),
+                            "releasedEndPosition",
+                            new BigDecimal("2.00"))),
+                    "results",
+                    List.of(Map.of("bedZoneId", 2L, "details", details)),
+                    "placementExclusionOrchidGroupIds",
+                    List.of(8L, 9L),
+                    "effectiveBusinessDate",
+                    date,
+                    "reason",
+                    "reason")));
+  }
+
+  @Test
   void creationCancellationSelectionIsNormalizedAndPartOfTheFingerprint() {
     var source =
         new OrchidGroupMutationSource(

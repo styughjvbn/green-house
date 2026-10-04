@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.springframework.stereotype.Component;
 
+/** Frozen legacy v1 JSON shape. Nested application records are projected before hashing. */
 @Component
 public class OrchidGroupMutationCommandFingerprint {
 
@@ -24,7 +25,7 @@ public class OrchidGroupMutationCommandFingerprint {
               new CreatePayload(
                   OrchidGroupMutationType.CREATE,
                   value.bedZoneId(),
-                  value.details(),
+                  DetailsV1.from(value.details()),
                   value.effectiveBusinessDate(),
                   value.reason()));
       case CreateInboundOrchidGroupsMutationCommand value ->
@@ -32,15 +33,15 @@ public class OrchidGroupMutationCommandFingerprint {
               new CreateInboundPayload(
                   OrchidGroupMutationType.CREATE,
                   value.inboundRecordId(),
-                  value.groups(),
+                  value.groups().stream().map(PlacedDetailsV1::from).toList(),
                   value.effectiveBusinessDate(),
                   value.reason()));
       case TransformOrchidGroupsMutationCommand value ->
           fingerprint.calculate(
               new TransformPayload(
                   OrchidGroupMutationType.TRANSFORM,
-                  value.sources(),
-                  value.results(),
+                  value.sources().stream().map(TransformSourceV1::from).toList(),
+                  value.results().stream().map(PlacedDetailsV1::from).toList(),
                   value.effectiveBusinessDate(),
                   value.reason(),
                   new TreeSet<>(value.placementExclusionOrchidGroupIds())));
@@ -49,7 +50,7 @@ public class OrchidGroupMutationCommandFingerprint {
               new UpdatePayload(
                   OrchidGroupMutationType.UPDATE_DETAILS,
                   value.orchidGroupId(),
-                  value.details(),
+                  DetailsV1.from(value.details()),
                   value.effectiveBusinessDate(),
                   value.reason()));
       case MoveOrchidGroupMutationCommand value ->
@@ -66,7 +67,7 @@ public class OrchidGroupMutationCommandFingerprint {
           fingerprint.calculate(
               new BatchMovePayload(
                   OrchidGroupMutationType.MOVE,
-                  value.items(),
+                  value.items().stream().map(MoveItemV1::from).toList(),
                   value.effectiveBusinessDate(),
                   value.reason(),
                   new TreeSet<>(value.placementExclusionOrchidGroupIds())));
@@ -82,7 +83,7 @@ public class OrchidGroupMutationCommandFingerprint {
                   new CorrectedCancelCreationPayload(
                       OrchidGroupMutationType.CANCEL_CREATION,
                       value.orchidGroupId(),
-                      value.correctedMutations(),
+                      RelatedMutationsV1.from(value.correctedMutations()),
                       value.effectiveBusinessDate(),
                       value.reason()));
       case DiscardOrchidGroupMutationCommand value ->
@@ -125,8 +126,8 @@ public class OrchidGroupMutationCommandFingerprint {
           fingerprint.calculate(
               new CorrectionPayload(
                   OrchidGroupMutationType.CORRECTION,
-                  value.items(),
-                  value.correctedMutations(),
+                  value.items().stream().map(CorrectionItemV1::from).toList(),
+                  RelatedMutationsV1.from(value.correctedMutations()),
                   value.effectiveBusinessDate(),
                   value.reason()));
       case ReconcileOrchidGroupMutationCommand value ->
@@ -182,27 +183,32 @@ public class OrchidGroupMutationCommandFingerprint {
       LocalDate effectiveBusinessDate,
       String reason) {
     return fingerprint.calculate(
-        new QuantityPayload(mutationType, items, relatedMutations, effectiveBusinessDate, reason));
+        new QuantityPayload(
+            mutationType,
+            items.stream().map(QuantityItemV1::from).toList(),
+            RelatedMutationsV1.from(relatedMutations),
+            effectiveBusinessDate,
+            reason));
   }
 
   private record CreatePayload(
       OrchidGroupMutationType mutationType,
       Long bedZoneId,
-      OrchidGroupMutationDetails details,
+      DetailsV1 details,
       LocalDate effectiveBusinessDate,
       String reason) {}
 
   private record CreateInboundPayload(
       OrchidGroupMutationType mutationType,
       Long inboundRecordId,
-      List<CreateOrchidGroupMutationItem> groups,
+      List<PlacedDetailsV1> groups,
       LocalDate effectiveBusinessDate,
       String reason) {}
 
   private record TransformPayload(
       OrchidGroupMutationType mutationType,
-      List<TransformOrchidGroupMutationSource> sources,
-      List<TransformOrchidGroupMutationResult> results,
+      List<TransformSourceV1> sources,
+      List<PlacedDetailsV1> results,
       LocalDate effectiveBusinessDate,
       String reason,
       Set<Long> placementExclusionOrchidGroupIds) {}
@@ -210,7 +216,7 @@ public class OrchidGroupMutationCommandFingerprint {
   private record UpdatePayload(
       OrchidGroupMutationType mutationType,
       Long orchidGroupId,
-      OrchidGroupMutationDetails details,
+      DetailsV1 details,
       LocalDate effectiveBusinessDate,
       String reason) {}
 
@@ -225,7 +231,7 @@ public class OrchidGroupMutationCommandFingerprint {
 
   private record BatchMovePayload(
       OrchidGroupMutationType mutationType,
-      List<MoveOrchidGroupMutationItem> items,
+      List<MoveItemV1> items,
       LocalDate effectiveBusinessDate,
       String reason,
       Set<Long> placementExclusionOrchidGroupIds) {}
@@ -239,7 +245,7 @@ public class OrchidGroupMutationCommandFingerprint {
   private record CorrectedCancelCreationPayload(
       OrchidGroupMutationType mutationType,
       Long orchidGroupId,
-      RelatedOrchidGroupMutations correctedMutations,
+      RelatedMutationsV1 correctedMutations,
       LocalDate effectiveBusinessDate,
       String reason) {}
 
@@ -252,15 +258,15 @@ public class OrchidGroupMutationCommandFingerprint {
 
   private record QuantityPayload(
       OrchidGroupMutationType mutationType,
-      List<OrchidGroupQuantityMutationItem> items,
-      RelatedOrchidGroupMutations relatedMutations,
+      List<QuantityItemV1> items,
+      RelatedMutationsV1 relatedMutations,
       LocalDate effectiveBusinessDate,
       String reason) {}
 
   private record CorrectionPayload(
       OrchidGroupMutationType mutationType,
-      List<CorrectOrchidGroupMutationItem> items,
-      RelatedOrchidGroupMutations correctedMutations,
+      List<CorrectionItemV1> items,
+      RelatedMutationsV1 correctedMutations,
       LocalDate effectiveBusinessDate,
       String reason) {}
 
@@ -295,4 +301,87 @@ public class OrchidGroupMutationCommandFingerprint {
       List<Long> creationCancellationOrchidGroupIds,
       LocalDate effectiveBusinessDate,
       String reason) {}
+
+  // These v1 values describe persisted hash input, not a second application/domain model.
+  private record DetailsV1(
+      Long varietyId,
+      Integer quantity,
+      String potSize,
+      Integer ageYear,
+      String status,
+      String placementType,
+      Integer trayCount,
+      Boolean splitPlacementAllowed,
+      BigDecimal startPosition,
+      BigDecimal endPosition,
+      String memo) {
+    static DetailsV1 from(OrchidGroupMutationDetails value) {
+      return new DetailsV1(
+          value.varietyId(),
+          value.quantity(),
+          value.potSize(),
+          value.ageYear(),
+          value.status(),
+          value.placementType(),
+          value.trayCount(),
+          value.splitPlacementAllowed(),
+          value.startPosition(),
+          value.endPosition(),
+          value.memo());
+    }
+  }
+
+  private record PlacedDetailsV1(Long bedZoneId, DetailsV1 details) {
+    static PlacedDetailsV1 from(CreateOrchidGroupMutationItem value) {
+      return new PlacedDetailsV1(value.bedZoneId(), DetailsV1.from(value.details()));
+    }
+
+    static PlacedDetailsV1 from(TransformOrchidGroupMutationResult value) {
+      return new PlacedDetailsV1(value.bedZoneId(), DetailsV1.from(value.details()));
+    }
+  }
+
+  private record TransformSourceV1(
+      Long orchidGroupId,
+      Integer transformedQuantity,
+      BigDecimal releasedStartPosition,
+      BigDecimal releasedEndPosition) {
+    static TransformSourceV1 from(TransformOrchidGroupMutationSource value) {
+      return new TransformSourceV1(
+          value.orchidGroupId(),
+          value.transformedQuantity(),
+          value.releasedStartPosition(),
+          value.releasedEndPosition());
+    }
+  }
+
+  private record MoveItemV1(
+      Long orchidGroupId, Long toBedZoneId, BigDecimal startPosition, BigDecimal endPosition) {
+    static MoveItemV1 from(MoveOrchidGroupMutationItem value) {
+      return new MoveItemV1(
+          value.orchidGroupId(), value.toBedZoneId(), value.startPosition(), value.endPosition());
+    }
+  }
+
+  private record QuantityItemV1(Long orchidGroupId, Integer quantity) {
+    static QuantityItemV1 from(OrchidGroupQuantityMutationItem value) {
+      return new QuantityItemV1(value.orchidGroupId(), value.quantity());
+    }
+  }
+
+  private record CorrectionItemV1(
+      Long orchidGroupId, Integer correctedQuantity, String correctedStatus) {
+    static CorrectionItemV1 from(CorrectOrchidGroupMutationItem value) {
+      return new CorrectionItemV1(
+          value.orchidGroupId(), value.correctedQuantity(), value.correctedStatus());
+    }
+  }
+
+  private record RelatedMutationsV1(boolean legacySource, List<Long> mutationIds) {
+    static RelatedMutationsV1 from(RelatedOrchidGroupMutations value) {
+      return value == null
+          ? null
+          : new RelatedMutationsV1(value.legacySource(), value.mutationIds());
+    }
+  }
 }

@@ -227,6 +227,17 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 
 V24 전환 시 기존 코드 발급 방식과 새 방식이 동시에 쓰이지 않도록 이전 백엔드 인스턴스의 쓰기를 중지한 후 migration과 새 버전 기동을 진행한다. 신규 코드 생성 후 구버전으로 단순 rollback하지 않는다. 데이터 수입 등으로 코드를 직접 추가하는 운영 변경은 쓰기를 중지하고 코드 sequence가 추가된 숫자 코드보다 큰지 함께 확인한다.
 
+### 저장 지문·스냅샷 형식 변경 기준
+
+현재 Mutation 지문은 중첩 입력까지 기존 v1 형식으로 고정한다. 저장 hash에 version 접두사를 추가하거나 기존 hash를 재계산하지 않는다. coverage의 engine/snapshot schema version(현재 각각 1), state-chain manifest schema version(현재 2), 최소 writer version은 각각 다른 계약이다. coverage metadata와 writer 기동 검사가 개별 Mutation·Work·Sales receipt의 다중 형식 reader를 제공하는 것은 아니다.
+
+- 새 속성·직렬화 설정을 바꾸기 전에 어느 지문·응답·Entry·baseline/import manifest·취소 복원에 영향을 주는지 확인한다. 명령/중첩 값/snapshot 필드 fixture가 실패하면 기존 golden을 새 결과로 덮어쓰기 전에 형식 전환을 설계한다. 의미 있는 신규 값은 v1 projection에서 누락시켜 같은 요청으로 취급하지 않는다.
+- 변경되는 저장 계약마다 구형/신형을 명확히 판별할 version과 구형 reader/replay 경로를 먼저 구현한다. version 없는 자료의 해석은 실제 지원 자료로 검증한 기존 형식에 한정한다. 과거 필드를 현재 Entity로 복원하거나 다른 hash를 순서대로 시도해 일치시키지 않는다. absent/null/default·수량·위치 정밀도·배열 순서·문자열 정규화와 새 값의 비교 의미를 명시한다.
+- 실제 확장 배포 전에는 구형 저장 JSON/hash, 완료 receipt replay, effective head·대사·baseline/import fingerprint와 취소/보상 복원을 PostgreSQL에서 검증한다. 현재 fixture는 개발 시점의 계약이며 운영 과거 요청 corpus의 검증을 대체하지 않는다. 새 필드의 DB default/backfill이 원장 의미와 일치하는지도 별도로 검증한다.
+- 형식이 다른 writer의 병행 실행은 호환 시험을 통과한 조합에만 허용한다. 그렇지 않으면 영향 쓰기를 중지하고 migration·reader/writer를 함께 전환한다. 기존 Farm 최소 writer 검사는 ACTIVE coverage 경계에 적용되므로 Work·Sales의 모든 쓰기 차단 수단으로 간주하지 않는다. 신규 형식 기록 이후 구버전 writer의 재개/rollback은 새 자료의 읽기·쓰기·재요청 보존이 입증될 때만 허용한다.
+
+현재 변경은 v1 지문 고정과 회귀 방어만 제공한다. 신규 속성·version dispatcher·운영 자료 backfill을 도입한 배포 절차는 아니며, 실제 형식 확장 시 해당 구현과 배포 계획을 함께 작성한다.
+
 V21~V23은 아직 운영에 배포되지 않은 기존 V21~V28 실험 migration을 V20 기준으로
 통합한 이력이다. 지원하는 업그레이드 경로는 `V20 → V21~V23`이다. 통합 전
 V21~V28을 적용했던 개발·rehearsal DB는 checksum repair나 수동 스키마 변경을 하지
