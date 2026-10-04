@@ -3,6 +3,9 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.common.exception.ConflictException;
@@ -22,7 +25,9 @@ import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import jakarta.persistence.EntityManagerFactory;
+import java.security.MessageDigest;
 import java.time.LocalDate;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +96,63 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
             jdbc.queryForObject(
                 "select reserved_quantity from orchid_groups where id = ?", Integer.class, groupId))
         .isEqualTo(5);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"DIRECT,작성중", "DIRECT,출고 완료", "AUCTION,작성중", "AUCTION,출하 완료"})
+  void replaysLegacyRequestHashAndResponseAfterCancellation(SalesType type, String status)
+      throws Exception {
+    var request = request(type, status, 5, "original memo");
+    var first = creation.create(request, "legacy-v1");
+    var legacyMapper =
+        JsonMapper.builder()
+            .findAndAddModules()
+            .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .build();
+    var legacyHash =
+        HexFormat.of()
+            .formatHex(
+                MessageDigest.getInstance("SHA-256")
+                    .digest(legacyMapper.writeValueAsBytes(request)));
+    assertThat(
+            jdbc.queryForObject(
+                "select request_fingerprint from sales_creation_receipts where request_key = ?",
+                String.class,
+                "legacy-v1"))
+        .isEqualTo(legacyHash);
+    jdbc.update(
+        "update sales_creation_receipts set request_fingerprint = ?, response_snapshot = cast(? as jsonb) where request_key = ?",
+        legacyHash,
+        legacyMapper.writeValueAsString(first),
+        "legacy-v1");
+    statuses.updateStatus(first.id(), new SalesSlipStatusUpdateRequest("취소", null));
+    jdbc.update("update business_partners set is_active = false where id = ?", request.partnerId());
+    var before = snapshot();
+    try {
+      assertThat(creation.create(request, "legacy-v1")).isEqualTo(first);
+      var changed =
+          new SalesSlipCommand(
+              request.saleDate(),
+              request.salesType(),
+              request.partnerId(),
+              request.auctionShipmentId(),
+              request.paymentStatus(),
+              request.salesStatus(),
+              request.paymentMethod(),
+              "changed memo",
+              request.items());
+      assertThatThrownBy(() -> creation.create(changed, "legacy-v1"))
+          .isInstanceOf(ConflictException.class)
+          .satisfies(
+              error ->
+                  assertThat(((ConflictException) error).getCode())
+                      .isEqualTo("SALES_CREATE_REQUEST_KEY_CONFLICT"));
+      assertThat(snapshot()).isEqualTo(before);
+    } finally {
+      jdbc.update(
+          "update business_partners set is_active = true where id = ?", request.partnerId());
+    }
   }
 
   @Test

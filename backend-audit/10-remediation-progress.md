@@ -766,6 +766,35 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-013은 부분 완료다. Work·Sales·Auction 등 다른 저장 지문/응답의 형식별 projection·version 선택, 실제 신규 속성의 구형/신형 reader와 head/복원 migration, 구버전 writer 병행·rollback 실행 시험 및 운영 과거 요청 corpus 대사가 남는다. 이번 변경은 새 속성·version dispatcher·운영 backfill을 도입하지 않는다.
 
+## 21차 변경 — BE-013 Sales·일반 Work 생성 지문
+
+작업일: 2026-10-04. 상태: 생성 지문 projection·호환 fixture·구형 접수 replay·정책 문서 및 최종 검증 완료.
+
+### 원인과 범위
+
+- Sales 생성 접수는 현재 명령·품목·배분 record를 직접 직렬화했고, 일반 Work 단건/품종별 일괄 계획·완료 기록은 HTTP DTO 전체를 해시했다. 선택 필드 추가가 과거 receipt 지문에 자동 반영될 수 있었다.
+- 두 모듈에 기존 v1 필드를 명시하는 접수 지문 전용 값을 둔다. Sales 중첩 품목·배분도 복사하며 Work 일괄 요청의 operation wrapper와 자유 details 전체를 보존한다. 이 값은 실행 명령·HTTP DTO·domain validation의 대체물이 아니다.
+- Sales의 날짜 문자열·정렬된 record property·숫자 표현과 Work의 날짜 배열·객체 키 정렬·숫자 정규화를 그대로 사용한다. null/default·원문 문자열·대상/제외/배분 배열 순서를 임의 정규화하지 않는다. null collection/element를 projection 단계에서 새로 거절하지 않으며 기존 업무 검증을 유지한다.
+- Sales 3개 요청 record·일반 Work 2개 DTO의 필드 집합을 HEAD 기준 fixture로 고정한다. 새 의미 있는 필드를 v1에 누락시킨 채 fixture만 갱신하지 않으며, 20차에서 정한 version/판별·writer 배포 정책을 적용한다. DB 접수·key 범위·완료 응답·membership·트랜잭션·잠금·HTTP 계약은 변경하지 않는다.
+
+### 회귀 방어
+
+- 제품 코드 변경 전에 기존 serializer로 baseline golden 회귀 4건을 먼저 통과시켰다. 최종 Sales 5종·Work 5종 자료는 full/null/default/empty·배열 순서·경매와 선택 metadata의 고정 SHA-256을 비교한다. Work의 단건과 일괄 wrapper를 각각 보호하며 전체 직렬화도 기존 DTO/명령과 비교한다. 운영 요청 corpus로 간주하지 않는다.
+- 자유 details의 미상 추가 key·명시적 null·숫자 scale·중첩 객체 순서가 기존 비교 의미를 유지한다. Sales invalid null collection/element도 기존 hash 의미를 유지하며 projection에 validation을 중복하지 않는다.
+- PostgreSQL 신규 7건: 직접 기존 요청 직렬화로 구한 hash를 저장/재설정한 뒤 일반·경매의 작성중/완료 판매 4조합을 취소하고 거래처를 비활성화해도 최초 응답을 replay한다. 일반 Work 3경로도 현재 제목·유형이 바뀐 뒤 최초 응답을 replay한다. 같은 키의 다른 메모/제목은 안정적 conflict code로 거절하고 접수·수량·Mutation·업무 행·membership·감사 전체를 보존한다.
+- 첫 PostgreSQL 실행에서 새 시험 SQL의 Work 접수 키 컬럼명과 Sales jsonb cast를 수정했다. 제품의 지문·rollback 결함으로 판정하지 않는다.
+
+### 검증
+
+- 최종 집중 단위/architecture 4개 클래스 17건·PostgreSQL 2개 클래스 88건, 총 105건 성공. 기존 병렬 생성·rollback·snapshot·query-count·key 범위 회귀를 포함하며 46초 소요했다.
+- 백엔드 전체 `./gradlew test`: 130개 클래스 646건 성공. PostgreSQL 전체 `./gradlew workE2eTest`: 56개 클래스 558건 성공. 두 task 모두 실패·오류·생략은 없다. 최종 전체 검증은 8분 46초 소요했다.
+- 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. 공개 API·DB schema 변경은 없어 Flyway/OpenAPI/생성 TypeScript 갱신은 없다. 새 benchmark·브라우저 E2E·운영 DB 대사는 실행하지 않았다.
+- 전체 검증에 포함된 Work 계약 시험의 JSON 비교를 객체 필드 선언 순서에 의존하지 않도록 보완했다. 고정 지문·배열 순서·원문·null 비교는 유지한다. 보완한 시험의 재컴파일·집중 3건과 spotlessCheck가 6초 내 성공했다. 제품 코드·PostgreSQL 시험·fixture는 전체 검증 시작 이후 변경하지 않았으며 이후에는 진행 문서만 갱신했다.
+
+### 남은 범위
+
+- BE-013은 부분 완료다. 일반 생성 이외 Work 실행·구조 기록·포트·취소·보정·효과와 Farm 입고·Auction 접수의 형식 고정, 저장 응답의 필드 확장, 실제 신규 형식의 version dispatcher/upgrade와 구버전 writer 병행·rollback 실행 시험, 운영 과거 요청 corpus 검증은 남는다. 기존 응답 reader와 저장 자료를 추정 보정하지 않는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -788,7 +817,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `9843c9ea` — BE-012 고정 결과 타입 유지·JSON golden·효과/대상/보정 저장 회귀.
 - `8288c839` — BE-012 공통 효과 reader·형식별 정책·호환 fixture·query-count 회귀.
 - `4ea56293` — BE-012 공통 명령 집합·구형 입력/receipt 호환·rollback 회귀.
-- BE-013 Mutation v1 — `refactor: freeze legacy mutation fingerprint payloads`. 중첩 지문·schema guard·snapshot/replay 회귀와 전환 정책을 별도 커밋으로 저장한다.
+- `2c35562a` — BE-013 Mutation 중첩 v1 지문·schema guard·snapshot/replay 회귀·전환 정책.
+- BE-013 생성 접수 — `refactor: freeze sales and work creation fingerprints`. 두 모듈의 생성 지문·schema guard·구형 접수 replay 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -805,4 +835,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-011의 운영 대사·제약별 validation 도구와 rehearsal 회귀는 15차 범위다. 운영 DB의 `convalidated`, 위반 행과 교차 불변식은 조회하지 않았다. 운영 적용·승인된 복구·실제 validation 완료와 그 증적이 남으며 이번 커밋을 운영 데이터 검증 완료로 취급하지 않는다.
 - BE-012 포트 입력 타입 유지와 JSON·지문 호환/rollback은 16차, 고정 결과 타입 유지와 JSON 저장 회귀는 17차, 대상·상세·계보·수량의 공통 효과 reader와 형식별 정책 보존은 18차 범위다. 공통 명령 Object/구형 구조 변경·현장 동기화 HTTP DTO 경계 이식과 receipt 호환은 19차 범위다. 자유 JSON·보정 이벤트 해석은 남으며, BE-013의 실제 저장 version 전환과 운영 과거 요청 corpus 검증도 후속 범위다.
 - BE-013의 Mutation 중첩 v1 지문 고정·필드 변경 검출·snapshot/구형 지문 replay·배포 기준은 20차 범위다. 실제 format version 전환과 Work/Sales 등 다른 접수 계약·운영 과거 요청 corpus 검증은 남는다.
+- BE-013의 Sales 생성과 일반 Work 3생성 경로 v1 지문·필드 변경 검출·구형 접수 replay는 21차 범위다. 그 밖의 명령/응답과 실제 version 전환·운영 corpus 검증은 남는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

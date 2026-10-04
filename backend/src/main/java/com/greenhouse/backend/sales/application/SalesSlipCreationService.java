@@ -96,7 +96,8 @@ public class SalesSlipCreationService {
       return HexFormat.of()
           .formatHex(
               MessageDigest.getInstance("SHA-256")
-                  .digest(RECEIPT_MAPPER.writeValueAsBytes(request)));
+                  .digest(
+                      RECEIPT_MAPPER.writeValueAsBytes(SalesCreationRequestPayload.from(request))));
     } catch (JsonProcessingException | NoSuchAlgorithmException exception) {
       throw new IllegalStateException("판매 생성 요청의 지문을 계산할 수 없습니다.", exception);
     }

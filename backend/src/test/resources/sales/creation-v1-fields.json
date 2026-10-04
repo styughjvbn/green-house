@@ -1,0 +1,26 @@
+{
+  "com.greenhouse.backend.sales.application.command.SalesSlipAllocationInput": [
+    "orchidGroupId",
+    "quantity"
+  ],
+  "com.greenhouse.backend.sales.application.command.SalesSlipCommand": [
+    "auctionShipmentId",
+    "items",
+    "memo",
+    "partnerId",
+    "paymentMethod",
+    "paymentStatus",
+    "saleDate",
+    "salesStatus",
+    "salesType"
+  ],
+  "com.greenhouse.backend.sales.application.command.SalesSlipItemInput": [
+    "allocations",
+    "genus",
+    "itemName",
+    "memo",
+    "quantity",
+    "spec",
+    "unitPrice"
+  ]
+}

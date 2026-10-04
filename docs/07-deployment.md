@@ -229,7 +229,7 @@ V24 전환 시 기존 코드 발급 방식과 새 방식이 동시에 쓰이지 
 
 ### 저장 지문·스냅샷 형식 변경 기준
 
-현재 Mutation 지문은 중첩 입력까지 기존 v1 형식으로 고정한다. 저장 hash에 version 접두사를 추가하거나 기존 hash를 재계산하지 않는다. coverage의 engine/snapshot schema version(현재 각각 1), state-chain manifest schema version(현재 2), 최소 writer version은 각각 다른 계약이다. coverage metadata와 writer 기동 검사가 개별 Mutation·Work·Sales receipt의 다중 형식 reader를 제공하는 것은 아니다.
+현재 Mutation 지문은 중첩 입력까지, Sales 생성과 일반 Work 세 생성 경로의 지문은 기존 요청 필드까지 v1 형식으로 고정한다. Work 자유 details는 기존 전체 JSON 비교를 유지한다. 저장 hash에 version 접두사를 추가하거나 기존 hash를 재계산하지 않는다. coverage의 engine/snapshot schema version(현재 각각 1), state-chain manifest schema version(현재 2), 최소 writer version은 각각 다른 계약이다. coverage metadata와 writer 기동 검사가 개별 Mutation·Work·Sales receipt의 다중 형식 reader를 제공하는 것은 아니다.
 
 - 새 속성·직렬화 설정을 바꾸기 전에 어느 지문·응답·Entry·baseline/import manifest·취소 복원에 영향을 주는지 확인한다. 명령/중첩 값/snapshot 필드 fixture가 실패하면 기존 golden을 새 결과로 덮어쓰기 전에 형식 전환을 설계한다. 의미 있는 신규 값은 v1 projection에서 누락시켜 같은 요청으로 취급하지 않는다.
 - 변경되는 저장 계약마다 구형/신형을 명확히 판별할 version과 구형 reader/replay 경로를 먼저 구현한다. version 없는 자료의 해석은 실제 지원 자료로 검증한 기존 형식에 한정한다. 과거 필드를 현재 Entity로 복원하거나 다른 hash를 순서대로 시도해 일치시키지 않는다. absent/null/default·수량·위치 정밀도·배열 순서·문자열 정규화와 새 값의 비교 의미를 명시한다.

@@ -1,0 +1,19 @@
+{
+  "com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest": [
+    "operation"
+  ],
+  "com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest": [
+    "details",
+    "excludedOrchidGroupIds",
+    "memo",
+    "plannedEndDate",
+    "plannedStartDate",
+    "sourceDerivedGroupKey",
+    "sourceOrchidGroupIds",
+    "sourceScopeId",
+    "sourceScopeType",
+    "title",
+    "workTypeId",
+    "worker"
+  ]
+}

@@ -65,7 +65,11 @@ public class WorkOperationPlanService {
     return key == null
         ? createNew(request)
         : receipts
-            .executeCreation("GENERAL_PLAN", key, request, () -> List.of(createNew(request)))
+            .executeCreation(
+                "GENERAL_PLAN",
+                key,
+                WorkCreationRequestPayload.from(request),
+                () -> List.of(createNew(request)))
             .getFirst();
   }
 
@@ -97,7 +101,10 @@ public class WorkOperationPlanService {
     return key == null
         ? createBatchNew(request)
         : receipts.executeCreation(
-            "GENERAL_PLAN_BATCH", key, request, () -> createBatchNew(request));
+            "GENERAL_PLAN_BATCH",
+            key,
+            WorkCreationRequestPayload.from(request),
+            () -> createBatchNew(request));
   }
 
   private List<WorkOperationView> createBatchNew(WorkOperationBatchCreateRequest request) {
@@ -141,7 +148,10 @@ public class WorkOperationPlanService {
         ? createCompletedRecordNew(request)
         : receipts
             .executeCreation(
-                "GENERAL_RECORD", key, request, () -> List.of(createCompletedRecordNew(request)))
+                "GENERAL_RECORD",
+                key,
+                WorkCreationRequestPayload.from(request),
+                () -> List.of(createCompletedRecordNew(request)))
             .getFirst();
   }
 

@@ -16,6 +16,7 @@ import com.greenhouse.backend.work.application.operation.WorkOperationPlanServic
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.application.operation.WorkOperationRelationQueryService;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
+import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
@@ -105,6 +106,48 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     assertThat(second.data()).isEqualTo(first.data());
     assertThat(jdbc.queryForObject("select count(*) from work_operations", Integer.class))
         .isEqualTo(1);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Mode.class)
+  void replaysLegacyCreationHashAfterCurrentWorkChanges(Mode mode) throws Exception {
+    var request = request("original title");
+    var first = create(mode, request, "legacy-v1");
+    Object legacyPayload =
+        mode == Mode.BATCH ? new WorkOperationBatchCreateRequest(request) : request;
+    var legacyHash = new WorkRequestFingerprint().calculate(legacyPayload);
+    var scope =
+        switch (mode) {
+          case SINGLE -> "GENERAL_PLAN";
+          case BATCH -> "GENERAL_PLAN_BATCH";
+          case RECORD -> "GENERAL_RECORD";
+        };
+    var key = scope + ":legacy-v1";
+    assertThat(
+            jdbc.queryForObject(
+                "select request_fingerprint from work_command_receipts where receipt_key = ?",
+                String.class,
+                key))
+        .isEqualTo(legacyHash);
+    jdbc.update(
+        "update work_command_receipts set request_fingerprint = ? where receipt_key = ?",
+        legacyHash,
+        key);
+    progress.updateTitle(first.getFirst().id(), "later title");
+    jdbc.update("update work_types set is_active = false where id = ?", workTypeId);
+    var before = snapshot();
+    try {
+      assertThat(responseJson(create(mode, request, "legacy-v1"))).isEqualTo(responseJson(first));
+      assertThatThrownBy(() -> create(mode, request("changed title"), "legacy-v1"))
+          .isInstanceOf(ConflictException.class)
+          .satisfies(
+              error ->
+                  assertThat(((ConflictException) error).getCode())
+                      .isEqualTo("IDEMPOTENCY_KEY_REUSED"));
+      assertThat(snapshot()).isEqualTo(before);
+    } finally {
+      jdbc.update("update work_types set is_active = true where id = ?", workTypeId);
+    }
   }
 
   @Test
