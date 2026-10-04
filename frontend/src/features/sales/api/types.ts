@@ -5,6 +5,7 @@ import type {
   PartnerSettlementSettings,
   PartnerType,
 } from "@/entities/farm/types";
+import type { components } from "@/shared/api/generated/openapi";
 
 export type BusinessPartnerPayload = {
   name: string;
@@ -57,11 +58,15 @@ export type AuctionResultFormPayload = {
   resultLines?: AuctionResultLinePayload[];
 };
 
-export type CreateAuctionResultPayload = AuctionResultFormPayload & {
-  attemptNo: number | null;
-};
+export type CreateAuctionResultPayload = AuctionResultFormPayload &
+  Pick<components["schemas"]["AuctionLotResultRequest"], "idempotencyKey"> & {
+    attemptNo: number | null;
+  };
 
-export type AuctionReturnPayload = {
+export type AuctionReturnPayload = Pick<
+  components["schemas"]["AuctionLotReturnRequest"],
+  "idempotencyKey"
+> & {
   returnedQuantity: number;
   returnDate: string;
   worker: string | null;

@@ -83,6 +83,8 @@ npm run api:types
 - `SOLD`, `PARTIALLY_SOLD`는 `resultLines` 필요
 - `FAILED`, `RETURN_INFERRED`는 서버가 대기 수량 기준 결과 행을 자동 생성
 
+경매 결과 입력·반환 확인의 재전송은 같은 lot·endpoint의 `idempotencyKey`와 입력을 그대로 보낸다. 같은 키·같은 입력은 최초 처리 응답을 반환하고, 다른 입력은 `409 / AUCTION_REQUEST_KEY_CONFLICT`로 거절한다. 전량 처리 후에도 원래 요청을 재전송할 수 있다. 실제 다음 경매·추가 반환에는 새 키를 사용한다. 응답 유실 뒤 입력을 바꿔 새 키로 전송하기 전에는 현재 상세와 이전 처리 결과를 확인해야 한다. 최초 응답은 당시 상태이므로 후속 업무가 있으면 상세를 다시 조회한다.
+
 수동 입금 확인:
 
 - 일반 판매 전표와 경매 정산 입금 요청은 대상별 `idempotencyKey`가 필수다.

@@ -321,7 +321,10 @@ class AuctionShipmentCancellationPostgresE2ETest extends WorkE2ETestBase {
           case PARTIALLY_SOLD -> List.of(new AuctionResultLineInput("A", 1, 1000, null, null));
           case FAILED, RETURN_INFERRED -> List.of();
         };
-    auctions.addResult(lotId, new RecordAuctionResultCommand(DATE, 1, status, null, null, lines));
+    auctions.addResult(
+        lotId,
+        new RecordAuctionResultCommand(
+            UUID.randomUUID().toString(), DATE, 1, status, null, null, lines));
   }
 
   private void resetStatusToWaiting() {

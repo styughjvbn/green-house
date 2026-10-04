@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -97,7 +98,13 @@ class ClockPersistenceIntegrationTest extends AbstractBackendIntegrationTest {
     auctions.addResult(
         lot.getId(),
         new RecordAuctionResultCommand(
-            LocalDate.of(2041, 1, 1), null, AuctionAttemptStatus.FAILED, null, null, null));
+            UUID.randomUUID().toString(),
+            LocalDate.of(2041, 1, 1),
+            null,
+            AuctionAttemptStatus.FAILED,
+            null,
+            null,
+            null));
     assertThat(lot.getStatusHistory())
         .singleElement()
         .satisfies(

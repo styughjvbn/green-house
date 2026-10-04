@@ -20,6 +20,7 @@ import com.greenhouse.backend.sales.domain.SalesType;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -151,6 +152,7 @@ class InputChannelExtensionPostgresE2ETest extends WorkE2ETestBase {
   private record MarketRow(String date, String quantity, String unitPrice) {
     RecordAuctionResultCommand toCommand() {
       return new RecordAuctionResultCommand(
+          UUID.randomUUID().toString(),
           LocalDate.parse(date),
           null,
           AuctionAttemptStatus.SOLD,

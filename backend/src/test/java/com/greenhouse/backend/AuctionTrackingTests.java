@@ -29,6 +29,7 @@ import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -95,7 +96,9 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
 
     var partial =
         trackingService.confirmReturn(
-            lot.getId(), new AuctionLotReturnRequest(20, LocalDate.of(2026, 6, 8), "관리자", "일부 반환"));
+            lot.getId(),
+            new AuctionLotReturnRequest(
+                UUID.randomUUID().toString(), 20, LocalDate.of(2026, 6, 8), "관리자", "일부 반환"));
     assertThat(partial.currentStatus()).isEqualTo(AuctionLotStatus.PARTIALLY_RETURNED);
     assertThat(partial.returnedQuantity()).isEqualTo(20);
     assertThat(partial.waitingQuantity()).isEqualTo(30);
@@ -105,7 +108,8 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
     var returned =
         trackingService.confirmReturn(
             lot.getId(),
-            new AuctionLotReturnRequest(null, LocalDate.of(2026, 6, 9), "관리자", "나머지 반환"));
+            new AuctionLotReturnRequest(
+                UUID.randomUUID().toString(), null, LocalDate.of(2026, 6, 9), "관리자", "나머지 반환"));
     assertThat(returned.currentStatus()).isEqualTo(AuctionLotStatus.RETURNED);
     assertThat(returned.returnedQuantity()).isEqualTo(50);
 
@@ -125,7 +129,8 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
     var returned =
         trackingService.confirmReturn(
             lot.getId(),
-            new AuctionLotReturnRequest(30, LocalDate.of(2026, 6, 10), "관리자", "재경매 없이 반환"));
+            new AuctionLotReturnRequest(
+                UUID.randomUUID().toString(), 30, LocalDate.of(2026, 6, 10), "관리자", "재경매 없이 반환"));
 
     assertThat(returned.currentStatus()).isEqualTo(AuctionLotStatus.RETURNED);
     assertThat(returned.returnedQuantity()).isEqualTo(30);
@@ -404,7 +409,13 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
     trackingService.addResult(
         createdLot.getId(),
         new RecordAuctionResultCommand(
-            LocalDate.of(2026, 7, 9), 1, AuctionAttemptStatus.FAILED, "유찰", null, null));
+            UUID.randomUUID().toString(),
+            LocalDate.of(2026, 7, 9),
+            1,
+            AuctionAttemptStatus.FAILED,
+            "유찰",
+            null,
+            null));
 
     mockMvc
         .perform(
@@ -430,6 +441,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
         trackingService.addResult(
             soldLot.getId(),
             new RecordAuctionResultCommand(
+                UUID.randomUUID().toString(),
                 LocalDate.of(2026, 7, 3),
                 null,
                 AuctionAttemptStatus.SOLD,
@@ -448,6 +460,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
         trackingService.addResult(
             partialLot.getId(),
             new RecordAuctionResultCommand(
+                UUID.randomUUID().toString(),
                 LocalDate.of(2026, 7, 4),
                 1,
                 AuctionAttemptStatus.PARTIALLY_SOLD,
@@ -469,6 +482,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
                 .content(
                     """
 						{
+						  "idempotencyKey": "manual-return-inferred",
 						  "auctionDate": "2026-07-05",
 						  "attemptStatus": "RETURN_INFERRED",
 						  "failedReason": "반환 추정 등록",

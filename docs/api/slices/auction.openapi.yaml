@@ -688,6 +688,10 @@ components:
           type: string
           maxLength: 200
           minLength: 0
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 1
         memo:
           type: string
           maxLength: 1000
@@ -699,9 +703,14 @@ components:
       required:
       - attemptStatus
       - auctionDate
+      - idempotencyKey
     AuctionLotReturnRequest:
       type: object
       properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 1
         memo:
           type: string
           maxLength: 1000
@@ -718,6 +727,7 @@ components:
           maxLength: 100
           minLength: 0
       required:
+      - idempotencyKey
       - returnDate
     AuctionLotStatusRequest:
       type: object

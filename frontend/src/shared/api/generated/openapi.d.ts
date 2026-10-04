@@ -3172,6 +3172,7 @@ export interface components {
             /** Format: date */
             auctionDate: string;
             failedReason?: string;
+            idempotencyKey: string;
             memo?: string;
             resultLines?: components["schemas"]["AuctionLotResultLineRequest"][];
         };
@@ -3259,6 +3260,7 @@ export interface components {
             worker?: string;
         };
         AuctionLotReturnRequest: {
+            idempotencyKey: string;
             memo?: string;
             /** Format: date */
             returnDate: string;

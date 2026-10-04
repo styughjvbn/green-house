@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AuctionLot, AuctionTrackingSummary } from "@/entities/farm/types";
 import { createEmptyPage } from "@/shared/api/page";
 import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
+import { createUuid } from "@/shared/lib/id";
+import { createAuctionRequestKeys } from "../lib/auctionRequestKeys";
 import {
   adjustAuctionQuantity,
   confirmAuctionReturn,
@@ -24,6 +26,7 @@ import type {
   AuctionQuantityAdjustmentPayload,
   AuctionResultFormPayload,
   AuctionReturnPayload,
+  CreateAuctionResultPayload,
 } from "../api/types";
 
 export function useAuctionTracking({
@@ -41,6 +44,9 @@ export function useAuctionTracking({
     writeFilterParams: writeAuctionFilterParams,
   });
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [requestKeys] = useState(() =>
+    createAuctionRequestKeys(createUuid, () => window.sessionStorage),
+  );
   const pageResult =
     lotsQuery.data ??
     createEmptyPage<AuctionLot>(routeState.size, routeState.page);
@@ -61,23 +67,31 @@ export function useAuctionTracking({
   }
 
   const createResultMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       lotId,
       payload,
     }: {
       lotId: number;
-      payload: AuctionResultFormPayload & { attemptNo: null };
-    }) => createAuctionResult(lotId, payload),
+      payload: CreateAuctionResultPayload;
+    }) => {
+      const response = await createAuctionResult(lotId, payload);
+      requestKeys.complete(lotId, "RESULT", payload.idempotencyKey);
+      return response;
+    },
     onSuccess: invalidateAuctionTracking,
   });
   const confirmReturnMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       lotId,
       payload,
     }: {
       lotId: number;
       payload: AuctionReturnPayload;
-    }) => confirmAuctionReturn(lotId, payload),
+    }) => {
+      const response = await confirmAuctionReturn(lotId, payload);
+      requestKeys.complete(lotId, "RETURN", payload.idempotencyKey);
+      return response;
+    },
     onSuccess: invalidateAuctionTracking,
   });
   const adjustQuantityMutation = useMutation({
@@ -106,6 +120,7 @@ export function useAuctionTracking({
     await confirmReturnMutation.mutateAsync({
       lotId: selectedLot.id,
       payload: {
+        idempotencyKey: requestKeys.get(selectedLot.id, "RETURN"),
         returnedQuantity,
         returnDate,
         worker: null,
@@ -135,6 +150,7 @@ export function useAuctionTracking({
     await createResultMutation.mutateAsync({
       lotId: selectedLot.id,
       payload: {
+        idempotencyKey: requestKeys.get(selectedLot.id, "RESULT"),
         auctionDate: payload.auctionDate,
         attemptNo: null,
         attemptStatus: payload.attemptStatus,

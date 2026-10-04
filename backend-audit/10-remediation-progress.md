@@ -162,13 +162,51 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 프론트엔드 `npm run check`, `./gradlew spotlessCheck`, `git diff --check`: 성공.
 - 최종 전체 검증 뒤에는 이 진행 문서의 결과만 갱신했다. 실행 코드와 테스트는 바꾸지 않았다.
 
+## 5차 변경 — BE-005 경매 결과·반환 요청 멱등 처리
+
+작업일: 2026-10-04. 상태: 코드·API 계약·정책 문서 수정 및 전체 회귀 검증 완료. 기존 경매 자료의 중복 여부는 조사하지 않았다.
+
+### 수정 전 재현
+
+- PostgreSQL에서 자동 차수의 부분 낙찰 10개를 같은 요청 키·내용으로 두 번 전송했다. 기존 구현은 두 번째를 새 차수로 처리해 판매 수량 20개·시도 2건을 만들었다.
+- 유찰 상태의 부분 반환 10개를 같은 요청으로 두 번 전송했다. 기존 구현은 반환 수량 20개로 누적했다. 최초 반환 fixture의 유찰 입력에는 validation에 걸리는 0개 결과 행이 있었으며, 정상 유찰 입력으로 보완한 뒤 반환 중복 반영을 별도로 재현했다.
+- lot row lock은 두 쓰기를 직렬화할 뿐 재전송을 구분하지 않는다. 경매일·명시적 차수 UNIQUE도 자동 차수와 반환에는 요청 identity가 될 수 없었다.
+
+### 구현과 계약
+
+- 결과 입력 application 명령과 반환 확인 요청에 필수 `idempotencyKey`를 추가했다. 구형 HTTP 요청은 400으로 거절한다. application 직접 호출에도 키의 누락·공백·길이를 검증하며 호환 생성자로 새 키를 자동 생성하는 우회 경로는 추가하지 않았다.
+- `AuctionTrackingService`가 기존 lot root 잠금 후 `(lot, RESULT/RETURN, key)` receipt를 먼저 확인한다. 같은 바인딩 입력은 최초 응답을 반환하고 다른 입력은 `409 / AUCTION_REQUEST_KEY_CONFLICT`로 거절한다. JSON 객체 속성은 정렬하며 결과 행 순서와 입력 문자열·선택 필드의 null을 보존한다. 요청 키는 lot·업무별 범위이며 서로 다른 lot나 결과/반환 간에는 같은 값도 독립적이다.
+- replay 검증은 현재 수량·상태 검증보다 먼저 수행한다. 자동 차수와 반환 수량 null은 최초 실행에서만 현재 lot를 기준으로 해석한다. 전량 낙찰·반환 완료 후의 재전송과 후속 경매/반환 뒤의 과거 재전송도 안전하다. 동일 경매일·명시적 차수에 다른 새 키로 결과를 추가하는 기존 금지 규칙은 유지한다.
+- 최초 변경은 lot·시도·결과·상태 이력을 flush해 실제 ID를 확정한 뒤 응답 snapshot을 저장한다. 최초 응답과 receipt가 같은 ID·시점을 가진다. 이 flush는 commit이 아니며 receipt 저장 실패에도 전부 rollback한다. receipt 이외의 중간 접수 계층이나 범용 Engine, 다른 모듈의 Repository 의존은 추가하지 않고 Auction 안에서 처리한다.
+- V36은 receipt의 UNIQUE, lot FK와 삭제 제한, 업무 종류·공백 키·지문·응답 대상 CHECK 및 NOT NULL을 추가한다. 조회는 UNIQUE의 lot 선두 인덱스를 사용한다. 실패한 요청은 receipt를 남기지 않아 정상 내용으로 같은 키를 다시 사용할 수 있다. 기존 결과·반환은 요청 identity가 없어 receipt를 추정 backfill하지 않는다.
+- 판매 hook이 같은 lot·업무의 미확정 키를 유지한다. 탭 세션 저장소로 화면 재진입·같은 탭 새로고침에도 유지하며, 저장소가 차단된 경우에는 현재 화면 메모리에서 유지한다. 성공 응답을 받으면 그 키만 완료 처리한다. 뒤늦은 병렬 응답이 다음 업무의 새 키를 지우지 않으며 query invalidation 실패와 키의 성공 확인을 분리한다. 실제 새 업무는 성공 확인 뒤 새 키를 쓴다. 생성 TypeScript schema에서 키 계약을 가져온다.
+- API 생성 스크립트와 `npm run api:types`로 전체 OpenAPI·Auction slice·TypeScript를 갱신했다. 판매 기능·도메인 규칙·트랜잭션 기준·API 재전송 사용법과 구버전 writer 동시 실행 금지/배포 순서를 문서에 반영했다.
+
+### 회귀 방어와 한계
+
+- [AuctionCommandIdempotencyPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/AuctionCommandIdempotencyPostgresE2ETest.java): PostgreSQL 40건. 실제 판매 예약·출하로 생성한 lot에서 부분 결과/반환 재전송, 4종 결과 상태와 전량·생략 반환, 후속 업무 뒤 과거 응답 replay, 정산 행·금액, 내용 14종 충돌, 키 validation, 실패 후 키 재사용, 객체 순서/결과 행 순서, 명시적 차수, 키 범위, receipt 저장 실패와 관련 17개 테이블 rollback을 검증한다. 충돌·retry에서는 행 값·version·시각·이력·감사·Mutation·정산을 DB JSON 값으로 비교한다.
+- 경쟁 5건은 PostgreSQL backend PID·`pg_blocking_pids`로 두 번째 요청의 실제 대기를 확인한다. 결과/반환의 동일 키·동일 입력은 winner를 replay하고, 서로 다른 입력은 winner commit 후 충돌한다. 선행 요청이 rollback하면 기다린 동일 요청이 한 번 적용된다.
+- [AuctionCommandReceiptMigrationPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/AuctionCommandReceiptMigrationPostgresE2ETest.java): legacy 부분 낙찰·부분 반환을 V35에 넣고 V36으로 갱신한다. 기존 5개 업무 테이블 불변·빈 receipt·재실행 0건·checksum, SQL 우회 시 UNIQUE/FK/CHECK/NOT NULL·lot 삭제 제한을 검증한다.
+- [auction-request-keys.test.mjs](../frontend/test/auction-request-keys.test.mjs): 6건. 미확정 재시도·성공 후 실제 추가 업무·대상과 업무 변경·늦은 병렬 응답·탭 재기동·저장소 차단을 검증한다. 실제 브라우저에서 응답 유실을 주입하는 E2E는 실행하지 않았다.
+- 최초 응답 snapshot은 당시 경매장 이름과 전체 lot 이력을 포함한다. 현재 상태·이름을 확인하려면 상세 조회를 사용한다. receipt의 지문·영속 응답 schema를 변경할 때는 호환을 별도 검토해야 하며, 이력이 늘면 snapshot 저장량도 증가한다. receipt의 임의 TTL 삭제는 중복 방어를 무효화한다.
+- 새 탭·새 세션에서 새 키로 보낸 같은 내용은 실제 다음 업무와 구분할 수 없다. 응답 유실 후 새 키로 입력하기 전에는 상세와 이전 처리 결과를 확인해야 한다. 이번 변경은 기존 수량 보정의 actor·감사 공백, 반환에 따른 별도 재고 복구 정책, 정산 snapshot 변경 가능성 또는 모듈 전체 잠금 순서를 해결하지 않는다.
+
+### 검증
+
+- 집중 검증: 기존 Auction·Clock integration 10건, 신규 PostgreSQL 41건과 프론트 키 회귀 6건 성공.
+- 백엔드 전체 `./gradlew test`: 115개 클래스, 555건 성공. 기존 architecture·query-count·도메인·integration 회귀 포함.
+- PostgreSQL 전체 `./gradlew workE2eTest`: 41개 클래스, 280건 성공. 신규 41건과 BE-001~BE-004를 포함한 기존 239건 모두 성공.
+- 프론트엔드 `npm run check`: 포맷·생성 타입 drift·전체 순수 로직 시험·lint·production build 성공.
+- `./gradlew spotlessCheck`, `git diff --check`: 성공. 전체 검증 뒤에는 이 진행 문서의 상태·결과만 갱신했다. 실행 코드·API 생성물·테스트는 바꾸지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
 - `d0a661d6` — BE-001 판매 수정 예약 identity와 회귀·정책 문서.
 - `1509e55f` — BE-002 경매 이력 보존과 rollback·경쟁 회귀·정책 문서.
 - `3a5114cc` — BE-003 금액 보호·V35·회귀·정책 문서.
-- BE-004 — `fix: enforce orchid saleability for new reservations`. 상태 정책·조회·회귀·관련 문서를 한 목적의 별도 커밋으로 저장한다.
+- `7cd07446` — BE-004 판매 가능 상태·조회·회귀·관련 문서.
+- BE-005 — `fix: make auction result and return requests idempotent`. 요청·receipt·V36·화면 키 유지·계약 생성물·회귀·정책 문서를 한 목적의 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -176,5 +214,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-002의 과거 삭제 이력은 코드 수정으로 복원되지 않는다. 운영 영향과 복원 가능한 백업·자료의 존재 여부는 확인하지 않았다.
 - BE-003의 과거 잘못된 금액·잔액·입금은 별도 대사·복구 대상이다. V35 적용만으로 운영 자료의 정합성이 입증되거나 기존 위반 행이 모두 검증되는 것은 아니다.
 - BE-004 수정 전 확정된 판매 불가 상태의 예약은 자동 해제하지 않았다. 운영 영향과 기존 출고 여부는 별도 대사·업무 판단 대상이다.
-- 다음 P0는 BE-005 경매 부분 결과·반환 재전송의 중복 반영 방지다.
-- BE-006의 전역 lock ordering, 성능·추상화·테스트 체계의 나머지 finding은 후속 변경으로 남긴다. 이번 변경으로 전체 P0 또는 운영 정합성이 해결됐다고 판정하지 않는다.
+- BE-005의 기존 중복 결과·반환 및 정산 영향은 별도 대사 대상이다. 기존 기록을 중복으로 추정해 삭제하지 않는다.
+- 다음 변경은 BE-006의 전역 lock ordering이다. 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
