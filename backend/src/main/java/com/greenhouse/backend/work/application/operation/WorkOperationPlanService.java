@@ -84,6 +84,11 @@ public class WorkOperationPlanService {
           queryService.get(createOperation(operationRequest, workType, resolvedSelection).getId()));
     }
     List<VarietyTargetGroup> varietyGroups = groupTargetsByVariety(resolvedSelection.included());
+    if (varietyGroups.size() > 1) {
+      // Lock the complete selection before variety groups can accumulate locks in different orders.
+      workTargetResolver.lockAndValidateActive(
+          resolvedSelection.included().stream().map(ResolvedWorkTarget::orchidGroupId).toList());
+    }
     return varietyGroups.stream()
         .map(
             group ->

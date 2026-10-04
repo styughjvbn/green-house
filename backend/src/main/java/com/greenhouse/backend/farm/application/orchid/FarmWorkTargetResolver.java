@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @RequiredArgsConstructor
 public class FarmWorkTargetResolver implements WorkTargetResolver {
+  private static final int ID_BATCH_SIZE = 500;
 
   private final HouseRepository houseRepository;
 
@@ -83,12 +84,20 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
   public void lockAndValidateActive(List<Long> orchidGroupIds) {
     var ids = orchidGroupIds.stream().distinct().sorted().toList();
     try {
-      if (orchidGroupRepository.findAllForUpdateByIdIn(ids).size() != ids.size()
-          || orchidGroupRepository
-                  .findActiveWorkTargetsByIds(ids, OrchidGroupStatusPolicy.inactiveStatuses())
-                  .size()
-              != ids.size()) {
-        throw targetChanged();
+      for (int start = 0; start < ids.size(); start += ID_BATCH_SIZE) {
+        var batch = ids.subList(start, Math.min(start + ID_BATCH_SIZE, ids.size()));
+        if (orchidGroupRepository.findAllForUpdateByIdIn(batch).size() != batch.size()) {
+          throw targetChanged();
+        }
+      }
+      for (int start = 0; start < ids.size(); start += ID_BATCH_SIZE) {
+        var batch = ids.subList(start, Math.min(start + ID_BATCH_SIZE, ids.size()));
+        if (orchidGroupRepository
+                .findActiveWorkTargetsByIds(batch, OrchidGroupStatusPolicy.inactiveStatuses())
+                .size()
+            != batch.size()) {
+          throw targetChanged();
+        }
       }
     } catch (ObjectOptimisticLockingFailureException exception) {
       throw targetChanged();
