@@ -938,6 +938,49 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-015는 부분 완료다. Sales의 재잠금과 예약/출고 snapshot·최종 조회, 정산 snapshot과 표시 참조 조회는 후속 분석·회귀가 남는다. 필요 재검증과 과거 snapshot 보존에 쓰이는 조회는 비용만으로 제거하지 않는다. 큰 입력, 품종 분할의 기존 메모리 필터링과 운영 잠금 대기·지연 benchmark는 이번 범위에 포함하지 않는다.
 
+## 26차 변경 — BE-015 판매 쓰기의 배분·스냅샷 N+1과 수정 후 재조회 제거
+
+작업일: 2026-10-04. 상태: 판매 소유 aggregate 일괄 로딩·중복 재조회 제거·query-count/snapshot/replay/rollback 회귀·정책 문서 및 최종 전체 검증 완료.
+
+### 원인과 범위
+
+- 기존 일반 상세 query-count는 1/10/50 품목의 조회를, PostgreSQL 판매 생성 접수 회귀는 이미 성공한 생성의 replay만 보호한다. 검색 benchmark는 목록을, Work benchmark는 Work 읽기를 측정한다. 판매 수정·출고·취소·입금·현재 상태 반환의 상세 조립과 기존 배분 삭제 cascade는 별도 검사가 없었다. 관련 시험을 먼저 확인하고 신규 PostgreSQL 19건을 제품 수정 전 통과시켰다.
+- 쓰기는 전표 root를 잠근 뒤 품목마다 배분, 배분마다 역사 snapshot collection을 lazy loading했다. 품목당 2개 배분 fixture에서 collection fetch는 1/8 품목에 4/25회다. 목록/조회가 일괄 로딩해도 쓰기는 같은 최적화를 거치지 않아 조회 회귀가 이 비용을 발견하지 못했다. 수정은 flush 후 이미 managed 상태인 전표와 품목을 다시 조회했다.
+- Sales 소유 aggregate 로더가 기존 root 행 잠금을 먼저 획득하고 품목·전체 배분·보존 snapshot을 준비한다. 품목의 배분과 배분의 snapshot은 각각 하나의 collection fetch 쿼리로 초기화한다. 두 collection을 동시에 fetch join하지 않으며 전표 ID 하나로 필터링한다. 기존 snapshot 일괄 조회를 재사용하고 타 모듈 Entity/Repository를 추가로 참조하지 않는다.
+- 수정·상태 변경·입금의 동일한 소유 aggregate 로딩을 이 경로로 모은다. 단순 조회 wrapper가 아니라 root 잠금과 두 collection의 로딩 순서를 소유하며 호출 트랜잭션을 필수로 요구한다. 수정은 기존 flush를 유지한 뒤 동일한 managed 전표로 재예약·감사·최종 응답을 처리한다. 삭제 cascade가 사용할 과거 snapshot도 미리 로딩해 allocation별 조회를 막는다.
+- 최상위 트랜잭션, 기존/신규 allocation 합집합 선잠금, 편집별 예약 identity, Farm Engine의 잠금 후 재확인과 Mutation·이동 이력·감사·잔액·입금의 atomicity는 유지한다. 각 유스케이스의 기존 root·거래처·Farm 잠금 순서를 바꾸지 않으며 중간에 추가된 소유 collection 조회는 행 잠금을 추가하지 않는다.
+- 예약 전 생성 snapshot, 수정의 예약 해제 후 새 snapshot, 출고 직전 예약 수량 snapshot, 최종 응답의 현재 Farm 상태는 서로 다른 시점 계약이다. 이를 이전 조회값이나 과거 Mutation 결과로 대체하지 않는다. 생성은 기존 최초 응답 snapshot을 replay하며 상태 유지·입금 replay는 현재 상세를 반환한다. 공개 API·저장 JSON·수량·금액·취소·입금 정책은 변경하지 않는다.
+
+### 측정과 회귀 방어
+
+| 실제 application 트랜잭션 경로 | 전체 prepared statement 기존 1 / 8 품목 → 수정 1 / 8 품목 |
+| --- | --- |
+| 전표 수정·배분 교환 | 42 / 91 → 40 / 68 |
+| 출고 완료 | 20 / 41 → 19 / 19 |
+| 작성중 취소 | 23 / 44 → 22 / 22 |
+| 출고 완료 취소 | 30 / 51 → 29 / 29 |
+| 입금 확인 | 20 / 39 → 19 / 17 |
+| 동일 입금 재요청 | 10 / 31 → 9 / 9 |
+| 동일 판매 상태 요청 | 8 / 29 → 7 / 7 |
+
+- 모든 경로의 lazy collection fetch는 4 / 25 → 각각 1이다. 남는 1회는 단일 root의 품목 collection 로딩이다. 1/8 품목에 같은 Hibernate query 실행 상한을 검사하고, 쓰기 없는 상태 유지·입금 replay는 전체 prepared statement도 각각 7/9회로 고정한다. 입력 품목 수에 비례하는 실제 삭제·생성·이력 쓰기는 줄이거나 고정 비용이라고 주장하지 않는다.
+- 각 품목은 같은 2개 난 묶음에 배분해 품목/배분 수 증가의 영향을 분리한다. 고정 Clock과 같은 요청·seed로 측정하고 `backend/build/work-query-count/sales-write-*.json`에 prepared statement·collection fetch·query별 실행 횟수를 저장한다. 일반 서비스 mock 호출 횟수로 SQL 회귀를 대체하지 않는다.
+- prepared statement는 SELECT 외 DML·sequence 접근을 포함한다. ID allocation 상태가 결과에 영향을 주며 입금 1품목의 수치가 8품목보다 큰 것도 쿼리의 선형 증가를 의미하지 않는다. 고정 SQL 계약은 쓰기 없는 두 경로에만 적용한다. 이 표는 운영 latency·잠금 대기 benchmark나 완전한 native SQL trace가 아니다.
+- 신규 14개 경로 조합은 품목·allocation ID, creation/outbound snapshot, 수정의 교환 배분과 두 묶음 수량/예약, 단독 상세와 최종 응답의 일치, 최초 생성 receipt의 기존 snapshot replay와 업무 행 불변성을 확인한다. 입금 첫 처리와 같은 key 재요청은 입금 이벤트를 한 건만 남긴다.
+- 신규 5건은 수정·출고·작성중 취소·출고 취소·입금의 최종 응답 조립 실패 후 전표·배분·snapshot·Mutation·재고 이동·잔액·입금·감사·생성 접수의 모든 행이 rollback하고 다시 처리되는지 검사한다. 기존 PostgreSQL의 배분 합집합 잠금 경쟁, 수량 부족·DB 저장 실패·예약 identity·판매 가능 상태, 생성 접수 병렬/rollback도 함께 실행한다.
+- 초기 시험의 상태 변경 명령 생성자와 입금 event enum 오해, 공통 Work seeder가 Sales receipt를 초기화하지 않는 fixture 문제는 제품 변경 전에 바로잡았다. 운영 계약을 시험에 맞춰 바꾸지 않았다.
+
+### 검증
+
+- 수정 전 신규 PostgreSQL 19건 성공. 수정 후 집중 일반/integration/architecture 6개 클래스 40건·PostgreSQL 5개 클래스 107건, 총 147건 성공. 실패·오류·생략은 없고 1분 45초 소요했다. 이후 측정된 query 실행 상한과 쓰기 없는 두 경로의 prepared statement 고정 회귀를 추가했다.
+- 백엔드 전체 `./gradlew test`: 131개 클래스 662건 성공. PostgreSQL 전체 `./gradlew workE2eTest`: 61개 클래스 624건 성공. 신규 19건을 포함해 실패·오류·생략은 없고 전체 백엔드 검증은 9분 24초 소요했다.
+- 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. `python3 scripts/generate_openapi.py`도 성공했고 전체 명세·slice와 생성 타입에 diff가 없다. 공개 API·DB schema 변경이 없어 TypeScript 재생성과 Flyway 추가는 필요하지 않다. 응답 시간 benchmark·브라우저 E2E·운영 DB 대사는 실행하지 않았다.
+- 전체 검증 이후에는 진행 문서의 완료 상태와 검증 결과만 갱신했다. 제품 코드·시험·HTTP/저장 계약은 변경하지 않았다.
+
+### 남은 범위
+
+- BE-015는 부분 완료다. 정산 snapshot과 현재 표시 참조 조회는 별도 분석·회귀가 남는다. Sales의 Farm 재잠금과 시점별 snapshot/최종 현재 상태 조회는 필요한 정확성 경계로 유지한다. 큰 품목·서로 다른 난 묶음 수, 운영 lock 대기·지연·메모리 benchmark와 DB index 대사는 이번 범위에 포함하지 않는다. 조회 개수가 줄어도 반환 행과 실제 이력 쓰기는 입력 크기에 비례한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -965,7 +1008,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `4df04833` — BE-014 저장 handler·정의·strategy 계보 연결과 rollback/replay 회귀.
 - `5d2786f8` — BE-015 구조 기록 중간 상세 조회 제거·실제 경로 query-count·rollback/replay 회귀.
 - `372efc20` — BE-015 포트 중간 상세/중복 완료 제거·경로별 query-count·snapshot/rollback/replay 회귀.
-- BE-015 폐기 — `refactor: assemble discard record responses once`. 품종별 계획/폐기 중간 상세 제거·query-count·연계 취소/replay·rollback 회귀를 별도 커밋으로 저장한다.
+- `95f594fa` — BE-015 품종별 계획/폐기 중간 상세 제거·query-count·연계 취소/replay·rollback 회귀.
+- BE-015 판매 — `refactor: bulk load sales write aggregates`. 소유 배분/snapshot 일괄 로딩·중복 재조회 제거·query-count·snapshot/replay/rollback 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -986,5 +1030,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-014의 저장 구조 handler와 계보 분류 계약·strategy 관계 재사용·새 결과 검사·전체 흐름 회귀는 22차 범위다. 신규 유형의 미래 확장 회귀와 운영 unknown code 대사는 별도다.
 - BE-015의 구조 변경 기록 계획/시작/실행의 중간 상세 조회 제거와 단건·배치 query-count·rollback/replay 회귀는 23차 범위다. 포트는 24차 범위로 이어졌으며 연계 폐기·Sales·정산 경로와 운영 지연 측정은 남는다.
 - BE-015의 포트 신규/활성 계획·단독 실행/기록의 중간 상세/중복 완료 제거와 query-count·snapshot·완료 판정·rollback/replay 회귀는 24차 범위다.
-- BE-015의 연계/독립 폐기·품종별 일반 계획 중간 상세 제거와 query-count·수량 배분·공동 취소/replay·rollback 회귀는 25차 범위다. Sales·정산과 운영 지연 측정은 남는다.
+- BE-015의 연계/독립 폐기·품종별 일반 계획 중간 상세 제거와 query-count·수량 배분·공동 취소/replay·rollback 회귀는 25차 범위다.
+- BE-015의 판매 수정·상태 전환·입금의 소유 배분/snapshot N+1과 수정 후 재조회 제거는 26차 범위다. Farm 재잠금·snapshot 시점·최종 현재 상태 조회는 유지하며 정산과 운영 지연 측정은 남는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

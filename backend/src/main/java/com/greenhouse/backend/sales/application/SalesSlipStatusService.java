@@ -1,7 +1,6 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.audit.domain.AuditAction;
-import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
@@ -23,6 +22,8 @@ public class SalesSlipStatusService {
 
   private final SalesSlipRepository salesSlipRepository;
 
+  private final SalesSlipAggregateLoader aggregateLoader;
+
   private final AuctionSalesSlipCancellationPolicy auctionSalesSlipCancellationPolicy;
 
   private final SalesSlipInventoryService salesSlipInventoryService;
@@ -38,10 +39,7 @@ public class SalesSlipStatusService {
   private final SalesSlipDocumentAssembler responseAssembler;
 
   public SalesSlipDocument updateStatus(Long salesSlipId, SalesSlipStatusUpdateRequest request) {
-    var salesSlip =
-        salesSlipRepository
-            .findForUpdateById(salesSlipId)
-            .orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+    var salesSlip = aggregateLoader.getForUpdate(salesSlipId);
     String nextStatus = request.salesStatus().trim();
     if (salesSlip.isCanceled()) {
       throw new IllegalArgumentException("취소된 전표는 상태를 변경할 수 없습니다.");

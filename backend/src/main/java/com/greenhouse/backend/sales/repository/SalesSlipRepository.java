@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.repository;
 
 import com.greenhouse.backend.sales.domain.SalesSlip;
+import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;
@@ -29,6 +30,15 @@ public interface SalesSlipRepository
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select slip from SalesSlip slip where slip.id = :id")
   Optional<SalesSlip> findForUpdateById(@Param("id") Long id);
+
+  @Query(
+      """
+      select item from SalesSlipItem item
+      left join fetch item.allocations allocation
+      where item.salesSlip.id = :salesSlipId
+      order by item.id, allocation.id
+      """)
+  List<SalesSlipItem> findItemsWithAllocationsBySalesSlipId(@Param("salesSlipId") Long salesSlipId);
 
   @Query(
       """

@@ -1,7 +1,6 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.audit.domain.AuditAction;
-import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
@@ -29,6 +28,8 @@ public class SalesSlipUpdateService {
 
   private final SalesSlipRepository salesSlipRepository;
 
+  private final SalesSlipAggregateLoader aggregateLoader;
+
   private final PaymentEventReader paymentEventReader;
 
   private final BusinessPartnerReader businessPartnerReader;
@@ -46,10 +47,7 @@ public class SalesSlipUpdateService {
   private final SalesSlipDocumentAssembler responseAssembler;
 
   public SalesSlipDocument update(Long salesSlipId, SalesSlipCommand request) {
-    SalesSlip salesSlip =
-        salesSlipRepository
-            .findForUpdateById(salesSlipId)
-            .orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+    SalesSlip salesSlip = aggregateLoader.getForUpdate(salesSlipId);
     Long previousPartnerId = salesSlip.getPartnerId();
     Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
@@ -102,11 +100,7 @@ public class SalesSlipUpdateService {
     salesSlip.refreshAmounts();
     salesSlip.updateExpectedPaymentDate(expectedPaymentDate);
     salesSlipRepository.saveAndFlush(salesSlip);
-    SalesSlip persisted =
-        salesSlipRepository
-            .findWithDetailsById(salesSlipId)
-            .orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
-    salesSlipInventoryService.reserveForEdit(persisted, editId);
+    salesSlipInventoryService.reserveForEdit(salesSlip, editId);
     partnerBalanceService.updateReceivable(
         partner.id(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);
     if (!previousPartnerId.equals(partner.id())) {
@@ -115,9 +109,9 @@ public class SalesSlipUpdateService {
           salesSlipRepository.sumDirectReceivableByPartnerId(previousPartnerId),
           null);
     }
-    auditSupport.record(AuditAction.UPDATED, persisted, before, auditSupport.snapshot(persisted));
+    auditSupport.record(AuditAction.UPDATED, salesSlip, before, auditSupport.snapshot(salesSlip));
 
-    return responseAssembler.assemble(persisted);
+    return responseAssembler.assemble(salesSlip);
   }
 
   private void validateEditable(SalesSlip salesSlip, SalesSlipCommand request) {
