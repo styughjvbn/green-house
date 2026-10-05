@@ -140,6 +140,7 @@ public class AuctionTrackingService {
     var replay = replay(id, "RETURN", request.idempotencyKey(), fingerprint);
     if (replay.isPresent()) return replay.get();
     lot.requireReturnConfirmable();
+    loadWriteResponseDetails(lot);
     int quantity =
         request.returnedQuantity() == null
             ? lot.getReturnConfirmableQuantity()
@@ -156,6 +157,7 @@ public class AuctionTrackingService {
   @Transactional
   public AuctionLotResponse adjust(Long id, AuctionLotAdjustmentRequest request) {
     var lot = findLotForUpdate(id);
+    loadWriteResponseDetails(lot);
     lot.adjustQuantities(
         request.soldQuantity(),
         request.waitingQuantity(),
@@ -174,6 +176,7 @@ public class AuctionTrackingService {
     String fingerprint = fingerprint(request.idempotencyKey(), request);
     var replay = replay(id, "RESULT", request.idempotencyKey(), fingerprint);
     if (replay.isPresent()) return replay.get();
+    loadWriteResponseDetails(lot);
     lot.recordResult(
         request.auctionDate(),
         request.attemptNo(),
@@ -245,6 +248,7 @@ public class AuctionTrackingService {
   @Transactional
   public AuctionLotResponse changeStatus(Long id, AuctionLotStatusRequest request) {
     var lot = findLotForUpdate(id);
+    loadWriteResponseDetails(lot);
     lot.changeStatus(
         request.status(),
         request.reason().trim(),
@@ -260,6 +264,12 @@ public class AuctionTrackingService {
     return lotRepository
         .findWithDetailsById(id)
         .orElseThrow(() -> new NotFoundException("경매 출하 lot를 찾을 수 없습니다."));
+  }
+
+  private void loadWriteResponseDetails(AuctionShipmentLot lot) {
+    // Hydrate the managed attempts before cascade flush/response mapping. Keep the lot's own
+    // collection order, including a newly appended attempt with an earlier auction date.
+    attemptRepository.findAllWithResultLinesByLotIdIn(List.of(lot.getId()));
   }
 
   private AuctionShipmentLot findLotForUpdate(Long id) {

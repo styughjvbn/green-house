@@ -1346,6 +1346,26 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-026의 수동 입금 키 충돌 구별·오류 선택 기준·확인된 저장소 소비자 호환과 관련 회귀를 완료했다. 기존 업무의 다른 상태 검증/도메인별 code를 일괄 변경하지 않는다. 다음 변경은 BE-027의 경매 변경 응답 mapper N+1을 추적한다.
 
+## 39차 변경 — BE-027 경매 쓰기 응답의 결과 행 N+1 제거
+
+### 완료 범위
+
+- lot root 잠금과 결과/반환의 완료 접수 replay 뒤 기존 시도의 결과 행을 소유 Repository로 일괄 로딩한다. 변경·cascade flush·최초 응답 조립 전에 같은 managed Entity의 collection을 초기화해 시도별 lazy SQL을 제거한다. root 조회에 shipment fetch/부모 잠금을 추가하지 않는다.
+- 쓰기 응답은 기존 lot collection으로 조립한다. 조회 assembler의 경매일 정렬로 교체하지 않아 과거 날짜로 추가한 신규 시도도 기존 append 위치를 유지한다. 결과 행의 일괄 조회에는 생성 ID 순서를 명시하며 최초 응답·접수 snapshot의 자식 ID/행 순서를 유지한다. snapshot 시점·지문·replay·수량 검증·트랜잭션/rollback은 변경하지 않는다.
+- GET도 같은 결과 행 bulk Repository를 사용하며 collection fetch join을 root pagination에 추가하지 않는다. 전체 이력의 Entity 적재량은 응답 이력 수에 비례한다. 하위 이력 상한/별도 pagination은 BE-034에 남긴다. 새 조회 규칙만 architecture 문서에 반영했고 API/DB schema는 바뀌지 않았다.
+
+### 측정·회귀와 검증
+
+- 새 PostgreSQL 회귀는 독립 시도 1/10/50개와 시도별 결과 2행·상태 이력을 갖는 detached fixture에서 상태 변경·결과 등록·반환·무변경 수량 보정의 최상위 트랜잭션을 호출한다. commit을 포함한 prepareStatement 수와 Entity/collection 적재 증적을 `build/work-query-count/auction-write-*.json`에 남긴다. 전체 응답의 기존 시도/행/이력 ID 순서·검토 상태·수량 capability와 신규 ID·과거 날짜 append·receipt replay를 검증한다.
+- 제품 변경 전 SQL은 상태 변경 9/17/57, 결과 등록 11/20/59, 반환 10/19/59, 무변경 보정 6/15/55였다. 응답 계약 assertion은 통과하고 조회 상한에서 12건 중 8건이 실패해 N+1을 재현했다. 최초 시험의 잘못된 검토 enum 이름은 실제 MANUAL_REVIEW로 수정한 뒤 측정했다.
+- 변경 후 같은 순서로 상태 변경 9/8/8, 결과 등록 11/11/10, 반환 10/10/10, 무변경 보정 6/6/6으로 건수 증가와 무관해졌다. 시퀀스 할당의 단일 SQL 차이를 허용하면서 commit 포함 상한 14를 고정했다. 신규 12건과 관련 일반 경매/수량 정책 집중 검증 성공(49초).
+- 최종 일반 `./gradlew test`: 133개 클래스 711건 성공. 관련 PostgreSQL 쓰기 조회 12건·요청 멱등성 40건·수량 이력 16건, 3개 클래스 68건 성공. 기존 root 잠금 경쟁·늦은 실패 rollback·최초 snapshot/replay·수량 변경 제한 회귀도 포함한다. 실패·오류·생략 0건; 백엔드 검사 2분 43초.
+- 프론트 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. PostgreSQL 전체·benchmark 전체·브라우저 E2E·운영 지연/lock duration 실측은 미실행. OpenAPI/TypeScript 재생성과 Flyway는 필요하지 않다. 최종 검증 후 진행 문서만 변경했다.
+
+### 다음 범위
+
+- BE-027 완료. 요청한 다음 단계는 BE-028 직접 계보 조회와 BE-029 배치 profile의 적재 범위 정리다. 각각 별도 커밋으로 진행한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1386,7 +1406,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `75aac8cd` — BE-023 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀.
 - `f7f5cf90` — BE-024 미사용 주입/전략 옵션 제거·기존 실행 회귀.
 - `6c95e7a0` — BE-025 즉시 명령 전달·actor 정규화·지문/실행 호환 회귀.
-- BE-026 — `fix: return conflicts for reused payment keys`. 입금 키 충돌 오류·소비자/명세·금융 상태/경쟁 회귀를 별도 커밋으로 저장한다.
+- `6bb0bac9` — BE-026 입금 키 충돌 오류·소비자/명세·금융 상태/경쟁 회귀.
+- BE-027 — `perf: batch load auction write result histories`. 쓰기 결과 행 N+1·순서/접수 호환·query-count 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1420,5 +1441,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-023의 생성/수정 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀는 35차 범위다.
 - BE-024의 미사용 주입·전략 옵션 제거와 기존 실행 회귀 확인은 36차 범위다.
 - BE-025의 즉시 실행 명령 전달·actor 정규화와 지문/실행 호환 회귀는 37차 범위다.
-- BE-026의 수동 입금 키 충돌 오류 계약·소비자/명세·금융 상태/경쟁 회귀는 38차 범위다. 다음 변경은 BE-027의 경매 변경 응답 mapper N+1을 검토한다.
+- BE-026의 수동 입금 키 충돌 오류 계약·소비자/명세·금융 상태/경쟁 회귀는 38차 범위다. 다음 변경은 BE-028 직접 계보와 BE-029 배치 profile의 적재 범위를 검토한다.
+- BE-027의 쓰기 결과 행 N+1 제거와 조회/순서/접수 회귀는 39차 범위다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

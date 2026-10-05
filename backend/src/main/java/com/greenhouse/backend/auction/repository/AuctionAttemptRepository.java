@@ -12,9 +12,9 @@ public interface AuctionAttemptRepository extends JpaRepository<AuctionAttempt, 
   @Query(
       """
 			select distinct attempt from AuctionAttempt attempt
-			left join fetch attempt.resultLines
+			left join fetch attempt.resultLines line
 			where attempt.shipmentLot.id in :lotIds
-			order by attempt.shipmentLot.id asc, attempt.auctionDate asc, attempt.attemptNo asc
+			order by attempt.shipmentLot.id asc, attempt.auctionDate asc, attempt.attemptNo asc, line.id asc
 			""")
   List<AuctionAttempt> findAllWithResultLinesByLotIdIn(@Param("lotIds") Collection<Long> lotIds);
 }
