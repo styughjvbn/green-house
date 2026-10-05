@@ -11,15 +11,18 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Tag("work-benchmark")
+@Timeout(value = 15, unit = TimeUnit.MINUTES)
 class WorkOperationBenchmarkTest extends WorkE2ETestBase {
 
   private static final int OPERATION_COUNT = 100;

@@ -13,10 +13,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.LongStream;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.ConnectionCallback;
@@ -24,6 +26,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @Tag("work-benchmark")
 @Import(QueryShapeCapture.Configuration.class)
+@Timeout(value = 15, unit = TimeUnit.MINUTES)
 class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
 
   @Autowired JdbcTemplate jdbc;

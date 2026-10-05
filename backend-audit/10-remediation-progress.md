@@ -1632,6 +1632,16 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 검증: 집중 기본 4개 클래스 44건 통과; 관련 PostgreSQL 2개 클래스 4건 통과(역사/최신 upgrade 2, Mutation schema/과거 Entry 2); `git diff --check` 통과. 세 finding의 최종 전체 기본/frontend 검증은 55차 체크포인트에서 수행한다.
 - 범위: 생산 코드·migration 파일·API 계약은 바꾸지 않았다. 다른 fixture의 MIN/OFFSET·payload/seed 중복과 긴 lifecycle 전체 분해는 후속 정리다. 과거 upgrade의 고정 버전/정확 hash·API golden은 일반적인 brittle assertion으로 제거하지 않는다.
 
+## 54차 변경 — BE-040 공통 HTTP·병렬 future·JUnit 실행 상한
+
+- PG 공통 HTTP transport에 연결 10초/request 60초를 적용했다. IO 실패/timeout에는 method·path·설정 상한과 원인 예외를 남기고 body·query string은 기록하지 않는다. interrupt는 복원해 전파한다. 기존 status/body/사용자 header는 유지한다.
+- 공통 GET/POST뿐 아니라 직접 별도 client로 보내던 Farm PATCH 두 경로도 공통 transport로 이식했다. MockMvc의 static `patch`와 이름 충돌을 피하도록 HTTP helper는 `patchJson`으로 구분한다.
+- 실제 local HTTP 서버로 stalled response의 timeout/진단·본문 비노출과 PATCH/header/error response 보존을 검증한다. 서버/worker는 finally에서 해제한다.
+- 판매 전표 번호·Farm 기준정보 번호의 `invokeAll`을 60초로 제한하고 취소 여부·bounded future 결과를 확인한다. 전표 번호 executor는 shutdown 뒤 10초 이내 종료도 확인한다. 기존 번호 uniqueness/FK/rollback 검증을 유지한다.
+- 공통 PG test method는 SAME_THREAD 5분 JUnit 상한, 두 benchmark 클래스는 15분을 명시한다. `workE2eTest`의 timeout thread dump를 켰다. 과거 migration/benchmark를 60초의 일반 HTTP 상한으로 일괄 제한하지 않는다.
+- 검증: HTTP transport 기본 2건 통과. 관련 PG 4개 클래스 20건 통과(전표 번호 1, Farm 코드 5, 입고 취소/포트 10, Work 상태 보호 4); `git diff --check` 통과. 전체 기본/frontend·format은 55차 완료 체크포인트에서 실행한다.
+- 범위: test harness 변경이며 운영 timeout/SLA는 바꾸지 않았다. JUnit method 상한은 Spring context/container 기동·DB 서버 statement·JVM 종료의 강제 종료 보장이 아니다. 무응답 서버의 JDBC 취소나 모든 executor의 종료 정책까지 확대하지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1691,7 +1701,9 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - `d1abdf7e` — BE-038 `test: observe postgres conflicts by worker and blocker pid`. 실제 충돌 관측·양쪽 순서·무관 대기자 부정 회귀.
 
-- BE-039 — `test: decouple response ids dates and migration head assertions`. JSON path·고정 Clock·작은 농장 fixture·최신 upgrade 회귀.
+- `5ed1d575` — BE-039 `test: decouple response ids dates and migration head assertions`. JSON path·고정 Clock·작은 농장 fixture·최신 upgrade 회귀.
+
+- BE-040 — `test: bound postgres http requests and concurrent waits`. 공통 transport·future·JUnit 상한과 실제 stalled response 회귀.
 
 ## 남은 작업
 
@@ -1740,4 +1752,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-037의 핵심 Work 취소·경매 출하·입금 standalone 경계와 늦은 CHECK/전체 행 rollback은 51차 범위다. H2 전체의 wrapper 전환과 모든 쓰기 경로의 실패 위치 확대는 후속이다.
 - BE-038의 정확 worker/owner 잠금 관측·Work/입고 양쪽 순서·재전송 중첩과 부정 회귀는 52차 범위다. 전체 writer의 병렬 충돌, BE-039 fixture와 BE-040 전역 timeout 개선은 남는다.
 - BE-039의 대표 JSON parser·년생/농장 날짜·단건 farm fixture·역사/최신 migration 구분은 53차 범위다. 다른 fixture 중복과 lifecycle 분해는 점진 후속이다.
+- BE-040의 공통/별도 PATCH HTTP·번호 발급 future·PG method/benchmark 상한·timeout 진단은 54차 범위다. context 기동/서버 JDBC 강제 취소·모든 executor 종료 정책은 별도다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

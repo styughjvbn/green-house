@@ -138,6 +138,7 @@ tasks.register<Test>("workE2eTest") {
 		includeTags("work-e2e")
 	}
 	shouldRunAfter(tasks.named("test"))
+	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")
 }
 
 tasks.register<Test>("workBenchmark") {

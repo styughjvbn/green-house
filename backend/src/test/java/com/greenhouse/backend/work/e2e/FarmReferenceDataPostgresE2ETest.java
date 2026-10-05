@@ -103,8 +103,14 @@ class FarmReferenceDataPostgresE2ETest extends WorkE2ETestBase {
     try (var executor = Executors.newFixedThreadPool(2)) {
       var results =
           executor.invokeAll(
-              List.<Callable<String>>of(() -> action.apply(1), () -> action.apply(2)));
-      return List.of(results.get(0).get(), results.get(1).get());
+              List.<Callable<String>>of(() -> action.apply(1), () -> action.apply(2)),
+              60,
+              TimeUnit.SECONDS);
+      assertThat(results)
+          .as("Reference allocation completed within 60 seconds")
+          .allMatch(future -> !future.isCancelled());
+      return List.of(
+          results.get(0).get(1, TimeUnit.SECONDS), results.get(1).get(1, TimeUnit.SECONDS));
     }
   }
 

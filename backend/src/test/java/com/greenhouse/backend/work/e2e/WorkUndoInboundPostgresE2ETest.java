@@ -20,10 +20,6 @@ import com.greenhouse.backend.work.application.operation.InboundPottingPlanServi
 import com.greenhouse.backend.work.application.operation.InboundPottingVoidPort;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
 import java.math.BigDecimal;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDate;
@@ -55,8 +51,6 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
   @Autowired OrchidGroupCommandService groupCommands;
 
   @Autowired OrchidGroupCollectionService collections;
-
-  @org.springframework.boot.test.web.server.LocalServerPort int auditPort;
 
   private final LocalDate date = LocalDate.of(2026, 8, 20);
 
@@ -411,19 +405,13 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
         jdbc.queryForObject("select variety_id from orchid_groups where id = ?", Long.class, group);
     assertThat(Assertions.catchThrowable(() -> groupCommands.delete(group)))
         .isInstanceOf(ConflictException.class);
-    var request =
-        HttpRequest.newBuilder(
-                URI.create("http://localhost:" + auditPort + "/api/orchid-groups/" + group))
-            .header("Content-Type", "application/json")
-            .method(
-                "PATCH",
-                HttpRequest.BodyPublishers.ofString(
-                    "{\"varietyId\":"
-                        + variety
-                        + ",\"quantity\":60,\"potSize\":\"4치\",\"ageYear\":3,\"status\":\"생성 취소\",\"startPosition\":6,\"endPosition\":8}"))
-            .build();
-    var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-    assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
+    var response =
+        patchJson(
+            "/api/orchid-groups/" + group,
+            "{\"varietyId\":"
+                + variety
+                + ",\"quantity\":60,\"potSize\":\"4치\",\"ageYear\":3,\"status\":\"생성 취소\",\"startPosition\":6,\"endPosition\":8}");
+    assertThat(response.status()).as(response.body().toString()).isEqualTo(400);
     assertThat(
             jdbc.queryForObject(
                 "select quantity from orchid_groups where id = ?", Integer.class, group))

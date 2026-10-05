@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,11 +28,14 @@ class SalesSlipNumberPostgresE2ETest extends WorkE2ETestBase {
         tasks.add(() -> repository.nextDailySequence(saleDate));
       }
       List<Long> values =
-          executor.invokeAll(tasks).stream()
+          executor.invokeAll(tasks, 60, TimeUnit.SECONDS).stream()
               .map(
                   future -> {
                     try {
-                      return future.get();
+                      assertThat(future.isCancelled())
+                          .as("Daily sequence allocation exceeded 60 seconds")
+                          .isFalse();
+                      return future.get(1, TimeUnit.SECONDS);
                     } catch (Exception exception) {
                       throw new AssertionError(exception);
                     }
@@ -42,6 +46,9 @@ class SalesSlipNumberPostgresE2ETest extends WorkE2ETestBase {
       assertThat(values).containsExactly(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L);
     } finally {
       executor.shutdownNow();
+      assertThat(executor.awaitTermination(10, TimeUnit.SECONDS))
+          .as("Daily sequence workers terminated")
+          .isTrue();
     }
   }
 }
