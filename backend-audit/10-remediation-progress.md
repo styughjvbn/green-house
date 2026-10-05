@@ -4,6 +4,7 @@
 - 브랜치: `fix/backend-sales-reservation-consistency`
 - 시작 기준: `80106917232a671b5a489ad8e59d37b63a06dffe` (`develop`)
 - 우선순위 기준: [08 통합 findings](08-findings.md), [09 최종 평가](09-final-assessment.md)의 P0. 기존 감사 문서는 수정 전 판단의 근거로 보존한다.
+- 읽기 기준: 차수별 변경 기록은 당시의 구현·검증 이력이다. 현재 후속 작업과 보류 상태는 마지막 [남은 작업](#남은-작업)에서 확인한다.
 
 ## 1차 변경 — BE-001 판매 수정 예약 identity
 
@@ -1686,16 +1687,13 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 증적: XML `backend/build/test-results/workE2eTest/TEST-*.xml`, HTML `backend/build/reports/tests/workE2eTest/index.html`, 실행 로그 `/tmp/green-house-postgres-checkpoint.log`. 이 경로의 산출물은 로컬 검증 자료이며 버전 관리하지 않는다.
 - 일반 backend 141개 클래스·743건, frontend `npm run check`, `spotlessCheck`는 58차의 마지막 성공 결과를 유지한다. 이후 제품 코드 변경이 없고 이번 변경은 검증 기록뿐이므로 재실행하지 않았다. `git diff --check`는 이번 문서 변경에 실행했다. 별도 `workBenchmark`, 브라우저 E2E, 운영 DB 대사/validation·부하·배포 검증은 이번 실행에 포함하지 않았다.
 
-### 이어갈 작업과 필요한 입력
+전체 로컬 회귀 성공을 기존 운영 데이터의 정합성·과거 삭제 기록 복원이나 모든 writer의 무교착 증명으로 취급하지 않는다. 현재 후속 작업과 필요한 입력은 마지막 [남은 작업](#남은-작업)에서 관리한다.
 
-| 구분 | 대상 | 다음 작업 또는 조건 |
-| --- | --- | --- |
-| 로컬 측정 가능 | BE-036/042 | 한 정산의 결과 수·원장의 그룹/이력 수를 늘려 peak heap·GC·처리 시간과 transaction/lock 유지 시간을 측정한다. 기존 query-count/Entity 적재 검증과 별도로 비용을 확인한다. |
-| 로컬 조사 가능 | BE-032/034/035 | 남은 전체 목록·하위 이력·출하 선택지와 미측정 검색/상태/집계/FK 조회의 실제 적재량·계획을 조사한다. 응답 계약 변경은 측정 결과와 소비자 사용 범위를 확인한 뒤 별도 변경 단위로 진행한다. |
-| 정책 보류 | BE-009 | 일반 수정에 `RECONCILIATION`을 적용하는 변경과 수정 허용 범위의 정책 정리는 보류한다. 기존 Audit/Mutation·일반 수정과 실사/보정 gate를 유지한다. |
-| 운영 자료 필요 | BE-001~005/007/011/013 등 | 최신 백업을 복원한 격리 DB와 과거 요청 자료로 read-only 대사·호환 검증을 수행한다. 실제 위반 복구와 운영 constraint validation은 대상 자료·복구 정책·적용 절차 확인 후 별도 진행한다. |
+## 60차 문서 정리 — 현재 후속 작업과 완료 이력 분리
 
-전체 로컬 회귀 성공을 기존 운영 데이터의 정합성·과거 삭제 기록 복원이나 모든 writer의 무교착 증명으로 취급하지 않는다. 아래 finding별 남은 범위는 그대로 유지한다.
+- 59차 검증과 1~58차 구현 완료 근거를 반영해 마지막 목록을 다시 정리했다. 오래된 BE-015/018/019/038의 후속 문구와 완료 내역 반복을 제외하고 기술 후속·운영 검증·정책 보류/범위 판단·조건부 확장을 구분했다.
+- 기존 1~59차 기록은 당시 이력으로 보존하고 현재 후속 목록의 위치를 문서 처음과 59차에 연결했다. BE-009 사용자 보류는 유지하며 미측정 영역을 확인된 결함이나 신규 기능을 필수 잔여 구현으로 취급하지 않는다.
+- 문서만 변경했다. `git diff --check` 통과. 마지막 전체 PostgreSQL 780건 및 58차 일반 backend 743건/frontend 검증 이후 제품 변경이 없어 테스트·benchmark·OpenAPI 생성은 반복하지 않았다.
 
 ## 커밋 진행
 
@@ -1764,58 +1762,63 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `d5ad1753` — BE-042 `test: measure jdbc execution rows and work fan out`. JDBC counters·쓰기 commit/replay·fan-out benchmark와 영구 PG 회귀.
 - `c301dfb4` — BE-042 후속 `test: close measurement database without warning inspection`. 전체 DEBUG 환경의 H2 정리 회귀 수정.
 - `16f357d4` — BE-043 `docs: align mutation writers and work completion policies`. 단일 writer·취소 대상 terminal·완료 action 문서 일치.
-- BE-044 — `fix: distinguish settlement preferences from execution capabilities`. 저장값 보존·실행 capability·화면/생성 계약·PG 회귀.
+- `222e1d04` — BE-044 `fix: distinguish settlement preferences from execution capabilities`. 저장값 보존·실행 capability·화면/생성 계약·PG 회귀.
+- `275bd445` — `docs: record full postgres regression checkpoint`. 전체 PostgreSQL 780건·후속 작업/보류 상태 기록.
 
 ## 남은 작업
 
-- BE-001의 기존 운영 데이터 대사·복구는 별도 작업이다. 수정 코드가 기존 allocation/예약/이력을 자동 보정하지 않는다. 기존 read-only 대사로 영향 전표를 확인하고, 이력 보존 및 원장과 일치하는 복구 정책을 정해야 한다.
-- BE-002의 과거 삭제 이력은 코드 수정으로 복원되지 않는다. 운영 영향과 복원 가능한 백업·자료의 존재 여부는 확인하지 않았다.
-- BE-003의 과거 잘못된 금액·잔액·입금은 별도 대사·복구 대상이다. V35 적용만으로 운영 자료의 정합성이 입증되거나 기존 위반 행이 모두 검증되는 것은 아니다.
-- BE-004 수정 전 확정된 판매 불가 상태의 예약은 자동 해제하지 않았다. 운영 영향과 기존 출고 여부는 별도 대사·업무 판단 대상이다.
-- BE-005의 기존 중복 결과·반환 및 정산 영향은 별도 대사 대상이다. 기존 기록을 중복으로 추정해 삭제하지 않는다.
-- BE-006의 예정 수정 범위는 완료했다. 판매 교차 수정, Farm 단건·일괄 수정, Work 구조 기록과 Farm 경쟁, 일반 품종별 계획·폐기/Farm·구조 기록·겹치는 계획 경쟁을 검증했다. 경로별 전체 잠금 순서와 기존 대상 변경 거절 계약을 유지한다. 모든 writer·FK·내부 fence의 무교착을 증명한 것은 아니며 새 writer에는 같은 경로별 순서와 경쟁 회귀가 필요하다.
-- BE-007의 신규 수량 이력과 경매 시도·반환 확인 이후 직접 보정 제한을 완료했다. 과거 누락된 이력과 수량 불일치는 자동 복원하지 않았으며 운영 데이터 대사가 남는다. 결과 이후의 보상·정정 이벤트는 별도 업무 계약과 구현이 필요한 후속 범위다.
-- BE-008의 키가 있는 판매·입고·일반 Work 계획/완료 기록 생성 재전송 방어를 완료 대상으로 삼는다. 기존 자료의 중복 대사와 키 없는 연동의 재시도 정책은 남는다. 입고 포트 계획·폐기 기록 같은 별도 생성 경로는 이번 일반 생성 계약에 포함하지 않으며 필요 시 업무별 재시도 의미부터 정의한다. 후속 작업은 감사 우선순위에 따른 정책 일치·감사 완전성·DB 제약 상태·조회 비용 보강이다.
-- BE-009는 일반 metadata·수량·상태·위치 수정의 허용 범위와 보정/실사 제한의 정책 일치가 남는다. 일반 수정의 `RECONCILIATION` 적용과 관련 정책 변경은 사용자 요청으로 보류한다. 기존 현장 수정 기능과 Audit/Mutation 기록은 유지한다.
-- BE-010의 전표 최초 생성과 난 묶음 metadata 누락은 14차 범위다. 과거 감사의 복원·입고/inline 품종 등의 필수 생성 감사 범위는 별도 판단이며, 자체 업무 이력을 일반 감사 부재만으로 무기록으로 취급하지 않는다.
-- BE-011의 운영 대사·제약별 validation 도구와 rehearsal 회귀는 15차 범위다. 운영 DB의 `convalidated`, 위반 행과 교차 불변식은 조회하지 않았다. 운영 적용·승인된 복구·실제 validation 완료와 그 증적이 남으며 이번 커밋을 운영 데이터 검증 완료로 취급하지 않는다.
-- BE-012 포트 입력 타입 유지와 JSON·지문 호환/rollback은 16차, 고정 결과 타입 유지와 JSON 저장 회귀는 17차, 대상·상세·계보·수량의 공통 효과 reader와 형식별 정책 보존은 18차 범위다. 공통 명령 Object/구형 구조 변경·현장 동기화 HTTP DTO 경계 이식과 receipt 호환은 19차 범위다. 자유 JSON·보정 이벤트 해석은 남으며, BE-013의 실제 저장 version 전환과 운영 과거 요청 corpus 검증도 후속 범위다.
-- BE-013의 Mutation 중첩 v1 지문 고정·필드 변경 검출·snapshot/구형 지문 replay·배포 기준은 20차 범위다. 실제 format version 전환과 Work/Sales 등 다른 접수 계약·운영 과거 요청 corpus 검증은 남는다.
-- BE-013의 Sales 생성과 일반 Work 3생성 경로 v1 지문·필드 변경 검출·구형 접수 replay는 21차 범위다. 그 밖의 명령/응답과 실제 version 전환·운영 corpus 검증은 남는다.
-- BE-014의 저장 구조 handler와 계보 분류 계약·strategy 관계 재사용·새 결과 검사·전체 흐름 회귀는 22차 범위다. 신규 유형의 미래 확장 회귀와 운영 unknown code 대사는 별도다.
-- BE-015의 구조 변경 기록 계획/시작/실행의 중간 상세 조회 제거와 단건·배치 query-count·rollback/replay 회귀는 23차 범위다. 포트는 24차 범위로 이어졌으며 연계 폐기·Sales·정산 경로와 운영 지연 측정은 남는다.
-- BE-015의 포트 신규/활성 계획·단독 실행/기록의 중간 상세/중복 완료 제거와 query-count·snapshot·완료 판정·rollback/replay 회귀는 24차 범위다.
-- BE-015의 연계/독립 폐기·품종별 일반 계획 중간 상세 제거와 query-count·수량 배분·공동 취소/replay·rollback 회귀는 25차 범위다.
-- BE-015의 판매 수정·상태 전환·입금의 소유 배분/snapshot N+1과 수정 후 재조회 제거는 26차 범위다.
-- BE-015의 정산 원본 Entity graph 제거·500 ID 분할과 snapshot/query-count/rollback/replay 회귀는 27차 범위다. Farm 재잠금·snapshot 시점·최종 현재 상태와 정산의 금융/표시 별도 조회는 유지한다. 운영 실측·큰 초기화의 전체 적재/transaction·index는 별도 후속 범위다.
-- BE-016의 구조 결과 생성 DTO 경유 제거와 속성·순서·상속 회귀는 28차 범위다.
-- BE-017의 취소 검사·수집·종류별 처리·응답 단계 정리와 차단 우선순위/잠금 재검사/snapshot 회귀는 29차 범위다.
-- BE-018의 그래프 조립 상태·종류별 생성과 상한/순서/JSON 회귀는 30차 범위다. 내부 조회량과 truncation 의미 개선은 BE-034에 남긴다.
-- BE-019의 현재 소비자 Entity/helper 공개 경계 정리와 architecture/입력 호환 회귀는 31차 범위다. 새 비 HTTP 채널의 검증·주체·인가·감사 context는 채널 도입 시 필요한 조건부 범위다. Work 보정 조율 소유권은 32차 BE-020에서 이어진다.
-- BE-020의 보정 callback 제거·Work 날짜/감사 조율과 Farm 준비/적용·rollback/동시성 회귀는 32차 범위다.
-- BE-021의 Farm Receipt helper 의존 제거·입고 포트 취소 업무 API·저장 호환/rollback/architecture 회귀는 33차 범위다.
-- BE-022의 전표 입금 감사 소유권·내부 helper 공개 범위 정리·감사/rollback/architecture 회귀는 34차 범위다.
-- BE-023의 생성/수정 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀는 35차 범위다.
-- BE-024의 미사용 주입·전략 옵션 제거와 기존 실행 회귀 확인은 36차 범위다.
-- BE-025의 즉시 실행 명령 전달·actor 정규화와 지문/실행 호환 회귀는 37차 범위다.
-- BE-026의 수동 입금 키 충돌 오류 계약·소비자/명세·금융 상태/경쟁 회귀는 38차 범위다. BE-027~029의 조회/적재 개선은 39~42차에 이어서 기록했다.
-- BE-027의 쓰기 결과 행 N+1 제거와 조회/순서/접수 회귀는 39차 범위다.
-- BE-028의 직접 계보 현재 참조 일괄 로딩·순서/연령/query-count 회귀는 40차 범위다.
-- BE-029의 PostgreSQL 동일 키 규칙 교체 오류/rollback 회귀는 41차, profile 전용 graph와 SQL·Entity 적재 회귀는 42차 범위다. BE-030의 Work summary 조회 개선은 43차에 기록한다.
-- BE-030의 summary target/child Entity 제거·입고/관계/receipt/진행 회귀와 기존 benchmark 적재 gate는 43차 범위다. BE-031/032는 44차 이후에 기록한다.
-- BE-031의 품종 DB 집계/최신일·자동 그룹 scalar stream/현재 연령과 관련 적재 회귀는 44차 범위다. BE-032 개선은 45차에 이어서 기록했다.
-- BE-032의 다중 검색 scan·배열 ID 바인딩·500개 참조 입력과 대량/검색 의미/페이지/이력 회귀는 45차 범위다. 전체 ID 메모리·호환 응답 상한·운영 부하와 나머지 검색 정책은 별도 후속 범위다.
-- BE-033의 배치 placement 조회·Entity/flush 증폭과 중첩 비교 개선은 46차 범위다. 운영 lock 대기·처리량 검증은 별도다.
-- BE-034의 캘린더/호환 작업 이력과 graph 내부 참조·관계 상한/partial 의미는 47차 범위다. 전체 목록·하위 이력 분리·출하 선택지 계약은 남는다.
-- BE-035의 실제 참조/날짜/계보 계획과 index·MIN 반복 개선은 48차 범위다. 미측정 검색/상태/집계/FK·운영 계획과 index 쓰기·배포 비용 검증은 남는다.
-- BE-036의 정산별 초기화 commit·유한 scan·정확 key 조회·날짜 index는 49차 범위다. 한 정산의 크기와 운영 부하 측정은 남는다.
-- BE-036의 원장 대사 scalar 현재 그룹·Entry cursor·일관된 snapshot과 이력/기존 fingerprint 회귀는 50차 범위다. 전체 그룹/오류·업무 참조/보정 누적·fingerprint 직렬화·장기 read transaction과 운영 heap/GC 검증은 남는다.
-- BE-037의 핵심 Work 취소·경매 출하·입금 standalone 경계와 늦은 CHECK/전체 행 rollback은 51차 범위다. H2 전체의 wrapper 전환과 모든 쓰기 경로의 실패 위치 확대는 후속이다.
-- BE-038의 정확 worker/owner 잠금 관측·Work/입고 양쪽 순서·재전송 중첩과 부정 회귀는 52차 범위다. 전체 writer의 병렬 충돌, BE-039 fixture와 BE-040 전역 timeout 개선은 남는다.
-- BE-039의 대표 JSON parser·년생/농장 날짜·단건 farm fixture·역사/최신 migration 구분은 53차 범위다. 다른 fixture 중복과 lifecycle 분해는 점진 후속이다.
-- BE-040의 공통/별도 PATCH HTTP·번호 발급 future·PG method/benchmark 상한·timeout 진단은 54차 범위다. context 기동/서버 JDBC 강제 취소·모든 executor 종료 정책은 별도다.
-- BE-041의 외부 application member 승인·generic 값 경계·compiled 새 mutator/참조/field write·query root 표기 우회는 55차 범위다. SQL parser·reflection/동적/alias SQL·새 원자 writer와 관련 객체 변화 검토는 남는다.
-- BE-042의 JDBC 실행/행·Work 고정 root의 target/history fan-out과 실제 commit/replay 측정은 56차 범위다. driver 내부 round trip·lock 보유 시간·정산/원장 peak heap·운영 부하 실험은 후속이다.
-- BE-043의 제거된 writer 경로·대상 완료 terminal·진행률과 취소 capability 문서 일치는 57차 범위다. BE-009의 수정 권한 정책은 별도다.
-- BE-044의 저장된 선호값과 실행 지원 capability·화면/생성 API 계약 구분은 58차 범위다. 신규 묶음 정산·자동화·입금 분배는 별도 승인된 범위다.
-- BE-001~044의 이번 수정 범위와 검증은 위 변경 기록에 남겼다. finding 번호의 수정 진행을 운영 데이터 정합성 입증이나 모든 후속 범위 완료로 취급하지 않는다. 과거 데이터 대사·복구·제약 validation, 남은 정책 결정과 운영 성능/heap/lock 실측은 각 항목에 기록한 대로 남는다.
+기준: 59차 전체 PostgreSQL 검증까지 반영한 현재 후속 목록이다. 1~59차 기록의 “남은 범위”는 각 변경 당시의 상태이며 이후 차수에서 해결한 내용을 포함한다. 완료된 구현은 위 변경 기록에 보존하고 여기에서는 중복 집계하지 않는다.
+
+아래는 **바로 조사·보강할 기술 작업 5묶음**, **운영 자료·환경이 필요한 검증 4묶음**, **명시적 보류/범위 판단 3건**으로 구분한다. 묶음 수는 미해결 버그 수·필요 커밋 수·일정 추정이 아니다. 미래 확장은 별도로 두며 현재 필수 개선량에 포함하지 않는다.
+
+### 1. 바로 조사·보강할 기술 작업
+
+| 작업 | 관련 finding | 남은 범위와 완료 기준 |
+| --- | --- | --- |
+| 정산 초기화·원장 대사의 대량 처리 측정 | BE-015/033/036/042 | 정산 한 건의 결과 수, 원장의 그룹·이력·오류·업무 참조 수를 늘려 peak heap·GC·처리 시간·transaction/lock 유지 시간을 기록한다. 49·50차의 정산별 commit·Entry cursor 개선은 유지한다. 재현 가능한 측정과 확인된 병목별 개선·회귀 증적을 남긴다. |
+| 남은 목록·하위 이력·선택지의 조회 경계 | BE-032/034 | 전체 그룹·sellable·derived member·collection/직접 계보, Work/Inbound/lot/Mutation 상세의 하위 이력, Sales 출하 선택지를 endpoint·소비자별로 조사한다. 전체 matching ID 메모리·응답량·반복 조회를 확인하고 pagination/검색/호환 상한 계약과 필요한 회귀를 정한다. 전체 farm map의 의도된 배치 계약에 임의 cut을 넣지 않는다. |
+| 미측정 쿼리와 index 비용 검증 | BE-032/035 | contains/OR/concat·희귀 상태·count/집계·복합 조건·deep offset·generic prepared plan·미측정 FK 등의 실제 Repository 계획을 확인한다. 48·49차에서 검증한 참조/날짜/계보 index를 다시 미완료로 세지 않는다. 결과·행/loop/buffer·쓰기 비용을 비교해 필요한 개선만 채택한다. |
+| 기존 접수·응답의 저장 계약 보호 범위 확대 | BE-013 | Mutation 및 Sales/일반 Work 생성의 v1 고정은 완료했다. 그 밖의 Work 실행·구조 기록·포트·취소·보정, Farm 입고·Auction 접수와 저장 응답에서 추가 보호가 필요한 shape/hash를 식별한다. 기존 golden·필드 변경 guard·구형 replay로 보호하며 과거 hash나 응답을 재작성하지 않는다. 신규 version 전환 자체는 아래 조건부 작업이다. |
+| 핵심 경로의 선택적 회귀·해석 경계 보강 | BE-012/037/038/039 | 독립 transaction의 후행 실패·실제 잠금 충돌 관측이 빠진 중요한 writer와 보정 이벤트 수량 수지 해석을 선별한다. 필요한 PG/호환 회귀와 해당 경로의 fixture 정리를 추가한다. 모든 H2 시험의 wrapper 전환·모든 lifecycle 분해·자유 JSON의 일괄 타입화를 완료 목표로 삼지 않는다. |
+
+우선 다음 작업은 **정산/원장 대량 처리 측정**이다. 목록·쿼리 개선은 비용과 소비자 계약을 확인한 뒤 진행하고, 저장 계약 보호는 해당 필드 변경 전에 보강한다. 마지막 회귀·fixture 항목은 위험이 큰 경로부터 점진적으로 수행한다. 미측정 영역 전체에 성능 결함이 확인됐다는 의미는 아니다.
+
+### 2. 운영 자료·환경이 필요한 검증
+
+| 작업 | 관련 finding | 필요한 입력과 완료 기준 |
+| --- | --- | --- |
+| 과거 데이터 대사·조건부 복구 | BE-001~005/007/008/010/014 | 최신 백업을 복원한 격리 DB에서 예약/allocation·금액/잔액/입금·경매 결과/반환·원장·누락된 이력/감사·unknown 저장 code·중복 후보를 대사한다. 영향 건수와 업무 사실을 확인하고 필요한 경우에만 복구 정책·이력 보존·재대사 증적을 남긴다. 과거 삭제 기록은 복원 가능한 백업/자료가 있어야 복구할 수 있다. |
+| 기존 CHECK의 실제 validation | BE-003/011 | 15차 도구와 배포 절차는 완료했다. 대상 DB의 설치 정의·위반 행·convalidated를 확인하고, 필요한 복구와 재대사 후 제약별 validation 및 최종 상태를 기록한다. Flyway 성공을 과거 행 검증 완료로 취급하지 않는다. |
+| 운영 과거 요청·저장 JSON의 호환 대사 | BE-013 | 실제 과거 요청 자료와 receipt/Mutation/응답 자료를 확보해 현재 reader·fingerprint·replay와 비교한다. 합성 golden은 실제 운영 corpus를 대체하지 않는다. 원문을 추정하거나 현재 Entity로 과거 snapshot을 만들지 않는다. |
+| 운영 부하·index 배포 비용 확인 | BE-015/033/035/036/042 | 운영 규모·분포·PostgreSQL 통계·동시 요청 조건에서 지연/처리량·heap/GC·잠금 대기/보유·긴 snapshot의 vacuum 영향·index 쓰기/WAL/HOT/build 공간·배포 시간을 확인한다. 로컬 측정과 실제 운영 적용 결과를 구분해 증적을 남긴다. |
+
+기존 자료에 실제 위반·중복·누락이 있다고 확정한 상태는 아니다. read-only 대사 결과로 복구 필요 여부를 판단하며, 운영 DB 수정·validation·배포는 대상 자료와 적용 절차를 확인한 뒤 별도 변경 단위로 수행한다.
+
+### 3. 정책 보류와 적용 범위 판단
+
+| 상태 | 관련 finding | 남은 판단 |
+| --- | --- | --- |
+| 사용자 요청으로 보류 | BE-009 | 일반 수정의 허용 범위와 `RECONCILIATION` 분류·Work 생성 여부. 기존 일반 수정의 Audit/Mutation과 실사/보정 gate를 유지한다. 관련 코드·API·기능 활성화는 변경하지 않는다. |
+| 추가 적용 범위 판단 | BE-008 | 일반 생성에 포함하지 않은 입고 포트 계획·폐기 기록 등과 키 없는 연동에 재시도 방어가 필요한지, 같은 입력의 새 업무와 replay를 어떻게 구별할지 정한다. 현재 키 기반 Sales·입고·일반 Work 생성은 구현 완료다. |
+| 추가 감사 범위 판단 | BE-010 | 입고·inline 신규 품종 등에 일반 AuditEvent가 추가로 필요한지 판단한다. 기존 WorkEffect·Mutation·Auction 자체 이력을 먼저 확인하며 업무 원장이 있는 경로를 일반 감사 부재만으로 무기록으로 취급하지 않는다. 전표 생성·묶음 metadata 감사는 구현 완료다. |
+
+뒤의 두 항목은 범위 판단이 필요한 사항이며 사용자가 보류한 BE-009와 구분한다. 모든 생성 경로에 멱등 키나 일반 감사 이벤트를 일괄 추가하지 않는다.
+
+### 4. 해당 변경이 생길 때 수행할 조건부 작업
+
+- **새 영속 필드/형식 도입 — BE-013:** 실제 version dispatcher·upgrade, absent/null/default 의미, reader-first 배포, 구버전 writer 병행·rollback 시험. 현재 형식을 바꾸지 않는 동안 신규 형식 migration을 만들 필요는 없다.
+- **새 Work 유형·비 HTTP 채널 도입 — BE-014/019:** 새 저장 이름·strategy·계보·취소/replay의 전체 흐름 회귀와 채널별 검증·주체·인가·감사 context. 미래 유형·채널을 미리 구현하지 않는다.
+- **새 보상·정산 기능 도입 — BE-007/044:** 경매 결과/반환 이후 정정·보상 이벤트, 월간 정산·자동화·입금 분배·예치금. 별도 기능 범위와 업무 계약을 정한 후 진행한다.
+- **테스트/architecture gate 밖의 실제 문제가 확인될 때 — BE-039/040/041/042:** 나머지 fixture 중복·긴 lifecycle 정리, context/JDBC 강제 종료·executor 종료 정책, 동적/alias SQL·reflection·새 원자 writer 검사, driver 내부 round trip 계측을 필요 범위에서 보강한다. 완전한 SQL parser나 모든 writer의 무교착 증명을 독립적인 필수 구현 목표로 두지 않는다.
+
+### 5. 완료되어 현재 미완료 목록에서 제외한 내용
+
+| 이전 목록의 오래된 후속 문구 | 완료 근거 |
+| --- | --- |
+| BE-015 연계 폐기·Sales·정산 경로의 조회 개선이 남는다는 문구 | 25~27차에서 구현·회귀 완료. 운영 성능은 위 기술 측정/운영 검증에만 남긴다. |
+| BE-018 그래프 내부 조회량·truncation과 계보 MIN 반복이 남는다는 문구 | 47차 조회 상한/partial, 48차 계보 MIN 계획 개선 완료. |
+| BE-019 Work 보정 조율이 후속이라는 문구 | 32차 BE-020에서 소유권·rollback/동시성 보강 완료. |
+| BE-038 fixture·HTTP/future timeout 개선이 남는다는 문구 | 53차 BE-039, 54차 BE-040에서 해당 범위 완료. |
+| 이후 차수의 “전체 PostgreSQL 미실행”을 현재 상태로 읽는 경우 | 59차 전체 76개 클래스·780건 통과, 실패·오류·건너뜀 0건. |
+
+그 밖의 완료된 변경 목적은 1~58차 기록에서 확인한다. 새 writer의 잠금 순서·snapshot 보존·호환 검증 같은 상시 구현 규칙은 별도 미완료 작업으로 세지 않는다. 구현 범위 완료, 실제 운영 자료 검증, 미래 기능 확장을 서로 구분하며 BE-001~044 전체가 운영 검증까지 종료됐다고 판정하지 않는다.
