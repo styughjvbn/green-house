@@ -1695,6 +1695,16 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 기존 1~59차 기록은 당시 이력으로 보존하고 현재 후속 목록의 위치를 문서 처음과 59차에 연결했다. BE-009 사용자 보류는 유지하며 미측정 영역을 확인된 결함이나 신규 기능을 필수 잔여 구현으로 취급하지 않는다.
 - 문서만 변경했다. `git diff --check` 통과. 마지막 전체 PostgreSQL 780건 및 58차 일반 backend 743건/frontend 검증 이후 제품 변경이 없어 테스트·benchmark·OpenAPI 생성은 반복하지 않았다.
 
+## 61차 변경 — 정산·원장 대량 측정 도구와 결과 전달 경로
+
+- 사용자 환경에서 오래 걸리는 측정을 실행하고 결과만 전달할 수 있도록 `domainBenchmark` task와 `scripts/performance/run-domain-benchmark.py`를 추가했다. PostgreSQL 18 Testcontainers의 새 격리 DB와 실행별 고유 디렉터리를 사용하며, 파괴적 fixture 초기화 전에 연결 URL을 확인한다. 제품 코드·migration·API·일반 수정/실사/보정 gate는 변경하지 않았다.
+- 정산 초기화/재실행과 원장 정상/긴 단일 chain/Work 참조/오류 누적을 smoke·standard·large profile로 나눴다. sample마다 fixture를 새로 준비하고 실제 application proxy를 호출한다. 정산 수·line·금액·무변경 replay와 원장 Entry 수·ready·오류 종류/수·fingerprint를 검증한 결과만 성공으로 기록한다. 원장은 수량 0의 `BASELINE_PREPARING` 합성 자료이며 ACTIVE 전환이나 Work 보정 writer 실행을 측정하지 않는다.
+- JSON에 처리 시간, 10ms 간격의 sampled heap·측정 스레드 할당량·GC, JDBC 실행/반환 행·Hibernate 적재, 관측 transaction/row-lock 구간과 실행 환경을 함께 저장한다. transaction은 첫 SQL부터 JDBC 종료까지이며 row-lock 구간은 명시적 locking SQL 반환부터 종료까지다. 서버의 정확한 lock hold/wait·process RSS·운영 p95를 측정한 것으로 해석하지 않는다.
+- runner는 종료 코드뿐 아니라 report 설정·scenario/sample 수·개별 성공 상태를 확인한다. 실패·중단의 부분 결과를 보존하고 이전 성공 파일 재사용을 막는다. 일반 `test`와 기존 PostgreSQL 회귀/benchmark, 기본 CI에서는 대량 측정을 실행하지 않는다. 실행 명령·fixture 크기·결과 전달·관측 한계는 [측정 가이드](12-domain-performance-measurement.md)와 배포 문서에 반영했다.
+- 집중 검증: JDBC transaction/실제 H2 locking SQL·rollback·미종료와 heap sampler의 새 Java 3건, runner 완료/누락/실패/중복/설정·이전 성공 재사용 방어 Python 3건 통과. PostgreSQL smoke는 warmup 1회·sample 2회·heap 1GiB로 **5개 scenario·14개 측정 sample 성공**, 전체 실행 약 40초였다. 미종료/관측 없이 닫힌 transaction은 0건이다. 결과는 `backend/build/domain-benchmark/20261005T121717Z-2bccac3d/result.json`에 보존한다.
+- 기능 단위 검증: `./gradlew --init-script /tmp/green-house-be034-test-heap.gradle test spotlessCheck` **143개 클래스·746건 성공**, 실패·오류·건너뜀 0건. 기존 임시 검증 설정으로 일반 Test heap을 1GiB로 사용했다. frontend `npm run check`, Python runner 3건 및 `git diff --check` 통과. 제품 DB 경계 변경이 없어 전체 `workE2eTest` 780건을 다시 실행하지 않았으며 새 측정 경로는 실제 PostgreSQL smoke로 확인했다.
+- **standard·large 대량 측정은 사용자 실행과 결과 분석 대기다.** 도구 준비/smoke 성공으로 BE-015/033/036/042의 대량 성능·병목 개선이나 운영 부하 검증을 완료 처리하지 않는다. BE-009 보류는 유지한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1764,10 +1774,11 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `16f357d4` — BE-043 `docs: align mutation writers and work completion policies`. 단일 writer·취소 대상 terminal·완료 action 문서 일치.
 - `222e1d04` — BE-044 `fix: distinguish settlement preferences from execution capabilities`. 저장값 보존·실행 capability·화면/생성 계약·PG 회귀.
 - `275bd445` — `docs: record full postgres regression checkpoint`. 전체 PostgreSQL 780건·후속 작업/보류 상태 기록.
+- `7329edc6` — `docs: separate remaining audit work from completed changes`. 현재 후속 목록과 완료 이력 분리.
 
 ## 남은 작업
 
-기준: 59차 전체 PostgreSQL 검증까지 반영한 현재 후속 목록이다. 1~59차 기록의 “남은 범위”는 각 변경 당시의 상태이며 이후 차수에서 해결한 내용을 포함한다. 완료된 구현은 위 변경 기록에 보존하고 여기에서는 중복 집계하지 않는다.
+기준: 61차 측정 도구 준비와 59차 전체 PostgreSQL 검증을 반영한 현재 후속 목록이다. 앞선 변경 기록의 “남은 범위”는 각 변경 당시의 상태이며 이후 차수에서 해결한 내용을 포함한다. 완료된 구현은 위 변경 기록에 보존하고 여기에서는 중복 집계하지 않는다.
 
 아래는 **바로 조사·보강할 기술 작업 5묶음**, **운영 자료·환경이 필요한 검증 4묶음**, **명시적 보류/범위 판단 3건**으로 구분한다. 묶음 수는 미해결 버그 수·필요 커밋 수·일정 추정이 아니다. 미래 확장은 별도로 두며 현재 필수 개선량에 포함하지 않는다.
 
@@ -1775,13 +1786,13 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 | 작업 | 관련 finding | 남은 범위와 완료 기준 |
 | --- | --- | --- |
-| 정산 초기화·원장 대사의 대량 처리 측정 | BE-015/033/036/042 | 정산 한 건의 결과 수, 원장의 그룹·이력·오류·업무 참조 수를 늘려 peak heap·GC·처리 시간·transaction/lock 유지 시간을 기록한다. 49·50차의 정산별 commit·Entry cursor 개선은 유지한다. 재현 가능한 측정과 확인된 병목별 개선·회귀 증적을 남긴다. |
+| 정산 초기화·원장 대사의 대량 처리 측정 | BE-015/033/036/042 | 61차에서 실행 도구·JSON 전달·PostgreSQL smoke 검증을 완료했다. 사용자 환경의 standard/large 결과를 받아 정산 한 건의 결과 수, 원장의 그룹·이력·오류·업무 참조 수에 따른 sampled heap·GC·처리 시간·transaction/lock 관측 구간을 분석한다. 49·50차의 정산별 commit·Entry cursor 개선은 유지하고 확인된 병목별 개선·회귀 증적을 남긴다. |
 | 남은 목록·하위 이력·선택지의 조회 경계 | BE-032/034 | 전체 그룹·sellable·derived member·collection/직접 계보, Work/Inbound/lot/Mutation 상세의 하위 이력, Sales 출하 선택지를 endpoint·소비자별로 조사한다. 전체 matching ID 메모리·응답량·반복 조회를 확인하고 pagination/검색/호환 상한 계약과 필요한 회귀를 정한다. 전체 farm map의 의도된 배치 계약에 임의 cut을 넣지 않는다. |
 | 미측정 쿼리와 index 비용 검증 | BE-032/035 | contains/OR/concat·희귀 상태·count/집계·복합 조건·deep offset·generic prepared plan·미측정 FK 등의 실제 Repository 계획을 확인한다. 48·49차에서 검증한 참조/날짜/계보 index를 다시 미완료로 세지 않는다. 결과·행/loop/buffer·쓰기 비용을 비교해 필요한 개선만 채택한다. |
 | 기존 접수·응답의 저장 계약 보호 범위 확대 | BE-013 | Mutation 및 Sales/일반 Work 생성의 v1 고정은 완료했다. 그 밖의 Work 실행·구조 기록·포트·취소·보정, Farm 입고·Auction 접수와 저장 응답에서 추가 보호가 필요한 shape/hash를 식별한다. 기존 golden·필드 변경 guard·구형 replay로 보호하며 과거 hash나 응답을 재작성하지 않는다. 신규 version 전환 자체는 아래 조건부 작업이다. |
 | 핵심 경로의 선택적 회귀·해석 경계 보강 | BE-012/037/038/039 | 독립 transaction의 후행 실패·실제 잠금 충돌 관측이 빠진 중요한 writer와 보정 이벤트 수량 수지 해석을 선별한다. 필요한 PG/호환 회귀와 해당 경로의 fixture 정리를 추가한다. 모든 H2 시험의 wrapper 전환·모든 lifecycle 분해·자유 JSON의 일괄 타입화를 완료 목표로 삼지 않는다. |
 
-우선 다음 작업은 **정산/원장 대량 처리 측정**이다. 목록·쿼리 개선은 비용과 소비자 계약을 확인한 뒤 진행하고, 저장 계약 보호는 해당 필드 변경 전에 보강한다. 마지막 회귀·fixture 항목은 위험이 큰 경로부터 점진적으로 수행한다. 미측정 영역 전체에 성능 결함이 확인됐다는 의미는 아니다.
+정산/원장 대량 처리 측정은 **사용자 실행 결과를 받아 분석하는 단계**다. 결과를 기다리는 동안 목록·쿼리 개선은 비용과 소비자 계약을 확인한 뒤 진행할 수 있고, 저장 계약 보호는 해당 필드 변경 전에 보강한다. 마지막 회귀·fixture 항목은 위험이 큰 경로부터 점진적으로 수행한다. 미측정 영역 전체에 성능 결함이 확인됐다는 의미는 아니다.
 
 ### 2. 운영 자료·환경이 필요한 검증
 

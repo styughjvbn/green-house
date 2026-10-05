@@ -918,6 +918,21 @@ Playwright 실행을 순서대로 수행한다. 결과는
 않는다. Chromium headed 모드와 Playwright Inspector를 사용하며, 축소된 반복 횟수로
 디버깅한다.
 
+### 정산·원장 대량 처리 측정
+
+Docker와 JDK 21, Python 3가 있는 환경에서 프로젝트 루트의 다음 명령을 실행한다.
+
+```bash
+python3 scripts/performance/run-domain-benchmark.py --profile standard
+```
+
+실행마다 Testcontainers의 격리 PostgreSQL에 합성 자료를 만들고
+`backend/build/domain-benchmark/<실행 ID>/result.json`에 환경·처리 시간·메모리/GC·JDBC·transaction/잠금 관측을 저장한다.
+결과 파일을 전달해 분석을 이어갈 수 있다. 먼저 환경 확인만 하려면 `--profile smoke --warmup 0 --samples 1 --heap 1g`를 사용한다.
+profile별 데이터 크기, 실패/중단 결과와 관측 한계는
+[정산·원장 측정 가이드](../backend-audit/12-domain-performance-measurement.md)를 따른다.
+이 대량 측정은 기본 CI에 추가하지 않으며 실제 운영 DB 대사·validation을 대체하지 않는다.
+
 ## 9. CI 검증
 
 `.github/workflows/verify.yml`에서 프론트 format·API 타입·테스트·lint·build, 기본 백엔드 검사·패키징, PostgreSQL 회귀·벤치마크, API 계약 drift를 별도 job으로 실행한다. 각 검사는 독립 단계로 끝까지 실행하고 결과를 Actions Summary에 표로 기록한다. 기본 백엔드 검사는 Java 포맷과 import 순서, 테스트 비활성화 방지 검사도 포함한다.

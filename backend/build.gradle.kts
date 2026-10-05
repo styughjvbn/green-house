@@ -72,7 +72,7 @@ tasks.withType<Test> {
 
 tasks.named<Test>("test") {
 	useJUnitPlatform {
-		excludeTags("work-e2e", "work-benchmark")
+		excludeTags("work-e2e", "work-benchmark", "domain-benchmark")
 	}
 }
 
@@ -155,4 +155,28 @@ tasks.register<Test>("workBenchmark") {
 		providers.gradleProperty("workBenchmarkEnforce").orElse("false").get()
 	)
 	shouldRunAfter(tasks.named("workE2eTest"))
+}
+
+tasks.register<Test>("domainBenchmark") {
+	group = "verification"
+	description = "Measures settlement rebuild and ledger reconciliation in an isolated PostgreSQL database."
+	testClassesDirs = sourceSets["test"].output.classesDirs
+	classpath = sourceSets["test"].runtimeClasspath
+	useJUnitPlatform { includeTags("domain-benchmark") }
+	maxParallelForks = 1
+	maxHeapSize = providers.gradleProperty("domainBenchmarkHeap").orElse("2g").get()
+	for ((key, fallback) in mapOf(
+		"profile" to "standard", "scenario" to "all", "samples" to "3", "warmup" to "1"
+	)) {
+		val value = providers.gradleProperty("domainBenchmark.$key").orElse(fallback)
+		systemProperty("domainBenchmark.$key", value.get())
+		inputs.property(key, value)
+	}
+	val reportDirectory = providers.gradleProperty("domainBenchmark.outputDir")
+		.orElse(layout.buildDirectory.dir("domain-benchmark/direct").map { it.asFile.absolutePath })
+	systemProperty("domainBenchmark.outputDir", reportDirectory.get())
+	outputs.dir(reportDirectory)
+	outputs.upToDateWhen { false }
+	testLogging.showStandardStreams = true
+	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")
 }
