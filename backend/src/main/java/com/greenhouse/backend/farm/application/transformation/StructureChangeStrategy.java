@@ -17,10 +17,6 @@ public interface StructureChangeStrategy {
     return false;
   }
 
-  default boolean requiresEverySourceResult() {
-    return true;
-  }
-
   default boolean preservesSourceAttributes() {
     return false;
   }

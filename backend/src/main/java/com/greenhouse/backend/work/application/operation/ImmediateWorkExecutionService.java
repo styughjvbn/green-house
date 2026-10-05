@@ -12,7 +12,6 @@ import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationTy
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
-import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
@@ -36,8 +35,6 @@ public class ImmediateWorkExecutionService {
   private final WorkOperationRepository operationRepository;
 
   private final WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
-
-  private final WorkAppliedEffectRepository appliedEffectRepository;
 
   private final WorkTargetResolver workTargetResolver;
 

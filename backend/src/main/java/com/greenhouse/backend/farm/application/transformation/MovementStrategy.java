@@ -26,11 +26,6 @@ public class MovementStrategy implements StructureChangeStrategy {
   }
 
   @Override
-  public boolean requiresEverySourceResult() {
-    return false;
-  }
-
-  @Override
   public boolean preservesSourceAttributes() {
     return true;
   }

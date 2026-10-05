@@ -1271,6 +1271,27 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-023은 실제 생성/수정의 공통 필수·거래처 제한과 입금 기본값 참조를 완료 범위로 삼는다. 전체 paymentStatus/salesStatus 문자열 모델(BE-026), 일반 metadata 수정 정책과 보정/실사 제한(BE-009), 입금 취소/보정 등의 후속 기능은 별도다.
 - 다음 변경은 BE-024의 호출되지 않는 전략 옵션·주입 의존을 검토한다. 사용되지 않는 옵션을 새 기능으로 연결하는 것은 이번 정책 중복 정리의 범위가 아니다.
 
+## 36차 변경 — BE-024 미사용 주입 의존과 전략 옵션 제거
+
+### 완료 범위
+
+- 전체 소스·테스트·현재 문서의 참조를 다시 확인했다. `ImmediateWorkExecutionService`의 `appliedEffectRepository`는 선언 외 사용이 없고, `requiresEverySourceResult`는 인터페이스 default와 이동 전략 override만 존재하며 호출되지 않는다. 직접 생성자 호출이나 해당 옵션을 사용하는 시험도 없다.
+- 즉시 실행 service에서 미사용 Repository 필드·import를 제거해 Lombok 생성자의 필수 의존을 줄였다. 실제 효과 저장·조회 경로의 Repository는 유지한다.
+- 구조 변경 전략에서 실행에 영향을 주지 않는 옵션과 이동 override를 제거했다. 원본별 결과 의무를 새 validation으로 연결하지 않는다. 실제 실행에서 사용하는 수량 검증·배분·혼합 품종 제한·속성 상속·계보 관계와 registry/handler는 유지한다. 제품 변경은 세 Java 파일의 미사용 선언 12줄 삭제다.
+- 공개 업무 API·접수 지문·actor 정규화·트랜잭션·잠금·Mutation/효과/감사·저장/HTTP 계약의 변경은 없다. 즉시 명령의 반복 인자 전달 정리는 BE-025로 분리한다.
+
+### 검증
+
+- 집중 검증 `spotlessApply test --tests ...`: 전략 registry 4건·이동 수량 배분 3건·분갈이 8건·분주/합식 12건·일괄 이동 6건, 총 5개 클래스 33건 성공(30초). 이동의 ID 보존·폐기·N:M 수량 배분, 구조 결과·계보·부분 실행, 즉시 실행의 제목/actor·멱등 계약을 기존 회귀로 확인했다. 삭제된 내부 선언의 부재만 검사하는 시험은 추가하지 않는다.
+- 최종 백엔드 `./gradlew test spotlessCheck`: 132개 클래스 701건 성공(2분 1초). 실패·오류·생략 0건. 컴파일과 application context 로딩도 성공했다.
+- 프론트엔드 `npm run check`, `git diff --check`: 성공. 제품 소스에서 제거 대상의 참조가 남지 않은 것을 재검색했다.
+- PostgreSQL `workE2eTest`·benchmark·브라우저 E2E·운영 대사는 미실행. 실제 DB 경계·수량/금액 정책·SQL·Flyway 변경이 없는 정리이므로 PostgreSQL E2E를 반복하지 않는다. OpenAPI/TypeScript 생성과 기능/architecture 문서 갱신도 필요하지 않다.
+- 전체 검증 이후에는 진행 문서만 수정했다. 동작 변경 없이 동일한 전체 시험을 다시 실행하지 않는다.
+
+### 남은 범위
+
+- BE-024의 감사에서 지적한 미사용 주입과 전략 옵션 제거를 완료했다. 다음 변경은 BE-025의 즉시 실행 명령 전달·actor 정규화 정리이며 기존 지문과 실제 실행 값의 일치를 검증한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1308,7 +1329,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `c9505f0d` — BE-020 보정 준비/적용·Work 날짜/감사 조율·rollback/동시성 회귀.
 - `885d7863` — BE-021 포트 취소 업무 API·Farm adapter·저장 호환/rollback/architecture 회귀.
 - `646e0db6` — BE-022 전표 입금 감사 소유권·내부 helper 가시성·감사/rollback/architecture 회귀.
-- BE-023 — `refactor: centralize sales slip input policy`. 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀를 별도 커밋으로 저장한다.
+- `75aac8cd` — BE-023 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀.
+- BE-024 — `refactor: remove unused work and strategy dependencies`. 미사용 주입/전략 옵션 제거·기존 실행 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1339,5 +1361,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-020의 보정 callback 제거·Work 날짜/감사 조율과 Farm 준비/적용·rollback/동시성 회귀는 32차 범위다.
 - BE-021의 Farm Receipt helper 의존 제거·입고 포트 취소 업무 API·저장 호환/rollback/architecture 회귀는 33차 범위다.
 - BE-022의 전표 입금 감사 소유권·내부 helper 공개 범위 정리·감사/rollback/architecture 회귀는 34차 범위다.
-- BE-023의 생성/수정 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀는 35차 범위다. 다음 변경은 BE-024의 호출되지 않는 전략 옵션·주입 의존을 검토한다.
+- BE-023의 생성/수정 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀는 35차 범위다.
+- BE-024의 미사용 주입·전략 옵션 제거와 기존 실행 회귀 확인은 36차 범위다. 다음 변경은 BE-025의 즉시 실행 명령 전달·actor 정규화를 검토한다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
