@@ -2,6 +2,10 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.doAnswer;
 
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
@@ -16,6 +20,8 @@ import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionPlan;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionPort;
 import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
+import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
+import com.greenhouse.backend.work.application.operation.WorkOperationVoidService;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,6 +37,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.IllegalTransactionStateException;
 
 @Tag("work-e2e")
@@ -38,6 +45,8 @@ import org.springframework.transaction.IllegalTransactionStateException;
     properties = "features.work-quantity-correction.enabled=true")
 class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 
+  @MockitoSpyBean WorkOperationVoidService cancellations;
+  @MockitoSpyBean WorkOperationPlanService plans;
   @Autowired WorkCorrectionPort correctionPort;
 
   @Autowired WorkTestDataSeeder seeder;
@@ -575,9 +584,26 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
             .formatted(
                 jdbc.queryForObject("SELECT id FROM work_types WHERE code='PESTICIDE'", Long.class),
                 result);
+    var cancellationWorker = new PostgresLockTestSupport.Worker();
+    var planWorker = new PostgresLockTestSupport.Worker();
+    doAnswer(
+            invocation -> {
+              cancellationWorker.capture(jdbc);
+              return invocation.callRealMethod();
+            })
+        .when(cancellations)
+        .cancelOperation(anyLong(), any());
+    doAnswer(
+            invocation -> {
+              planWorker.capture(jdbc);
+              return invocation.callRealMethod();
+            })
+        .when(plans)
+        .create(any(), nullable(String.class));
     try (var connection = dataSource.getConnection();
         var executor = Executors.newFixedThreadPool(2)) {
       connection.setAutoCommit(false);
+      int owner = PostgresLockTestSupport.backendPid(connection);
       try (var statement = connection.createStatement()) {
         statement
             .executeQuery("SELECT id FROM orchid_groups WHERE id=" + result + " FOR UPDATE")
@@ -590,14 +616,14 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
                       cancelFirst ? cancelPath : "/api/work-operations",
                       cancelFirst ? cancelBody : planBody));
       try {
-        awaitLockWaiters(1);
+        (cancelFirst ? cancellationWorker : planWorker).awaitBlockedBy(jdbc, owner, first);
         var second =
             executor.submit(
                 () ->
                     post(
                         cancelFirst ? "/api/work-operations" : cancelPath,
                         cancelFirst ? planBody : cancelBody));
-        awaitLockWaiters(2);
+        (cancelFirst ? planWorker : cancellationWorker).awaitBlockedBy(jdbc, owner, second);
         connection.commit();
         var firstResult = first.get(20, TimeUnit.SECONDS);
         var secondResult = second.get(20, TimeUnit.SECONDS);
@@ -621,20 +647,6 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
                 Long.class))
         .isZero();
     assertThat(reconciliation.reconcile().ready()).isTrue();
-  }
-
-  private void awaitLockWaiters(int expected) throws Exception {
-    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-    while (System.nanoTime() < deadline) {
-      if (jdbc.queryForObject(
-              "SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock'",
-              Integer.class)
-          >= expected) {
-        return;
-      }
-      Thread.sleep(25);
-    }
-    throw new AssertionError("Expected database lock waiters: " + expected);
   }
 
   @Test

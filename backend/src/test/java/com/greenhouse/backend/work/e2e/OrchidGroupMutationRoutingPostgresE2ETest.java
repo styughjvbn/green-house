@@ -2,6 +2,8 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
 
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.common.exception.ConflictException;
@@ -29,10 +31,9 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -55,7 +57,7 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
 
-  @Autowired private OrchidGroupCommandService orchidGroupCommandService;
+  @MockitoSpyBean private OrchidGroupCommandService orchidGroupCommandService;
 
   @Autowired private OrchidGroupRepository orchidGroupRepository;
 
@@ -74,6 +76,8 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
   @Autowired private OrchidGroupMutationEngine mutationEngine;
 
   @Autowired private JdbcTemplate jdbcTemplate;
+
+  @Autowired private DataSource dataSource;
 
   private WorkTestDataSeeder.ContractScenario scenario;
 
@@ -162,32 +166,88 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 
   @Test
   void creationCancellationWaitsForTheGroupLock() throws Exception {
+    var worker = new PostgresLockTestSupport.Worker();
+    doAnswer(
+            invocation -> {
+              worker.capture(jdbcTemplate);
+              return invocation.callRealMethod();
+            })
+        .when(orchidGroupCommandService)
+        .delete(anyLong());
     try (var executor = Executors.newSingleThreadExecutor()) {
-      var started = new CountDownLatch(1);
       var transaction = new TransactionTemplate(transactionManager);
       var deletion =
           transaction.execute(
               status -> {
                 orchidGroupRepository.findAllForUpdateByIdIn(List.of(scenario.orchidGroupId()));
+                int owner = jdbcTemplate.queryForObject("SELECT pg_backend_pid()", Integer.class);
+                // Observation must see the live blocking chain even after statistics were read.
+                jdbcTemplate.queryForList("SELECT pid, wait_event_type FROM pg_stat_activity");
                 var pending =
                     executor.submit(
-                        () -> {
-                          started.countDown();
-                          orchidGroupCommandService.delete(scenario.orchidGroupId());
-                        });
+                        () -> orchidGroupCommandService.delete(scenario.orchidGroupId()));
                 try {
-                  assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
-                } catch (InterruptedException e) {
-                  Thread.currentThread().interrupt();
+                  worker.awaitBlockedBy(jdbcTemplate, owner, pending);
+                } catch (Exception e) {
                   throw new IllegalStateException(e);
                 }
-                assertThatThrownBy(() -> pending.get(200, TimeUnit.MILLISECONDS))
-                    .isInstanceOf(TimeoutException.class);
                 return pending;
               });
       deletion.get(10, TimeUnit.SECONDS);
       assertThat(orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow().getStatus())
           .isEqualTo("생성 취소");
+      assertThat(reconciliationService.reconcile().ready()).isTrue();
+    }
+  }
+
+  @Test
+  void unrelatedLockWaitersCannotSatisfyWorkerObservation() throws Exception {
+    var worker = new PostgresLockTestSupport.Worker();
+    var unrelated = new PostgresLockTestSupport.Worker();
+    try (var owner = dataSource.getConnection();
+        var otherOwner = dataSource.getConnection();
+        var executor = Executors.newFixedThreadPool(2)) {
+      owner.setAutoCommit(false);
+      otherOwner.setAutoCommit(false);
+      int ownerPid = PostgresLockTestSupport.backendPid(owner);
+      int otherPid = PostgresLockTestSupport.backendPid(otherOwner);
+      try {
+        try (var statement = owner.createStatement()) {
+          statement.execute("SELECT pg_advisory_xact_lock(513801)");
+        }
+        try (var statement = otherOwner.createStatement()) {
+          statement.execute("SELECT pg_advisory_xact_lock(513802)");
+        }
+        var pending =
+            executor.submit(
+                () ->
+                    new TransactionTemplate(transactionManager)
+                        .executeWithoutResult(
+                            status -> {
+                              worker.capture(jdbcTemplate);
+                              jdbcTemplate.execute("SELECT pg_advisory_xact_lock(513801)");
+                            }));
+        var other =
+            executor.submit(
+                () ->
+                    new TransactionTemplate(transactionManager)
+                        .executeWithoutResult(
+                            status -> {
+                              unrelated.capture(jdbcTemplate);
+                              jdbcTemplate.execute("SELECT pg_advisory_xact_lock(513802)");
+                            }));
+        worker.awaitBlockedBy(jdbcTemplate, ownerPid, pending);
+        unrelated.awaitBlockedBy(jdbcTemplate, otherPid, other);
+        assertThat(worker.isBlockedByOwner(jdbcTemplate, otherPid)).isFalse();
+        assertThat(unrelated.isBlockedByOwner(jdbcTemplate, ownerPid)).isFalse();
+        owner.commit();
+        otherOwner.commit();
+        pending.get(10, TimeUnit.SECONDS);
+        other.get(10, TimeUnit.SECONDS);
+      } finally {
+        owner.rollback();
+        otherOwner.rollback();
+      }
     }
   }
 

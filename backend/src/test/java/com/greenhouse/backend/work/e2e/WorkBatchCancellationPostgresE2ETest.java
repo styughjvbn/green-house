@@ -1,6 +1,8 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
@@ -18,14 +20,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.PlatformTransactionManager;
 
 @Tag("work-e2e")
@@ -34,7 +37,9 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired WorkTestDataSeeder seeder;
 
-  @Autowired WorkOperationVoidService cancellations;
+  @MockitoSpyBean WorkOperationVoidService cancellations;
+
+  @Autowired DataSource dataSource;
 
   @Autowired PlatformTransactionManager transactionManager;
 
@@ -205,22 +210,42 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
   void concurrentRetriesCreateOnlyOneCompensationAndAuditSet() throws Exception {
     prepare();
     String payload = request(workIds, sourceIds, "parallel");
-    var start = new CountDownLatch(1);
-    try (var executor = Executors.newFixedThreadPool(2)) {
-      Callable<ApiResult> task =
-          () -> {
-            start.await();
-            return post("/api/work-operations/cancel-batch", payload);
-          };
-      var first = executor.submit(task);
-      var second = executor.submit(task);
-      start.countDown();
-      var firstResult = first.get(30, TimeUnit.SECONDS);
-      var secondResult = second.get(30, TimeUnit.SECONDS);
-      assertThat(firstResult.status()).as(firstResult.body().toString()).isEqualTo(200);
-      assertThat(secondResult.status()).as(secondResult.body().toString()).isEqualTo(200);
-      assertThat(firstResult.data().path("compensationMutationId"))
-          .isEqualTo(secondResult.data().path("compensationMutationId"));
+    var firstWorker = new PostgresLockTestSupport.Worker();
+    var secondWorker = new PostgresLockTestSupport.Worker();
+    var invocationOrder = new AtomicInteger();
+    doAnswer(
+            invocation -> {
+              (invocationOrder.getAndIncrement() == 0 ? firstWorker : secondWorker).capture(jdbc);
+              return invocation.callRealMethod();
+            })
+        .when(cancellations)
+        .cancelBatch(any());
+    try (var connection = dataSource.getConnection();
+        var executor = Executors.newFixedThreadPool(2)) {
+      connection.setAutoCommit(false);
+      int owner = PostgresLockTestSupport.backendPid(connection);
+      try (var statement =
+          connection.prepareStatement("SELECT id FROM work_operations WHERE id = ? FOR UPDATE")) {
+        statement.setLong(1, workIds.stream().min(Long::compareTo).orElseThrow());
+        try (var rows = statement.executeQuery()) {
+          assertThat(rows.next()).isTrue();
+        }
+      }
+      try {
+        var first = executor.submit(() -> post("/api/work-operations/cancel-batch", payload));
+        firstWorker.awaitBlockedBy(jdbc, owner, first);
+        var second = executor.submit(() -> post("/api/work-operations/cancel-batch", payload));
+        secondWorker.awaitBlockedBy(jdbc, owner, second);
+        connection.commit();
+        var a = first.get(30, TimeUnit.SECONDS);
+        var b = second.get(30, TimeUnit.SECONDS);
+        assertThat(a.status()).as(a.body().toString()).isEqualTo(200);
+        assertThat(b.status()).as(b.body().toString()).isEqualTo(200);
+        assertThat(a.data().path("compensationMutationId"))
+            .isEqualTo(b.data().path("compensationMutationId"));
+      } finally {
+        connection.rollback();
+      }
     }
     assertThat(
             jdbc.queryForObject(

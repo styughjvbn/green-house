@@ -1,6 +1,8 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.collection.OrchidGroupCollectionService;
@@ -34,14 +36,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.IllegalTransactionStateException;
 
 class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
 
   @Autowired InboundRecordService inbounds;
 
-  @Autowired InboundPottingOperationService potting;
+  @MockitoSpyBean InboundPottingOperationService potting;
 
   @Autowired InboundPottingPlanService plans;
 
@@ -276,16 +281,28 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
     assertThat(reconciliation.reconcile().ready()).isTrue();
   }
 
-  @Test
-  void siblingPottingExecutionsUseTheSameInboundLockOrder() throws Exception {
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void siblingPottingExecutionsUseTheSameInboundLockOrder(boolean siblingFirst) throws Exception {
     long first = inbound(), sibling = inbound();
     var plan =
         plans.create(
             new InboundPottingPlanCreateRequest(
                 "병렬 포트", date, date, List.of(first, sibling), "audit", null));
+    var firstWorker = new PostgresLockTestSupport.Worker();
+    var secondWorker = new PostgresLockTestSupport.Worker();
+    doAnswer(
+            invocation -> {
+              InboundPottingCommand command = invocation.getArgument(0);
+              (command.inboundRecordId().equals(first) ? firstWorker : secondWorker).capture(jdbc);
+              return invocation.callRealMethod();
+            })
+        .when(potting)
+        .executeNow(any());
     try (var connection = dataSource.getConnection();
         var executor = Executors.newFixedThreadPool(2)) {
       connection.setAutoCommit(false);
+      int owner = PostgresLockTestSupport.backendPid(connection);
       try (var statement =
           connection.prepareStatement("select id from inbound_records where id = ? for update")) {
         statement.setLong(1, first);
@@ -294,16 +311,20 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
         }
       }
       try {
-        var one = executor.submit(() -> executeAt(first, "sibling-one", 12, 14));
-        var two = executor.submit(() -> executeAt(sibling, "sibling-two", 15, 17));
-        long until = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-        while (jdbc.queryForObject(
-                "select count(*) from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'",
-                Integer.class)
-            < 2) {
-          if (System.nanoTime() > until) throw new AssertionError("포트 병렬 잠금 대기 누락");
-          Thread.sleep(25);
-        }
+        var one =
+            executor.submit(
+                () ->
+                    siblingFirst
+                        ? executeAt(sibling, "sibling-two", 15, 17)
+                        : executeAt(first, "sibling-one", 12, 14));
+        (siblingFirst ? secondWorker : firstWorker).awaitBlockedBy(jdbc, owner, one);
+        var two =
+            executor.submit(
+                () ->
+                    siblingFirst
+                        ? executeAt(first, "sibling-one", 12, 14)
+                        : executeAt(sibling, "sibling-two", 15, 17));
+        (siblingFirst ? firstWorker : secondWorker).awaitBlockedBy(jdbc, owner, two);
         connection.commit();
         assertThat(one.get(20, TimeUnit.SECONDS)).isEqualTo(plan.id());
         assertThat(two.get(20, TimeUnit.SECONDS)).isEqualTo(plan.id());

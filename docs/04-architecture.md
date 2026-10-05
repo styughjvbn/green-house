@@ -559,6 +559,7 @@ cd backend
   작업과 대상 상태 전이, 분갈이 수량·계보, 계획형 구조 변경, 요청 키 멱등성,
   작업 상세·분갈이 결과·난 묶음 통합 이력을 검증한다. 같은 PostgreSQL 환경에서 판매일별 전표 번호의 동시 원자 증가도 검증한다.
 - 쓰기 rollback 회귀는 테스트 외부 transaction 없이 DI application proxy 또는 HTTP를 호출하고, 별도 read-only transaction에서 변경 전후 저장 상태를 비교한다. 늦은 실패를 주입할 때는 의도한 CHECK 이름·SQLSTATE 또는 정확한 실패 원인을 검증한 뒤 원장·업무 이력·접수·감사의 atomicity와 재시도를 확인한다. 호출자 transaction 참여 시험은 별도로 유지하며 최상위 transaction 검증을 대신하지 않는다.
+- 잠금 경쟁 회귀는 실제 application transaction 안에서 worker DB PID를 기록하고 `pg_blocking_pids`의 직접·대기열 차단 관계가 지정한 잠금 보유자까지 이어지는지 확인한다. 시간 경과·DB 전체 대기자 수만으로 요청의 충돌을 추정하지 않는다. worker 진입과 잠금 관측·결과 대기에는 상한을 두고, 잠금 해제 뒤 양쪽 실행 순서의 상태·업무 오류·이력 불변식을 확인한다. 테스트용 관측은 최상위 쓰기 transaction을 대신 만들지 않는다.
 - `workBenchmark`: 작업 100건과 대상 2,000건을 고정 생성하고 작업 목록·상세·난 묶음 통합 이력
   조회의 쿼리 수를 검증한다. API별 3회 워밍업 후 20회 측정한 median/p95는
   `backend/build/work-benchmark/results.json`에 기록한다.

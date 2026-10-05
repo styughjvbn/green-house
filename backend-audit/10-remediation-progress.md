@@ -1611,6 +1611,18 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 검증: 관련 PostgreSQL 3개 클래스 54건 통과(Work 취소 13, Sales 재고 22, 거래처 입금/정산 19). 전체 기본 134개 클래스 715건 통과(기존 임시 init script로 test heap 1GiB); frontend `npm run check`, `spotlessCheck`, `git diff --check` 통과. 전체 PostgreSQL suite·benchmark는 재실행하지 않았다. 이후 문서 변경만 반영했다.
 - 범위: 운영 로직·DB/API 계약은 바꾸지 않았다. 기존 H2 MockMvc 전체를 독립 transaction 시험으로 전환하지 않았으며 기존 독립 응답/접수/감사 실패 회귀와 보완 관계다. 모든 writer의 transaction 삭제를 mutation test로 검증한 것은 아니다.
 
+## 52차 변경 — BE-038 worker PID별 실제 잠금 충돌·양쪽 순서 회귀
+
+- 공통 PG 잠금 관측 helper는 서비스 spy에서 실제 쓰기 transaction 활성 상태와 worker `pg_backend_pid()`를 기록한다. spy는 원래 메서드를 그대로 실행하며 외부 worker transaction·지연 barrier를 추가하지 않는다. 지정한 보유자 PID까지 이어지는 `pg_blocking_pids` 차단 관계를 10초 이내 관측하고 worker 진입(5초)·미완료 상태도 확인한다.
+- 대기열에서 앞선 waiter에 막히는 경우도 고려해 차단 관계를 재귀 추적한다. `UNION`으로 PID 중복/순환을 제한한다. DB 전체 대기자 수와 단순 200ms 미완료 검증을 제거하고, 현재 잠금 manager의 관계만 조회한다. 함수 의미는 [PostgreSQL 공식 문서](https://www.postgresql.org/docs/current/functions-info.html#FUNCTIONS-INFO-SESSION) 기준이다.
+- Farm 생성 취소는 실제 group row를 가진 owner와 독립 취소 호출의 PID를 구분하고 기다림을 확인한 뒤 최종 생성 취소/대사를 검증한다. observer transaction이 통계 view를 미리 조회한 조건에서도 확인한다. 별도 owner 둘에 막힌 unrelated worker 둘이 서로의 관측을 통과시키지 못하는 실제 PG 부정 회귀를 추가했다.
+- Work 취소/새 계획 등록의 양쪽 순서는 cancel·plan 서비스에서 각각 PID를 기록한다. 지정한 결과 root 잠금과 두 요청의 충돌을 확인한 뒤 성공/업무 거절 코드와 잘못된 PLANNED 대상 부재·원장 대사를 검증한다.
+- Work 대상 완료/취소는 양쪽 순서로 확대했다. 완료 우선이면 완료·취소 성공, 취소 우선이면 완료 `400 / VALIDATION_ERROR`와 최종 CANCELED·활성 효과 부재를 확인한다. 취소/Farm 이동 재검사도 취소 worker와 이동 owner의 실제 차단 관계를 확인한다.
+- 형제 입고 포트도 양쪽 실행 순서에서 각각의 실제 worker PID가 동일 inbound owner의 잠금으로 이어지는지 확인하고 공통 작업 완료/대사를 검증한다. Work 일괄 취소 재전송은 두 HTTP 요청을 원본 Work row 잠금 아래에서 실제로 겹치게 만든 뒤 단일 보상/감사 결과를 검증한다.
+- BE-006에서 이미 보강한 Sales 교차 배분 수정·취소·구조 변경의 양쪽 순서와 첫 수정 rollback 회귀도 최종 관련 PG 실행에 포함한다. 기존 테스트를 새 helper로 임의 이식하지 않았다.
+- 최종 검증: 관련 PostgreSQL 6개 클래스 67건 통과(Farm routing 6, Work 보정 20, 안전 취소 6, 입고 취소/포트 10, 일괄 취소 13, Sales 잠금 순서 12). 전체 기본 134개 클래스 715건 통과(기존 임시 init script로 test heap 1GiB); frontend `npm run check`, `spotlessCheck`, `git diff --check` 통과. 추가 회귀 수정과 겹쳤던 포맷 검사 실패는 최종 재검증에서 해소했다. 전체 PostgreSQL suite·benchmark는 재실행하지 않았다. 이후 문서 변경만 반영했다. 운영 코드·DB migration·HTTP/API 계약은 변경하지 않았다.
+- 범위: 기존 DB 전체 대기자 helper 3곳과 200ms 생성 취소 시험, 일괄 취소의 시작 latch만 사용한 경쟁을 보강했다. 전체 concurrent suite의 모든 시작 latch를 제거한 것은 아니며, 다른 경로의 모든 충돌/무교착·고부하 처리량을 증명하지 않는다. HTTP client의 전역 timeout·fixture 공통화는 BE-039/040 후속 범위다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1666,7 +1678,9 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `935f042c` — BE-036 정산 `fix: commit settlement initialization per auction house and day`. 정산별 commit·실패/재시작·정확 key/날짜 계획·V42와 회귀.
 - `c085d21f` — BE-036 원장 `refactor: stream reconciliation chains without entity accumulation`. 현재 scalar/chain cursor·기존 fingerprint/판정·snapshot 회귀를 별도 목적으로 저장한다.
 
-- BE-037 — `test: verify standalone writes and late database rollback`. 독립 Work 취소/출하/입금 경계·정확 CHECK·새 transaction snapshot·재시도 회귀.
+- `7b08702e` — BE-037 `test: verify standalone writes and late database rollback`. 독립 Work 취소/출하/입금 경계·정확 CHECK·새 transaction snapshot·재시도 회귀.
+
+- BE-038 — `test: observe postgres conflicts by worker and blocker pid`. 실제 충돌 관측·양쪽 순서·무관 대기자 부정 회귀.
 
 ## 남은 작업
 
@@ -1713,4 +1727,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-036의 정산별 초기화 commit·유한 scan·정확 key 조회·날짜 index는 49차 범위다. 한 정산의 크기와 운영 부하 측정은 남는다.
 - BE-036의 원장 대사 scalar 현재 그룹·Entry cursor·일관된 snapshot과 이력/기존 fingerprint 회귀는 50차 범위다. 전체 그룹/오류·업무 참조/보정 누적·fingerprint 직렬화·장기 read transaction과 운영 heap/GC 검증은 남는다.
 - BE-037의 핵심 Work 취소·경매 출하·입금 standalone 경계와 늦은 CHECK/전체 행 rollback은 51차 범위다. H2 전체의 wrapper 전환과 모든 쓰기 경로의 실패 위치 확대는 후속이다.
+- BE-038의 정확 worker/owner 잠금 관측·Work/입고 양쪽 순서·재전송 중첩과 부정 회귀는 52차 범위다. 전체 writer의 병렬 충돌, BE-039 fixture와 BE-040 전역 timeout 개선은 남는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
