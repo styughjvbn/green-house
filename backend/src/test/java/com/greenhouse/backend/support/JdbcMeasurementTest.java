@@ -52,7 +52,11 @@ class JdbcMeasurementTest {
       assertThat(jdbc.queryForList("select id from sample order by id", Integer.class))
           .containsExactly(1, 2, 3);
     } finally {
-      jdbc.execute("shutdown");
+      // SHUTDOWN closes H2 before JdbcTemplate's DEBUG warning inspection runs.
+      try (var connection = source.getConnection();
+          var statement = connection.createStatement()) {
+        statement.execute("shutdown");
+      }
     }
   }
 
