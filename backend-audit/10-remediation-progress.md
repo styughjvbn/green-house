@@ -1176,6 +1176,38 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-020은 Work 보정의 callback·날짜·최종 감사 결과 조율 소유권을 완료 범위로 삼는다. Farm이 사용하는 Work 소유 실행/Mutation 참조와 수량 snapshot 조회 계약은 유지하며 이 read 경계를 없애기 위한 DTO/interface를 일괄 추가하지 않는다.
 - 보정 수량 context의 반복 적재/Java 집계(BE-037), Work Receipt 외부 노출(BE-021), 다른 HTTP DTO/application 경계(BE-022), 운영 과거 보정 corpus 검증과 과거 감사 복구는 별도다.
 
+## 33차 변경 — BE-021 입고 포트 취소의 Work Receipt 내부화
+
+작업일: 2026-10-05. 상태: 업무 API·Farm adapter·저장 호환/rollback/architecture 회귀·최종 전체 검증 완료. BE-021 완료.
+
+### 원인과 범위
+
+- Farm의 입고 포트 취소 한 경로가 Work Receipt helper에 namespace·Object 지문 입력·저장 callback·Work ID 목록을 넘기고 `executeExisting`을 선택했다. 현재 멱등 처리 실패를 재현한 버그 수정이 아니라 접수 표현과 생성 membership 의미의 소유권을 정리하는 BE-021 변경이다.
+- 별도 Receipt wrapper나 범용 workflow를 추가하지 않고 기존 Work 포트 업무 service에 입고별 취소 API를 둔다. 호출자는 입고 ID·요청 키·사유만 전달한다. Work가 기존 키 정규화·사유 trim/빈 값 처리·`INBOUND_POTTING_VOID:<입고 ID>:<키>` namespace·`inboundRecordId/reason` 지문·기존 작업의 비생성 membership을 선택한다. 지문에는 키나 실행 metadata를 추가하지 않는다.
+- Farm은 Work가 정의한 포트 취소 업무 port를 구현한다. 기존 연결 입고/Work 선잠금 → 입고 쓰기 조회 → 입고 자격 검증 → 감사 전값 → Work 취소/Mutation 보상 → 입고 감사 후값의 실행 순서와 소유 모듈 내 Entity 접근을 유지한다. port에는 Entity·Repository·Receipt scope·지문 계산용 Object·`Supplier`를 전달하지 않는다. 반환 Work ID를 Receipt 목록으로 조립하는 것은 Work 내부 책임이다.
+- 업무 API와 Farm adapter는 `MANDATORY`로 최상위 입고 service 트랜잭션에 참여한다. 기존 Receipt claim/행 잠금이 Farm 검증보다 먼저이며 완료 Receipt는 업무 port를 다시 호출하지 않는다. 입고/보상/효과/감사/접수를 한 트랜잭션에 확정한다. 기존 입고 취소 경로와 Work 직접 취소·포트 실행의 접수 의미는 변경하지 않는다.
+- 입고 포트 취소 응답은 기존처럼 현재 입고 참조로 조립한다. 새 포트 작업 후 옛 키로 재시도하면 새 작업을 취소하지 않고 현재 입고 응답을 반환한다. Receipt의 ID 기반 replay를 일반 Work 생성 응답 snapshot으로 바꾸거나 과거 접수를 재작성하지 않는다.
+
+### 회귀 방어
+
+- 제품 변경 전 신규 PostgreSQL 2건을 통과시켜 기존 저장 계약을 고정했다. 기존 namespace와 literal JSON의 독립 SHA-256 지문·공백 정규화·생성 membership 보존을 확인하고, 완료 Receipt를 구형 필드/작업 ID로 직접 재설치한 뒤 대체 포트 작업이 있는 상태에서 replay/다른 사유 충돌이 DB 상태를 바꾸지 않는지 검증한다.
+- 입고 최종 감사의 실제 DB CHECK 실패를 주입해 입고·Work/대상/실행/효과/참조·묶음·Mutation/entry/relation·계보·감사·Receipt/membership을 전후 비교한다. 전체 rollback과 같은 키 재시도·추가 replay의 무변경을 확인한다. 테스트 비교는 PostgreSQL 배열을 포함한 DB 행 JSON을 사용한다.
+- 새 PostgreSQL 회귀는 호출자 트랜잭션 없는 업무 API와 Farm port가 모두 실패하고 DB 상태를 바꾸지 않는지 확인한다. 기존 병렬 동일 키/다른 사유, 부분 실행 취소, 새 포트 작업 후 지연 replay, 형제 입고 잠금, 일반 변경/취소 경쟁을 유지한다.
+- 컴파일된 dependency architecture gate는 다른 모듈의 Work Receipt helper·지문 계산기 참조를 차단한다. 기존 Farm 구현을 일시적으로 복원한 음성 대조에서 Receipt 의존으로 예상한 1건 실패를 확인한 뒤 현재 소스를 복원했다. 포트 계약의 Entity·중첩 container·저장 callback 금지도 추가했다.
+
+### 검증
+
+- 집중 일반/integration/architecture 5개 클래스 30건 성공(32초). 집중 PostgreSQL 3개 클래스 31건 성공(48초). 실패·오류·생략 없음.
+- 최종 백엔드 전체 `./gradlew test`: 132개 클래스 688건 성공. PostgreSQL 전체 `./gradlew workE2eTest`: 62개 클래스 660건 성공. 실패·오류·생략은 없고 최종 백엔드 전체 검증은 9분 31초 소요했다.
+- 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. PostgreSQL 전체에는 신규 3건 외에 기존 접수/replay·동시성·rollback·migration·수량 원장 대사 회귀를 포함한다.
+- HTTP 필드·enum·Controller·DB schema 변경이 없어 OpenAPI/TypeScript 재생성·Flyway 추가는 필요하지 않다. benchmark·브라우저 E2E·운영 과거 Receipt corpus 검증은 실행하지 않았다.
+- 최종 전체 검증 이후에는 진행 문서의 완료 상태와 검증 결과만 갱신했다. 제품 코드·시험·HTTP/저장 계약은 변경하지 않았다.
+
+### 남은 범위
+
+- BE-021은 실제 Farm 소비자의 Receipt 메커니즘 의존 제거와 업무별 접수 소유권을 완료 범위로 삼는다. Work 내부의 Receipt 공용 helper는 여러 Work application 경로가 사용하므로 유지한다. 입고 전체 취소의 별도 child key 의미와 키 없는 신규 채널의 재시도 정책을 이 취소 API에 일괄 통합하지 않는다.
+- 다음 변경은 BE-022의 Sales 감사와 Settlement 내부 helper 결합을 검토한다. 과거 접수의 운영 corpus 검증과 실제 저장 version 전환은 BE-013의 별도 범위다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1210,7 +1242,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `389cbd9b` — BE-017 검사·선택 범위 검증·보상 단계와 취소 정책 회귀.
 - `dee4ca93` — BE-018 그래프 출력 상태·노드 factory·상한/순서/JSON 회귀.
 - `2ac96878` — BE-019 소비자 기준 값/업무 API·내부 helper 경계·호환/architecture 회귀.
-- BE-020 — `refactor: keep work correction orchestration in work`. 보정 준비/적용·Work 날짜/감사 조율·rollback/동시성 회귀를 별도 커밋으로 저장한다.
+- `c9505f0d` — BE-020 보정 준비/적용·Work 날짜/감사 조율·rollback/동시성 회귀.
+- BE-021 — `refactor: keep inbound potting void receipts in work`. 포트 취소 업무 API·Farm adapter·저장 호환/rollback/architecture 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1238,5 +1271,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-017의 취소 검사·수집·종류별 처리·응답 단계 정리와 차단 우선순위/잠금 재검사/snapshot 회귀는 29차 범위다.
 - BE-018의 그래프 조립 상태·종류별 생성과 상한/순서/JSON 회귀는 30차 범위다. 내부 조회량과 truncation 의미 개선은 BE-034에 남긴다.
 - BE-019의 현재 소비자 Entity/helper 공개 경계 정리와 architecture/입력 호환 회귀는 31차 범위다. 새 비 HTTP 채널의 검증·주체·인가·감사 context는 채널 도입 시 필요한 조건부 범위다. Work 보정 조율 소유권은 32차 BE-020에서 이어진다.
-- BE-020의 보정 callback 제거·Work 날짜/감사 조율과 Farm 준비/적용·rollback/동시성 회귀는 32차 범위다. 다음 변경은 BE-021의 Farm에 노출된 Work Receipt 계약을 검토한다.
+- BE-020의 보정 callback 제거·Work 날짜/감사 조율과 Farm 준비/적용·rollback/동시성 회귀는 32차 범위다.
+- BE-021의 Farm Receipt helper 의존 제거·입고 포트 취소 업무 API·저장 호환/rollback/architecture 회귀는 33차 범위다. 다음 변경은 BE-022의 Sales 감사와 Settlement 내부 helper 결합을 검토한다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

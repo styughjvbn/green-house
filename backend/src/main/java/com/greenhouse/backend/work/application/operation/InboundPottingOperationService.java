@@ -43,6 +43,22 @@ public class InboundPottingOperationService {
 
   private final InboundPottingCommandCodec commandCodec;
 
+  private final InboundPottingVoidPort voidPort;
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void voidForInbound(Long inboundRecordId, String idempotencyKey, String reason) {
+    String requestKey = WorkCommandReceipts.normalizeKey(idempotencyKey);
+    String normalizedReason = reason == null || reason.trim().isEmpty() ? null : reason.trim();
+    receipts.executeExisting(
+        "INBOUND_POTTING_VOID:" + inboundRecordId,
+        requestKey,
+        new PottingVoidIdentity(inboundRecordId, normalizedReason),
+        () -> List.of(voidPort.voidPotting(inboundRecordId, requestKey, normalizedReason)));
+  }
+
+  // Persisted fingerprint fields are kept separate from retry key and execution metadata.
+  private record PottingVoidIdentity(Long inboundRecordId, String reason) {}
+
   public WorkOperationView executeNow(InboundPottingCommand request) {
     var ids =
         receipts.executeExisting(

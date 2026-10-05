@@ -30,9 +30,9 @@ import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
+import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService;
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder;
-import com.greenhouse.backend.work.application.operation.WorkCommandReceipts;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
@@ -86,7 +86,7 @@ public class InboundRecordService {
 
   private final InboundRecordResponseAssembler responseAssembler;
 
-  private final WorkCommandReceipts commandReceipts;
+  private final InboundPottingOperationService pottingOperationService;
 
   public InboundRecordResponse create(InboundRecordCreateCommand request) {
     return createNew(request);
@@ -238,30 +238,10 @@ public class InboundRecordService {
 
   public InboundRecordResponse voidPotting(
       Long inboundRecordId, InboundRecordPottingVoidRequest request) {
-    String reason = normalize(request.reason());
-    commandReceipts.executeExisting(
-        "INBOUND_POTTING_VOID:" + inboundRecordId,
-        request.idempotencyKey(),
-        new PottingVoidIdentity(inboundRecordId, reason),
-        () -> {
-          inboundWorkOperationLifecycleService.lockForInboundChange(inboundRecordId);
-          InboundRecord inboundRecord = inboundRecordFinder.findForUpdate(inboundRecordId);
-          inboundRecord.requirePottingVoidAllowed();
-          Map<String, Object> before = auditSupport.snapshot(inboundRecord);
-          Long operationId =
-              inboundWorkOperationLifecycleService.voidPottingForInboundRecord(
-                  inboundRecordId,
-                  resolveRequestKey(
-                      request.idempotencyKey(), "inbound-potting-void", inboundRecordId),
-                  reason);
-          auditSupport.record(
-              AuditAction.UPDATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
-          return List.of(operationId);
-        });
+    pottingOperationService.voidForInbound(
+        inboundRecordId, request.idempotencyKey(), request.reason());
     return responseAssembler.assemble(inboundRecordFinder.find(inboundRecordId));
   }
-
-  private record PottingVoidIdentity(Long inboundRecordId, String reason) {}
 
   private void validateCreate(InboundRecordCreateCommand request) {
     if (request.varietyId() == null && request.newVariety() == null) {

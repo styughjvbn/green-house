@@ -15,20 +15,27 @@ import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
+import com.greenhouse.backend.work.application.operation.InboundPottingVoidPort;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDate;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.IllegalTransactionStateException;
 
 class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
 
@@ -37,6 +44,8 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
   @Autowired InboundPottingOperationService potting;
 
   @Autowired InboundPottingPlanService plans;
+
+  @Autowired InboundPottingVoidPort voidPort;
 
   @Autowired OrchidGroupCommandService groupCommands;
 
@@ -97,6 +106,149 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
     return post(
         "/api/inbound-records/" + inbound + "/potting-void",
         "{\"idempotencyKey\":\"original-undo\",\"reason\":\"audit\"}");
+  }
+
+  @Test
+  void inboundPottingVoidBusinessApiAndFarmPortRequireTheCallerTransaction() {
+    long inbound = inbound();
+    execute(inbound, "mandatory-potting");
+    var before = pottingState();
+    assertThat(
+            Assertions.catchThrowable(
+                () -> potting.voidForInbound(inbound, "mandatory-void", "audit")))
+        .isInstanceOf(IllegalTransactionStateException.class);
+    assertThat(
+            Assertions.catchThrowable(
+                () -> voidPort.voidPotting(inbound, "mandatory-void", "audit")))
+        .isInstanceOf(IllegalTransactionStateException.class);
+    assertThat(pottingState()).isEqualTo(before);
+  }
+
+  @Test
+  void legacyPottingVoidReceiptKeepsItsFingerprintAndNeverCreatesMembership() throws Exception {
+    long inbound = inbound();
+    long original = execute(inbound, "legacy-potting");
+    var memberships =
+        jdbc.queryForList(
+            "SELECT * FROM work_command_receipt_memberships ORDER BY receipt_key, operation_id");
+    String receiptKey = "INBOUND_POTTING_VOID:" + inbound + ":original-undo";
+    String legacyFingerprint =
+        HexFormat.of()
+            .formatHex(
+                MessageDigest.getInstance("SHA-256")
+                    .digest(
+                        ("{\"inboundRecordId\":" + inbound + ",\"reason\":\"audit\"}")
+                            .getBytes(StandardCharsets.UTF_8)));
+    var first =
+        post(
+            "/api/inbound-records/" + inbound + "/potting-void",
+            "{\"idempotencyKey\":\" original-undo \",\"reason\":\" audit \"}");
+    assertThat(first.status()).as(first.body().toString()).isEqualTo(200);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT request_fingerprint FROM work_command_receipts WHERE receipt_key = ?",
+                String.class,
+                receiptKey))
+        .isEqualTo(legacyFingerprint);
+    jdbc.update("DELETE FROM work_command_receipts WHERE receipt_key = ?", receiptKey);
+    // Reinstall the old completed identity directly; current entities cannot reconstruct it.
+    jdbc.update(
+        "INSERT INTO work_command_receipts (receipt_key, request_fingerprint, result_operation_ids, created_at) VALUES (?, ?, CAST(? AS jsonb), CURRENT_TIMESTAMP)",
+        receiptKey,
+        legacyFingerprint,
+        "[" + original + "]");
+    long replacement = execute(inbound, "legacy-replacement");
+    var beforeReplay = pottingState();
+    assertThat(voidPotting(inbound).status()).isEqualTo(200);
+    assertThat(pottingState()).isEqualTo(beforeReplay);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM work_operations WHERE id = ?", String.class, replacement))
+        .isEqualTo("COMPLETED");
+    assertThat(
+            jdbc.queryForList(
+                "SELECT * FROM work_command_receipt_memberships ORDER BY receipt_key, operation_id"))
+        .isEqualTo(memberships);
+    var changed =
+        post(
+            "/api/inbound-records/" + inbound + "/potting-void",
+            "{\"idempotencyKey\":\"original-undo\",\"reason\":\"different\"}");
+    assertThat(changed.status()).isEqualTo(409);
+    assertThat(changed.body().path("error").path("code").asText())
+        .isEqualTo("IDEMPOTENCY_KEY_REUSED");
+    assertThat(pottingState()).isEqualTo(beforeReplay);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  @Test
+  void inboundAuditFailureRollsBackPottingVoidAndAllowsTheSameKeyRetry() throws Exception {
+    long inbound = inbound();
+    execute(inbound, "rollback-potting");
+    var before = pottingState();
+    jdbc.execute(
+        "ALTER TABLE audit_events ADD CONSTRAINT test_potting_void_audit CHECK (source <> 'INBOUND_MANAGEMENT' OR entity_type <> 'INBOUND_RECORD' OR entity_id <> "
+            + inbound
+            + " OR action <> 'UPDATED')");
+    ApiResult failed;
+    try {
+      failed = voidPotting(inbound);
+    } finally {
+      jdbc.execute("ALTER TABLE audit_events DROP CONSTRAINT test_potting_void_audit");
+    }
+    assertThat(failed.status()).as(failed.body().toString()).isBetween(400, 599);
+    assertThat(pottingState()).isEqualTo(before);
+    var retry = voidPotting(inbound);
+    assertThat(retry.status()).as(retry.body().toString()).isEqualTo(200);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM inbound_records WHERE id = ?", String.class, inbound))
+        .isEqualTo("POTTING_PENDING");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM orchid_group_mutations WHERE mutation_type = 'COMPENSATION'",
+                Long.class))
+        .isEqualTo(1);
+    var after = pottingState();
+    assertThat(voidPotting(inbound).status()).isEqualTo(200);
+    assertThat(pottingState()).isEqualTo(after);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  private Map<String, Object> pottingState() {
+    var state = new LinkedHashMap<String, Object>();
+    for (String table :
+        List.of(
+            "inbound_records",
+            "work_operations",
+            "work_operation_targets",
+            "work_target_executions",
+            "work_applied_effects",
+            "work_effect_orchid_groups",
+            "orchid_groups",
+            "orchid_group_mutations",
+            "orchid_group_mutation_entries",
+            "orchid_group_mutation_relations",
+            "orchid_group_lineage",
+            "audit_events")) {
+      state.put(
+          table,
+          jdbc.queryForList(
+              "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM "
+                  + table
+                  + " ORDER BY id) snapshot",
+              String.class));
+    }
+    state.put(
+        "receipts",
+        jdbc.queryForList(
+            "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM work_command_receipts ORDER BY receipt_key) snapshot",
+            String.class));
+    state.put(
+        "memberships",
+        jdbc.queryForList(
+            "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM work_command_receipt_memberships ORDER BY receipt_key, operation_id) snapshot",
+            String.class));
+    return state;
   }
 
   @Test
