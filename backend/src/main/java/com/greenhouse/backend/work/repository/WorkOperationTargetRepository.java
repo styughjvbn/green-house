@@ -11,6 +11,17 @@ import org.springframework.data.jpa.repository.Query;
 public interface WorkOperationTargetRepository extends JpaRepository<WorkOperationTarget, Long> {
 
   @Query(
+      """
+      select new com.greenhouse.backend.work.repository.WorkOperationInboundReference(
+          t.workOperation.id, t.inboundRecordId)
+      from WorkOperationTarget t
+      where t.workOperation.id in :operationIds and t.inboundRecordId is not null
+      group by t.workOperation.id, t.inboundRecordId
+      order by t.workOperation.id, min(t.id)
+      """)
+  List<WorkOperationInboundReference> findInboundReferences(Collection<Long> operationIds);
+
+  @Query(
       "select distinct t.inboundRecordId from WorkOperationTarget t where t.workOperation.id in :operationIds "
           + "and t.inboundRecordId is not null order by t.inboundRecordId")
   List<Long> findInboundRecordIdsIn(Collection<Long> operationIds);

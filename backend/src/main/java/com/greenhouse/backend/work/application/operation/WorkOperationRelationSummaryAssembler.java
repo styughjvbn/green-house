@@ -3,11 +3,12 @@ package com.greenhouse.backend.work.application.operation;
 import com.greenhouse.backend.work.domain.operation.WorkCommandReceipt;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.dto.operation.WorkOperationOriginType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationRelationSummaryResponse;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptMembershipRepository;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptRepository;
+import com.greenhouse.backend.work.repository.WorkOperationChildCount;
+import com.greenhouse.backend.work.repository.WorkOperationInboundReference;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import java.util.Collection;
@@ -16,8 +17,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -37,11 +36,11 @@ class WorkOperationRelationSummaryAssembler {
   Map<Long, WorkOperationRelationSummaryResponse> assemble(Collection<WorkOperation> operations) {
     if (operations.isEmpty()) return Map.of();
     List<Long> ids = operations.stream().map(WorkOperation::getId).toList();
-    Map<Long, List<WorkOperationTarget>> targets =
-        targetRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(ids).stream()
+    Map<Long, List<WorkOperationInboundReference>> inboundReferences =
+        targetRepository.findInboundReferences(ids).stream()
             .collect(
                 Collectors.groupingBy(
-                    target -> target.getWorkOperation().getId(),
+                    WorkOperationInboundReference::operationId,
                     LinkedHashMap::new,
                     Collectors.toList()));
     Map<Long, Integer> batchSizes = new HashMap<>();
@@ -64,10 +63,8 @@ class WorkOperationRelationSummaryAssembler {
     Map<Long, WorkOperationRelationSummaryResponse> result = new LinkedHashMap<>();
     for (WorkOperation operation : operations) {
       List<Long> inboundIds =
-          targets.getOrDefault(operation.getId(), List.of()).stream()
-              .map(WorkOperationTarget::getInboundRecordId)
-              .filter(Objects::nonNull)
-              .distinct()
+          inboundReferences.getOrDefault(operation.getId(), List.of()).stream()
+              .map(WorkOperationInboundReference::inboundRecordId)
               .toList();
       int linkedCount = linkedCounts.getOrDefault(operation.getId(), 0);
       result.put(
@@ -83,40 +80,39 @@ class WorkOperationRelationSummaryAssembler {
   }
 
   private Map<Long, Integer> linkedCounts(Collection<WorkOperation> operations) {
-    Map<Long, Set<Long>> groupsByOperationId = new LinkedHashMap<>();
-    Map<Long, Set<Long>> structuralGroups = new LinkedHashMap<>();
+    var rootIds = new LinkedHashSet<Long>();
     for (WorkOperation operation : operations) {
       Long rootId =
           operation.getParentOperation() == null
               ? operation.getId()
               : operation.getParentOperation().getId();
-      structuralGroups.computeIfAbsent(rootId, ignored -> new LinkedHashSet<>()).add(rootId);
-      structuralGroups.get(rootId).add(operation.getId());
+      rootIds.add(rootId);
     }
-    operationRepository
-        .findByParentOperationIdInOrderByParentOperationIdAscIdAsc(
-            structuralGroups.keySet().stream().toList())
-        .forEach(
-            operation ->
-                structuralGroups
-                    .computeIfAbsent(
-                        operation.getParentOperation().getId(), ignored -> new LinkedHashSet<>())
-                    .add(operation.getId()));
-    structuralGroups
-        .values()
-        .forEach(group -> group.forEach(id -> groupsByOperationId.put(id, group)));
+    var childCounts =
+        operationRepository.countChildrenByParentIds(rootIds).stream()
+            .collect(
+                Collectors.toMap(
+                    WorkOperationChildCount::parentOperationId,
+                    WorkOperationChildCount::childCount));
+    // Preserve the old last-group precedence when a page contains nested parent/child families.
+    Map<Long, Long> rootsByOperationId = new HashMap<>();
+    for (Long rootId : rootIds) {
+      for (WorkOperation operation : operations) {
+        if (operation.getId().equals(rootId)
+            || operation.getParentOperation() != null
+                && operation.getParentOperation().getId().equals(rootId)) {
+          rootsByOperationId.put(operation.getId(), rootId);
+        }
+      }
+    }
 
     Map<Long, Integer> result = new LinkedHashMap<>();
     operations.forEach(
         operation ->
             result.put(
                 operation.getId(),
-                Math.max(
-                    0,
-                    groupsByOperationId
-                            .getOrDefault(operation.getId(), Set.of(operation.getId()))
-                            .size()
-                        - 1)));
+                Math.toIntExact(
+                    childCounts.getOrDefault(rootsByOperationId.get(operation.getId()), 0L))));
     return result;
   }
 

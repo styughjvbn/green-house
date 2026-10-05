@@ -16,6 +16,16 @@ import org.springframework.data.repository.query.Param;
 public interface WorkOperationRepository
     extends JpaRepository<WorkOperation, Long>, WorkOperationRepositoryCustom {
 
+  @Query(
+      """
+      select new com.greenhouse.backend.work.repository.WorkOperationChildCount(
+          o.parentOperation.id, count(o))
+      from WorkOperation o
+      where o.parentOperation.id in :parentIds and o.id <> o.parentOperation.id
+      group by o.parentOperation.id
+      """)
+  List<WorkOperationChildCount> countChildrenByParentIds(Collection<Long> parentIds);
+
   @org.springframework.data.jpa.repository.Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select o from WorkOperation o where o.id = :id")
   Optional<WorkOperation> findForUpdateById(@Param("id") Long id);

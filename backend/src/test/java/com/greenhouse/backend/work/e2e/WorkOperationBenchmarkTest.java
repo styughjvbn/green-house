@@ -2,6 +2,8 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import jakarta.persistence.EntityManagerFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -94,6 +96,15 @@ class WorkOperationBenchmarkTest extends WorkE2ETestBase {
     statistics.clear();
     responseAssertion.accept(get(path));
     long queryCount = statistics.getPrepareStatementCount();
+    long entityLoads = statistics.getEntityLoadCount();
+    long targetLoads =
+        statistics.getEntityStatistics(WorkOperationTarget.class.getName()).getLoadCount();
+    long operationLoads =
+        statistics.getEntityStatistics(WorkOperation.class.getName()).getLoadCount();
+    if (name.equals("work-operation-list-100")) {
+      assertThat(targetLoads).as("summary must not materialize target snapshots").isZero();
+      assertThat(operationLoads).isLessThanOrEqualTo(OPERATION_COUNT);
+    }
 
     List<Double> responseTimesMs = new ArrayList<>(SAMPLE_COUNT);
     for (int index = 0; index < SAMPLE_COUNT; index++) {
@@ -113,6 +124,9 @@ class WorkOperationBenchmarkTest extends WorkE2ETestBase {
     measurement.put("name", name);
     measurement.put("endpoint", "GET " + path);
     measurement.put("queryCount", queryCount);
+    measurement.put("entityLoads", entityLoads);
+    measurement.put("targetLoads", targetLoads);
+    measurement.put("operationLoads", operationLoads);
     measurement.put("queryCountLimit", queryCountLimit);
     measurement.put("medianMs", percentile(responseTimesMs, 0.50));
     measurement.put("p95Ms", percentile(responseTimesMs, 0.95));

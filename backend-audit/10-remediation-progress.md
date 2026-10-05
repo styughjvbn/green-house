@@ -1422,6 +1422,26 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - 요청한 BE-027~029를 완료한다. 이후 범위는 BE-030의 Work 요약을 위한 전체 target Entity 적재 검토이며 이번 요청에 포함하지 않는다.
 
+## 43차 변경 — BE-030 Work 요약의 대상/child Entity 적재 제거
+
+### 완료 범위
+
+- Work 소유 Repository에서 `(작업 ID, 입고 ID)`를 group/min(target ID)로 조회해 처음 등장한 순서와 distinct 의미를 유지한다. 기존처럼 excluded target도 출처 판단에 포함한다. snapshot JSON·대상/실행 Entity는 목록 요약에서 로딩하지 않는다.
+- parent별 전체 child 수는 scalar DB 집계로 읽는다. 상태별 child 제외는 추가하지 않는다. 페이지의 nested family가 겹치는 경우 기존 조립 순서의 마지막 family 우선순위를 유지해 root·child·parent가 없는 페이지와 과거 깊은 연결의 기존 응답 의미를 보존한다. receipt membership·생성 batch는 그대로이며 동일 receipt는 구조적 연결로 계산하지 않는다.
+- 상세/실행/잠금/효과·receipt snapshot·readOnly 경계·API/DB schema는 변경하지 않는다. 기존 Repository의 Entity 조회는 다른 소비자를 위해 유지한다. 페이지 root·receipt 크기와 모든 입고 ID의 응답 크기는 별도 한계이며 이번 변경이 모든 요약 메모리를 상수로 만든 것은 아니다.
+
+### 측정·회귀와 검증
+
+- PostgreSQL 회귀는 root 10개 고정, 각 root의 target 20/200/2,000개와 child 1/10/50개를 조합한다. child의 큰 details JSON, 중복/순서가 다른 입고 참조·제외 대상·페이지 밖 receipt batch를 포함한다. HTTP 응답의 pagination/total·진행 대상 수·입고 순서/출처·연관 수·생성 batch와 snapshot 필드 미노출을 검증한다.
+- 제품 변경 전 SQL 8/8/8회, target load 200/2,000/20,000개, WorkOperation load 20/110/510개. fixture의 JSON 정수 node 종류 비교를 ID 값 비교로 고친 후 3건 모두 응답 검사는 통과하고 적재 조건에서 실패했다. 변경 후 SQL 8/8/8회, target load 0, WorkOperation load 10, 전체 Entity 14개로 고정됐다. `build/work-query-count/work-summary-*.json`에 증적을 남긴다.
+- 기존 Work benchmark(100×20)는 SQL 상한뿐 아니라 요약 target load 0·작업 load ≤100을 검사하고 각 API의 Entity 적재량도 측정 결과에 남긴다. 관계 unit 회귀에 두 페이지 순서의 nested family 사례를 추가했다. JDBC rows·allocation·heap·운영 지연/plan은 이 적재 회귀의 직접 측정 대상이 아니다.
+- 초기 집중 검증: 관계 unit 및 PostgreSQL 3건 성공(34초). 최종 일반 `./gradlew test`: 133개 클래스 713건 성공. 관련 PostgreSQL 요약 적재 3건·Work 보정 감사 20건, 2개 클래스 23건 성공. 기존 Work benchmark 1건도 `-PworkBenchmarkEnforce=true`로 성공했으며 목록 SQL 7회·target load 0·operation load 100을 확인했다. 실패·오류·생략 0건; 백엔드 검사 3분 2초.
+- 프론트 `npm run check`, `spotlessCheck`, `git diff --check` 성공. PostgreSQL 전체·검색 benchmark·브라우저 E2E·실제 JDBC rows/heap/운영 부하 실측은 미실행. 최종 검증 뒤에는 진행 문서만 수정했다.
+
+### 다음 범위
+
+- BE-030 조회 적재 개선을 완료한 뒤 BE-031 품종/자동 그룹의 요약 집계를 진행한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1466,7 +1486,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `7aa63f7f` — BE-027 `perf: batch load auction write result histories`. 쓰기 결과 행 N+1·순서/접수 호환·query-count 회귀를 별도 커밋으로 저장한다.
 - `c5ee8014` — BE-028 `perf: batch load direct lineage references`. 직접 계보 참조·순서/연령·query-count 회귀를 별도 커밋으로 저장한다.
 - `aa675b08` — BE-029 추가 결함 `fix: flush old placement rules before replacement`. 동일 키 교체·삭제 flush/감사 rollback/retry 회귀를 별도 커밋으로 저장한다.
-- BE-029 — `perf: load placement profiles without inventory groups`. profile 전용 graph·응답/감사/재고 보존과 Entity 적재 회귀를 별도 커밋으로 저장한다.
+- BE-030 — `perf: project work summary origins and relation counts`. Work summary 적재·응답/관계/순서·기존 benchmark 회귀를 별도 커밋으로 저장한다.
+- `d8aaa928` — BE-029 `perf: load placement profiles without inventory groups`. profile 전용 graph·응답/감사/재고 보존과 Entity 적재 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1503,5 +1524,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-026의 수동 입금 키 충돌 오류 계약·소비자/명세·금융 상태/경쟁 회귀는 38차 범위다. BE-027~029의 조회/적재 개선은 39~42차에 이어서 기록했다.
 - BE-027의 쓰기 결과 행 N+1 제거와 조회/순서/접수 회귀는 39차 범위다.
 - BE-028의 직접 계보 현재 참조 일괄 로딩·순서/연령/query-count 회귀는 40차 범위다.
-- BE-029의 PostgreSQL 동일 키 규칙 교체 오류/rollback 회귀는 41차, profile 전용 graph와 SQL·Entity 적재 회귀는 42차 범위다. 다음 우선 검토 대상은 BE-030이다.
+- BE-029의 PostgreSQL 동일 키 규칙 교체 오류/rollback 회귀는 41차, profile 전용 graph와 SQL·Entity 적재 회귀는 42차 범위다. BE-030의 Work summary 조회 개선은 43차에 기록한다.
+- BE-030의 summary target/child Entity 제거·입고/관계/receipt/진행 회귀와 기존 benchmark 적재 gate는 43차 범위다. 다음은 BE-031/032다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

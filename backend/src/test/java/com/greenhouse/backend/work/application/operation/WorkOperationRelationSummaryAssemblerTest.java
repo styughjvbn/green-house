@@ -8,16 +8,20 @@ import com.greenhouse.backend.work.domain.operation.WorkCommandReceipt;
 import com.greenhouse.backend.work.domain.operation.WorkCommandReceiptMembership;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.dto.operation.WorkOperationOriginType;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptMembershipRepository;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptRepository;
+import com.greenhouse.backend.work.repository.WorkOperationChildCount;
+import com.greenhouse.backend.work.repository.WorkOperationInboundReference;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
+import java.util.LinkedHashSet;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -47,12 +51,8 @@ class WorkOperationRelationSummaryAssemblerTest {
     WorkOperation movement = operation(2L, null);
     WorkOperation discard = operation(3L, movement);
     WorkOperation direct = operation(4L, null);
-    WorkOperationTarget inboundTarget = mock(WorkOperationTarget.class);
-    when(inboundTarget.getWorkOperation()).thenReturn(inbound);
-    when(inboundTarget.getInboundRecordId()).thenReturn(123L);
-    when(targetRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(
-            List.of(1L, 2L, 3L, 4L)))
-        .thenReturn(List.of(inboundTarget));
+    when(targetRepository.findInboundReferences(List.of(1L, 2L, 3L, 4L)))
+        .thenReturn(List.of(new WorkOperationInboundReference(1L, 123L)));
     when(membershipRepository.findByOperationIdIn(List.of(1L, 2L, 3L, 4L)))
         .thenReturn(
             List.of(
@@ -61,9 +61,8 @@ class WorkOperationRelationSummaryAssemblerTest {
     WorkCommandReceipt receipt = mock(WorkCommandReceipt.class);
     when(receipt.getResultOperationIds()).thenReturn(List.of(1L, 4L));
     when(receiptRepository.findByReceiptKeyIn(List.of("receipt"))).thenReturn(List.of(receipt));
-    when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(
-            List.of(1L, 2L, 4L)))
-        .thenReturn(List.of(discard));
+    when(operationRepository.countChildrenByParentIds(new LinkedHashSet<>(List.of(1L, 2L, 4L))))
+        .thenReturn(List.of(new WorkOperationChildCount(2L, 1L)));
 
     var summaries = assembler.assemble(List.of(inbound, movement, discard, direct));
 
@@ -82,10 +81,9 @@ class WorkOperationRelationSummaryAssemblerTest {
   @Test
   void keepsOperationWithoutReceiptOrExplicitRelationIndependent() {
     WorkOperation operation = operation(9L, null);
-    when(targetRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(List.of(9L)))
-        .thenReturn(List.of());
+    when(targetRepository.findInboundReferences(List.of(9L))).thenReturn(List.of());
     when(membershipRepository.findByOperationIdIn(List.of(9L))).thenReturn(List.of());
-    when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(9L)))
+    when(operationRepository.countChildrenByParentIds(new LinkedHashSet<>(List.of(9L))))
         .thenReturn(List.of());
 
     var summary = assembler.assemble(List.of(operation)).get(9L);
@@ -101,13 +99,10 @@ class WorkOperationRelationSummaryAssemblerTest {
     WorkOperation parent = operation(10L, null);
     WorkOperation firstChild = operation(11L, parent);
     WorkOperation secondChild = operation(12L, parent);
-    when(targetRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(
-            List.of(10L, 11L, 12L)))
-        .thenReturn(List.of());
+    when(targetRepository.findInboundReferences(List.of(10L, 11L, 12L))).thenReturn(List.of());
     when(membershipRepository.findByOperationIdIn(List.of(10L, 11L, 12L))).thenReturn(List.of());
-    when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(
-            List.of(10L)))
-        .thenReturn(List.of(firstChild, secondChild));
+    when(operationRepository.countChildrenByParentIds(new LinkedHashSet<>(List.of(10L))))
+        .thenReturn(List.of(new WorkOperationChildCount(10L, 2L)));
 
     var summaries = assembler.assemble(List.of(parent, firstChild, secondChild));
 
@@ -124,5 +119,24 @@ class WorkOperationRelationSummaryAssemblerTest {
       when(operation.getRelationType()).thenReturn(WorkOperationRelationType.MOVEMENT_DISCARD);
     }
     return operation;
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void preservesExistingFamilyPrecedenceForNestedParents(boolean reversed) {
+    var parent = operation(1L, null);
+    var child = operation(2L, parent);
+    var grandchild = operation(3L, child);
+    var page = reversed ? List.of(grandchild, child, parent) : List.of(parent, child, grandchild);
+    var ids = page.stream().map(WorkOperation::getId).toList();
+    when(targetRepository.findInboundReferences(ids)).thenReturn(List.of());
+    when(membershipRepository.findByOperationIdIn(ids)).thenReturn(List.of());
+    when(operationRepository.countChildrenByParentIds(new LinkedHashSet<>(List.of(1L, 2L))))
+        .thenReturn(
+            List.of(new WorkOperationChildCount(1L, 5L), new WorkOperationChildCount(2L, 2L)));
+    var summaries = assembler.assemble(page);
+    assertThat(summaries.get(1L).linkedOperationCount()).isEqualTo(5);
+    assertThat(summaries.get(2L).linkedOperationCount()).isEqualTo(reversed ? 5 : 2);
+    assertThat(summaries.get(3L).linkedOperationCount()).isEqualTo(2);
   }
 }
