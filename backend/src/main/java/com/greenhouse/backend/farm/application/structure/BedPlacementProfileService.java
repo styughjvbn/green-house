@@ -8,6 +8,7 @@ import com.greenhouse.backend.farm.dto.structure.BedZoneCapacityRequest;
 import com.greenhouse.backend.farm.dto.structure.BedZonePlacementProfileRequest;
 import com.greenhouse.backend.farm.dto.structure.BedZonePlacementProfileResponse;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,7 +33,11 @@ public class BedPlacementProfileService {
     BedZone bedZone = findZone(bedZoneId);
     Map<String, Object> before = auditSupport.snapshot(bedZone);
     var rules = request.capacities().stream().map(this::toRule).toList();
-    bedZone.replaceCapacities(BedPlacementProfilePolicy.createCapacities(rules));
+    var nextCapacities = BedPlacementProfilePolicy.createCapacities(rules);
+    // Hibernate inserts new Entities before orphan deletes. Release the old UNIQUE keys first.
+    bedZone.replaceCapacities(List.of());
+    bedZoneRepository.flush();
+    bedZone.replaceCapacities(nextCapacities);
     auditSupport.record(bedZone, before, auditSupport.snapshot(bedZone));
     return BedZonePlacementProfileResponse.from(bedZone);
   }

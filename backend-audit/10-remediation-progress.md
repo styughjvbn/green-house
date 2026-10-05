@@ -1385,6 +1385,24 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-028의 조회 수 문제를 해결했다. 다음은 BE-029 배치 profile의 불필요한 난 묶음 적재 제거다.
 
+## 41차 변경 — BE-029 검증 중 발견한 배치 profile 규칙 교체 오류
+
+### 완료 범위
+
+- BE-029 조회/수정 PostgreSQL fixture에서 기존 키의 값만 바꾸는 전체 규칙 교체가 `uk_bed_zone_capacities_rule`에 실패했다. Hibernate의 새 Entity INSERT가 orphan DELETE보다 먼저 실행돼 같은 `(구역, 배치 유형, 화분, 모드)` 키가 잠시 중복된다. H2 기반 교체 테스트는 이 PostgreSQL 제약을 검사하지 않아 통과해 왔다. 감사의 적재 최적화와 별도의 버그 수정으로 저장한다.
+- 새 규칙 전체를 기존 Domain Policy로 먼저 검증한 뒤 빈 목록으로 교체해 삭제를 flush하고 새 규칙을 적용한다. 같은 최상위 트랜잭션 안에서 원래 삭제·신규 규칙·감사가 함께 확정/rollback하며 commit/잠금/인가/API/DB schema를 추가하지 않는다. 행을 in-place 수정하는 방식으로 바꾸지 않아 기존 전체 교체 의미와 동일 값의 감사 생략을 유지한다.
+- 새 PostgreSQL 회귀는 기존 키의 3개 모드 수정·신규 행 ID·동일 값 재요청의 감사 생략, 삭제 flush 후 감사 DB CHECK 실패·원래 규칙의 ID/모든 DB 필드 복구·감사/재고 보존·재시도 성공을 검증한다. 테스트 실패 주입 CHECK는 기존 감사는 보존하고 신규 감사 INSERT만 검사하도록 `NOT VALID`로 추가/정리한다. 제품 migration이나 제약은 바꾸지 않는다.
+
+### 검증
+
+- 집중 검증: 기존 배치 profile/감사/정책 일반 테스트 성공, 새 PostgreSQL 동일 키/감사 rollback/retry 회귀 1건 성공(24초). 별도 적재 실험 9건은 응답·감사 검증 통과 후 난 묶음 적재 0 조건에서 실패해 BE-029의 남은 문제를 확인했다. 최초 fixture의 화분 표시 기대를 실제 정규화 값 `3"`에 맞췄다.
+- 최종 일반 `./gradlew test`: 133개 클래스 711건 성공. 관련 PostgreSQL 교체/rollback 1건·Farm 조회 4건, 2개 클래스 5건 성공. 실패·오류·생략 0건; 백엔드 검사 2분 27초. 프론트 `npm run check`, `spotlessCheck`, `git diff --check` 성공.
+- PostgreSQL 전체·benchmark 전체·브라우저 E2E·동시 profile 수정 검증은 미실행. 이번 변경은 동시 writer 제어를 추가하지 않는다. 최종 검증 후 커밋 대상에는 진행 문서만 수정했고 적재 회귀는 다음 변경에서 별도로 저장한다.
+
+### 다음 범위
+
+- 규칙 교체 오류 수정을 별도 커밋한 뒤 BE-029의 profile 전용 graph를 적용한다. 조회·수정 SQL이 고정돼도 현재 graph의 불필요한 난 묶음 적재는 남아 있다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1426,7 +1444,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `f7f5cf90` — BE-024 미사용 주입/전략 옵션 제거·기존 실행 회귀.
 - `6c95e7a0` — BE-025 즉시 명령 전달·actor 정규화·지문/실행 호환 회귀.
 - `6bb0bac9` — BE-026 입금 키 충돌 오류·소비자/명세·금융 상태/경쟁 회귀.
-- BE-028 — `perf: batch load direct lineage references`. 직접 계보 참조·순서/연령·query-count 회귀를 별도 커밋으로 저장한다.
+- BE-029 추가 결함 — `fix: flush old placement rules before replacement`. 동일 키 교체·삭제 flush/감사 rollback/retry 회귀를 별도 커밋으로 저장한다.
+- `c5ee8014` — BE-028 `perf: batch load direct lineage references`. 직접 계보 참조·순서/연령·query-count 회귀를 별도 커밋으로 저장한다.
 - `7aa63f7f` — BE-027 `perf: batch load auction write result histories`. 쓰기 결과 행 N+1·순서/접수 호환·query-count 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
