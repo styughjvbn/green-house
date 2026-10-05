@@ -68,21 +68,7 @@ public class ImmediateWorkExecutionService {
             workTypeCode, title, workDate, actor, memo, orchidGroupId, details, payload);
     var ids =
         receipts.execute(
-            "IMMEDIATE",
-            key,
-            command,
-            () ->
-                List.of(
-                    executeNewForTarget(
-                        key,
-                        workTypeCode,
-                        title,
-                        workDate,
-                        actor,
-                        memo,
-                        orchidGroupId,
-                        details,
-                        payload)));
+            "IMMEDIATE", key, command, () -> List.of(executeNewForTarget(key, command)));
     return queryService.get(ids.getFirst());
   }
 
@@ -99,14 +85,7 @@ public class ImmediateWorkExecutionService {
     String actor = support.actor(worker);
     var command =
         new ImmediateCommand(workTypeCode, title, workDate, actor, memo, null, details, payload);
-    var ids =
-        receipts.execute(
-            "IMMEDIATE",
-            key,
-            command,
-            () ->
-                List.of(
-                    executeNew(key, workTypeCode, title, workDate, actor, memo, details, payload)));
+    var ids = receipts.execute("IMMEDIATE", key, command, () -> List.of(executeNew(key, command)));
     return queryService.get(ids.getFirst());
   }
 
@@ -120,36 +99,26 @@ public class ImmediateWorkExecutionService {
       Map<String, Object> details,
       WorkEffectPayload payload) {}
 
-  private Long executeNewForTarget(
-      String requestKey,
-      String workTypeCode,
-      String title,
-      LocalDate workDate,
-      String worker,
-      String memo,
-      Long orchidGroupId,
-      Map<String, Object> details,
-      WorkEffectPayload payload) {
-    worker = support.actor(worker);
+  private Long executeNewForTarget(String requestKey, ImmediateCommand command) {
     if (operationRepository.findByRequestKey(requestKey).isPresent()) {
       throw new ConflictException(
           "IDEMPOTENCY_REPLAY_UNAVAILABLE", "과거 요청 원문이 없어 재실행 내용을 확인할 수 없습니다. 기존 작업을 조회해 주세요.");
     }
 
-    ResolvedWorkTarget resolved = workTargetResolver.getCurrent(orchidGroupId);
-    WorkTargetSelection targetSelection = WorkTargetSelection.orchidGroup(orchidGroupId);
+    ResolvedWorkTarget resolved = workTargetResolver.getCurrent(command.orchidGroupId());
+    WorkTargetSelection targetSelection = WorkTargetSelection.orchidGroup(command.orchidGroupId());
     WorkOperation operation =
         new WorkOperation(
-            workTypeService.getByCode(workTypeCode),
-            title,
-            workDate,
-            workDate,
+            workTypeService.getByCode(command.workTypeCode()),
+            command.title(),
+            command.workDate(),
+            command.workDate(),
             targetSelection.sourceScopeType(),
             targetSelection.sourceScopeId(),
             targetSelection.conditionSnapshot(),
-            details,
-            worker,
-            memo,
+            command.details(),
+            command.worker(),
+            command.memo(),
             support.now());
     operation.assignRequestKey(requestKey);
     aggregateCreator.createForOrchidGroups(
@@ -165,22 +134,14 @@ public class ImmediateWorkExecutionService {
         workEffectProcessor.apply(
             operation,
             execution.getTarget(),
-            new WorkEffectCommand(executedAt, worker, details, payload));
-    execution.completeWithEffect(executedAt, worker, result.storedDetails());
+            new WorkEffectCommand(
+                executedAt, command.worker(), command.details(), command.payload()));
+    execution.completeWithEffect(executedAt, command.worker(), result.storedDetails());
     operation.complete(executedAt);
     return operation.getId();
   }
 
-  private Long executeNew(
-      String requestKey,
-      String workTypeCode,
-      String title,
-      LocalDate workDate,
-      String worker,
-      String memo,
-      Map<String, Object> details,
-      WorkEffectPayload payload) {
-    worker = support.actor(worker);
+  private Long executeNew(String requestKey, ImmediateCommand command) {
     if (operationRepository.findByRequestKey(requestKey).isPresent()) {
       throw new ConflictException(
           "IDEMPOTENCY_REPLAY_UNAVAILABLE", "과거 요청 원문이 없어 재실행 내용을 확인할 수 없습니다. 기존 작업을 조회해 주세요.");
@@ -188,23 +149,25 @@ public class ImmediateWorkExecutionService {
 
     WorkOperation operation =
         new WorkOperation(
-            workTypeService.getByCode(workTypeCode),
-            title,
-            workDate,
-            workDate,
+            workTypeService.getByCode(command.workTypeCode()),
+            command.title(),
+            command.workDate(),
+            command.workDate(),
             WorkSourceScopeType.NONE,
             null,
             Map.of(),
-            details,
-            worker,
-            memo,
+            command.details(),
+            command.worker(),
+            command.memo(),
             support.now());
     operation.assignRequestKey(requestKey);
     operationRepository.save(operation);
     LocalDateTime executedAt = support.now();
     operation.start(executedAt);
     workEffectProcessor.apply(
-        operation, null, new WorkEffectCommand(executedAt, worker, details, payload));
+        operation,
+        null,
+        new WorkEffectCommand(executedAt, command.worker(), command.details(), command.payload()));
     operation.complete(executedAt);
     return operation.getId();
   }

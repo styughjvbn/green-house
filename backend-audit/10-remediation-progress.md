@@ -1292,6 +1292,32 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-024의 감사에서 지적한 미사용 주입과 전략 옵션 제거를 완료했다. 다음 변경은 BE-025의 즉시 실행 명령 전달·actor 정규화 정리이며 기존 지문과 실제 실행 값의 일치를 검증한다.
 
+## 37차 변경 — BE-025 즉시 실행 명령 전달·actor 정규화 정리
+
+### 완료 범위
+
+- 즉시 실행의 두 공개 진입점에서 이미 만든 `ImmediateCommand`를 접수 지문과 내부 실행에 함께 사용한다. callback에서 명령을 풀어 8/9개 인자를 반복 전달하던 경로를 `requestKey`와 기존 명령의 두 인자로 줄였다. 공개 서명·새 범용 실행 계층·외부 모듈 계약은 추가하거나 변경하지 않는다.
+- actor는 기존처럼 접수 전에 정규화하고 명령에 저장한다. 내부 실행에서 다시 정규화하지 않고 작업·효과·대상 완료에 동일한 값을 전달한다. 일반 모드의 null/공백 → null·trim과 데모 계정 치환은 유지한다. 실제 provider의 정규화가 재적용해도 같은 값임을 확인하고 제품 변경 전후 회귀로 고정했다.
+- 기존 명령의 필드 이름·순서·값, null 대상 ID, 자동 이력 제목과 직접 전달 제목, 원문 payload의 actor/제목/키/메모/사유·날짜 표현을 보존한다. 요청 원문을 정규화한 실행 값으로 대체하지 않는다. 접수 namespace·키 처리·legacy 거절·replay 우선 판정·membership·최종 현재 응답 조회도 기존 위치에 유지한다.
+- 작업 생성/대상 확정·상태 전이·효과·Mutation·감사의 실행 순서와 트랜잭션·잠금·DB schema·HTTP 계약은 변경하지 않는다. 대상 없는 공개 실행의 실제 외부 소비자를 새로 추가하지 않는다.
+
+### 회귀 방어
+
+- 새 parameterized 시험 10건은 대상 유무 × 일반 actor null/공백/trim 및 데모 actor null/위조 입력을 확인한다. 변경 전 코드에서 먼저 10건이 성공했다(8초).
+- private record를 직접 호출하거나 메서드 인자 개수·actor 호출 횟수를 검사하지 않는다. 두 공개 업무 API의 접수 입력을 기존 literal JSON envelope의 지문과 비교하고, 실제 생성된 Work와 효과 명령·대상 완료의 actor/날짜/메모/상태·원문 payload를 확인한다. DB claim/replay/rollback의 증거는 이 mock 시험이 아닌 기존 PostgreSQL 회귀에서 확보한다.
+
+### 검증
+
+- 변경 후 집중 실행/지문/현장 동기화 payload/분갈이/보상·실사/actor 6개 클래스 30건 성공(30초).
+- 최종 백엔드 `./gradlew test workE2eTest --tests '*WorkIdempotencyPostgresE2ETest' spotlessCheck`: 일반 133개 클래스 711건·관련 PostgreSQL 1개 클래스 11건 성공(전체 2분 25초). 실패·오류·생략은 없다.
+- PostgreSQL은 즉시 요청의 동시 실행·효과/접수/membership 단일 생성, 실패 후 전체 rollback과 같은 키 재시도, 구형 분갈이·현장 동기화 접수 지문/replay와 snapshot 보존, 변경 원문 충돌, 원문 없는 legacy 거절·DB 효과 identity 제약을 기존 회귀로 확인한다. 실제 트랜잭션 경계를 변경하지 않지만 영속 지문에 쓰이는 명령을 실행에도 사용하는 호환성 위험을 이 관련 범위로 검증했다.
+- 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. PostgreSQL 전체·benchmark·브라우저 E2E·운영 대사는 미실행. 공개 API/enum/validation·저장 schema·모듈 경계나 도메인 정책 변경이 없어 OpenAPI/TypeScript 생성·Flyway·기능/architecture 문서 갱신은 필요하지 않다.
+- 전체 검증 후 진행 문서만 수정했다. 제품·시험 소스가 유지되어 전체 검증을 반복하지 않는다.
+
+### 남은 범위
+
+- BE-025의 내부 반복 전달과 actor 재정규화 제거를 완료했다. 다음 변경은 BE-026의 Work/Settlement 멱등 키 충돌 오류 계약이며 기존 payment 소비자의 HTTP 호환성을 먼저 검토한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1330,7 +1356,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `885d7863` — BE-021 포트 취소 업무 API·Farm adapter·저장 호환/rollback/architecture 회귀.
 - `646e0db6` — BE-022 전표 입금 감사 소유권·내부 helper 가시성·감사/rollback/architecture 회귀.
 - `75aac8cd` — BE-023 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀.
-- BE-024 — `refactor: remove unused work and strategy dependencies`. 미사용 주입/전략 옵션 제거·기존 실행 회귀를 별도 커밋으로 저장한다.
+- `f7f5cf90` — BE-024 미사용 주입/전략 옵션 제거·기존 실행 회귀.
+- BE-025 — `refactor: pass immediate work commands through execution`. 즉시 명령 전달·actor 정규화·지문/실행 호환 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1362,5 +1389,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-021의 Farm Receipt helper 의존 제거·입고 포트 취소 업무 API·저장 호환/rollback/architecture 회귀는 33차 범위다.
 - BE-022의 전표 입금 감사 소유권·내부 helper 공개 범위 정리·감사/rollback/architecture 회귀는 34차 범위다.
 - BE-023의 생성/수정 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀는 35차 범위다.
-- BE-024의 미사용 주입·전략 옵션 제거와 기존 실행 회귀 확인은 36차 범위다. 다음 변경은 BE-025의 즉시 실행 명령 전달·actor 정규화를 검토한다.
+- BE-024의 미사용 주입·전략 옵션 제거와 기존 실행 회귀 확인은 36차 범위다.
+- BE-025의 즉시 실행 명령 전달·actor 정규화와 지문/실행 호환 회귀는 37차 범위다. 다음 변경은 BE-026의 멱등 키 충돌 오류 계약을 검토한다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
