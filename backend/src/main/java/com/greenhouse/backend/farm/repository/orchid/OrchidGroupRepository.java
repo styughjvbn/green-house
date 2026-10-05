@@ -1,7 +1,6 @@
 package com.greenhouse.backend.farm.repository.orchid;
 
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -359,33 +358,4 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			""")
   List<OrchidGroupNameRow> findNameRowsByIdIn(
       @Param("orchidGroupIds") Collection<Long> orchidGroupIds);
-
-  @Query(
-      """
-			select g from OrchidGroup g
-			join fetch g.bedZone z
-			join fetch z.physicalBed b
-			join fetch b.house h
-			join fetch g.variety v
-			left join fetch g.inboundRecord
-			where g.quantity > 0
-			  and g.status not in :inactiveStatuses
-			  and g.potSizeCode <> com.greenhouse.backend.farm.domain.orchid.PotSizeCode.UNMAPPED
-			  and (:varietyId is null or v.id = :varietyId)
-			  and (:potSizeCode is null or g.potSizeCode = :potSizeCode)
-			  and (:houseId is null or h.id = :houseId)
-			  and (:status = '' or g.status = :status)
-			  and (:keyword = ''
-			      or lower(v.name) like lower(concat('%', :keyword, '%'))
-			      or lower(v.genus) like lower(concat('%', :keyword, '%')))
-			order by v.name asc, g.ageYear asc, g.potSizeCode asc,
-			         h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
-			""")
-  List<OrchidGroup> findDerivedGroupCandidates(
-      @Param("varietyId") Long varietyId,
-      @Param("potSizeCode") PotSizeCode potSizeCode,
-      @Param("houseId") Long houseId,
-      @Param("status") String status,
-      @Param("keyword") String keyword,
-      @Param("inactiveStatuses") Collection<String> inactiveStatuses);
 }

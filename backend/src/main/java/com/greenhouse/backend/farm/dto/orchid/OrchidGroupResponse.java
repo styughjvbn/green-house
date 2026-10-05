@@ -5,6 +5,7 @@ import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 public record OrchidGroupResponse(
@@ -67,12 +68,21 @@ public record OrchidGroupResponse(
       return null;
     }
 
+    return calculateAgeYear(
+        baseAgeYear,
+        orchidGroup.getInboundRecord() == null
+            ? null
+            : orchidGroup.getInboundRecord().getInboundDate(),
+        orchidGroup.getCreatedAt(),
+        businessDate);
+  }
+
+  public static Integer calculateAgeYear(
+      Integer baseAgeYear, LocalDate inboundDate, LocalDateTime createdAt, LocalDate businessDate) {
     LocalDate referenceDate =
-        orchidGroup.getInboundRecord() != null
-            ? orchidGroup.getInboundRecord().getInboundDate()
-            : orchidGroup.getCreatedAt() != null
-                ? TimeConfig.toFarmTime(orchidGroup.getCreatedAt()).toLocalDate()
-                : null;
+        inboundDate != null
+            ? inboundDate
+            : createdAt == null ? null : TimeConfig.toFarmTime(createdAt).toLocalDate();
     return calculateAgeYear(baseAgeYear, referenceDate, businessDate);
   }
 

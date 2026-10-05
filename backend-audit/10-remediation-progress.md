@@ -1442,6 +1442,28 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-030 조회 적재 개선을 완료한 뒤 BE-031 품종/자동 그룹의 요약 집계를 진행한다.
 
+## 44차 변경 — BE-031 품종 DB 집계·자동 그룹 scalar 순차 조립
+
+### 완료 범위
+
+- 품종 페이지/단건의 양수 묶음 개수·전체 수량·판매 가능량은 Farm 소유 QueryDSL 집계로 조회한다. 기존처럼 양수이면 종료/경고 상태도 개수/전체량에 포함하고 판매 가능량만 Domain Policy의 상태 목록과 예약 잔량/0 하한을 적용한다. 품종 응답에 불필요한 그룹/위치 Entity를 적재하지 않는다.
+- 현재 그룹 ID/품종의 scalar cursor와 500개 Work 날짜 입력 batch로 최신 날짜를 모은다. 전 그룹 Entity·ID·Work 날짜 map을 한꺼번에 보관하지 않고 품종별 최대 날짜만 유지한다. Work가 현재 그룹 ID에 대해 완료/제외 여부를 판단하는 기존 계약을 유지한다. 현재 품종 연결 대신 과거 target의 품종 snapshot으로 집계하지 않는다.
+- 검증 중 기존 페이지 조립이 모든 품종에 페이지 전체 최신 작업일을 넣는 결함을 확인했다. 자기 품종의 최신일을 반환하도록 바로잡았으며 작업이 없는 품종은 null이다. 단건/연결 상세와 의미를 맞췄고 DOMAIN_RULES에 기준을 명시했다. API shape·enum·validation은 변경하지 않아 명세/타입 재생성은 필요하지 않다.
+- 자동 그룹은 공통 QueryDSL 조건/정렬로 scalar summary/member cursor를 읽는다. summary는 key별 개수/수량/고유 위치만 누적하고 전체 member DTO 목록을 만들지 않는다. member는 현재 연령 필터 통과 후에만 DTO를 만든다. 기존 연령 함수를 공통 사용해 입고일 우선, UTC 생성일의 농장 날짜, 윤년·미래일 0 하한·미지정 나이·group key를 유지한다. 저장 age_year 조건으로 바꾸지 않았다.
+- scalar stream은 caller read/write 트랜잭션 안에서 fetch size 500으로 처리하고 닫는다. 다중 모듈 조회의 전체 결과가 하나의 DB snapshot이라는 보장은 추가하지 않는다. summary key/고유 위치 수와 반환 member DTO 크기, DB 후보 scan/sort·Java 연령 계산은 여전히 데이터 수에 영향받는다. 호환 member/연결 상세의 pagination/상한 변경은 BE-034에 남긴다.
+
+### 측정·회귀와 검증
+
+- 새 PostgreSQL 회귀는 품종 3개 고정, 첫 품종의 묶음 1/500/5,001개 + 다른 품종 1개·비어 있는 품종을 구성한다. 정상/주의/종료·예약·서로 다른 두 위치·현재/저장 품종명이 다른 자료·품종별 완료 날짜를 포함한다. 합계/판매량/최신 입고·작업일, 자동 그룹 수량/고유 위치/현재 연령 및 전체 member DTO의 기존 Entity mapper 호환을 검증한다.
+- 품종 변경 전 묶음 load 2/501/5,002개, 전체 Entity 8/508/5,009개·SQL 5회. 3건 모두 다른 품종의 최근 작업일 assertion에서 기존 결함을 재현했다. 변경 후 묶음 load 0·Entity 3개, SQL 6/7/16회(5 + ceil(양수 그룹/500))다. 조회 수 증가를 허용하는 대신 scalar/ID batch 크기와 Entity 상한을 방어한다.
+- 자동 그룹의 새 scalar 경로에서는 summary/member 각각 SQL 1회·Entity load 0이다. 해당 수치는 품종 변경 전후 측정이며 자동 그룹 구형 경로의 별도 실행 baseline은 하지 않았다. `build/work-query-count/orchid-summary-*.json`에 단계별 SQL/Entity 증적을 남긴다. 실제 JDBC row count·allocation·heap은 미측정이며 fetch-size 설정만으로 peak heap을 입증했다고 취급하지 않는다.
+- 기존 품종/감사/자동 그룹 일반 회귀 및 첫 PostgreSQL 3건 집중 검증 성공(50초). 윤년 두 경계·미래 입고·UTC 생성일의 농장 날짜 두 경계·null 연령 6건을 추가했다. 추가 6개 날짜 경계까지 PostgreSQL 신규 9건 집중 검증 성공(29초). 최종 일반 `./gradlew test`: 133개 클래스 713건 성공. PostgreSQL 요약/연령 9건·기존 Farm 조회 4건, 2개 클래스 13건 성공. 실패·오류·생략 0건; 백엔드 검사 2분 38초.
+- 프론트 `npm run check`, `spotlessCheck`, `git diff --check` 성공. PostgreSQL 전체·전체 benchmark·브라우저 E2E·peak heap/실제 cursor fetch round trip·운영 plan/부하는 미실행. 최종 검증 후에는 진행 문서만 수정했다.
+
+### 다음 범위
+
+- BE-031 요약 적재 개선 후 BE-032 반복 검색/큰 ID 입력을 진행한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1486,7 +1508,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `7aa63f7f` — BE-027 `perf: batch load auction write result histories`. 쓰기 결과 행 N+1·순서/접수 호환·query-count 회귀를 별도 커밋으로 저장한다.
 - `c5ee8014` — BE-028 `perf: batch load direct lineage references`. 직접 계보 참조·순서/연령·query-count 회귀를 별도 커밋으로 저장한다.
 - `aa675b08` — BE-029 추가 결함 `fix: flush old placement rules before replacement`. 동일 키 교체·삭제 flush/감사 rollback/retry 회귀를 별도 커밋으로 저장한다.
-- BE-030 — `perf: project work summary origins and relation counts`. Work summary 적재·응답/관계/순서·기존 benchmark 회귀를 별도 커밋으로 저장한다.
+- BE-031 — `perf: assemble orchid summaries from scalar queries`. 품종 집계/최신일과 자동 그룹 stream·mapper/연령·Entity 적재 회귀를 별도 커밋으로 저장한다.
+- `a59b862c` — BE-030 `perf: project work summary origins and relation counts`. Work summary 적재·응답/관계/순서·기존 benchmark 회귀를 별도 커밋으로 저장한다.
 - `d8aaa928` — BE-029 `perf: load placement profiles without inventory groups`. profile 전용 graph·응답/감사/재고 보존과 Entity 적재 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
@@ -1525,5 +1548,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-027의 쓰기 결과 행 N+1 제거와 조회/순서/접수 회귀는 39차 범위다.
 - BE-028의 직접 계보 현재 참조 일괄 로딩·순서/연령/query-count 회귀는 40차 범위다.
 - BE-029의 PostgreSQL 동일 키 규칙 교체 오류/rollback 회귀는 41차, profile 전용 graph와 SQL·Entity 적재 회귀는 42차 범위다. BE-030의 Work summary 조회 개선은 43차에 기록한다.
-- BE-030의 summary target/child Entity 제거·입고/관계/receipt/진행 회귀와 기존 benchmark 적재 gate는 43차 범위다. 다음은 BE-031/032다.
+- BE-030의 summary target/child Entity 제거·입고/관계/receipt/진행 회귀와 기존 benchmark 적재 gate는 43차 범위다. BE-031/032는 44차 이후에 기록한다.
+- BE-031의 품종 DB 집계/최신일·자동 그룹 scalar stream/현재 연령과 관련 적재 회귀는 44차 범위다. 다음은 BE-032다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

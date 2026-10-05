@@ -275,6 +275,7 @@ Persistence 조회 규칙:
 - 페이지 조회에 collection fetch join을 적용하지 않는다. 먼저 root를 페이지 조회한 뒤 연관 collection을 ID `IN` 조회로 조립한다.
 - 목록 응답 조립 중 반복문 안에서 Repository를 호출하지 않고 필요한 ID를 모아 일괄 조회한다.
 - Work 목록 요약의 입고 출처는 대상 행의 최초 ID 순서로 중복 제거한 scalar 참조를 읽고, parent/child 연관 수는 DB에서 집계한다. 제외된 대상의 출처와 receipt의 생성 batch 의미를 유지하며 대상 snapshot·페이지 밖 child Entity를 로딩하지 않는다. 상세와 실제 실행의 대상 로딩은 별도 계약이다. SQL 상한과 함께 target/operation Entity 적재 상한을 검사한다.
+- 품종의 양수 묶음 개수/수량/판매 가능량은 Farm DB에서 집계한다. 현재 묶음 ID/품종 참조는 scalar cursor로 읽고 Work 날짜 조회에는 500개씩 전달해 품종별 최신일만 보관한다. 자동 그룹 요약은 연령 계산에 필요한 scalar 행을 순차 처리하며 member DTO 목록을 만들지 않는다. member 조회도 연령 필터를 통과한 행만 DTO로 조립한다. cursor는 호출자 트랜잭션 안에서 fetch size 500으로 사용하고 닫는다. 현재 연령은 기존 입고일 우선·UTC 생성 시각의 농장 날짜·요청 업무일 계산을 공통 사용하며, 저장 age_year만으로 대체하지 않는다.
 - 난 묶음 계보는 Work 실행 계보에 포함된 직접 연결을 먼저 제외하고, 남은 직접 연결과 실행 계보의 그룹 ID를 합쳐 위치·품종·입고까지 일괄 로딩한다. 직접 연결의 생성 시각/ID 순서와 현재 참조·농장 업무일 기준 연령 계산을 유지하며 과거 효과 snapshot으로 대체하지 않는다.
 - 배치 profile의 전체 규칙 교체는 정책으로 새 규칙 전체를 검증한 뒤 기존 규칙 삭제를 먼저 flush해 동일 UNIQUE 키의 새 INSERT보다 앞서 처리한다. flush는 commit이 아니며 새 규칙·감사는 최상위 트랜잭션에서 함께 확정/rollback한다. 값이 동일할 때 감사 생략과 규칙 행 교체의 기존 의미는 유지한다.
 - 배치 profile 조회·수정·감사는 위치와 용량 규칙만 로딩한다. 재고 묶음 collection을 전용 graph에 포함하지 않아 구역의 그룹 수에 따른 불필요한 Entity 적재와 규칙/그룹 collection 간 join 증폭을 피한다. 실제 재고가 필요한 구역 상세 조회의 graph는 따로 유지한다.

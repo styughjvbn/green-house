@@ -1,18 +1,20 @@
 package com.greenhouse.backend.farm.application.variety;
 
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.dto.variety.VarietyConnectedOrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyResponse;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupSummaryRepository;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupVarietyReference;
+import com.greenhouse.backend.farm.repository.orchid.VarietyInventorySummary;
 import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
 import java.time.LocalDate;
-import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,36 +28,71 @@ public class VarietyResponseAssembler {
 
   private final InboundRecordRepository inboundRecordRepository;
 
+  private final OrchidGroupSummaryRepository summaries;
+
+  private static final int WORK_BATCH_SIZE = 500;
+
   private final WorkOperationMetricsReader workOperationMetricsReader;
 
   public Page<VarietyResponse> assemble(Page<Variety> varieties) {
     var varietyIds = varieties.getContent().stream().map(Variety::getId).toList();
     if (varietyIds.isEmpty()) {
-      return varieties.map(variety -> assemble(variety, List.of(), Map.of(), null));
+      return varieties.map(variety -> VarietyResponse.from(variety, 0, 0, 0, null, null));
     }
-    var orchidGroups = orchidGroupRepository.findByVarietyIdInOrderByLocation(varietyIds);
-    var groupsByVarietyId =
-        orchidGroups.stream().collect(Collectors.groupingBy(group -> group.getVariety().getId()));
-    var latestWorkDates = latestWorkDates(orchidGroups);
-    var latestInboundDates =
-        inboundRecordRepository.findLatestInboundDatesByVarietyIds(varietyIds).stream()
-            .collect(Collectors.toMap(row -> (Long) row[0], row -> (LocalDate) row[1]));
-    return varieties.map(
-        variety ->
-            assemble(
-                variety,
-                groupsByVarietyId.getOrDefault(variety.getId(), List.of()),
-                latestWorkDates,
-                latestInboundDates.get(variety.getId())));
+    var responses = summarize(varieties.getContent());
+    return varieties.map(variety -> responses.get(variety.getId()));
   }
 
   public VarietyResponse assemble(Variety variety) {
-    var orchidGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(variety.getId());
-    return assemble(
-        variety,
-        orchidGroups,
-        latestWorkDates(orchidGroups),
-        inboundRecordRepository.findLatestInboundDateByVarietyId(variety.getId()));
+    return summarize(List.of(variety)).get(variety.getId());
+  }
+
+  private Map<Long, VarietyResponse> summarize(List<Variety> varieties) {
+    var ids = varieties.stream().map(Variety::getId).toList();
+    var inventory =
+        summaries.summarizeVarieties(ids).stream()
+            .collect(Collectors.toMap(VarietyInventorySummary::varietyId, row -> row));
+    var workDates = latestWorkDatesByVariety(ids);
+    var inboundDates =
+        inboundRecordRepository.findLatestInboundDatesByVarietyIds(ids).stream()
+            .collect(Collectors.toMap(row -> (Long) row[0], row -> (LocalDate) row[1]));
+    var result = new HashMap<Long, VarietyResponse>();
+    for (Variety variety : varieties) {
+      var quantities =
+          inventory.getOrDefault(
+              variety.getId(), new VarietyInventorySummary(variety.getId(), 0, 0, 0));
+      result.put(
+          variety.getId(),
+          VarietyResponse.from(
+              variety,
+              quantities.groupCount(),
+              quantities.quantity(),
+              quantities.saleableQuantity(),
+              inboundDates.get(variety.getId()),
+              workDates.get(variety.getId())));
+    }
+    return result;
+  }
+
+  private Map<Long, LocalDate> latestWorkDatesByVariety(List<Long> varietyIds) {
+    var result = new HashMap<Long, LocalDate>();
+    try (var rows = summaries.streamVarietyReferences(varietyIds)) {
+      var iterator = rows.iterator();
+      while (iterator.hasNext()) {
+        var batch = new ArrayList<OrchidGroupVarietyReference>(WORK_BATCH_SIZE);
+        while (iterator.hasNext() && batch.size() < WORK_BATCH_SIZE) batch.add(iterator.next());
+        var dates =
+            workOperationMetricsReader.getLatestWorkDates(
+                batch.stream().map(OrchidGroupVarietyReference::orchidGroupId).toList());
+        for (var row : batch) {
+          var date = dates.get(row.orchidGroupId());
+          if (date != null)
+            result.merge(
+                row.varietyId(), date, (left, right) -> left.isAfter(right) ? left : right);
+        }
+      }
+    }
+    return result;
   }
 
   public List<VarietyConnectedOrchidGroupResponse> connectedOrchidGroups(Variety variety) {
@@ -71,31 +108,6 @@ public class VarietyResponseAssembler {
                     group.getStatus(),
                     latestWorkDates.get(group.getId())))
         .toList();
-  }
-
-  private VarietyResponse assemble(
-      Variety variety,
-      List<OrchidGroup> orchidGroups,
-      Map<Long, LocalDate> latestWorkDates,
-      LocalDate latestInboundDate) {
-    long totalQuantity = orchidGroups.stream().mapToLong(OrchidGroup::getQuantity).sum();
-    long saleableQuantity =
-        orchidGroups.stream()
-            .filter(group -> OrchidGroupStatusPolicy.isSaleable(group.getStatus()))
-            .mapToLong(OrchidGroup::getAvailableQuantity)
-            .sum();
-    LocalDate recentWorkDate =
-        latestWorkDates.values().stream()
-            .filter(Objects::nonNull)
-            .max(Comparator.naturalOrder())
-            .orElse(null);
-    return VarietyResponse.from(
-        variety,
-        orchidGroups.size(),
-        totalQuantity,
-        saleableQuantity,
-        latestInboundDate,
-        recentWorkDate);
   }
 
   private Map<Long, LocalDate> latestWorkDates(List<OrchidGroup> orchidGroups) {
