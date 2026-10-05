@@ -51,6 +51,10 @@ abstract class WorkE2ETestBase {
     return exchange("PATCH", path, body, Map.of());
   }
 
+  protected ApiResult putJson(String path, String body) throws IOException, InterruptedException {
+    return exchange("PUT", path, body, Map.of());
+  }
+
   private ApiResult exchange(String method, String path, String body, Map<String, String> headers)
       throws IOException, InterruptedException {
     var requestHeaders = new LinkedHashMap<>(headers);

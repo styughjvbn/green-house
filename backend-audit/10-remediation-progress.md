@@ -1658,6 +1658,7 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - Work benchmark는 root 100건 고정·작업당 대상 1/20/100건과 동일 묶음 이력 1/100건으로 확장했다. Hibernate SQL/Entity/flush·JDBC counters·응답 JSON UTF-8 byte를 기록하며 목록 target Entity 0·반환 행 상한 및 enforcement 시 JDBC 실행 상한을 검사한다. 검색 benchmark의 501/5,001/70,001 거래처·공백 1/20개에도 JDBC counters를 추가했다.
 - 영구 PostgreSQL 회귀는 root 4건·대상 1/40/100건에서 SQL·반환 행 증가가 없음을 확인하고, Hibernate 통계가 0인 JdbcTemplate 조회 17행을 관측한다. 독립 Work 기록은 응답까지 commit 1회·JDBC 실행 37회(batch 호출 21회), 동일 키 replay는 commit 1회·실행 2회로 측정했다. 기존 저장 응답 replay와 flush를 함께 확인하고 `build/test-measurements/work-write.json`을 CI artifact에 포함했다.
 - 검증: 계측 단위 2건, 새 PG 회귀 3건, Work/Search benchmark 2건이 query enforcement와 함께 통과했다(benchmark/PG checkpoint 임시 heap 1GiB). `git diff --check` 통과. 전체 기본/frontend 검증은 BE-044 완료 체크포인트에서 실행한다.
+- 최종 전체 검증에서 DEBUG 환경의 H2 SHUTDOWN 뒤 JdbcTemplate 경고 조회가 정리 오류를 일으키는 문제를 발견했다. 정리만 raw JDBC로 수행하도록 별도 수정했다(`c301dfb4`). 수정 후 전체 기본 743건과 format이 통과했고 PG/benchmark의 계측·실행 의미는 바꾸지 않았다. Work benchmark 목록은 대상 1/20/100건 모두 JDBC 실행 7회·반환 행 201건·target Entity 0건을 유지했다.
 - 범위: 기존 BE-027~036 경로별 query/Entity/plan·rollback 회귀를 유지했다. JDBC 호출은 driver 내부 round trip이 아니고 소비 행은 DB scan이 아니다. JSON bytes는 재직렬화된 body 기준이며 autocommit·raw unwrap·다른 DataSource·lock 보유 시간·peak heap/GC·전체 할당량은 별도다. 시간 절대값을 CI 실패 기준으로 삼지 않으며 운영 부하 실험은 수행하지 않았다.
 
 ## 57차 변경 — BE-043 현행 writer·대상 terminal 정책 문서 일치
@@ -1666,6 +1667,15 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - Work 전체 완료 검사와 진행 중 자동 완료에 `CANCELED` 대상 terminal을 명시했다. 비어 있거나 미완료/부분 완료/실패 대상이 있으면 완료할 수 없고, 전체 취소·STOPPED를 자동 완료로 대체하지 않는 의미를 구별했다.
 - 기능 문서의 진행률 100%면 취소할 수 없다는 설명도 실제 완료 작업의 CANCEL/CORRECT action과 맞췄다. 프론트는 진행률 대신 서버 action/취소 가능 조회를 사용한다.
 - 검증: Engine·WorkTargetExecution·WorkOperationProgressService·WorkOperationActionResolver 및 관련 API slice와 현행 문서를 대조했다. `git diff --check` 통과. 문서만 변경했으며 테스트·OpenAPI 재생성은 반복하지 않았다. 일반 metadata 수정 권한(BE-009)의 업무 정책은 변경하지 않았다.
+
+## 58차 변경 — BE-044 정산 선호값과 실행 capability 구분
+
+- 정산 설정 응답에 현재 거래처 유형의 실행 capability를 추가했다. 비경매 거래처는 전표별, 경매장은 경매일별 정산을 제공하며 월간·자동 매칭/정산·예치금·자동 차감·규칙 실행은 미지원이다. immutable domain 값이 이 지원 정책을 소유하고 저장된 unit/boolean/ruleJson으로 기능을 활성화하지 않는다.
+- 기존 거래처 잠금에서 받은 유형을 응답에 사용해 별도 재조회 없이 capability를 조립한다. 최초 설정 생성·변경·감사의 기존 transaction/잠금 순서를 유지하고 저장된 MONTHLY_BATCH·자동 처리 true·JSON 규칙을 거절하거나 초기화하지 않는다. 지연일과 달력일/영업일의 실제 예상 입금일 계산도 유지한다.
+- 화면의 정산 단위 선택·자동 처리 availability는 생성된 capability 타입을 사용한다. 저장된 선호값과 현재 실행 지원 범위를 따로 안내하고 미지원 값을 실행 중인 기능으로 표시하지 않는다. capability가 없으면 조작을 허용하지 않으며 응답 전용 capability를 수정 payload에서 제외한다. 기존 수정 form 상태 구조를 전면 변경하지 않았다.
+- Controller/DTO와 회귀를 수정한 뒤 `python3 scripts/generate_openapi.py`, `npm run api:types`로 전체 명세·Partner slice·TypeScript 계약을 재생성했다. Request의 기존 필드·validation·저장 의미는 유지하고 보관용 설정의 설명을 추가했다. 도메인/판매 기능 문서에 실제 적용되는 지연일과 미지원 기능·별도 신규 정산의 설계 조건을 반영했다.
+- 검증: 집중 capability 4건·설정 HTTP/architecture 회귀 통과. 실제 PG 22건(신규 저장/조회 계약 3, 기존 정산/거래처 잠금·동시성·rollback 19) 통과. Wholesale/Retail/Auction 설정의 월간/자동 선호값 보존·capability 불변·설정 감사 한 건과 금융 행 미생성을 확인했다. frontend capability 부정/누락 회귀 3건 및 최종 `npm run check` 통과. 최종 backend 전체 141개 클래스 743건·`spotlessCheck`·`git diff --check` 통과(임시 init script로 test heap 1GiB). BE-042 PG 3건과 합쳐 이번 관련 PG 25건·benchmark 2건이 통과했다. 최종 성공 뒤 문서만 갱신했다.
+- 범위: capability는 현행 지원 범위이며 권한·특정 대상의 입금 가능 여부를 대체하지 않는다. 월간 aggregate·자동화·입금 분배·예치금 기능과 DB migration은 추가하지 않았다. 전체 PostgreSQL suite·브라우저 E2E·운영 부하 실험은 재실행하지 않았다.
 
 ## 커밋 진행
 
@@ -1732,7 +1742,9 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - `e31b99fa` — BE-041 `test: enforce application members and discover entity writers`. 명시 계약·값 유출·자동 writer 탐지와 부정 회귀.
 - `d5ad1753` — BE-042 `test: measure jdbc execution rows and work fan out`. JDBC counters·쓰기 commit/replay·fan-out benchmark와 영구 PG 회귀.
-- BE-043 — `docs: align mutation writers and work completion policies`. 단일 writer·취소 대상 terminal·완료 action 문서 일치.
+- `c301dfb4` — BE-042 후속 `test: close measurement database without warning inspection`. 전체 DEBUG 환경의 H2 정리 회귀 수정.
+- `16f357d4` — BE-043 `docs: align mutation writers and work completion policies`. 단일 writer·취소 대상 terminal·완료 action 문서 일치.
+- BE-044 — `fix: distinguish settlement preferences from execution capabilities`. 저장값 보존·실행 capability·화면/생성 계약·PG 회귀.
 
 ## 남은 작업
 
@@ -1785,4 +1797,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-041의 외부 application member 승인·generic 값 경계·compiled 새 mutator/참조/field write·query root 표기 우회는 55차 범위다. SQL parser·reflection/동적/alias SQL·새 원자 writer와 관련 객체 변화 검토는 남는다.
 - BE-042의 JDBC 실행/행·Work 고정 root의 target/history fan-out과 실제 commit/replay 측정은 56차 범위다. driver 내부 round trip·lock 보유 시간·정산/원장 peak heap·운영 부하 실험은 후속이다.
 - BE-043의 제거된 writer 경로·대상 완료 terminal·진행률과 취소 capability 문서 일치는 57차 범위다. BE-009의 수정 권한 정책은 별도다.
-- 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
+- BE-044의 저장된 선호값과 실행 지원 capability·화면/생성 API 계약 구분은 58차 범위다. 신규 묶음 정산·자동화·입금 분배는 별도 승인된 범위다.
+- BE-001~044의 이번 수정 범위와 검증은 위 변경 기록에 남겼다. finding 번호의 수정 진행을 운영 데이터 정합성 입증이나 모든 후속 범위 완료로 취급하지 않는다. 과거 데이터 대사·복구·제약 validation, 남은 정책 결정과 운영 성능/heap/lock 실측은 각 항목에 기록한 대로 남는다.

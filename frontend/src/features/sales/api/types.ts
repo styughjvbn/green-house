@@ -106,5 +106,5 @@ export type ManualPaymentPayload = {
 
 export type PartnerSettlementSettingsPayload = Omit<
   PartnerSettlementSettings,
-  "id" | "partnerId"
+  "id" | "partnerId" | "capabilities"
 >;

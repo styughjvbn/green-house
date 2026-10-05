@@ -1,6 +1,7 @@
 package com.greenhouse.backend.settlement.application;
 
 import com.greenhouse.backend.partner.application.BusinessPartnerLock;
+import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsRequest;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsResponse;
@@ -22,12 +23,14 @@ public class PartnerSettlementSettingsService {
   private final SettlementAuditSupport auditSupport;
 
   public PartnerSettlementSettingsResponse getOrCreate(Long partnerId) {
-    return PartnerSettlementSettingsResponse.from(findOrCreate(partnerId));
+    var context = findOrCreate(partnerId);
+    return PartnerSettlementSettingsResponse.from(context.settings(), context.partnerType());
   }
 
   public PartnerSettlementSettingsResponse update(
       Long partnerId, PartnerSettlementSettingsRequest request) {
-    var settings = findOrCreate(partnerId);
+    var context = findOrCreate(partnerId);
+    var settings = context.settings();
     var before = auditSupport.settingsSnapshot(settings);
     settings.update(
         request.settlementUnit(),
@@ -47,18 +50,22 @@ public class PartnerSettlementSettingsService {
         normalize(request.memo()));
     var saved = settingsRepository.save(settings);
     auditSupport.recordSettingsUpdate(saved, before, auditSupport.settingsSnapshot(saved));
-    return PartnerSettlementSettingsResponse.from(saved);
+    return PartnerSettlementSettingsResponse.from(saved, context.partnerType());
   }
 
-  private PartnerSettlementSettings findOrCreate(Long partnerId) {
+  private SettingsContext findOrCreate(Long partnerId) {
     var partner = partnerLock.lockAll(List.of(partnerId)).getFirst();
-    return settingsRepository
-        .findByPartnerId(partnerId)
-        .orElseGet(
-            () ->
-                settingsRepository.save(
-                    new PartnerSettlementSettings(partner.id(), partner.partnerType())));
+    var settings =
+        settingsRepository
+            .findByPartnerId(partnerId)
+            .orElseGet(
+                () ->
+                    settingsRepository.save(
+                        new PartnerSettlementSettings(partner.id(), partner.partnerType())));
+    return new SettingsContext(settings, partner.partnerType());
   }
+
+  private record SettingsContext(PartnerSettlementSettings settings, PartnerType partnerType) {}
 
   private String normalize(String value) {
     return value == null || value.isBlank() ? null : value.trim();

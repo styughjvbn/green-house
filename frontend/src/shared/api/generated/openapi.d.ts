@@ -2187,11 +2187,15 @@ export interface components {
             message?: string;
         };
         PartnerSettlementSettingsRequest: {
+            /** @description 선입금의 보관용 선호값. 현재 예치금 처리는 제공하지 않는다. */
             allowPrepayment?: boolean;
             /** Format: int64 */
             amountTolerance: number;
+            /** @description 자동 매칭의 보관용 선호값. 현재 자동 매칭 실행은 제공하지 않는다. */
             autoMatchEnabled?: boolean;
+            /** @description 자동 정산의 보관용 선호값. 현재 자동 정산 실행은 제공하지 않는다. */
             autoSettleEnabled?: boolean;
+            /** @description 선입금 자동 차감의 보관용 선호값. 현재 실행은 제공하지 않는다. */
             creditAutoApplyEnabled?: boolean;
             depositorAliases: string[];
             memo?: string;
@@ -2199,10 +2203,14 @@ export interface components {
             paymentDayMode: "CALENDAR_DAY" | "BUSINESS_DAY";
             /** Format: int32 */
             paymentDelayDays: number;
+            /** @description 보관용 규칙 JSON. 현재 결과 수신/파싱 또는 정산 실행에 적용하지 않는다. */
             ruleJson?: {
                 [key: string]: unknown;
             };
-            /** @enum {string} */
+            /**
+             * @description 저장할 선호 정산 단위. MONTHLY_BATCH 저장은 월간 실행을 활성화하지 않으며 실제 지원 범위는 응답 capabilities를 확인한다.
+             * @enum {string}
+             */
             settlementUnit: "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
         };
         ApiResponsePartnerSettlementSettingsResponse: {
@@ -2215,6 +2223,8 @@ export interface components {
             amountTolerance?: number;
             autoMatchEnabled?: boolean;
             autoSettleEnabled?: boolean;
+            /** @description 현재 거래처의 정산 실행 지원 범위. 저장된 설정값과 독립적이며 권한 또는 특정 전표의 실행 가능 여부를 뜻하지 않는다. */
+            readonly capabilities: components["schemas"]["SettlementCapabilities"];
             creditAutoApplyEnabled?: boolean;
             depositorAliases?: string[];
             /** Format: int64 */
@@ -2231,6 +2241,14 @@ export interface components {
             };
             /** @enum {string} */
             settlementUnit?: "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
+        };
+        SettlementCapabilities: {
+            autoMatching?: boolean;
+            autoSettlement?: boolean;
+            creditAutoApply?: boolean;
+            executableUnits?: ("SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE")[];
+            prepayment?: boolean;
+            ruleExecution?: boolean;
         };
         BedZoneCapacityRequest: {
             allowed: boolean;

@@ -464,7 +464,10 @@ export type BusinessPartner = {
 
 export type BusinessPartnerPage = Page<BusinessPartner>;
 
-export type SettlementUnit = "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
+export type SettlementUnit = NonNullable<
+  ApiSchemas["PartnerSettlementSettingsRequest"]["settlementUnit"]
+>;
+export type SettlementCapabilities = ApiSchemas["SettlementCapabilities"];
 export type PaymentDayMode = "CALENDAR_DAY" | "BUSINESS_DAY";
 
 export type PartnerSettlementSettings = {
@@ -481,6 +484,7 @@ export type PartnerSettlementSettings = {
   creditAutoApplyEnabled: boolean;
   ruleJson: Record<string, unknown> | null;
   memo: string | null;
+  capabilities: SettlementCapabilities;
 };
 
 export type SalesSlipItem = {

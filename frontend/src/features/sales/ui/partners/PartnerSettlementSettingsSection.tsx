@@ -17,11 +17,7 @@ import {
   getPartnerSettlementSettings,
   updatePartnerSettlementSettings,
 } from "../../api/salesApi";
-
-type DisabledFeature = {
-  enabled: boolean;
-  reason: string;
-};
+import { createSettlementFeatures } from "../../model/settlementCapabilities";
 
 export function PartnerSettlementSettingsSection({
   partner,
@@ -76,8 +72,8 @@ export function PartnerSettlementSettingsSection({
   }, [partner]);
 
   const disabledFeatures = useMemo(
-    () => createDisabledFeatures(partner),
-    [partner],
+    () => createSettlementFeatures(settings),
+    [settings],
   );
 
   function update<K extends keyof PartnerSettlementSettings>(
@@ -90,16 +86,8 @@ export function PartnerSettlementSettingsSection({
   }
 
   function updateSettlementUnit(nextUnit: SettlementUnit) {
-    if (!partner) return;
-    if (partner.partnerType !== "AUCTION_HOUSE") {
-      update("settlementUnit", "SALES_SLIP");
-      return;
-    }
-    if (
-      partner.partnerType === "AUCTION_HOUSE" &&
-      nextUnit !== "AUCTION_DATE"
-    ) {
-      setMessage("경매장 정산은 현재 경매일 단위만 지원합니다.");
+    if (!settings?.capabilities?.executableUnits?.includes(nextUnit)) {
+      setMessage("현재 지원하지 않는 정산 단위입니다.");
       return;
     }
     update("settlementUnit", nextUnit);
@@ -221,9 +209,7 @@ export function PartnerSettlementSettingsSection({
                 </option>
               </select>
               <FieldHint tone="muted">
-                {partner.partnerType === "AUCTION_HOUSE"
-                  ? disabledFeatures.monthlySettlement.reason
-                  : disabledFeatures.settlementUnit.reason}
+                {disabledFeatures.settlementUnit.reason}
               </FieldHint>
             </Field>
             <Field label="입금 지연일">
@@ -311,7 +297,7 @@ export function PartnerSettlementSettingsSection({
           {partner.partnerType === "AUCTION_HOUSE" ? (
             <details className="rounded-md border border-[#e1e6df] px-3 py-2">
               <summary className="cursor-pointer text-sm font-semibold">
-                경매 결과 수신·파싱 규칙
+                경매 규칙 JSON (보관용)
               </summary>
               <FieldHint tone="muted" className="mt-2">
                 {disabledFeatures.ruleJson.reason}
@@ -320,7 +306,7 @@ export function PartnerSettlementSettingsSection({
                 className="mt-3 min-h-36 w-full rounded-md border border-[#ccd5ca] bg-[#f5f7f4] p-3 font-mono text-xs text-[#748178] disabled:cursor-not-allowed"
                 value={ruleJson}
                 placeholder={'{"auctionDays":["MON","THU"]}'}
-                disabled
+                disabled={!disabledFeatures.ruleJson.enabled}
                 onChange={(event) => setRuleJson(event.target.value)}
               />
             </details>
@@ -347,7 +333,6 @@ export function PartnerSettlementSettingsSection({
         </form>
       ) : (
         <SettlementReadView
-          partner={partner}
           settings={settings}
           aliases={aliases}
           disabledFeatures={disabledFeatures}
@@ -433,24 +418,18 @@ function Toggle({
 function SettlementReadView({
   aliases,
   disabledFeatures,
-  partner,
   settings,
 }: {
   aliases: string;
-  disabledFeatures: ReturnType<typeof createDisabledFeatures>;
-  partner: BusinessPartner;
+  disabledFeatures: ReturnType<typeof createSettlementFeatures>;
   settings: PartnerSettlementSettings;
 }) {
   return (
     <div className="mt-3 grid gap-3 sm:grid-cols-2">
       <ReadField
-        label="정산 단위"
+        label="저장된 정산 단위"
         value={settlementUnitLabel(settings.settlementUnit)}
-        hint={
-          partner.partnerType === "AUCTION_HOUSE"
-            ? disabledFeatures.monthlySettlement.reason
-            : disabledFeatures.settlementUnit.reason
-        }
+        hint={disabledFeatures.settlementUnit.reason}
       />
       <ReadField
         label="입금 기준"
@@ -464,7 +443,7 @@ function SettlementReadView({
         value={`${settings.amountTolerance.toLocaleString()}원`}
       />
       <ReadField
-        label="자동 처리"
+        label="자동 처리 선호값"
         value={[
           settings.autoMatchEnabled ? "자동 매칭" : null,
           settings.autoSettleEnabled ? "자동 정산 완료" : null,
@@ -472,13 +451,16 @@ function SettlementReadView({
           .filter(Boolean)
           .join(", ")}
         hint={
-          !settings.autoMatchEnabled && !settings.autoSettleEnabled
-            ? "자동 매칭/정산 완료 미사용"
-            : undefined
+          !disabledFeatures.autoMatch.enabled &&
+          !disabledFeatures.autoSettle.enabled
+            ? "저장값과 관계없이 자동 매칭·정산 실행 기능은 제공하지 않습니다."
+            : !settings.autoMatchEnabled && !settings.autoSettleEnabled
+              ? "자동 매칭/정산 완료 미사용"
+              : undefined
         }
       />
       <ReadField
-        label="선입금"
+        label="선입금 선호값"
         value={[
           settings.allowPrepayment ? "선입금 허용" : null,
           settings.creditAutoApplyEnabled ? "자동 차감" : null,
@@ -486,9 +468,12 @@ function SettlementReadView({
           .filter(Boolean)
           .join(", ")}
         hint={
-          !settings.allowPrepayment && !settings.creditAutoApplyEnabled
-            ? "선입금/자동 차감 미사용"
-            : undefined
+          !disabledFeatures.prepayment.enabled &&
+          !disabledFeatures.autoCreditApply.enabled
+            ? "저장값과 관계없이 예치금·자동 차감 실행 기능은 제공하지 않습니다."
+            : !settings.allowPrepayment && !settings.creditAutoApplyEnabled
+              ? "선입금/자동 차감 미사용"
+              : undefined
         }
       />
       <ReadField
@@ -537,51 +522,4 @@ function paymentDayModeLabel(
 ) {
   if (mode === "BUSINESS_DAY") return "영업일";
   return "달력일";
-}
-
-function createDisabledFeatures(partner: BusinessPartner | null) {
-  const isAuctionHouse = partner?.partnerType === "AUCTION_HOUSE";
-
-  return {
-    settlementUnit: {
-      enabled: isAuctionHouse,
-      reason: isAuctionHouse
-        ? ""
-        : "비경매 거래처는 현재 판매 전표 단위 정산만 사용",
-    } satisfies DisabledFeature,
-    monthlySettlement: {
-      enabled: false,
-      reason: isAuctionHouse
-        ? "경매장 정산은 현재 경매일 단위만 동작"
-        : "월 정산 자동화 미구현",
-    } satisfies DisabledFeature,
-    salesSlipSettlement: {
-      enabled: !isAuctionHouse,
-      reason: "경매장 정산은 현재 경매일 단위만 동작",
-    } satisfies DisabledFeature,
-    auctionDateSettlement: {
-      enabled: isAuctionHouse,
-      reason: "비경매 거래처에는 사용하지 않음",
-    } satisfies DisabledFeature,
-    autoMatch: {
-      enabled: false,
-      reason: "자동 매칭 로직 미구현",
-    } satisfies DisabledFeature,
-    autoSettle: {
-      enabled: false,
-      reason: "자동 정산 완료 처리 미구현",
-    } satisfies DisabledFeature,
-    prepayment: {
-      enabled: false,
-      reason: "예치금/선입금 처리 미구현",
-    } satisfies DisabledFeature,
-    autoCreditApply: {
-      enabled: false,
-      reason: "예치금 자동 차감 미구현",
-    } satisfies DisabledFeature,
-    ruleJson: {
-      enabled: false,
-      reason: "경매 결과 자동 수신/파싱 미구현",
-    } satisfies DisabledFeature,
-  };
 }

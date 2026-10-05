@@ -4153,16 +4153,20 @@ components:
       properties:
         allowPrepayment:
           type: boolean
+          description: 선입금의 보관용 선호값. 현재 예치금 처리는 제공하지 않는다.
         amountTolerance:
           type: integer
           format: int64
           minimum: 0
         autoMatchEnabled:
           type: boolean
+          description: 자동 매칭의 보관용 선호값. 현재 자동 매칭 실행은 제공하지 않는다.
         autoSettleEnabled:
           type: boolean
+          description: 자동 정산의 보관용 선호값. 현재 자동 정산 실행은 제공하지 않는다.
         creditAutoApplyEnabled:
           type: boolean
+          description: 선입금 자동 차감의 보관용 선호값. 현재 실행은 제공하지 않는다.
         depositorAliases:
           type: array
           items:
@@ -4185,8 +4189,10 @@ components:
         ruleJson:
           type: object
           additionalProperties: {}
+          description: 보관용 규칙 JSON. 현재 결과 수신/파싱 또는 정산 실행에 적용하지 않는다.
         settlementUnit:
           type: string
+          description: 저장할 선호 정산 단위. MONTHLY_BATCH 저장은 월간 실행을 활성화하지 않으며 실제 지원 범위는 응답 capabilities를 확인한다.
           enum:
           - SALES_SLIP
           - MONTHLY_BATCH
@@ -4216,6 +4222,10 @@ components:
           type: boolean
         autoSettleEnabled:
           type: boolean
+        capabilities:
+          $ref: '#/components/schemas/SettlementCapabilities'
+          description: 현재 거래처의 정산 실행 지원 범위. 저장된 설정값과 독립적이며 권한 또는 특정 전표의 실행 가능 여부를 뜻하지 않는다.
+          readOnly: true
         creditAutoApplyEnabled:
           type: boolean
         depositorAliases:
@@ -4247,6 +4257,29 @@ components:
           - SALES_SLIP
           - MONTHLY_BATCH
           - AUCTION_DATE
+      required:
+      - capabilities
+    SettlementCapabilities:
+      type: object
+      properties:
+        autoMatching:
+          type: boolean
+        autoSettlement:
+          type: boolean
+        creditAutoApply:
+          type: boolean
+        executableUnits:
+          type: array
+          items:
+            type: string
+            enum:
+            - SALES_SLIP
+            - MONTHLY_BATCH
+            - AUCTION_DATE
+        prepayment:
+          type: boolean
+        ruleExecution:
+          type: boolean
     BedZoneCapacityRequest:
       type: object
       properties:
