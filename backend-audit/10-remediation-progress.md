@@ -1082,6 +1082,36 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-017은 감사에서 지적한 서비스 내부 검사·수집·종류별 처리·응답 책임 정리를 완료 범위로 삼는다. 앞으로 새 blocker는 조회·잠금 검사·일괄 보상에서 같은 의미로 적용되는지 확인해야 한다. 새로운 취소 정책, 모든 writer의 무교착 증명, Farm 보상 알고리즘의 별도 재설계는 이번 범위에 포함하지 않는다.
 
+## 30차 변경 — BE-018 Work 그래프 조립 상태와 노드 종류별 생성 정리
+
+작업일: 2026-10-05. 상태: 내부 조립 상태·노드 factory 정리·상한/순서/JSON 회귀·계약 생성 및 최종 전체 검증 완료. BE-018 완료.
+
+### 원인과 범위
+
+- `WorkOperationGraphQueryService.addMutationFlow`는 조회 입력 Map들과 수정할 출력 nodes/edges를 함께 전달받고 `truncated`만 별도로 반환했다. 네 노드 종류는 21개 위치 인자와 반복 `null`로 생성해, 필드 추가나 상한 변경 시 값 대응과 출력 상태를 여러 곳에서 확인해야 했다. 기존 표시 오류를 재현한 변경이 아니라 BE-018의 변경 비용을 줄이는 리팩터링이다.
+- 호출마다 생성하는 내부 `GraphAssembly`가 출력 노드·간선·보이는 ID·상한·truncation을 소유한다. seed 절단 후 보이는 ID 인덱스를 만들고 Mutation 묶음의 수용 판단, 보이는 작업 선정과 최종 불변 목록 응답을 처리한다. 상한 적용 전 전체 seed의 별도 ID 인덱스를 추가하지 않는다. `addMutationFlow`는 조회 입력 context와 조립 상태를 받아 실행하며 별도 boolean 결과를 호출자가 합치지 않는다.
+- 조회 입력은 별도 `MutationFlowContext`로 전달하고 이 단계에서 Map을 수정하지 않는다. 기존 작업 발견·효과/보정/대상 조회 순서와 조건, read-only 트랜잭션·Farm graph port는 유지한다. 별도 Service·일반 graph framework·Repository/캐시를 추가하지 않는다.
+- DTO 가까이에 출처·작업·Mutation·상태 factory를 두어 각 종류에 필요한 값만 전달한다. DTO가 Entity나 application port를 참조하지 않으며 공개 record 필드·ID 형식·날짜·snapshot·null/빈 목록을 유지한다. 품종명 배열의 과거 null도 삭제하거나 `List.copyOf`로 거절하지 않는다.
+- 출처 → seed 작업 → 수용한 Mutation별 발견 작업/Mutation/상태 순서, 공유 상태 노드 재사용, 상한을 넘는 묶음 전체 생략 후 다음 묶음 검토, 보이는 양 끝점의 간선 및 마지막 선후 관계를 유지한다. 같은 접수의 형제 작업 제외와 무효화 전 정상 효과 표시도 유지한다.
+
+### 회귀 방어
+
+- 기존 그래프 단위 회귀 5건은 형제 작업 제외·이동/폐기 선후 관계·보정 Mutation·계보 발견·무효화 효과 표시를 보호했다. 신규 8건을 제품 수정 전 통과시켜 seed 상한 미만/정확한 상한/초과, Farm truncation 전파, 공유 상태 및 큰 묶음 생략/다음 묶음 수용·선택 작업·노드/간선 순서·보이는 끝점을 확인했다.
+- 네 노드 종류와 전체 상태 snapshot의 JSON golden fixture는 21개 노드 필드·종류별 null·품종명 null·수량/예약·날짜/시각·위치·이력값을 검사한다. 서비스 공개 조회 응답을 직렬화하며 내부 조립 helper 호출이나 새 생성자 복사를 기대값으로 사용하지 않는다.
+- seed가 상한을 초과하면 원래 순서대로 자르므로 출처가 많은 경우 root 작업이 보이지 않을 수 있다. seed가 정확히 상한이면 Mutation 확장을 실행하지 않아 Farm fragment의 truncation을 합치지 않는 기존 동작도 고정했다. 이 변경에서 상한/완전성 정책을 조용히 바꾸지 않는다.
+
+### 검증
+
+- 수정 전 그래프 13건, 수정 후 그래프/Farm adapter/architecture 3개 클래스 24건 성공. 실패·오류·생략은 없고 수정 후 집중 검증은 11초 소요했다.
+- 보이는 ID 인덱스를 seed 절단 후 초기화하도록 최종 보정한 뒤 같은 집중 24건이 다시 성공했다. 최종 백엔드 전체 `./gradlew test`: 131개 클래스 679건 성공. 실패·오류·생략은 없고 최종 전체 검증은 1분 38초 소요했다.
+- `python3 scripts/generate_openapi.py`는 146 operations·124 paths·263 schemas로 성공했고 전체 명세·slice에 diff가 없다. 프론트엔드 `npm run check`도 성공했다. 공개 필드·enum 변경이 없어 생성 TypeScript 재생성은 필요하지 않다.
+- 이번 변경은 조회 응답 조립만 바꾸며 PostgreSQL SQL·Repository 조건·DB schema·트랜잭션·쓰기/잠금 경계를 변경하지 않아 `workE2eTest`를 재실행하지 않았다. benchmark·브라우저 E2E·운영 DB 대사도 실행하지 않았다.
+- 백엔드 `spotlessCheck`, `git diff --check`: 성공. 최종 전체 검증 이후에는 진행 문서의 완료 상태와 검증 결과만 갱신했다. 제품 코드·시험·HTTP/저장 계약은 변경하지 않았다.
+
+### 남은 범위
+
+- BE-018은 국소 출력 조립과 종류별 생성 정리를 완료 범위로 삼는다. 출력 상한을 DB 탐색량·하위 이력 적재량 상한으로 해석하지 않는다. 내부 조회 fan-out·메모리·truncation 의미 개선은 별도 BE-034 범위에서 API 소비자와 함께 검토한다. 과거 snapshot을 현재 Entity 값으로 복원하는 변경도 포함하지 않는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1113,7 +1143,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `8ac145d7` — BE-015 판매 소유 배분/snapshot 일괄 로딩·중복 재조회 제거·query-count·snapshot/replay/rollback 회귀.
 - `6d3baa09` — BE-015 정산 원본 Entity graph 대체·500 ID 분할·snapshot/query-count/rollback/replay 회귀.
 - `1d62c3c3` — BE-016 중간 생성 DTO 매핑 제거와 네 구조 유형의 배치 속성 회귀.
-- BE-017 — `refactor: separate work cancellation inspection stages`. 검사·선택 범위 검증·보상 단계와 취소 정책 회귀를 별도 커밋으로 저장한다.
+- `389cbd9b` — BE-017 검사·선택 범위 검증·보상 단계와 취소 정책 회귀.
+- BE-018 — `refactor: encapsulate work graph assembly`. 그래프 출력 상태·노드 factory·상한/순서/JSON 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1139,4 +1170,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-015의 정산 원본 Entity graph 제거·500 ID 분할과 snapshot/query-count/rollback/replay 회귀는 27차 범위다. Farm 재잠금·snapshot 시점·최종 현재 상태와 정산의 금융/표시 별도 조회는 유지한다. 운영 실측·큰 초기화의 전체 적재/transaction·index는 별도 후속 범위다.
 - BE-016의 구조 결과 생성 DTO 경유 제거와 속성·순서·상속 회귀는 28차 범위다.
 - BE-017의 취소 검사·수집·종류별 처리·응답 단계 정리와 차단 우선순위/잠금 재검사/snapshot 회귀는 29차 범위다.
+- BE-018의 그래프 조립 상태·종류별 생성과 상한/순서/JSON 회귀는 30차 범위다. 내부 조회량과 truncation 의미 개선은 BE-034에 남긴다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

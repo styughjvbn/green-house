@@ -1,0 +1,177 @@
+{
+  "rootWorkOperationId": 51,
+  "detail": "MUTATION",
+  "depth": 1,
+  "maxNodes": 120,
+  "truncated": false,
+  "nodes": [
+    {
+      "id": "origin-work_management-51",
+      "nodeType": "ORIGIN",
+      "selected": false,
+      "originType": "WORK_MANAGEMENT",
+      "originReferenceId": null,
+      "creationBatchSize": null,
+      "workOperationId": null,
+      "workTypeCode": null,
+      "workType": null,
+      "title": null,
+      "status": null,
+      "workDate": null,
+      "orchidGroupIds": [],
+      "varietyNames": [],
+      "mutationId": null,
+      "mutationType": null,
+      "effectiveBusinessDate": null,
+      "occurredAt": null,
+      "orchidGroupId": null,
+      "stateRevision": null,
+      "state": null
+    },
+    {
+      "id": "work-operation-51",
+      "nodeType": "WORK_OPERATION",
+      "selected": true,
+      "originType": null,
+      "originReferenceId": null,
+      "creationBatchSize": null,
+      "workOperationId": 51,
+      "workTypeCode": "TEST",
+      "workType": "테스트 작업",
+      "title": "작업 #51",
+      "status": "COMPLETED",
+      "workDate": "2026-09-01",
+      "orchidGroupIds": [
+        401
+      ],
+      "varietyNames": [
+        null
+      ],
+      "mutationId": null,
+      "mutationType": null,
+      "effectiveBusinessDate": null,
+      "occurredAt": null,
+      "orchidGroupId": null,
+      "stateRevision": null,
+      "state": null
+    },
+    {
+      "id": "mutation-111",
+      "nodeType": "MUTATION",
+      "selected": false,
+      "originType": null,
+      "originReferenceId": null,
+      "creationBatchSize": null,
+      "workOperationId": null,
+      "workTypeCode": null,
+      "workType": null,
+      "title": null,
+      "status": null,
+      "workDate": null,
+      "orchidGroupIds": [],
+      "varietyNames": [],
+      "mutationId": 111,
+      "mutationType": "TEST",
+      "effectiveBusinessDate": "2026-09-01",
+      "occurredAt": "2026-09-01T00:00:00Z",
+      "orchidGroupId": null,
+      "stateRevision": null,
+      "state": null
+    },
+    {
+      "id": "state-401-1",
+      "nodeType": "STATE",
+      "selected": false,
+      "originType": null,
+      "originReferenceId": null,
+      "creationBatchSize": null,
+      "workOperationId": null,
+      "workTypeCode": null,
+      "workType": null,
+      "title": null,
+      "status": null,
+      "workDate": null,
+      "orchidGroupIds": [
+        401
+      ],
+      "varietyNames": [],
+      "mutationId": null,
+      "mutationType": null,
+      "effectiveBusinessDate": null,
+      "occurredAt": null,
+      "orchidGroupId": 401,
+      "stateRevision": 1,
+      "state": {
+        "quantity": 100,
+        "reservedQuantity": 7,
+        "status": "관리",
+        "varietyId": 301,
+        "genus": "팔레놉시스",
+        "varietyName": "snapshot 품종",
+        "ageYear": 2,
+        "potSizeCode": "POT_3_5",
+        "bedZoneId": 201,
+        "houseNumber": 3,
+        "physicalBedNumber": 4,
+        "bedZoneName": "snapshot 구역",
+        "startPosition": 1.25,
+        "endPosition": 4.75
+      }
+    },
+    {
+      "id": "state-401-2",
+      "nodeType": "STATE",
+      "selected": false,
+      "originType": null,
+      "originReferenceId": null,
+      "creationBatchSize": null,
+      "workOperationId": null,
+      "workTypeCode": null,
+      "workType": null,
+      "title": null,
+      "status": null,
+      "workDate": null,
+      "orchidGroupIds": [
+        401
+      ],
+      "varietyNames": [],
+      "mutationId": null,
+      "mutationType": null,
+      "effectiveBusinessDate": null,
+      "occurredAt": null,
+      "orchidGroupId": 401,
+      "stateRevision": 2,
+      "state": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "originated-51",
+      "sourceNodeId": "origin-work_management-51",
+      "targetNodeId": "work-operation-51",
+      "edgeType": "ORIGINATED",
+      "relationType": null
+    },
+    {
+      "id": "in-111",
+      "sourceNodeId": "state-401-1",
+      "targetNodeId": "mutation-111",
+      "edgeType": "STATE_INPUT",
+      "relationType": null
+    },
+    {
+      "id": "out-111",
+      "sourceNodeId": "mutation-111",
+      "targetNodeId": "state-401-2",
+      "edgeType": "STATE_OUTPUT",
+      "relationType": null
+    },
+    {
+      "id": "effect-51-111",
+      "sourceNodeId": "work-operation-51",
+      "targetNodeId": "mutation-111",
+      "edgeType": "EFFECT",
+      "relationType": null
+    }
+  ]
+}
