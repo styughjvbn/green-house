@@ -1677,6 +1677,26 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 검증: 집중 capability 4건·설정 HTTP/architecture 회귀 통과. 실제 PG 22건(신규 저장/조회 계약 3, 기존 정산/거래처 잠금·동시성·rollback 19) 통과. Wholesale/Retail/Auction 설정의 월간/자동 선호값 보존·capability 불변·설정 감사 한 건과 금융 행 미생성을 확인했다. frontend capability 부정/누락 회귀 3건 및 최종 `npm run check` 통과. 최종 backend 전체 141개 클래스 743건·`spotlessCheck`·`git diff --check` 통과(임시 init script로 test heap 1GiB). BE-042 PG 3건과 합쳐 이번 관련 PG 25건·benchmark 2건이 통과했다. 최종 성공 뒤 문서만 갱신했다.
 - 범위: capability는 현행 지원 범위이며 권한·특정 대상의 입금 가능 여부를 대체하지 않는다. 월간 aggregate·자동화·입금 분배·예치금 기능과 DB migration은 추가하지 않았다. 전체 PostgreSQL suite·브라우저 E2E·운영 부하 실험은 재실행하지 않았다.
 
+## 59차 검증 — 전체 PostgreSQL 회귀 체크포인트
+
+- 기준: `222e1d04`의 작업 트리가 깨끗한 상태에서 전체 `workE2eTest`를 실행했다. 일반 수정의 `RECONCILIATION` 분류·Work 생성과 관련 정책 변경은 사용자 요청으로 보류했다. 운영 코드·테스트·migration·API·기능 활성화 설정은 변경하지 않았다.
+- 실행: backend에서 `./gradlew --init-script /tmp/green-house-be034-test-heap.gradle workE2eTest --rerun-tasks`. 기존 검증용 임시 init script로 모든 Test task의 `maxHeapSize`를 `1g`로 설정했으며 repository 빌드 설정은 유지했다. PostgreSQL 18 Alpine Testcontainers의 격리 DB를 사용했다.
+- 결과: **76개 클래스·780건 성공, 실패 0·오류 0·건너뜀 0**, Gradle 전체 실행 약 11분. 선언 위치의 `@Tag` 검색에는 추상 base가 포함되고 상속된 태그를 사용하는 구체 클래스가 빠지므로 최종 수치는 XML 보고서의 실제 실행 결과로 집계했다. `--rerun-tasks`로 5개 task가 모두 실행됐으며 기존 결과의 up-to-date 판정으로 대체하지 않았다.
+- 범위: 판매 예약/출고/취소·생성 접수, 경매 결과/반환·이력 보존, 입고/포트, 구조 변경·Work 생성/취소/보정, 정산/입금, Mutation 원장·write fence·전환/대사, 실제 CHECK/validation 도구, migration upgrade, query-count·조회 상한·인덱스 계획·잠금 충돌 회귀를 함께 실행했다. 이 체크포인트에서 수정할 테스트 실패는 발견되지 않았다.
+- 증적: XML `backend/build/test-results/workE2eTest/TEST-*.xml`, HTML `backend/build/reports/tests/workE2eTest/index.html`, 실행 로그 `/tmp/green-house-postgres-checkpoint.log`. 이 경로의 산출물은 로컬 검증 자료이며 버전 관리하지 않는다.
+- 일반 backend 141개 클래스·743건, frontend `npm run check`, `spotlessCheck`는 58차의 마지막 성공 결과를 유지한다. 이후 제품 코드 변경이 없고 이번 변경은 검증 기록뿐이므로 재실행하지 않았다. `git diff --check`는 이번 문서 변경에 실행했다. 별도 `workBenchmark`, 브라우저 E2E, 운영 DB 대사/validation·부하·배포 검증은 이번 실행에 포함하지 않았다.
+
+### 이어갈 작업과 필요한 입력
+
+| 구분 | 대상 | 다음 작업 또는 조건 |
+| --- | --- | --- |
+| 로컬 측정 가능 | BE-036/042 | 한 정산의 결과 수·원장의 그룹/이력 수를 늘려 peak heap·GC·처리 시간과 transaction/lock 유지 시간을 측정한다. 기존 query-count/Entity 적재 검증과 별도로 비용을 확인한다. |
+| 로컬 조사 가능 | BE-032/034/035 | 남은 전체 목록·하위 이력·출하 선택지와 미측정 검색/상태/집계/FK 조회의 실제 적재량·계획을 조사한다. 응답 계약 변경은 측정 결과와 소비자 사용 범위를 확인한 뒤 별도 변경 단위로 진행한다. |
+| 정책 보류 | BE-009 | 일반 수정에 `RECONCILIATION`을 적용하는 변경과 수정 허용 범위의 정책 정리는 보류한다. 기존 Audit/Mutation·일반 수정과 실사/보정 gate를 유지한다. |
+| 운영 자료 필요 | BE-001~005/007/011/013 등 | 최신 백업을 복원한 격리 DB와 과거 요청 자료로 read-only 대사·호환 검증을 수행한다. 실제 위반 복구와 운영 constraint validation은 대상 자료·복구 정책·적용 절차 확인 후 별도 진행한다. |
+
+전체 로컬 회귀 성공을 기존 운영 데이터의 정합성·과거 삭제 기록 복원이나 모든 writer의 무교착 증명으로 취급하지 않는다. 아래 finding별 남은 범위는 그대로 유지한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1756,7 +1776,7 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-006의 예정 수정 범위는 완료했다. 판매 교차 수정, Farm 단건·일괄 수정, Work 구조 기록과 Farm 경쟁, 일반 품종별 계획·폐기/Farm·구조 기록·겹치는 계획 경쟁을 검증했다. 경로별 전체 잠금 순서와 기존 대상 변경 거절 계약을 유지한다. 모든 writer·FK·내부 fence의 무교착을 증명한 것은 아니며 새 writer에는 같은 경로별 순서와 경쟁 회귀가 필요하다.
 - BE-007의 신규 수량 이력과 경매 시도·반환 확인 이후 직접 보정 제한을 완료했다. 과거 누락된 이력과 수량 불일치는 자동 복원하지 않았으며 운영 데이터 대사가 남는다. 결과 이후의 보상·정정 이벤트는 별도 업무 계약과 구현이 필요한 후속 범위다.
 - BE-008의 키가 있는 판매·입고·일반 Work 계획/완료 기록 생성 재전송 방어를 완료 대상으로 삼는다. 기존 자료의 중복 대사와 키 없는 연동의 재시도 정책은 남는다. 입고 포트 계획·폐기 기록 같은 별도 생성 경로는 이번 일반 생성 계약에 포함하지 않으며 필요 시 업무별 재시도 의미부터 정의한다. 후속 작업은 감사 우선순위에 따른 정책 일치·감사 완전성·DB 제약 상태·조회 비용 보강이다.
-- BE-009는 일반 metadata·수량·상태·위치 수정의 허용 범위와 보정/실사 제한의 정책 일치가 남는다. 이번 감사 보강은 기존 현장 수정 기능을 임의로 차단하지 않는다.
+- BE-009는 일반 metadata·수량·상태·위치 수정의 허용 범위와 보정/실사 제한의 정책 일치가 남는다. 일반 수정의 `RECONCILIATION` 적용과 관련 정책 변경은 사용자 요청으로 보류한다. 기존 현장 수정 기능과 Audit/Mutation 기록은 유지한다.
 - BE-010의 전표 최초 생성과 난 묶음 metadata 누락은 14차 범위다. 과거 감사의 복원·입고/inline 품종 등의 필수 생성 감사 범위는 별도 판단이며, 자체 업무 이력을 일반 감사 부재만으로 무기록으로 취급하지 않는다.
 - BE-011의 운영 대사·제약별 validation 도구와 rehearsal 회귀는 15차 범위다. 운영 DB의 `convalidated`, 위반 행과 교차 불변식은 조회하지 않았다. 운영 적용·승인된 복구·실제 validation 완료와 그 증적이 남으며 이번 커밋을 운영 데이터 검증 완료로 취급하지 않는다.
 - BE-012 포트 입력 타입 유지와 JSON·지문 호환/rollback은 16차, 고정 결과 타입 유지와 JSON 저장 회귀는 17차, 대상·상세·계보·수량의 공통 효과 reader와 형식별 정책 보존은 18차 범위다. 공통 명령 Object/구형 구조 변경·현장 동기화 HTTP DTO 경계 이식과 receipt 호환은 19차 범위다. 자유 JSON·보정 이벤트 해석은 남으며, BE-013의 실제 저장 version 전환과 운영 과거 요청 corpus 검증도 후속 범위다.
