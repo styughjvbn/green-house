@@ -42,6 +42,10 @@ public interface WorkOperationRepository
       Long parentOperationId, WorkOperationRelationType relationType);
 
   @EntityGraph(attributePaths = "workType")
+  List<WorkOperation> findByParentOperationIdAndRelationTypeOrderByIdAsc(
+      Long parentOperationId, WorkOperationRelationType relationType, Pageable pageable);
+
+  @EntityGraph(attributePaths = "workType")
   List<WorkOperation> findByParentOperationIdInOrderByParentOperationIdAscIdAsc(
       Collection<Long> parentOperationIds);
 

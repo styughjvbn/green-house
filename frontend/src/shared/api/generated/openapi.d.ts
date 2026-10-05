@@ -1160,6 +1160,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 노드 수 외에도 작업 대상·효과·정정 참조는 조회별 최대 1,000건, Mutation 관계는 최대 maxNodes × 4건으로 제한한다. 일부 노드·참조·관계가 생략되면 truncated=true이며 전체 이력으로 취급하지 않는다. */
         get: operations["getGraph"];
         put?: never;
         post?: never;
@@ -1224,6 +1225,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 양 끝 날짜를 포함해 최대 366일, 최대 1,000개 작업을 완전한 목록으로 반환한다. 기간 초과는 400, 결과 건수 초과는 422 QUERY_LIMIT_EXCEEDED. 초과 시 기간·필터를 좁히거나 작업 페이지 조회를 사용한다. */
         get: operations["getCalendar"];
         put?: never;
         post?: never;
@@ -1437,7 +1439,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @deprecated */
+        /**
+         * @deprecated
+         * @description 호환 경로: 작업일·ID 내림차순 최신 500개 작업을 반환한다. 전체 이력은 GET /api/work-history의 페이지 조회를 사용한다.
+         */
         get: operations["getOrchidGroupHistory"];
         put?: never;
         post?: never;
@@ -1550,6 +1555,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 노드·깊이 한도 안에서 탐색하며 표시되는 Mutation 간 관계는 최대 maxNodes × 4건이다. 노드·탐색·관계가 생략되면 truncated=true이며 전체 이력으로 취급하지 않는다. */
         get: operations["getMutationGraph"];
         put?: never;
         post?: never;
@@ -7254,13 +7260,31 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 범위의 전체 작업 요약 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseListWorkOperationSummaryResponse"];
+                };
+            };
+            /** @description 기간 또는 조회 조건 오류 (VALIDATION_ERROR) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 조회 결과 상한 초과 (QUERY_LIMIT_EXCEEDED) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

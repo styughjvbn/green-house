@@ -5,7 +5,6 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEnt
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
-import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineage;
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphEdgeResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphEdgeType;
@@ -119,33 +118,45 @@ public class OrchidGroupMutationGraphQueryService {
 
     Map<String, OrchidGroupMutationGraphNodeResponse> nodes = new LinkedHashMap<>();
     Map<Long, List<OrchidGroupMutationEntry>> visibleEntriesByMutationId = new LinkedHashMap<>();
-    Map<Long, BedZoneLocationRow> locationsByBedZoneId = locations(discovery.entries());
-    Map<Long, OrchidGroupMutationWorkOperationResponse> workOperationsByMutationId =
-        workOperationReader.resolveByMutationId(
-            entriesByMutationId.values().stream()
-                .map(entries -> entries.getFirst().getMutation())
-                .toList());
+    Set<String> selectedNodeIds = new LinkedHashSet<>();
     boolean truncated = discovery.truncated();
     for (var mutationEntries : entriesByMutationId.values()) {
       Set<String> candidateNodeIds = candidateNodeIds(mutationEntries);
-      long newNodeCount = candidateNodeIds.stream().filter(id -> !nodes.containsKey(id)).count();
-      if (nodes.size() + newNodeCount > maxNodes) {
+      long newNodeCount =
+          candidateNodeIds.stream().filter(id -> !selectedNodeIds.contains(id)).count();
+      if (selectedNodeIds.size() + newNodeCount > maxNodes) {
         truncated = true;
         continue;
       }
-      addNodes(nodes, mutationEntries, locationsByBedZoneId, workOperationsByMutationId);
+      selectedNodeIds.addAll(candidateNodeIds);
       visibleEntriesByMutationId.put(
           mutationEntries.getFirst().getMutation().getId(), mutationEntries);
     }
 
+    var visibleEntries =
+        visibleEntriesByMutationId.values().stream().flatMap(Collection::stream).toList();
+    var locationsByBedZoneId = locations(visibleEntries);
+    var workOperationsByMutationId =
+        workOperationReader.resolveByMutationId(
+            visibleEntriesByMutationId.values().stream()
+                .map(entries -> entries.getFirst().getMutation())
+                .toList());
+    visibleEntriesByMutationId
+        .values()
+        .forEach(
+            entries -> addNodes(nodes, entries, locationsByBedZoneId, workOperationsByMutationId));
     Set<Long> visibleMutationIds = visibleEntriesByMutationId.keySet();
-    Map<LineageKey, OrchidGroupLineageRelationType> lineageTypes = lineageTypes(visibleMutationIds);
+    Map<LineageKey, OrchidGroupLineageRelationType> lineageTypes = lineageTypes(visibleEntries);
     List<OrchidGroupMutationGraphEdgeResponse> edges = new ArrayList<>();
     visibleEntriesByMutationId
         .values()
         .forEach(entries -> entries.forEach(entry -> addStateEdges(edges, entry, lineageTypes)));
     if (!visibleMutationIds.isEmpty()) {
-      relationRepository.findConnectedToMutationIds(visibleMutationIds).stream()
+      var relations =
+          relationRepository.findVisibleGraphRelations(
+              visibleMutationIds, PageRequest.of(0, maxNodes * 4));
+      truncated |= relations.hasNext();
+      relations.stream()
           .filter(
               relation ->
                   visibleMutationIds.containsAll(
@@ -329,16 +340,22 @@ public class OrchidGroupMutationGraphQueryService {
   }
 
   private Map<LineageKey, OrchidGroupLineageRelationType> lineageTypes(
-      Collection<Long> mutationIds) {
+      List<OrchidGroupMutationEntry> entries) {
     Map<LineageKey, OrchidGroupLineageRelationType> result = new LinkedHashMap<>();
-    if (mutationIds.isEmpty()) {
+    var resultEntries =
+        entries.stream()
+            .filter(entry -> entry.getRole() == OrchidGroupMutationEntryRole.RESULT)
+            .toList();
+    if (resultEntries.isEmpty()) {
       return result;
     }
-    for (OrchidGroupLineage lineage :
-        lineageRepository.findByMutationIdInOrderByIdAsc(mutationIds)) {
+    var mutationIds =
+        resultEntries.stream().map(entry -> entry.getMutation().getId()).distinct().toList();
+    var entryIds = resultEntries.stream().map(OrchidGroupMutationEntry::getId).toList();
+    for (var lineage : lineageRepository.findGraphLineageTypes(mutationIds, entryIds)) {
       result.putIfAbsent(
-          new LineageKey(lineage.getMutationId(), lineage.getResultOrchidGroup().getId()),
-          lineage.getRelationType());
+          new LineageKey(lineage.mutationId(), lineage.resultOrchidGroupId()),
+          lineage.relationType());
     }
     return result;
   }

@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.common.api.PageResponse;
+import com.greenhouse.backend.common.api.QueryLimits;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.target.WorkTargetResolver;
@@ -17,8 +18,8 @@ import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -146,18 +147,29 @@ public class WorkOperationQueryService {
       Boolean hasCorrections) {
     validateDates(fromDate, toDate);
     LocalDate farmToday = TimeConfig.farmToday(clock);
-    return summaryAssembler.assembleAll(
+    if (fromDate == null || toDate == null || ChronoUnit.DAYS.between(fromDate, toDate) > 365) {
+      throw new IllegalArgumentException("캘린더 조회는 시작일과 종료일을 지정하고 366일 이내로 요청해주세요.");
+    }
+    var operations =
         operationRepository.searchAll(
-            fromDate, toDate, status, view, TimeConfig.farmDayStartUtc(farmToday), hasCorrections));
+            fromDate, toDate, status, view, TimeConfig.farmDayStartUtc(farmToday), hasCorrections);
+    QueryLimits.requireWithin(operations.size(), QueryLimits.CALENDAR_ROWS);
+    return summaryAssembler.assembleAll(operations);
   }
 
   public List<OrchidGroupWorkHistoryResponse> getOrchidGroupHistory(Long orchidGroupId) {
-    return getAllWorkHistory(WorkHistoryScopeType.ORCHID_GROUP, orchidGroupId);
+    return historyPage(WorkHistoryScopeType.ORCHID_GROUP, orchidGroupId, 0, QueryLimits.LEGACY_ROWS)
+        .content();
   }
 
   public PageResponse<OrchidGroupWorkHistoryResponse> getWorkHistory(
       WorkHistoryScopeType historyScopeType, Long historyScopeId, int page, int size) {
     PageRequests.validate(page, size);
+    return historyPage(historyScopeType, historyScopeId, page, size);
+  }
+
+  private PageResponse<OrchidGroupWorkHistoryResponse> historyPage(
+      WorkHistoryScopeType historyScopeType, Long historyScopeId, int page, int size) {
     ResolvedHistoryScope scope = resolveHistoryScope(historyScopeType, historyScopeId);
     if (scope.orchidGroupIds().isEmpty()) {
       return new PageResponse<>(List.of(), page, size, 0, 0);
@@ -183,45 +195,6 @@ public class WorkOperationQueryService {
         assembleHistoryPage(operationIds, scope.orchidGroupIds(), scope.currentLocations());
     return PageResponse.from(
         operationPage.map(operation -> historyByOperationId.get(operation.getId())));
-  }
-
-  private List<OrchidGroupWorkHistoryResponse> getAllWorkHistory(
-      WorkHistoryScopeType historyScopeType, Long historyScopeId) {
-    ResolvedHistoryScope scope = resolveHistoryScope(historyScopeType, historyScopeId);
-    if (scope.orchidGroupIds().isEmpty()) {
-      return List.of();
-    }
-    var historyByOperationId = new LinkedHashMap<Long, OrchidGroupWorkHistoryResponse>();
-    targetRepository
-        .findByOrchidGroupIdInAndExcludedAtIsNullOrderByWorkOperationPlannedStartDateDescWorkOperationIdDesc(
-            scope.orchidGroupIds())
-        .forEach(
-            target ->
-                historyByOperationId.put(
-                    target.getWorkOperation().getId(),
-                    OrchidGroupWorkHistoryResponse.from(
-                        target,
-                        scope
-                            .currentLocations()
-                            .getOrDefault(
-                                target.getOrchidGroupId(), target.getLocationSnapshot()))));
-    effectOrchidGroupRepository
-        .findByOrchidGroupIdInOrderByWorkAppliedEffectAppliedAtDescWorkAppliedEffectIdDesc(
-            scope.orchidGroupIds())
-        .forEach(
-            effectGroup ->
-                historyByOperationId.putIfAbsent(
-                    effectGroup.getWorkAppliedEffect().getWorkOperation().getId(),
-                    OrchidGroupWorkHistoryResponse.fromEffect(
-                        effectGroup,
-                        scope.currentLocations().get(effectGroup.getOrchidGroupId()))));
-    return historyByOperationId.values().stream()
-        .sorted(
-            Comparator.comparing(OrchidGroupWorkHistoryResponse::workDate)
-                .reversed()
-                .thenComparing(
-                    OrchidGroupWorkHistoryResponse::workOperationId, Comparator.reverseOrder()))
-        .toList();
   }
 
   private ResolvedHistoryScope resolveHistoryScope(

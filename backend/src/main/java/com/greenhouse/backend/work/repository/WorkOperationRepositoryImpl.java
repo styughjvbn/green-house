@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.repository;
 import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOperation;
 import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
+import com.greenhouse.backend.common.api.QueryLimits;
 import com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
@@ -54,6 +55,7 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
             searchConditions(fromDate, toDate, status, view, todayStartedAt, null, null, null)
                 .and(correctionCondition(hasCorrections)))
         .orderBy(workOperation.plannedStartDate.asc(), workOperation.id.asc())
+        .limit(QueryLimits.CALENDAR_ROWS + 1L)
         .fetch();
   }
 

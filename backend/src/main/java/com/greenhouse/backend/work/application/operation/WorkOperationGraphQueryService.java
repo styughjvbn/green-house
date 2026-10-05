@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +41,7 @@ public class WorkOperationGraphQueryService {
   private static final int MIN_NODES = 10;
 
   private static final int MAX_NODES = 300;
+  private static final int MAX_REFERENCES = 1000;
 
   private final WorkOperationRepository operationRepository;
 
@@ -60,9 +62,12 @@ public class WorkOperationGraphQueryService {
         operationRepository
             .findWithWorkTypeById(operationId)
             .orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
-    Map<Long, WorkOperation> seedOperations = relatedOperations(root);
+    var graph = new GraphAssembly(maxNodes);
+    Map<Long, WorkOperation> seedOperations = relatedOperations(root, maxNodes, graph);
     Map<Long, List<Long>> seedMutationIds =
-        detail == WorkOperationGraphDetail.WORK ? Map.of() : mutationIds(seedOperations.values());
+        detail == WorkOperationGraphDetail.WORK
+            ? Map.of()
+            : mutationIds(seedOperations.values(), graph);
     List<Long> rootMutationIds =
         seedMutationIds.values().stream().flatMap(Collection::stream).distinct().toList();
     WorkOperationMutationGraphPort.Fragment fragment =
@@ -73,11 +78,12 @@ public class WorkOperationGraphQueryService {
     Map<Long, WorkOperation> operations = new LinkedHashMap<>(seedOperations);
     Map<Long, Set<Long>> operationIdsByMutation = operationIdsByMutation(seedMutationIds);
     if (detail == WorkOperationGraphDetail.LINEAGE) {
-      addDiscoveredOperations(fragment, operations, operationIdsByMutation);
+      addDiscoveredOperations(fragment, operations, operationIdsByMutation, graph);
     }
-    Map<Long, List<WorkOperationTarget>> targets = targets(operations.keySet());
-    var rootRelationSummary = relationSummaryAssembler.assemble(List.of(root)).get(root.getId());
-    var graph = new GraphAssembly(maxNodes);
+    Map<Long, List<WorkOperationTarget>> targets = targets(operations.keySet(), graph);
+    var rootRelationSummary =
+        relationSummaryAssembler.assembleOrigins(List.of(root), maxNodes + 1).get(root.getId());
+    graph.includeTruncation(fragment.truncated());
 
     addOrigin(root, rootRelationSummary, graph);
     seedOperations
@@ -116,14 +122,17 @@ public class WorkOperationGraphQueryService {
   private void addDiscoveredOperations(
       WorkOperationMutationGraphPort.Fragment fragment,
       Map<Long, WorkOperation> operations,
-      Map<Long, Set<Long>> operationIdsByMutation) {
+      Map<Long, Set<Long>> operationIdsByMutation,
+      GraphAssembly graph) {
     List<Long> mutationIds =
         fragment.mutations().stream().map(WorkOperationMutationGraphPort.MutationNode::id).toList();
     if (mutationIds.isEmpty()) {
       return;
     }
-    effectRepository
-        .findByMutationIdInOrderByMutationIdAscIdAsc(mutationIds)
+    graph
+        .references(
+            effectRepository.findByMutationIdInOrderByMutationIdAscIdAsc(
+                mutationIds, PageRequest.of(0, MAX_REFERENCES + 1)))
         .forEach(
             effect -> {
               Long mutationId = effect.getMutationId();
@@ -136,8 +145,10 @@ public class WorkOperationGraphQueryService {
                   .computeIfAbsent(mutationId, ignored -> new LinkedHashSet<>())
                   .add(operation.getId());
             });
-    correctionRepository
-        .findByMutationIdIn(mutationIds)
+    graph
+        .references(
+            correctionRepository.findByMutationIdIn(
+                mutationIds, PageRequest.of(0, MAX_REFERENCES + 1)))
         .forEach(
             correction -> {
               var operation = correction.getOriginalWorkOperation();
@@ -265,7 +276,8 @@ public class WorkOperationGraphQueryService {
         state.id(), state.orchidGroupId(), state.stateRevision(), state(state.state()));
   }
 
-  private Map<Long, WorkOperation> relatedOperations(WorkOperation root) {
+  private Map<Long, WorkOperation> relatedOperations(
+      WorkOperation root, int maxNodes, GraphAssembly graph) {
     Map<Long, WorkOperation> result = new LinkedHashMap<>();
     result.put(root.getId(), root);
     if (root.getParentOperation() != null) {
@@ -273,16 +285,25 @@ public class WorkOperationGraphQueryService {
           .findWithWorkTypeById(root.getParentOperation().getId())
           .ifPresent(operation -> result.putIfAbsent(operation.getId(), operation));
     }
-    operationRepository
-        .findByParentOperationIdAndRelationTypeOrderByIdAsc(
-            root.getId(), WorkOperationRelationType.MOVEMENT_DISCARD)
+    var children =
+        operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(
+            root.getId(),
+            WorkOperationRelationType.MOVEMENT_DISCARD,
+            PageRequest.of(0, maxNodes + 1));
+    if (children.size() > maxNodes) graph.includeTruncation(true);
+    children.stream()
+        .limit(maxNodes)
         .forEach(operation -> result.putIfAbsent(operation.getId(), operation));
     return result;
   }
 
-  private Map<Long, List<WorkOperationTarget>> targets(Collection<Long> operationIds) {
-    return targetRepository
-        .findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(operationIds)
+  private Map<Long, List<WorkOperationTarget>> targets(
+      Collection<Long> operationIds, GraphAssembly graph) {
+    return graph
+        .references(
+            targetRepository
+                .findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(
+                    operationIds, PageRequest.of(0, MAX_REFERENCES + 1)))
         .stream()
         .collect(
             Collectors.groupingBy(
@@ -358,19 +379,24 @@ public class WorkOperationGraphQueryService {
     }
   }
 
-  private Map<Long, List<Long>> mutationIds(Collection<WorkOperation> operations) {
+  private Map<Long, List<Long>> mutationIds(
+      Collection<WorkOperation> operations, GraphAssembly graph) {
     Map<Long, Set<Long>> result = new LinkedHashMap<>();
     operations.forEach(operation -> result.put(operation.getId(), new LinkedHashSet<>()));
-    effectRepository
-        .findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(result.keySet())
+    graph
+        .references(
+            effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(
+                result.keySet(), PageRequest.of(0, MAX_REFERENCES + 1)))
         .forEach(
             effect -> {
               if (effect.getMutationId() != null) {
                 result.get(effect.getWorkOperation().getId()).add(effect.getMutationId());
               }
             });
-    correctionRepository
-        .findByOriginalWorkOperationIdIn(result.keySet())
+    graph
+        .references(
+            correctionRepository.findByOriginalWorkOperationIdIn(
+                result.keySet(), PageRequest.of(0, MAX_REFERENCES + 1)))
         .forEach(
             correction -> {
               if (correction.getMutationId() != null)
@@ -474,6 +500,12 @@ public class WorkOperationGraphQueryService {
 
     private void includeTruncation(boolean fragmentTruncated) {
       truncated |= fragmentTruncated;
+    }
+
+    private <T> List<T> references(List<T> references) {
+      if (references.size() <= MAX_REFERENCES) return references;
+      truncated = true;
+      return references.subList(0, MAX_REFERENCES);
     }
 
     private Set<Long> visibleOperationIds() {

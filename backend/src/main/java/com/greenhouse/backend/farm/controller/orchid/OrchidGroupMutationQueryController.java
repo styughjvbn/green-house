@@ -8,6 +8,7 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSou
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +39,9 @@ public class OrchidGroupMutationQueryController {
   }
 
   @GetMapping("/graph/{orchidGroupId}")
+  @Operation(
+      description =
+          "노드·깊이 한도 안에서 탐색하며 표시되는 Mutation 간 관계는 최대 maxNodes × 4건이다. 노드·탐색·관계가 생략되면 truncated=true이며 전체 이력으로 취급하지 않는다.")
   public ApiResponse<OrchidGroupMutationGraphResponse> getMutationGraph(
       @PathVariable Long orchidGroupId,
       @RequestParam(defaultValue = "2") int depth,

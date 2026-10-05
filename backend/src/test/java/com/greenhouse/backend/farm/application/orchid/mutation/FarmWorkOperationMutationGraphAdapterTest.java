@@ -59,8 +59,8 @@ class FarmWorkOperationMutationGraphAdapterTest {
     when(relation.getMutation()).thenReturn(correction);
     when(relation.getRelatedMutation()).thenReturn(original);
     when(relation.getRelationType()).thenReturn(OrchidGroupMutationRelationType.CORRECTS);
-    when(relationRepository.findConnectedToMutationIds(anyCollection()))
-        .thenReturn(List.of(relation));
+    when(relationRepository.findVisibleGraphRelations(anyCollection(), any(Pageable.class)))
+        .thenReturn(new SliceImpl<>(List.of(relation)));
 
     var fragment = adapter.load(List.of(111L, 112L), false, 1, 20);
 
@@ -82,7 +82,8 @@ class FarmWorkOperationMutationGraphAdapterTest {
     OrchidGroupMutationEntry entry = entry(3L, mutation, 501L);
     when(entryRepository.findGraphEntriesByMutationIdIn(eq(List.of(120L)), any(Pageable.class)))
         .thenReturn(new SliceImpl<>(List.of(entry), Pageable.ofSize(10), true));
-    when(relationRepository.findConnectedToMutationIds(anyCollection())).thenReturn(List.of());
+    when(relationRepository.findVisibleGraphRelations(anyCollection(), any(Pageable.class)))
+        .thenReturn(new SliceImpl<>(List.of()));
 
     var fragment = adapter.load(List.of(120L), false, 1, 10);
 

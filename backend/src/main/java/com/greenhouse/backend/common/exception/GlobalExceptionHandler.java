@@ -16,6 +16,12 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+  @ExceptionHandler(QueryLimitExceededException.class)
+  ResponseEntity<ErrorResponse> handleQueryLimit(QueryLimitExceededException exception) {
+    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+        .body(ErrorResponse.of("QUERY_LIMIT_EXCEEDED", exception.getMessage(), List.of()));
+  }
+
   @ExceptionHandler({
     ObjectOptimisticLockingFailureException.class,
     PessimisticLockingFailureException.class

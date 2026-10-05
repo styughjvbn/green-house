@@ -93,7 +93,8 @@ public class FarmWorkOperationMutationGraphAdapter implements WorkOperationMutat
                 entriesByMutation
                     .computeIfAbsent(entry.getMutation().getId(), ignored -> new ArrayList<>())
                     .add(entry));
-    Map<Long, BedZoneLocationRow> locations = locations(discovery.entries());
+    Set<String> selectedStateIds = new LinkedHashSet<>();
+    Map<Long, List<OrchidGroupMutationEntry>> visibleEntries = new LinkedHashMap<>();
     List<MutationNode> mutations = new ArrayList<>();
     Map<String, StateNode> states = new LinkedHashMap<>();
     List<Edge> edges = new ArrayList<>();
@@ -109,8 +110,8 @@ public class FarmWorkOperationMutationGraphAdapter implements WorkOperationMutat
         candidateStateIds.add(stateId(entry.getOrchidGroupId(), entry.getStateRevisionAfter()));
       }
       candidateCount +=
-          (int) candidateStateIds.stream().filter(id -> !states.containsKey(id)).count();
-      if (mutations.size() + states.size() + candidateCount > maxNodes) {
+          (int) candidateStateIds.stream().filter(id -> !selectedStateIds.contains(id)).count();
+      if (mutations.size() + selectedStateIds.size() + candidateCount > maxNodes) {
         truncated = true;
         continue;
       }
@@ -122,6 +123,13 @@ public class FarmWorkOperationMutationGraphAdapter implements WorkOperationMutat
               mutation.getMutationType().name(),
               mutation.getEffectiveBusinessDate(),
               mutation.getOccurredAt()));
+      selectedStateIds.addAll(candidateStateIds);
+      visibleEntries.put(mutation.getId(), mutationEntries);
+    }
+    var locations =
+        locations(visibleEntries.values().stream().flatMap(Collection::stream).toList());
+    for (var mutationEntries : visibleEntries.values()) {
+      var mutation = mutationEntries.getFirst().getMutation();
       for (var entry : mutationEntries) {
         if (entry.getStateRevisionBefore() != null) {
           String beforeId = stateId(entry.getOrchidGroupId(), entry.getStateRevisionBefore());
@@ -160,7 +168,11 @@ public class FarmWorkOperationMutationGraphAdapter implements WorkOperationMutat
       }
     }
     if (!visibleMutationIds.isEmpty()) {
-      relationRepository.findConnectedToMutationIds(visibleMutationIds).stream()
+      var relations =
+          relationRepository.findVisibleGraphRelations(
+              visibleMutationIds, PageRequest.of(0, maxNodes * 4));
+      truncated |= relations.hasNext();
+      relations.stream()
           .filter(
               relation ->
                   visibleMutationIds.contains(relation.getMutation().getId())

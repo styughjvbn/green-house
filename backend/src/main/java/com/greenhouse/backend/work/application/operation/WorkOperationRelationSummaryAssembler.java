@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -75,6 +76,25 @@ class WorkOperationRelationSummaryAssembler {
               batchSizes.getOrDefault(operation.getId(), 1),
               linkedCount > 0,
               linkedCount));
+    }
+    return result;
+  }
+
+  Map<Long, WorkOperationRelationSummaryResponse> assembleOrigins(
+      Collection<WorkOperation> operations, int maxReferences) {
+    var ids = operations.stream().map(WorkOperation::getId).toList();
+    var refs = targetRepository.findInboundReferences(ids, PageRequest.of(0, maxReferences));
+    var result = new LinkedHashMap<Long, WorkOperationRelationSummaryResponse>();
+    for (var operation : operations) {
+      var inboundIds =
+          refs.stream()
+              .filter(ref -> ref.operationId().equals(operation.getId()))
+              .map(WorkOperationInboundReference::inboundRecordId)
+              .toList();
+      result.put(
+          operation.getId(),
+          new WorkOperationRelationSummaryResponse(
+              origin(operation, inboundIds), inboundIds, 1, false, 0));
     }
     return result;
   }

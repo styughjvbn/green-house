@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -45,6 +46,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class WorkOperationGraphQueryServiceTest {
@@ -73,9 +75,6 @@ class WorkOperationGraphQueryServiceTest {
             correctionRepository,
             relationSummaryAssembler,
             mutationGraphPort);
-    when(targetRepository.findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(
-            anyCollection()))
-        .thenReturn(List.of());
   }
 
   @Test
@@ -83,9 +82,9 @@ class WorkOperationGraphQueryServiceTest {
     WorkOperation selected = operation(51L, null, null);
     when(operationRepository.findWithWorkTypeById(51L)).thenReturn(Optional.of(selected));
     when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(
-            51L, WorkOperationRelationType.MOVEMENT_DISCARD))
+            eq(51L), eq(WorkOperationRelationType.MOVEMENT_DISCARD), any(Pageable.class)))
         .thenReturn(List.of());
-    when(relationSummaryAssembler.assemble(anyCollection()))
+    when(relationSummaryAssembler.assembleOrigins(anyCollection(), anyInt()))
         .thenReturn(Map.of(51L, summary(WorkOperationOriginType.WORK_MANAGEMENT, 2)));
 
     var graph = service.get(51L, WorkOperationGraphDetail.WORK, 1, 120);
@@ -105,16 +104,17 @@ class WorkOperationGraphQueryServiceTest {
     WorkOperation discard = operation(61L, movement, WorkOperationRelationType.MOVEMENT_DISCARD);
     when(operationRepository.findWithWorkTypeById(62L)).thenReturn(Optional.of(movement));
     when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(
-            62L, WorkOperationRelationType.MOVEMENT_DISCARD))
+            eq(62L), eq(WorkOperationRelationType.MOVEMENT_DISCARD), any(Pageable.class)))
         .thenReturn(List.of(discard));
-    when(relationSummaryAssembler.assemble(anyCollection()))
+    when(relationSummaryAssembler.assembleOrigins(anyCollection(), anyInt()))
         .thenReturn(
             Map.of(
                 62L,
                 summary(WorkOperationOriginType.WORK_MANAGEMENT, 1),
                 61L,
                 summary(WorkOperationOriginType.SYSTEM, 1)));
-    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
+    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(
+            anyCollection(), any(Pageable.class)))
         .thenReturn(List.of());
     when(mutationGraphPort.load(anyCollection(), eq(true), anyInt(), anyInt()))
         .thenReturn(WorkOperationMutationGraphPort.Fragment.empty());
@@ -138,12 +138,13 @@ class WorkOperationGraphQueryServiceTest {
     WorkOperation original = operation(80L, null, null);
     WorkOperationCorrection correction = mock(WorkOperationCorrection.class);
     when(operationRepository.findWithWorkTypeById(80L)).thenReturn(Optional.of(original));
-    when(relationSummaryAssembler.assemble(anyCollection()))
+    when(relationSummaryAssembler.assembleOrigins(anyCollection(), anyInt()))
         .thenReturn(Map.of(80L, summary(WorkOperationOriginType.WORK_MANAGEMENT, 1)));
     var originalEffect = effect(original, 111L);
-    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
+    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(
+            anyCollection(), any(Pageable.class)))
         .thenReturn(List.of(originalEffect));
-    when(correctionRepository.findByOriginalWorkOperationIdIn(anyCollection()))
+    when(correctionRepository.findByOriginalWorkOperationIdIn(anyCollection(), any(Pageable.class)))
         .thenReturn(List.of(correction));
     when(correction.getOriginalWorkOperation()).thenReturn(original);
     when(correction.getMutationId()).thenReturn(112L);
@@ -169,15 +170,17 @@ class WorkOperationGraphQueryServiceTest {
     WorkAppliedEffect relatedEffect = effect(related, 116L);
     when(operationRepository.findWithWorkTypeById(85L)).thenReturn(Optional.of(selected));
     when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(
-            85L, WorkOperationRelationType.MOVEMENT_DISCARD))
+            eq(85L), eq(WorkOperationRelationType.MOVEMENT_DISCARD), any(Pageable.class)))
         .thenReturn(List.of());
-    when(relationSummaryAssembler.assemble(anyCollection()))
+    when(relationSummaryAssembler.assembleOrigins(anyCollection(), anyInt()))
         .thenReturn(Map.of(85L, summary(WorkOperationOriginType.WORK_MANAGEMENT, 1)));
-    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
+    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(
+            anyCollection(), any(Pageable.class)))
         .thenReturn(List.of(selectedEffect));
     when(mutationGraphPort.load(eq(List.of(115L)), eq(true), eq(3), anyInt()))
         .thenReturn(fragment(115L, 116L));
-    when(effectRepository.findByMutationIdInOrderByMutationIdAscIdAsc(List.of(115L, 116L)))
+    when(effectRepository.findByMutationIdInOrderByMutationIdAscIdAsc(
+            eq(List.of(115L, 116L)), any(Pageable.class)))
         .thenReturn(List.of(selectedEffect, relatedEffect));
 
     var graph = service.get(85L, WorkOperationGraphDetail.LINEAGE, 3, 120);
@@ -202,11 +205,12 @@ class WorkOperationGraphQueryServiceTest {
     when(operation.getStatus()).thenReturn(WorkOperationStatus.VOIDED);
     when(operationRepository.findWithWorkTypeById(90L)).thenReturn(Optional.of(operation));
     when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(
-            90L, WorkOperationRelationType.MOVEMENT_DISCARD))
+            eq(90L), eq(WorkOperationRelationType.MOVEMENT_DISCARD), any(Pageable.class)))
         .thenReturn(List.of());
-    when(relationSummaryAssembler.assemble(anyCollection()))
+    when(relationSummaryAssembler.assembleOrigins(anyCollection(), anyInt()))
         .thenReturn(Map.of(90L, summary(WorkOperationOriginType.WORK_MANAGEMENT, 1)));
-    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
+    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(
+            anyCollection(), any(Pageable.class)))
         .thenReturn(List.of(originalEffect));
     lenient().when(operation.getVoidMutationId()).thenReturn(122L);
     when(mutationGraphPort.load(eq(List.of(121L)), eq(false), eq(1), anyInt()))
@@ -235,7 +239,7 @@ class WorkOperationGraphQueryServiceTest {
       int inboundCount, boolean truncated, boolean rootVisible) {
     var root = prepareRoot(51L);
     var inboundIds = LongStream.rangeClosed(1, inboundCount).boxed().toList();
-    when(relationSummaryAssembler.assemble(anyCollection()))
+    when(relationSummaryAssembler.assembleOrigins(anyCollection(), anyInt()))
         .thenReturn(
             Map.of(
                 51L,
@@ -257,9 +261,9 @@ class WorkOperationGraphQueryServiceTest {
   }
 
   @Test
-  void preservesTheExactSeedLimitBehaviorWhenTheFarmFragmentIsTruncated() {
+  void propagatesFarmTruncationEvenWhenSeedsExactlyFillTheNodeLimit() {
     var root = prepareRoot(51L);
-    when(relationSummaryAssembler.assemble(anyCollection()))
+    when(relationSummaryAssembler.assembleOrigins(anyCollection(), anyInt()))
         .thenReturn(
             Map.of(
                 51L,
@@ -277,7 +281,7 @@ class WorkOperationGraphQueryServiceTest {
     var graph = service.get(51L, WorkOperationGraphDetail.MUTATION, 1, 10);
 
     assertThat(graph.nodes()).hasSize(10);
-    assertThat(graph.truncated()).isFalse();
+    assertThat(graph.truncated()).isTrue();
     assertThat(graph.nodes())
         .noneMatch(node -> node.nodeType() == WorkOperationGraphNodeType.MUTATION);
     assertVisibleEndpoints(graph);
@@ -307,11 +311,12 @@ class WorkOperationGraphQueryServiceTest {
     var visibleWork = operation(87L, null, null);
     var rootEffects =
         List.of(effect(root, 111L), effect(root, 112L), effect(root, 113L), effect(root, 114L));
-    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
+    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(
+            anyCollection(), any(Pageable.class)))
         .thenReturn(rootEffects);
     var discoveredEffects = List.of(effect(skippedWork, 113L), effect(visibleWork, 114L));
     when(effectRepository.findByMutationIdInOrderByMutationIdAscIdAsc(
-            List.of(111L, 112L, 113L, 114L)))
+            eq(List.of(111L, 112L, 113L, 114L)), any(Pageable.class)))
         .thenReturn(discoveredEffects);
     var states =
         LongStream.rangeClosed(1, 8)
@@ -392,10 +397,11 @@ class WorkOperationGraphQueryServiceTest {
     when(target.getOrchidGroupId()).thenReturn(401L);
     when(target.getVarietyNameSnapshot()).thenReturn(null);
     when(targetRepository.findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(
-            anyCollection()))
+            anyCollection(), any(Pageable.class)))
         .thenReturn(List.of(target));
     var rootEffect = effect(root, 111L);
-    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
+    when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(
+            anyCollection(), any(Pageable.class)))
         .thenReturn(List.of(rootEffect));
     var state =
         new WorkOperationMutationGraphPort.State(
@@ -444,7 +450,7 @@ class WorkOperationGraphQueryServiceTest {
   private WorkOperation prepareRoot(Long id) {
     var root = operation(id, null, null);
     when(operationRepository.findWithWorkTypeById(id)).thenReturn(Optional.of(root));
-    when(relationSummaryAssembler.assemble(anyCollection()))
+    when(relationSummaryAssembler.assembleOrigins(anyCollection(), anyInt()))
         .thenReturn(Map.of(id, summary(WorkOperationOriginType.WORK_MANAGEMENT, 1)));
     return root;
   }

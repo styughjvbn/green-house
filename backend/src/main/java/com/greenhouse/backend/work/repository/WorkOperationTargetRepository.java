@@ -4,22 +4,24 @@ import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import java.util.Collection;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface WorkOperationTargetRepository extends JpaRepository<WorkOperationTarget, Long> {
 
+  default List<WorkOperationInboundReference> findInboundReferences(Collection<Long> operationIds) {
+    return findInboundReferences(operationIds, Pageable.unpaged());
+  }
+
   @Query(
-      """
-      select new com.greenhouse.backend.work.repository.WorkOperationInboundReference(
-          t.workOperation.id, t.inboundRecordId)
-      from WorkOperationTarget t
-      where t.workOperation.id in :operationIds and t.inboundRecordId is not null
-      group by t.workOperation.id, t.inboundRecordId
-      order by t.workOperation.id, min(t.id)
-      """)
-  List<WorkOperationInboundReference> findInboundReferences(Collection<Long> operationIds);
+      "select new com.greenhouse.backend.work.repository.WorkOperationInboundReference("
+          + "t.workOperation.id, t.inboundRecordId) from WorkOperationTarget t "
+          + "where t.workOperation.id in :operationIds and t.inboundRecordId is not null "
+          + "group by t.workOperation.id, t.inboundRecordId order by t.workOperation.id, min(t.id)")
+  List<WorkOperationInboundReference> findInboundReferences(
+      Collection<Long> operationIds, Pageable pageable);
 
   @Query(
       "select distinct t.inboundRecordId from WorkOperationTarget t where t.workOperation.id in :operationIds "
@@ -74,6 +76,11 @@ public interface WorkOperationTargetRepository extends JpaRepository<WorkOperati
   List<WorkOperationTarget>
       findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(
           Collection<Long> workOperationIds);
+
+  @EntityGraph(attributePaths = {"workOperation", "workOperation.workType"})
+  List<WorkOperationTarget>
+      findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(
+          Collection<Long> workOperationIds, Pageable pageable);
 
   @EntityGraph(attributePaths = {"workOperation", "workOperation.workType"})
   List<WorkOperationTarget> findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(

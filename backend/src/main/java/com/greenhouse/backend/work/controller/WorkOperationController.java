@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.api.ErrorResponse;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.application.correction.WorkOperationCorrectionService;
@@ -42,7 +43,9 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationTitleUpdateRequest
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -224,6 +227,21 @@ public class WorkOperationController {
   }
 
   @GetMapping("/work-operations/calendar")
+  @Operation(
+      description =
+          "양 끝 날짜를 포함해 최대 366일, 최대 1,000개 작업을 완전한 목록으로 반환한다. 기간 초과는 400, 결과 건수 초과는 422 QUERY_LIMIT_EXCEEDED. 초과 시 기간·필터를 좁히거나 작업 페이지 조회를 사용한다.")
+  @io.swagger.v3.oas.annotations.responses.ApiResponse(
+      responseCode = "200",
+      description = "조회 범위의 전체 작업 요약",
+      useReturnTypeSchema = true)
+  @io.swagger.v3.oas.annotations.responses.ApiResponse(
+      responseCode = "400",
+      description = "기간 또는 조회 조건 오류 (VALIDATION_ERROR)",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  @io.swagger.v3.oas.annotations.responses.ApiResponse(
+      responseCode = "422",
+      description = "조회 결과 상한 초과 (QUERY_LIMIT_EXCEEDED)",
+      content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
   public ApiResponse<List<WorkOperationSummaryResponse>> getCalendar(
       @RequestParam LocalDate from,
       @RequestParam LocalDate to,
@@ -251,6 +269,9 @@ public class WorkOperationController {
   }
 
   @GetMapping("/work-operations/{workOperationId}/graph")
+  @Operation(
+      description =
+          "노드 수 외에도 작업 대상·효과·정정 참조는 조회별 최대 1,000건, Mutation 관계는 최대 maxNodes × 4건으로 제한한다. 일부 노드·참조·관계가 생략되면 truncated=true이며 전체 이력으로 취급하지 않는다.")
   public ApiResponse<WorkOperationGraphResponse> getGraph(
       @PathVariable Long workOperationId,
       @RequestParam(defaultValue = "WORK") WorkOperationGraphDetail detail,
@@ -354,6 +375,9 @@ public class WorkOperationController {
    */
   @Deprecated(since = "2026-08", forRemoval = false)
   @GetMapping("/orchid-groups/{orchidGroupId}/work-history")
+  @Operation(
+      description =
+          "호환 경로: 작업일·ID 내림차순 최신 500개 작업을 반환한다. 전체 이력은 GET /api/work-history의 페이지 조회를 사용한다.")
   public ApiResponse<List<OrchidGroupWorkHistoryResponse>> getOrchidGroupHistory(
       @PathVariable Long orchidGroupId) {
     return ApiResponse.ok(queryService.getOrchidGroupHistory(orchidGroupId));

@@ -1507,6 +1507,30 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-034 누적 목록·하위 이력/graph의 조회 경계를 이어서 진행한다.
 
+## 47차 변경 — BE-034 캘린더·호환 작업 이력·그래프 내부 조회 상한
+
+### 변경 범위
+
+- BE-034 전체를 완료로 닫지 않는다. 이번 변경은 Work 캘린더, deprecated 난 묶음 작업 이력, Work/Mutation 그래프의 참조·관계 적재를 대상으로 한다. root page나 출력 node 상한을 내부 Entity/JSON 상한으로 오해하던 경계를 먼저 보강했다.
+- 캘린더는 양 끝 날짜를 포함해 366일 이내를 요구하고 기간/상태/보기/보정 조건을 적용한 DB 조회를 1,001행으로 제한한다. 최대 1,000개이면 전체 요약을 조립하고 초과하면 조립 전에 422 `QUERY_LIMIT_EXCEEDED`를 반환한다. 기간 초과는 기존 validation 오류인 400이다. 일부 일정을 정상 응답으로 표시하지 않으며 더 좁은 기간·필터 또는 기존 작업 페이지 조회를 사용한다.
+- deprecated 난 묶음 작업 이력은 기존 통합 이력 페이지 코어에서 작업일·ID 내림차순 최신 500개 작업을 조립한다. 과거 전체 target/effect 행을 먼저 읽던 경로를 제거했다. 전체 과거 이력은 최대 100개씩 통합 페이지에서 확인한다. frontend는 이미 통합 페이지 경로를 사용한다. 전파/효과 우선순위·현재 위치 값과 전체 page total을 유지하며 호환 목록의 상한은 Controller/OpenAPI와 도메인 정책에 명시한다.
+- Work 그래프는 child query를 `maxNodes + 1`행, target/effect/correction query를 각각 1,001행으로 제한한다. sentinel을 제외한 최대 1,000개 참조를 조립하고 초과를 `truncated`에 반영한다. 그래프 출처는 제한된 입고 scalar 참조만 읽으며 receipt JSON·membership·child count를 읽지 않는다. 정정 참조는 ID 순서로 제한한다. 표시할 자식·관계가 생략된 경우와 정확히 seed node 상한을 채운 경우에도 Farm의 truncation을 전파한다.
+- Farm의 두 그래프 경로는 Entry 탐색의 기존 깊이별 Slice 한도를 유지하고 표시할 Mutation/Entry를 먼저 선택한 뒤 위치·Work 정보를 조립한다. Mutation relation은 양 끝이 표시되는 ID 집합에 속한 행만 DB에서 읽고 최대 `maxNodes × 4`개를 반환한다. Slice의 추가 행이 있으면 전체 graph/fragment를 truncated로 표시한다. 화면 밖 Mutation과의 관계는 결과에 원래 없던 것이므로 이를 생략한 사실만으로 graph를 truncated로 표시하지 않는다.
+- Mutation 결과 edge의 계보 라벨은 표시되는 RESULT Entry의 Mutation/결과 쌍마다 최소 lineage ID의 타입 하나를 scalar로 읽는다. 숨겨진 결과나 같은 결과에 연결된 모든 source/현재 그룹 Entity를 적재하지 않는다. 같은 결과에 여러 타입이 있으면 기존 최초 ID 우선순위를 유지한다. root 출력 순서·종류·snapshot·edge endpoint 계약은 작은 완전한 그래프에서 보존한다.
+- 기존 프론트 graph의 부분 결과 안내를 계속 사용한다. API JSON 필드/enum을 바꾸지 않고 새 422 응답과 조회 상한 설명을 Springdoc에서 생성한다. 작업/Mutation writer의 전체 이력, replay·잠금·수량 변경·원장·감사 경계와 DB schema는 바꾸지 않는다.
+
+### 검증
+
+- 일반 백엔드 134개 클래스 715건 성공. 최초 전체 실행은 기본 test JVM heap에서 `Java heap space`로 중단됐으며 `/tmp/green-house-be034-test-heap.gradle`의 검증용 `maxHeapSize=1g`로 전체를 다시 실행했다(1분 28초). 실패를 제품 성능 검증 성공으로 취급하지 않고 repository 빌드 설정에는 heap 우회 변경을 추가하지 않았다.
+- PostgreSQL 3개 클래스 35건 성공(46초). 신규 23건은 target=999/1,000/1,001/5,001, child=1/50/5,001, 캘린더=1,000/1,001/5,001, 기간 양 끝 366일/367일 경계, legacy 이력 501개와 마지막 page total, 외부 Mutation 관계=1/100/5,001, visible dense relation 132개, lineage source=1/100/5,001, effect/correction 각각=1,001/5,001을 검증한다. SQL 횟수뿐 아니라 대상·작업·관계·계보 Entity 적재 상한, 참조/관계 초과 시 truncated, 모든 edge 양 끝의 가시성, 초과 캘린더의 안정적인 오류와 요약 미조립을 확인한다. 기존 Mutation PostgreSQL 9건과 Work summary 적재 3건도 통과했다.
+- 기존 Work benchmark(100작업 × 20대상, 3회 warm-up/20회 sample)를 query gate를 켜고 실행했다. 목록 SQL 7회·대상 load 0, 상세 SQL 4회, 호환 이력 SQL 4회로 기존 7/4/5 상한을 통과했다. 이력의 root page 조회가 추가됐으며 비용 감소로 설명하지 않는다. benchmark 자체의 작은 이력 fixture가 상한을 입증하지 않으므로 큰 fan-out과 501개 이력은 새 PostgreSQL 회귀로 분리했다.
+- `python3 scripts/generate_openapi.py`와 `npm run api:types` 성공. 생성 명세의 캘린더 200/400/422 응답 및 정상 요약/ErrorResponse schema를 확인했다. 프론트 `npm run check`, `spotlessCheck`, `git diff --check` 성공. 전체 PostgreSQL·전체 benchmark·브라우저 E2E·운영 DB plan/부하·peak heap은 미실행. 전체 일반 테스트 뒤 제품 변경은 API 설명/응답 schema annotation·포맷뿐이며 PG의 적재 assertion은 향후 projection 최적화도 허용하는 상한으로 조정했다.
+
+### 남은 범위와 한계
+
+- 전체 그룹·sellable·derived member·collection/직접 계보의 누적 목록 계약, Work/Inbound/lot/Mutation page의 하위 이력 분리·pagination, 사용된 출하 후보가 많은 Sales 선택지 반복 조회는 남는다. 화면이 전체 구성원을 확정하거나 과거 이력을 표시하는 계약에 임의 cut을 넣지 않는다. 다음 BE-034 변경에서 endpoint·소비자별로 이어서 처리한다.
+- 전체 farm map은 의도된 전체 배치 계약으로 유지했다. graph/캘린더의 반환 행·Entity 상한은 DB scan/sort, snapshot JSON의 byte 크기, 실제 peak heap/latency, multi-query 단일 snapshot을 보장하지 않는다. 계보 최소 ID projection의 운영 plan·index 검증은 BE-035와 함께 남긴다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1556,7 +1580,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `dd230cd3` — BE-031 `perf: assemble orchid summaries from scalar queries`. 품종 집계/최신일과 자동 그룹 stream·mapper/연령·Entity 적재 회귀를 별도 커밋으로 저장한다.
 - `bed7e32a` — BE-032 `refactor: batch partner searches and bound identifier queries`. 다중 검색·배열 membership·참조 입력 분할과 PostgreSQL/검색/Work benchmark 회귀를 별도 커밋으로 저장한다.
 
-- BE-033 — `refactor: index mutation placements within locked batches`. 구역별 scalar 검사·구간 index와 SQL/flush/충돌/rollback/경쟁 회귀를 별도 커밋으로 저장한다.
+- `f9cca5ac` — BE-033 `refactor: index mutation placements within locked batches`. 구역별 scalar 검사·구간 index와 SQL/flush/충돌/rollback/경쟁 회귀.
+- BE-034 — `fix: bound calendar history and graph reference retrieval`. 조회 경계와 partial/error 계약·대량 PostgreSQL 회귀·생성 API 계약을 목적 단위로 저장한다.
 
 ## 남은 작업
 
@@ -1598,4 +1623,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-031의 품종 DB 집계/최신일·자동 그룹 scalar stream/현재 연령과 관련 적재 회귀는 44차 범위다. BE-032 개선은 45차에 이어서 기록했다.
 - BE-032의 다중 검색 scan·배열 ID 바인딩·500개 참조 입력과 대량/검색 의미/페이지/이력 회귀는 45차 범위다. 전체 ID 메모리·호환 응답 상한·운영 부하와 나머지 검색 정책은 별도 후속 범위다.
 - BE-033의 배치 placement 조회·Entity/flush 증폭과 중첩 비교 개선은 46차 범위다. 운영 lock 대기·처리량 검증은 별도다.
+- BE-034의 캘린더/호환 작업 이력과 graph 내부 참조·관계 상한/partial 의미는 47차 범위다. 전체 목록·하위 이력 분리·출하 선택지 계약은 남는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
