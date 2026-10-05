@@ -547,6 +547,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description 대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은 409 IDEMPOTENCY_KEY_REUSED입니다. */
         post: operations["confirmPayment"];
         delete?: never;
         options?: never;
@@ -792,6 +793,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description 대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은 409 IDEMPOTENCY_KEY_REUSED입니다. */
         post: operations["confirmAuctionPayment"];
         delete?: never;
         options?: never;
@@ -2800,6 +2802,14 @@ export interface components {
             totalQuantity?: number;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        ErrorBody: {
+            code?: string;
+            details?: string[];
+            message?: string;
+        };
+        ErrorResponse: {
+            error?: components["schemas"]["ErrorBody"];
         };
         ManualPaymentRequest: {
             /** Format: int64 */
@@ -5857,13 +5867,31 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 입금 확인 또는 재요청 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR: 입력 오류 또는 초과입금 등 기존 업무 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -6379,13 +6407,31 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 입금 확인 또는 재요청 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseAuctionSettlementResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR: 입력 오류 또는 초과입금 등 기존 업무 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

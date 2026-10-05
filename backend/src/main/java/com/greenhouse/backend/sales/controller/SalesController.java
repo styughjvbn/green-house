@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.api.ErrorResponse;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.sales.application.SalesOrchidGroupQueryService;
 import com.greenhouse.backend.sales.application.SalesPaymentService;
@@ -15,7 +16,9 @@ import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesOrchidGroupSearchResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -115,6 +118,23 @@ public class SalesController {
   }
 
   @PostMapping("/sales-slips/{salesSlipId}/confirm-payment")
+  @Operation(
+      description =
+          "대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은 409 IDEMPOTENCY_KEY_REUSED입니다.",
+      responses = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "입금 확인 또는 재요청 결과",
+            useReturnTypeSchema = true),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "VALIDATION_ERROR: 입력 오류 또는 초과입금 등 기존 업무 검증 실패",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "409",
+            description = "IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+      })
   public ApiResponse<SalesSlipDocument> confirmPayment(
       @PathVariable Long salesSlipId, @Valid @RequestBody ManualPaymentCommand request) {
     return ApiResponse.ok(salesPaymentService.confirmPayment(salesSlipId, request));

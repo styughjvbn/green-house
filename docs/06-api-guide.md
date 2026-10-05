@@ -95,7 +95,7 @@ npm run api:types
 
 - 일반 판매 전표와 경매 정산 입금 요청은 대상별 `idempotencyKey`가 필수다.
 - 같은 키·금액·입금일 재요청은 중복 입금으로 처리하지 않는다.
-- 같은 키를 다른 금액 또는 입금일에 재사용하면 검증 오류를 반환한다.
+- 같은 대상·키를 다른 금액 또는 입금일에 재사용하면 `409 / IDEMPOTENCY_KEY_REUSED`를 반환한다. 기존 `400 / VALIDATION_ERROR`에서 변경된 계약이다. 외부 소비자는 status/code 분기를 함께 갱신한다. 키 충돌을 받으면 기존 입금 결과를 확인하고 실제 추가 입금에만 새 키를 사용한다.
 
 경매 정산 조회는 `/api/auction-settlements/page`로 요약 목록을, `/api/auction-settlements/summary`로 같은 조건의 전체 금액 합계를 요청한다. 정산 결과 행은 단건 조회에서 받는다. 기존 `/api/auction-settlements`는 최신 500건으로 제한된 호환 경로이므로 전체 합계 계산에 사용하지 않는다.
 
@@ -127,6 +127,12 @@ npm run api:types
 ```
 
 프론트엔드 공통 `requestApi`는 실패를 `ApiError`로 변환하며 HTTP status, `error.code`, `error.details`를 그대로 보존한다. 화면 메시지만 필요한 경우 `getApiErrorMessage`를 사용하고, 업무 분기는 문자열 메시지가 아닌 status와 code를 기준으로 한다.
+
+오류 선택 기준은 다음과 같다.
+
+- 필수 값·형식·범위 오류는 `400 / VALIDATION_ERROR`다. 입금의 초과금액 등 기존 업무 검증도 이 계약을 유지한다.
+- 같은 처리 범위·멱등 키에 다른 입력을 보낸 요청은 `409`다. Work·보정·실사·수동 입금은 `IDEMPOTENCY_KEY_REUSED`를 사용하며 판매/입고 생성·경매의 기존 도메인별 충돌 code도 유지한다. 서로 다른 대상/경로에서 키가 같다는 이유만으로 충돌시키지 않는다.
+- 새 업무의 현재 상태 충돌은 명시적인 도메인 code를 가진 `409`로 구별한다. 기존 업무의 모든 `IllegalArgumentException`을 일괄 변환하지 않는다. DB 잠금/버전 충돌은 `409 / CONCURRENT_MODIFICATION`, 제약 위반은 `409 / DATA_INTEGRITY_CONFLICT`이며 입력 비교로 확인한 키 충돌과 구분한다.
 
 ## 5. 변경 체크리스트
 

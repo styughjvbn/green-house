@@ -1,6 +1,7 @@
 package com.greenhouse.backend.settlement.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
+import com.greenhouse.backend.common.exception.ConflictException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -191,7 +192,8 @@ public class PartnerPaymentEvent extends BaseEntity {
 
   public void validateReplay(Long amount, LocalDate eventDate) {
     if (!Objects.equals(this.amount, amount) || !Objects.equals(this.eventDate, eventDate)) {
-      throw new IllegalArgumentException("같은 입금 멱등 키를 다른 금액 또는 입금일에 재사용할 수 없습니다.");
+      throw new ConflictException(
+          "IDEMPOTENCY_KEY_REUSED", "같은 입금 멱등 키를 다른 금액 또는 입금일에 재사용할 수 없습니다.");
     }
   }
 }

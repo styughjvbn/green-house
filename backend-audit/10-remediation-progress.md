@@ -1318,6 +1318,34 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-025의 내부 반복 전달과 actor 재정규화 제거를 완료했다. 다음 변경은 BE-026의 Work/Settlement 멱등 키 충돌 오류 계약이며 기존 payment 소비자의 HTTP 호환성을 먼저 검토한다.
 
+## 38차 변경 — BE-026 수동 입금 멱등 키 충돌의 오류 계약
+
+### 완료 범위
+
+- Work 접수·보정의 기존 `409 / IDEMPOTENCY_KEY_REUSED`와 수동 입금의 `400 / VALIDATION_ERROR` 차이를 재확인했다. 입금 원장의 금액/입금일 비교는 그대로 두고, 비교로 확인한 키 재사용만 공통 `ConflictException`과 `IDEMPOTENCY_KEY_REUSED`로 반환한다. 일반 판매 전표·경매 정산 모두 같은 원장 정책을 사용한다.
+- 입력 형식/필수/범위·초과입금 등 기존 업무 검증은 400을 유지한다. 현재 상태의 선행 검증, 잠금 순서·트랜잭션·입금/연결 이벤트·잔액·감사·DB UNIQUE와 replay 처리 순서는 변경하지 않는다. 모든 `IllegalArgumentException`을 409로 바꾸거나 새 오류 framework/enum을 만들지 않는다.
+- 같은 대상·키의 비교 범위는 기존처럼 금액과 입금일이다. 키의 trim과 대상별 범위를 유지하며, 방법·입금자·worker·메모만 바뀐 재전송도 기존 반영 결과를 반환하고 저장된 이벤트를 수정하지 않는다. 실제 추가 입금에는 새 키를 사용한다.
+- 저장 DB schema·금융 계산·성공 응답과 요청 DTO는 유지하지만 충돌 HTTP status/code는 의도적으로 변경한다. API 가이드에 400 입력 오류·409 키/상태/DB 충돌 선택 기준과 기존 도메인별 code 보존 원칙을 추가하고, 입금 정책·Domain Rules에 새 응답과 처리 방법을 반영했다.
+
+### 소비자·명세와 회귀 방어
+
+- 저장소의 두 입금 API adapter는 공통 `requestApi`를 사용하고 입금 패널은 오류 메시지를 표시한다. 기존 400/code에 의존한 분기를 찾지 못했으며 별도 프론트 동작 변경은 필요하지 않다. 외부 소비자의 존재/배포는 확인하지 않았다. 기존 400에 의존한 외부 연동에는 status/code 갱신이 필요함을 API 가이드에 명시한다.
+- 두 Controller에 200·400·409 설명과 공통 ErrorResponse schema를 선언하고 `python3 scripts/generate_openapi.py`와 `npm run api:types`로 전체/slice/TypeScript를 생성했다. 생성 결과의 두 operation에서 성공 응답 schema가 보존되고 400/409가 ErrorResponse를 참조하는지 확인했다. 생성 파일은 직접 수정하지 않는다.
+- HTTP 회귀에서 일반 판매·경매의 동일 요청 성공/replay와 금액/입금일 변경의 409/code·공통 오류 envelope를 검사한다. 초과입금과 입력 validation의 기존 400을 별도로 유지한다. 원장 application 시험도 메시지 문자열 대신 ConflictException의 code를 확인한다.
+- PostgreSQL 신규 6건은 두 대상의 완납 뒤 금액/입금일 충돌과 같은 키의 다른 금액 동시 요청을 검증한다. 충돌 전후 대상·입금/연결 이벤트·잔액·감사의 전체 행 snapshot을 비교하고 이후 원래 요청과 metadata만 바뀐 요청의 replay가 저장 상태를 보존하는지 확인한다. 동시 요청은 성공 1건·정확한 키 충돌 1건과 이벤트 2개만 기록되며 성공 요청의 재전송도 변경하지 않는다. 기존 경매 fixture와 snapshot helper를 함께 사용한다.
+
+### 검증
+
+- 집중 입금 HTTP/원장 2개 클래스 26건 성공(32초), 기존 프론트 ApiError 처리 3건 성공. 신규 PostgreSQL 6건 성공(29초).
+- 최초 신규 PostgreSQL 시도는 병렬 Callable의 `var` 타입 추론이 Object가 되어 시험 컴파일에서 실패했다. 결과 변수를 `List<ApiResult>`로 명시해 수정했으며 PostgreSQL 실행 실패나 제품 오류는 아니었다. 이후 집중/최종 검증에서 컴파일과 시험이 모두 성공했다.
+- 최종 `./gradlew spotlessApply test workE2eTest --tests '*PartnerSettlementPostgresE2ETest' spotlessCheck`: 일반 133개 클래스 711건·관련 PostgreSQL 1개 클래스 19건 성공(2분 20초). 실패·오류·생략 0건. 신규 충돌 외 기존 동시 입금·재전송·잔액/정산 재구축·감사/호출자 rollback·외래키·잠금 회귀도 포함한다.
+- 프론트엔드 `npm run check`, OpenAPI/TypeScript 생성, 백엔드 포맷 검사·`git diff --check`: 성공. PostgreSQL 전체·benchmark·브라우저 E2E·운영 대사·외부 소비자 배포는 미실행. Flyway와 운영 데이터 변경은 없다.
+- 최종 전체 검증 이후 진행 문서만 수정했다. 제품·시험·명세·생성 타입의 입력이 유지되어 전체 검증을 반복하지 않는다.
+
+### 남은 범위
+
+- BE-026의 수동 입금 키 충돌 구별·오류 선택 기준·확인된 저장소 소비자 호환과 관련 회귀를 완료했다. 기존 업무의 다른 상태 검증/도메인별 code를 일괄 변경하지 않는다. 다음 변경은 BE-027의 경매 변경 응답 mapper N+1을 추적한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1357,7 +1385,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `646e0db6` — BE-022 전표 입금 감사 소유권·내부 helper 가시성·감사/rollback/architecture 회귀.
 - `75aac8cd` — BE-023 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀.
 - `f7f5cf90` — BE-024 미사용 주입/전략 옵션 제거·기존 실행 회귀.
-- BE-025 — `refactor: pass immediate work commands through execution`. 즉시 명령 전달·actor 정규화·지문/실행 호환 회귀를 별도 커밋으로 저장한다.
+- `6c95e7a0` — BE-025 즉시 명령 전달·actor 정규화·지문/실행 호환 회귀.
+- BE-026 — `fix: return conflicts for reused payment keys`. 입금 키 충돌 오류·소비자/명세·금융 상태/경쟁 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1390,5 +1419,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-022의 전표 입금 감사 소유권·내부 helper 공개 범위 정리·감사/rollback/architecture 회귀는 34차 범위다.
 - BE-023의 생성/수정 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀는 35차 범위다.
 - BE-024의 미사용 주입·전략 옵션 제거와 기존 실행 회귀 확인은 36차 범위다.
-- BE-025의 즉시 실행 명령 전달·actor 정규화와 지문/실행 호환 회귀는 37차 범위다. 다음 변경은 BE-026의 멱등 키 충돌 오류 계약을 검토한다.
+- BE-025의 즉시 실행 명령 전달·actor 정규화와 지문/실행 호환 회귀는 37차 범위다.
+- BE-026의 수동 입금 키 충돌 오류 계약·소비자/명세·금융 상태/경쟁 회귀는 38차 범위다. 다음 변경은 BE-027의 경매 변경 응답 mapper N+1을 검토한다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

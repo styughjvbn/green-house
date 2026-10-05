@@ -231,16 +231,25 @@ class PaymentTests {
     for (String rejectedPayment :
         List.of(
             paymentJson(70_000).replace("\"amount\": 70000", "\"amount\": 60000"),
-            paymentJson(70_000).replace("2026-07-06", "2026-07-07"),
-            paymentJson(1))) {
+            paymentJson(70_000).replace("2026-07-06", "2026-07-07"))) {
       mockMvc
           .perform(
               post("/api/sales-slips/{id}/confirm-payment", slip.getId())
                   .contentType("application/json")
                   .content(rejectedPayment))
-          .andExpect(status().isBadRequest())
-          .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+          .andExpect(status().isConflict())
+          .andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"))
+          .andExpect(jsonPath("$.error.message").value("같은 입금 멱등 키를 다른 금액 또는 입금일에 재사용할 수 없습니다."))
+          .andExpect(jsonPath("$.error.details.length()").value(0));
     }
+
+    mockMvc
+        .perform(
+            post("/api/sales-slips/{id}/confirm-payment", slip.getId())
+                .contentType("application/json")
+                .content(paymentJson(1)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 
     mockMvc
         .perform(get("/api/partner-payment-events").param("partnerId", partner.getId().toString()))
@@ -363,8 +372,30 @@ class PaymentTests {
         .perform(
             post("/api/auction-settlements/{id}/confirm-payment", settlement.id())
                 .contentType("application/json")
+                .content(paymentJson(40_000)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.paidAmount").value(40_000));
+    for (String changed :
+        List.of(
+            paymentJson(40_000).replace("\"amount\": 40000", "\"amount\": 30000"),
+            paymentJson(40_000).replace("2026-07-06", "2026-07-07"))) {
+      mockMvc
+          .perform(
+              post("/api/auction-settlements/{id}/confirm-payment", settlement.id())
+                  .contentType("application/json")
+                  .content(changed))
+          .andExpect(status().isConflict())
+          .andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"))
+          .andExpect(jsonPath("$.error.details.length()").value(0));
+    }
+
+    mockMvc
+        .perform(
+            post("/api/auction-settlements/{id}/confirm-payment", settlement.id())
+                .contentType("application/json")
                 .content(paymentJson(70_000)))
         .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
         .andExpect(jsonPath("$.error.message").exists());
 
     var audits =

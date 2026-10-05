@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.audit.repository.AuditEventRepository;
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
@@ -117,14 +118,18 @@ class PaymentLedgerContractIntegrationTest {
             () ->
                 ledger.findManualPayment(
                     PaymentTargetType.SALES_SLIP, TARGET_ID, payment(2_000L, PAYMENT_DATE)))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOfSatisfying(
+            ConflictException.class,
+            exception -> assertThat(exception.getCode()).isEqualTo("IDEMPOTENCY_KEY_REUSED"));
     assertThatThrownBy(
             () ->
                 ledger.findManualPayment(
                     PaymentTargetType.SALES_SLIP,
                     TARGET_ID,
                     payment(1_000L, PAYMENT_DATE.plusDays(1))))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOfSatisfying(
+            ConflictException.class,
+            exception -> assertThat(exception.getCode()).isEqualTo("IDEMPOTENCY_KEY_REUSED"));
     assertThat(
             eventRepository
                 .search(partner.getId(), null, null, null, PageRequest.of(0, 100))

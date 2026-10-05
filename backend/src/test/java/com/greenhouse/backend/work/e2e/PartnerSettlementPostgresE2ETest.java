@@ -56,6 +56,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -278,16 +280,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
         partnerRepository.saveAndFlush(
             new BusinessPartner("동시 경매 입금", PartnerType.AUCTION_HOUSE, null, null, null, null));
     var date = LocalDate.of(2040, 1, 3);
-    var shipment = new AuctionShipment(date.minusDays(1), house.getId(), house.getPartnerType());
-    var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
-    var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
-    attempt.addResultLine(
-        new AuctionResultLine(
-            date, "A", 10, 10_000, 100_000, null, AuctionInspectionStatus.NORMAL));
-    lot.addAttempt(attempt);
-    shipment.addLot(lot);
-    shipmentRepository.saveAndFlush(shipment);
-    var settlement = settlementService.rebuild(house.getId(), date);
+    var settlement = createAuctionSettlement(house, date);
     var first = payment(20_000L, "auction-first");
     var second = payment(30_000L, "auction-second");
 
@@ -418,13 +411,135 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
     assertThat(paymentState(partner.getId(), slip.getId())).isEqualTo(after);
   }
 
+  @ParameterizedTest
+  @CsvSource({
+    "SALES_SLIP, false", "SALES_SLIP, true",
+    "AUCTION_SETTLEMENT, false", "AUCTION_SETTLEMENT, true"
+  })
+  void changedAmountOrDateReturnsAConflictWithoutChangingTheFullyPaidTarget(
+      PaymentTargetType targetType, boolean changeDate) throws Exception {
+    var target = createPaymentTarget(targetType);
+    var original = payment(100_000L, "be026-conflict");
+    String json = objectMapper.writeValueAsString(original);
+    var first = post(target.path(), json);
+    assertThat(first.status()).as(first.body().toString()).isEqualTo(200);
+    assertThat(first.data().path("paidAmount").asLong()).isEqualTo(100_000L);
+    var before = paymentState(target.partnerId(), target.id(), targetType);
+
+    var changed =
+        new ManualPaymentCommand(
+            changeDate ? original.amount() : 90_000L,
+            changeDate ? original.paymentDate().plusDays(1) : original.paymentDate(),
+            " be026-conflict ",
+            "다른 방법",
+            "다른 입금자",
+            "다른 작업자",
+            "다른 메모");
+    var conflict = post(target.path(), objectMapper.writeValueAsString(changed));
+    assertThat(conflict.status()).as(conflict.body().toString()).isEqualTo(409);
+    assertThat(conflict.body().path("error").path("code").asText())
+        .isEqualTo("IDEMPOTENCY_KEY_REUSED");
+    assertThat(paymentState(target.partnerId(), target.id(), targetType)).isEqualTo(before);
+    var replay = post(target.path(), json);
+    assertThat(replay.status()).as(replay.body().toString()).isEqualTo(200);
+    assertThat(replay.data().path("paidAmount").asLong()).isEqualTo(100_000L);
+    assertThat(paymentState(target.partnerId(), target.id(), targetType)).isEqualTo(before);
+    var metadataOnly =
+        new ManualPaymentCommand(
+            original.amount(),
+            original.paymentDate(),
+            " be026-conflict ",
+            "다른 방법",
+            "다른 입금자",
+            "다른 작업자",
+            "다른 메모");
+    var metadataReplay = post(target.path(), objectMapper.writeValueAsString(metadataOnly));
+    assertThat(metadataReplay.status()).as(metadataReplay.body().toString()).isEqualTo(200);
+    assertThat(paymentState(target.partnerId(), target.id(), targetType)).isEqualTo(before);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = PaymentTargetType.class,
+      names = {"SALES_SLIP", "AUCTION_SETTLEMENT"})
+  void concurrentDifferentAmountsWithTheSameKeyCommitOnePaymentAndReturnOneConflict(
+      PaymentTargetType targetType) throws Exception {
+    var target = createPaymentTarget(targetType);
+    String first = objectMapper.writeValueAsString(payment(20_000L, "be026-race"));
+    String second = objectMapper.writeValueAsString(payment(30_000L, "be026-race"));
+    List<ApiResult> outcomes =
+        concurrently(List.of(() -> post(target.path(), first), () -> post(target.path(), second)));
+    assertThat(outcomes).extracting(ApiResult::status).containsExactlyInAnyOrder(200, 409);
+    var conflict =
+        outcomes.stream().filter(result -> result.status() == 409).findFirst().orElseThrow();
+    assertThat(conflict.body().path("error").path("code").asText())
+        .isEqualTo("IDEMPOTENCY_KEY_REUSED");
+    var accepted =
+        outcomes.stream().filter(result -> result.status() == 200).findFirst().orElseThrow();
+    long paidAmount = accepted.data().path("paidAmount").asLong();
+    assertThat(paidAmount).isIn(20_000L, 30_000L);
+    assertThat(accepted.data().path("remainingAmount").asLong()).isEqualTo(100_000L - paidAmount);
+    assertThat(
+            eventRepository
+                .search(target.partnerId(), targetType, target.id(), null, PageRequest.of(0, 100))
+                .getContent())
+        .extracting(PartnerPaymentEvent::getEventType)
+        .containsExactlyInAnyOrder(
+            PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED);
+    var beforeReplay = paymentState(target.partnerId(), target.id(), targetType);
+    var replay = post(target.path(), paidAmount == 20_000L ? first : second);
+    assertThat(replay.status()).as(replay.body().toString()).isEqualTo(200);
+    assertThat(paymentState(target.partnerId(), target.id(), targetType)).isEqualTo(beforeReplay);
+  }
+
+  private record PaymentTarget(Long partnerId, Long id, PaymentTargetType type) {
+    String path() {
+      String collection =
+          type == PaymentTargetType.SALES_SLIP ? "sales-slips" : "auction-settlements";
+      return "/api/" + collection + "/" + id + "/confirm-payment";
+    }
+  }
+
+  private PaymentTarget createPaymentTarget(PaymentTargetType type) {
+    if (type == PaymentTargetType.SALES_SLIP) {
+      var partner = createPartner("입금 충돌 판매 거래처");
+      return new PaymentTarget(
+          partner.getId(), createSlip(partner, "S20400102-" + partner.getId()).getId(), type);
+    }
+    var house =
+        partnerRepository.saveAndFlush(
+            new BusinessPartner("입금 충돌 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
+    var date = LocalDate.of(2040, 1, 3);
+    return new PaymentTarget(house.getId(), createAuctionSettlement(house, date).id(), type);
+  }
+
+  private AuctionSettlementResponse createAuctionSettlement(BusinessPartner house, LocalDate date) {
+    var shipment = new AuctionShipment(date.minusDays(1), house.getId(), house.getPartnerType());
+    var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
+    var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
+    attempt.addResultLine(
+        new AuctionResultLine(
+            date, "A", 10, 10_000, 100_000, null, AuctionInspectionStatus.NORMAL));
+    lot.addAttempt(attempt);
+    shipment.addLot(lot);
+    shipmentRepository.saveAndFlush(shipment);
+    return settlementService.rebuild(house.getId(), date);
+  }
+
   private Map<String, Object> paymentState(Long partnerId, Long slipId) {
+    return paymentState(partnerId, slipId, PaymentTargetType.SALES_SLIP);
+  }
+
+  private Map<String, Object> paymentState(Long partnerId, Long targetId, PaymentTargetType type) {
+    String table = type == PaymentTargetType.SALES_SLIP ? "sales_slips" : "auction_settlements";
     return Map.of(
-        "slip",
+        "target",
             jdbcTemplate.queryForList(
-                "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM sales_slips WHERE id = ?) snapshot",
+                "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM "
+                    + table
+                    + " WHERE id = ?) snapshot",
                 String.class,
-                slipId),
+                targetId),
         "events",
             jdbcTemplate.queryForList(
                 "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM partner_payment_events WHERE partner_id = ? ORDER BY id) snapshot",
