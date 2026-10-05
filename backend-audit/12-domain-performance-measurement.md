@@ -63,3 +63,7 @@ runner는 Gradle 종료 코드와 report의 설정·scenario/sample 수·개별 
 - **JDBC/Entity:** 실행/batch·소비한 반환 행·commit/rollback과 Hibernate statement/load/flush 수를 함께 기록한다. JDBC 호출 수는 driver 내부 round trip이 아니고 반환 행은 DB scan 행 수가 아니다. 계측 wrapper와 heap sampler의 비용도 포함하므로 같은 도구/설정으로 비교한다.
 
 시간·heap의 절대값으로 테스트를 실패시키지 않는다. 별도 `domainBenchmark` task/tag를 사용하며 일반 `test`, 기존 `workE2eTest`/`workBenchmark` 및 기본 CI에서는 대량 측정을 자동 실행하지 않는다. 이 도구 준비와 smoke 성공만으로 BE-036/042의 대량 측정·병목 개선을 완료 처리하지 않는다.
+
+## 분석 기록
+
+2026-10-05 사용자 제공 standard 결과의 수치·코드 대조·후속 우선순위는 [측정 결과 분석](13-domain-performance-results.md)에 기록했다. 10개 scenario·45개 sample 성공과 확인된 잔여 비용을 구분하며, 이후 전후 비교에는 동일한 profile/설정을 사용한다.
