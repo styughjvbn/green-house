@@ -3,10 +3,16 @@ package com.greenhouse.backend.farm.application.structure;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.orchid.OrchidPlacementRow;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -63,40 +69,113 @@ public class OrchidPlacementPolicy {
     if (placements.isEmpty()) {
       return;
     }
-    var zoneIds =
-        placements.stream().map(placement -> placement.bedZone().getId()).distinct().toList();
-    var remaining =
-        orchidGroupRepository.findByBedZoneIdInAndQuantityGreaterThan(zoneIds, 0).stream()
-            .filter(group -> !excludedIds.contains(group.getId()))
-            .toList();
-    for (int index = 0; index < placements.size(); index++) {
-      RestoredPlacement placement = placements.get(index);
+    var batch =
+        prepareBatch(
+            placements.stream().map(RestoredPlacement::bedZone).distinct().toList(),
+            excludedIds,
+            false);
+    for (RestoredPlacement placement : placements) {
       validateRange(placement.bedZone(), placement.startPosition(), placement.endPosition());
-      for (OrchidGroup group : remaining) {
-        if (placement.bedZone().getId().equals(group.getBedZone().getId())) {
-          validateRestoredPair(
-              placement, group.getStartPosition(), group.getEndPosition(), group.getSortOrder());
-        }
+      var zoneId = placement.bedZone().getId();
+      if (batch
+          .intervals
+          .get(zoneId)
+          .overlaps(placement.startPosition(), placement.endPosition())) {
+        throw new IllegalArgumentException("복구할 난 묶음의 배치가 다른 난 묶음 배치와 겹칩니다.");
       }
-      for (int other = 0; other < index; other++) {
-        RestoredPlacement previous = placements.get(other);
-        if (placement.bedZone().getId().equals(previous.bedZone().getId())) {
-          validateRestoredPair(
-              placement, previous.startPosition(), previous.endPosition(), previous.sortOrder());
-        }
+      if (placement.sortOrder() != null
+          && !batch.sortOrders.get(zoneId).add(placement.sortOrder())) {
+        throw new IllegalArgumentException("복구할 난 묶음의 구역 내 표시 순서가 다른 난 묶음과 중복됩니다.");
       }
+      batch.intervals.get(zoneId).add(placement.startPosition(), placement.endPosition());
     }
   }
 
-  private void validateRestoredPair(
-      RestoredPlacement placement, BigDecimal start, BigDecimal end, Integer sortOrder) {
-    if (start != null
-        && end != null
-        && isOverlapping(placement.startPosition(), placement.endPosition(), start, end)) {
-      throw new IllegalArgumentException("복구할 난 묶음의 배치가 다른 난 묶음 배치와 겹칩니다.");
+  public BatchPlacements prepareBatch(Collection<BedZone> zones, Set<Long> excludedIds) {
+    return prepareBatch(zones, excludedIds, true);
+  }
+
+  private BatchPlacements prepareBatch(
+      Collection<BedZone> zones, Set<Long> excludedIds, boolean normalize) {
+    var ids = zones.stream().map(BedZone::getId).distinct().toList();
+    Map<Long, List<OrchidPlacementRow>> rows = new HashMap<>();
+    for (int start = 0; start < ids.size(); start += 500) {
+      for (var row :
+          orchidGroupRepository.findActivePlacements(
+              ids.subList(start, Math.min(start + 500, ids.size())))) {
+        if (!excludedIds.contains(row.orchidGroupId())) {
+          rows.computeIfAbsent(row.bedZoneId(), id -> new ArrayList<>()).add(row);
+        }
+      }
     }
-    if (placement.sortOrder() != null && placement.sortOrder().equals(sortOrder)) {
-      throw new IllegalArgumentException("복구할 난 묶음의 구역 내 표시 순서가 다른 난 묶음과 중복됩니다.");
+    var batch = new BatchPlacements();
+    for (var zone : zones) {
+      var ranges = new ArrayList<PlacementRange>();
+      var orders = new HashSet<Integer>();
+      for (var row : rows.getOrDefault(zone.getId(), List.of())) {
+        if (row.startPosition() != null && row.endPosition() != null) {
+          ranges.add(
+              new PlacementRange(
+                  normalize ? normalizeNumber(row.startPosition()) : row.startPosition(),
+                  normalize ? normalizeNumber(row.endPosition()) : row.endPosition()));
+        }
+        if (row.sortOrder() != null) orders.add(row.sortOrder());
+      }
+      batch.intervals.put(
+          zone.getId(),
+          new PlacementIntervalIndex(ranges, zone.getPhysicalBed().getPositionUnitCount()));
+      batch.sortOrders.put(zone.getId(), orders);
+    }
+    return batch;
+  }
+
+  public void validateBatchMoves(List<RestoredPlacement> placements, Set<Long> excludedIds) {
+    var batch =
+        prepareBatch(
+            placements.stream().map(RestoredPlacement::bedZone).distinct().toList(), excludedIds);
+    for (var placement : placements) {
+      batch.validate(placement.bedZone(), placement.startPosition(), placement.endPosition());
+    }
+    var results = new HashMap<Long, PlacementIntervalIndex>();
+    for (var placement : placements) {
+      var index =
+          results.computeIfAbsent(
+              placement.bedZone().getId(), id -> new PlacementIntervalIndex(List.of(), null));
+      if (index.overlaps(placement.startPosition(), placement.endPosition())) {
+        throw new IllegalArgumentException("이동 결과 난 묶음의 배치가 서로 겹칩니다.");
+      }
+      index.add(placement.startPosition(), placement.endPosition());
+    }
+  }
+
+  /** Request-local state, created after zone locks; new results participate before DB flush. */
+  public final class BatchPlacements {
+    private final Map<Long, PlacementIntervalIndex> intervals = new HashMap<>();
+    private final Map<Long, Set<Integer>> sortOrders = new HashMap<>();
+
+    private BatchPlacements() {}
+
+    public void validate(BedZone zone, BigDecimal start, BigDecimal end) {
+      validateRange(zone, start, end);
+      if (intervals.get(zone.getId()).overlaps(start, end)) {
+        throw new IllegalArgumentException("선택한 위치가 기존 난 묶음 배치와 겹칩니다.");
+      }
+    }
+
+    public void reserve(BedZone zone, BigDecimal start, BigDecimal end) {
+      validate(zone, start, end);
+      intervals.get(zone.getId()).add(normalizeNumber(start), normalizeNumber(end));
+    }
+
+    public PlacementRange reserveFirstSingleSlot(BedZone zone) {
+      if (zone.getPhysicalBed().getPositionUnitCount() == null) {
+        throw new IllegalArgumentException("배드 칸 수 정보가 없어 자동 배치할 수 없습니다.");
+      }
+      var start = intervals.get(zone.getId()).firstSingleSlot();
+      if (start == null) throw new IllegalArgumentException("선택한 구역에 1칸 이상 비어 있는 공간이 없습니다.");
+      var range = new PlacementRange(start, start.add(MIN_SPAN));
+      reserve(zone, range.startPosition(), range.endPosition());
+      return range;
     }
   }
 

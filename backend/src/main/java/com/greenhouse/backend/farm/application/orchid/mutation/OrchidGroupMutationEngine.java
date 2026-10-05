@@ -126,6 +126,7 @@ public class OrchidGroupMutationEngine {
                 .map(CreateOrchidGroupMutationItem::bedZoneId)
                 .collect(Collectors.toSet()));
     Map<Long, Integer> nextSortOrderByZoneId = currentMaxSortOrders(zones.keySet());
+    var placements = orchidPlacementPolicy.prepareBatch(zones.values(), Set.of());
     OrchidGroupMutation mutation =
         recorder.start(
             OrchidGroupMutationType.CREATE,
@@ -136,7 +137,8 @@ public class OrchidGroupMutationEngine {
     List<OrchidGroup> groups = new ArrayList<>();
     for (CreateOrchidGroupMutationItem item : command.groups()) {
       BedZone zone = zones.get(item.bedZoneId());
-      OrchidGroupMutationDetails details = resolveInboundPlacement(zone, item.details());
+      OrchidGroupMutationDetails details =
+          resolveInboundPlacement(zone, item.details(), placements);
       int nextSortOrder = nextSortOrderByZoneId.compute(zone.getId(), (id, current) -> current + 1);
       OrchidGroup group =
           createGroup(zone, inboundRecord.getVariety(), details, nextSortOrder, inboundRecord);
@@ -208,16 +210,16 @@ public class OrchidGroupMutationEngine {
               sourceGroup.getId(), revisionBefore, beforeState, afterState));
     }
 
+    var placements =
+        orchidPlacementPolicy.prepareBatch(
+            zones.values(), command.placementExclusionOrchidGroupIds());
     List<OrchidGroup> resultGroups = new ArrayList<>();
     for (TransformOrchidGroupMutationResult resultCommand : command.results()) {
       BedZone zone = zones.get(resultCommand.bedZoneId());
       Variety variety = varieties.get(resultCommand.details().varietyId());
       requireActive(variety);
-      orchidPlacementPolicy.validatePlacementExcluding(
-          zone,
-          resultCommand.details().startPosition(),
-          resultCommand.details().endPosition(),
-          command.placementExclusionOrchidGroupIds());
+      placements.reserve(
+          zone, resultCommand.details().startPosition(), resultCommand.details().endPosition());
       int nextSortOrder = nextSortOrderByZoneId.compute(zone.getId(), (id, current) -> current + 1);
       resultGroups.add(createGroup(zone, variety, resultCommand.details(), nextSortOrder));
     }
@@ -1045,21 +1047,17 @@ public class OrchidGroupMutationEngine {
 
   private void validateBatchMovePlacements(
       List<MoveOrchidGroupMutationItem> items, Map<Long, BedZone> zones, Set<Long> movedGroupIds) {
-    for (MoveOrchidGroupMutationItem item : items) {
-      orchidPlacementPolicy.validatePlacementExcluding(
-          zones.get(item.toBedZoneId()), item.startPosition(), item.endPosition(), movedGroupIds);
-    }
-    for (int leftIndex = 0; leftIndex < items.size(); leftIndex++) {
-      MoveOrchidGroupMutationItem left = items.get(leftIndex);
-      for (int rightIndex = leftIndex + 1; rightIndex < items.size(); rightIndex++) {
-        MoveOrchidGroupMutationItem right = items.get(rightIndex);
-        if (left.toBedZoneId().equals(right.toBedZoneId())
-            && left.startPosition().compareTo(right.endPosition()) < 0
-            && right.startPosition().compareTo(left.endPosition()) < 0) {
-          throw new IllegalArgumentException("이동 결과 난 묶음의 배치가 서로 겹칩니다.");
-        }
-      }
-    }
+    orchidPlacementPolicy.validateBatchMoves(
+        items.stream()
+            .map(
+                item ->
+                    new OrchidPlacementPolicy.RestoredPlacement(
+                        zones.get(item.toBedZoneId()),
+                        item.startPosition(),
+                        item.endPosition(),
+                        null))
+            .toList(),
+        movedGroupIds);
   }
 
   private boolean equalNumber(BigDecimal left, BigDecimal right) {
@@ -1118,14 +1116,14 @@ public class OrchidGroupMutationEngine {
   }
 
   private OrchidGroupMutationDetails resolveInboundPlacement(
-      BedZone bedZone, OrchidGroupMutationDetails details) {
+      BedZone bedZone,
+      OrchidGroupMutationDetails details,
+      OrchidPlacementPolicy.BatchPlacements placements) {
     if (details.startPosition() == null && details.endPosition() == null) {
-      OrchidPlacementPolicy.PlacementRange range =
-          orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
+      OrchidPlacementPolicy.PlacementRange range = placements.reserveFirstSingleSlot(bedZone);
       return details.withPlacement(range.startPosition(), range.endPosition());
     }
-    orchidPlacementPolicy.validatePlacement(
-        bedZone, details.startPosition(), details.endPosition(), null);
+    placements.reserve(bedZone, details.startPosition(), details.endPosition());
     return details;
   }
 

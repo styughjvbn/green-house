@@ -19,6 +19,12 @@ import org.springframework.data.repository.query.Param;
 public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
 
   @Query(
+      "select new com.greenhouse.backend.farm.repository.orchid.OrchidPlacementRow("
+          + "g.id, g.bedZone.id, g.startPosition, g.endPosition, g.sortOrder) "
+          + "from OrchidGroup g where g.bedZone.id in :zoneIds and g.quantity > 0")
+  List<OrchidPlacementRow> findActivePlacements(Collection<Long> zoneIds);
+
+  @Query(
       """
 			select g from OrchidGroup g
 			join fetch g.bedZone z

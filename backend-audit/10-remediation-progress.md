@@ -1486,6 +1486,27 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - 요청한 BE-030~032를 마무리한다. 이후 BE-033 경매 대시보드 집계는 이번 요청에 포함하지 않는다.
 
+## 46차 변경 — BE-033 Mutation 배치 검사의 구역별 scalar 상태·구간 index
+
+### 변경 범위
+
+- 감사의 실제 BE-033은 Mutation 배치 placement 검사이며, 이전 결과의 다음 범위를 경매 대시보드라고 안내한 것은 잘못된 항목 설명이다. 기존 Engine은 입고/구조 변경 결과마다 구역 Entity 목록을 읽어 자동 정렬·겹침을 검사하고 결과 저장 사이의 조회가 AUTO flush를 유발한다. 일괄 이동은 구역 조회 후 결과 쌍을 전부 비교하고 복원도 기존/새 배치를 중첩 순회한다.
+- zone 잠금 뒤 활성 그룹의 ID/구역/구간/표시 순서 scalar 값을 500개 구역 ID씩 읽는다. 구역별 점유 구간의 union과 1칸 이상 빈 자리 index를 만들고 새 결과도 바로 예약한다. 첫 빈 1칸·2자리 정규화·양 끝 접촉 허용·명시 구간·null 구간 건너뛰기·입력 결과 순서를 유지한다. 기존의 최대 sort 집계는 수량 0을 포함한 구역 전체 의미로 유지한다.
+- 구조 변경은 원본 수량/구간 변경 후 최초 placement 조회를 수행해 해제 위치 재사용과 현재 원본 잔여를 반영한다. 제외 ID는 기존 명령 계약을 따른다. 이동은 전체 기존 배치를 먼저 검사한 뒤 새 결과를 index로 비교해 기존 배치/결과 충돌의 단계별 우선순위를 유지한다. 복원은 원래 구간과 구역별 표시 순서 집합을 검사하며 같은 요청의 이전 복원도 반영한다. 여러 충돌 종류가 동시에 있는 복원은 구간 충돌을 우선 보고하지만 안정적인 HTTP 오류 분류는 동일하다.
+- request-local 상태이며 공유 cache는 추가하지 않았다. replay의 두 단계 확인, inbound/group/zone 잠금 순서, Mutation fence·Entry·효과·감사 원자성은 유지한다. 동시 요청은 zone lock 이후 별도의 scalar 조회로 앞선 commit을 확인한다. HTTP 요청/응답·명세·DB schema 변경은 없다.
+
+### 검증
+
+- 순수 구간 index 회귀는 고정 seed의 100개 fragment/중첩/음수 시작 fixture에서 기존 전체 scan의 overlap/첫 빈 자리 결과와 20회 연속 예약을 비교한다. 기존 H2 Mutation/배치/Work 집중 회귀와 최종 일반 `./gradlew test` 134개 클래스 715건 성공.
+- 새 PostgreSQL 회귀는 결과 R=1/10/50 × 기존 그룹 G=1/100/1,000의 9조합에서 구역 조회·기존 Entity 적재·flush와 전체 transaction 경과 시간을 기록한다. 자동 위치/표시 순서/입고 연결·응답 순서와 replay도 확인한다. 실제 구형 Engine/Policy를 같은 신규 fixture에 실행해 기존 구역 조회/flush가 R=1/10/50회, 그룹 load가 G개인 baseline을 재현했다. 개선 후 모든 조합이 구역 조회 1회·기존 그룹 load 0·flush 1회다. 첫 SQL의 sequence block 확보 등으로 전체 prepared count는 11~14회여서 전체 SQL이 엄밀하게 고정됐다고 표현하지 않는다.
+- 로컬 R50/G1000 단일 샘플은 구형 약 654ms, 개선 약 106ms다. JVM/컨테이너 warm-up 차이가 있으므로 지연 개선율이나 운영 처리량으로 단정하지 않는다. 실제 lock 대기/보유 시간을 별도로 계측한 것은 아니며 transaction elapsed만 기록한다. `build/work-query-count/mutation-placement-*.json`에 회귀 증적을 저장한다.
+- 후행 결과 겹침 실패는 앞선 그룹/Mutation/Entry를 전부 rollback하며 같은 source로 올바른 배치를 재시도한다. 관련 PostgreSQL 5개 클래스 55건(신규 10건 포함), 기존 Mutation 경쟁·ACTIVE fence·보상·일괄 취소·구조 기록·포트 기록 회귀 성공. 추가한 서로 다른 입고의 같은 구역 50개씩 병렬 자동 배치 1건도 성공(19초). 100개 결과가 서로 다른 연속 위치에 놓이고 Entry 100개를 보존했다. 관련 PostgreSQL 총 56건을 검증했다.
+- 프론트 `npm run check` 성공. 최종 전체 백엔드+PostgreSQL+spotless 검증 3분 24초. 전체 benchmark·브라우저 E2E·운영 lock/heap/부하 실측은 미실행. 전체 검증 이후 변경은 추가 경쟁 테스트와 문서다.
+
+### 다음 범위
+
+- BE-034 누적 목록·하위 이력/graph의 조회 경계를 이어서 진행한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1533,7 +1554,9 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `d8aaa928` — BE-029 `perf: load placement profiles without inventory groups`. profile 전용 graph·응답/감사/재고 보존과 Entity 적재 회귀를 별도 커밋으로 저장한다.
 - `a59b862c` — BE-030 `perf: project work summary origins and relation counts`. Work summary 적재·응답/관계/순서·기존 benchmark 회귀를 별도 커밋으로 저장한다.
 - `dd230cd3` — BE-031 `perf: assemble orchid summaries from scalar queries`. 품종 집계/최신일과 자동 그룹 stream·mapper/연령·Entity 적재 회귀를 별도 커밋으로 저장한다.
-- BE-032 — `refactor: batch partner searches and bound identifier queries`. 다중 검색·배열 membership·참조 입력 분할과 PostgreSQL/검색/Work benchmark 회귀를 별도 커밋으로 저장한다.
+- `bed7e32a` — BE-032 `refactor: batch partner searches and bound identifier queries`. 다중 검색·배열 membership·참조 입력 분할과 PostgreSQL/검색/Work benchmark 회귀를 별도 커밋으로 저장한다.
+
+- BE-033 — `refactor: index mutation placements within locked batches`. 구역별 scalar 검사·구간 index와 SQL/flush/충돌/rollback/경쟁 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1574,4 +1597,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-030의 summary target/child Entity 제거·입고/관계/receipt/진행 회귀와 기존 benchmark 적재 gate는 43차 범위다. BE-031/032는 44차 이후에 기록한다.
 - BE-031의 품종 DB 집계/최신일·자동 그룹 scalar stream/현재 연령과 관련 적재 회귀는 44차 범위다. BE-032 개선은 45차에 이어서 기록했다.
 - BE-032의 다중 검색 scan·배열 ID 바인딩·500개 참조 입력과 대량/검색 의미/페이지/이력 회귀는 45차 범위다. 전체 ID 메모리·호환 응답 상한·운영 부하와 나머지 검색 정책은 별도 후속 범위다.
+- BE-033의 배치 placement 조회·Entity/flush 증폭과 중첩 비교 개선은 46차 범위다. 운영 lock 대기·처리량 검증은 별도다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
