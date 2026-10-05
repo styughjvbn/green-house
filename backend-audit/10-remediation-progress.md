@@ -1403,6 +1403,25 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - 규칙 교체 오류 수정을 별도 커밋한 뒤 BE-029의 profile 전용 graph를 적용한다. 조회·수정 SQL이 고정돼도 현재 graph의 불필요한 난 묶음 적재는 남아 있다.
 
+## 42차 변경 — BE-029 배치 profile의 불필요한 난 묶음 적재 제거
+
+### 완료 범위
+
+- profile 조회·수정의 구역 조회만 위치 tree와 capacities를 fetch하는 Farm 소유 전용 graph로 교체했다. 응답과 감사가 읽지 않는 orchidGroups를 제거해 두 collection 간 join 증폭 경로도 없앴다. 재고가 필요한 입고/구역 상세의 기존 graph는 유지한다.
+- 용량 정책·응답 필드/정규화·모드 순서·감사 before/after·동일 값 감사 생략은 유지한다. 41차의 같은 키 교체를 위한 삭제 flush와 전체 rollback도 그대로다. 현재 규칙·위치 조회를 projection/역사 snapshot으로 바꾸거나 root 잠금·트랜잭션을 변경하지 않았다. API/DB schema 변경과 신규 migration은 없다.
+
+### 측정·회귀와 검증
+
+- 새 PostgreSQL 회귀는 서로 독립인 난 묶음 1/10/50개와 용량 규칙 1/3/5개를 조합한 9개 fixture를 사용한다. fixture commit 후 각각 새 서비스 트랜잭션에서 조회·수정하고 수정 commit까지 측정한다. 전체 응답/모드 순서·정규화 값·감사 before/after·변경 필드·위치·주체와 재고 모든 DB 필드 보존을 검증한다.
+- graph 변경 전 SQL은 조회 1회, 수정 4~6회로 작았지만 난 묶음 적재는 조회·수정 모두 1/10/50개였다. 41차 교체 오류를 해결한 뒤 9건 모두 응답/감사 검증 통과 후 적재 상한에서만 실패했다. 최종 전용 graph에서는 난 묶음과 품종 적재 모두 0, 전체 Entity는 규칙 수 + 위치 3개(4/6/8개), 조회 SQL 1회·수정 4~6회로 그룹 수에 무관하다. 시퀀스 할당에 의한 단일 SQL 차이를 허용한다.
+- `build/work-query-count/placement-profile-*.json`에 조회/수정 prepareStatement·전체 Entity·그룹/품종/규칙 load 수를 별도로 남긴다. 규칙/Entity 적재 검사는 상한을 사용해 향후 projection 전환도 허용하며 SQL count만으로 과다 적재를 완료 판정하지 않는다. JDBC 실제 row 수·round trip·heap·운영 지연은 측정하지 않았다. 규칙의 조회/교체 자체 비용은 규칙 수에 비례한다.
+- 집중 검증: 기존 배치 profile/감사/정책 일반 테스트와 신규 PostgreSQL 적재 9건·동일 키 교체/감사 rollback/retry 1건 성공(44초). 최종 일반 `./gradlew test`: 133개 클래스 711건 성공. 관련 PostgreSQL 적재 9건·교체/감사 rollback/retry 1건·Farm 조회 4건, 3개 클래스 14건 성공. 실패·오류·생략 0건; 백엔드 검사 2분 32초.
+- 프론트 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check` 성공. PostgreSQL 전체·benchmark 전체·브라우저 E2E·운영 rows/heap/지연·동시 profile 수정 실험은 미실행. OpenAPI/TypeScript 재생성은 필요하지 않다. 최종 검증 뒤에는 진행 문서만 수정했다.
+
+### 다음 범위
+
+- 요청한 BE-027~029를 완료한다. 이후 범위는 BE-030의 Work 요약을 위한 전체 target Entity 적재 검토이며 이번 요청에 포함하지 않는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1444,9 +1463,10 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `f7f5cf90` — BE-024 미사용 주입/전략 옵션 제거·기존 실행 회귀.
 - `6c95e7a0` — BE-025 즉시 명령 전달·actor 정규화·지문/실행 호환 회귀.
 - `6bb0bac9` — BE-026 입금 키 충돌 오류·소비자/명세·금융 상태/경쟁 회귀.
-- BE-029 추가 결함 — `fix: flush old placement rules before replacement`. 동일 키 교체·삭제 flush/감사 rollback/retry 회귀를 별도 커밋으로 저장한다.
-- `c5ee8014` — BE-028 `perf: batch load direct lineage references`. 직접 계보 참조·순서/연령·query-count 회귀를 별도 커밋으로 저장한다.
 - `7aa63f7f` — BE-027 `perf: batch load auction write result histories`. 쓰기 결과 행 N+1·순서/접수 호환·query-count 회귀를 별도 커밋으로 저장한다.
+- `c5ee8014` — BE-028 `perf: batch load direct lineage references`. 직접 계보 참조·순서/연령·query-count 회귀를 별도 커밋으로 저장한다.
+- `aa675b08` — BE-029 추가 결함 `fix: flush old placement rules before replacement`. 동일 키 교체·삭제 flush/감사 rollback/retry 회귀를 별도 커밋으로 저장한다.
+- BE-029 — `perf: load placement profiles without inventory groups`. profile 전용 graph·응답/감사/재고 보존과 Entity 적재 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1480,7 +1500,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-023의 생성/수정 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀는 35차 범위다.
 - BE-024의 미사용 주입·전략 옵션 제거와 기존 실행 회귀 확인은 36차 범위다.
 - BE-025의 즉시 실행 명령 전달·actor 정규화와 지문/실행 호환 회귀는 37차 범위다.
-- BE-026의 수동 입금 키 충돌 오류 계약·소비자/명세·금융 상태/경쟁 회귀는 38차 범위다. 다음 변경은 BE-028 직접 계보와 BE-029 배치 profile의 적재 범위를 검토한다.
+- BE-026의 수동 입금 키 충돌 오류 계약·소비자/명세·금융 상태/경쟁 회귀는 38차 범위다. BE-027~029의 조회/적재 개선은 39~42차에 이어서 기록했다.
 - BE-027의 쓰기 결과 행 N+1 제거와 조회/순서/접수 회귀는 39차 범위다.
 - BE-028의 직접 계보 현재 참조 일괄 로딩·순서/연령/query-count 회귀는 40차 범위다.
+- BE-029의 PostgreSQL 동일 키 규칙 교체 오류/rollback 회귀는 41차, profile 전용 graph와 SQL·Entity 적재 회귀는 42차 범위다. 다음 우선 검토 대상은 BE-030이다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

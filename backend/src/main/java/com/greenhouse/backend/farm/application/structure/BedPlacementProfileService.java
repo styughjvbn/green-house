@@ -55,7 +55,7 @@ public class BedPlacementProfileService {
 
   private BedZone findZone(Long id) {
     return bedZoneRepository
-        .findWithDetailsById(id)
+        .findWithPlacementProfileById(id)
         .orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
   }
 }

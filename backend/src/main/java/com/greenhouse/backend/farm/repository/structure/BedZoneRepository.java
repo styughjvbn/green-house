@@ -37,6 +37,9 @@ public interface BedZoneRepository extends JpaRepository<BedZone, Long> {
   @EntityGraph(attributePaths = {"physicalBed", "physicalBed.house", "orchidGroups", "capacities"})
   Optional<BedZone> findWithDetailsById(Long id);
 
+  @EntityGraph(attributePaths = {"physicalBed", "physicalBed.house", "capacities"})
+  Optional<BedZone> findWithPlacementProfileById(Long id);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select z from BedZone z join fetch z.physicalBed b join fetch b.house where z.id = :id")
   Optional<BedZone> findForUpdateById(@Param("id") Long id);
