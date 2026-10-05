@@ -1239,6 +1239,38 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-022는 실제 Sales 소비자의 Settlement 감사 내부 의존과 불필요한 공개 target helper 제거를 완료 범위로 삼는다. 입금 원장·잔액 API와 기존 감사 사실의 출처를 통합하거나 과거 감사를 재작성하지 않는다.
 - 다음 변경은 BE-023의 직접 판매 생성·수정 공통 입력 정책 중복을 검토한다. 신규 입금 취소/보정·예치금·자동 매칭 등의 MVP 후속 기능은 별도 업무 범위다.
 
+## 35차 변경 — BE-023 판매 생성·수정의 공통 입력 정책 정리
+
+작업일: 2026-10-05. 상태: 공통 Domain Policy·기본값 참조·HTTP/rollback 회귀·최종 검증 완료. BE-023 완료.
+
+### 원인과 범위
+
+- 일반 판매 생성과 수정이 거래처/품목 필수·경매장 금지의 조건과 메시지를 따로 관리했다. 생성은 판매 유형의 입금 기본값을 사용했지만 수정은 같은 값을 문자열로 지정했다. 현재 서로 다른 업무 결과를 재현한 버그 수정이 아니라 같은 정책을 바꿀 때 두 유스케이스가 어긋나는 변경 비용을 줄이는 BE-023 변경이다.
+- 조회·저장·주입이 없는 작은 Sales Domain Policy가 거래처 필수·품목 개수·판매 유형에 맞는 거래처 여부를 소유한다. 입력은 Sales 유형·식별자·개수·경매장 여부의 값이며 다른 모듈 Entity/application DTO에 의존하지 않는다. 경매 생성의 기존 필수 메시지와 거래처 제한도 같은 정책에서 구별한다. 별도 workflow·registry·생성/수정 공통 service나 입력 DTO를 추가하지 않는다.
+- 생성은 기존 null 유형의 DIRECT 해석 뒤 거래처 → 품목 → 활성 거래처 조회 → 유형 검사 순으로 검증한다. 수정은 기존 요청/저장 전표의 경매 수정 거절·작성중/입금 이력 검사를 먼저 수행하고 같은 직접 판매 입력 정책을 적용한다. 입력이 여러 조건을 동시에 위반할 때 거래처 필수와 경매 수정 제한이 먼저 반환되는 기존 순서를 유지한다.
+- 수정의 입금 기본값은 기존 `SalesType.DIRECT.defaultPaymentStatus()`를 참조한다. null/공백의 기본값과 명시적 legacy 상태 문자열의 trim을 유지한다. 생성·수정의 서로 다른 paymentMethod 처리, 수정에서 지원하지 않는 품목 개수 변경, 일반/경매 상태 전이와 입금 정책은 이 공통 정책에 합치지 않는다.
+- 생성 접수·영속 지문·원문/null/default 구별·replay 우선 판정은 기존 위치에 유지한다. 원문을 공통 정책 적용 전에 정규화해 지문으로 쓰지 않는다. 트랜잭션·파트너/난 묶음 잠금·기존 예약 해제/재예약·Mutation·이력·잔액·감사·응답 조립 순서와 생성/수정 HTTP 계약은 변경하지 않는다.
+
+### 회귀 방어
+
+- 제품 변경 전 기존 Farm fixture의 HTTP 시험 12건과 PostgreSQL 1건을 통과시켜 정책을 고정했다. 일반 판매 생성/수정의 거래처 없음·품목 없음·복합 위반·경매장 선택에서 동일한 `400 / VALIDATION_ERROR`, 공통 message와 도메인 details를 검사하고 기존 전표 응답이 보존되는지 확인한다. 도메인 문구는 `error.details`에 있으며 공통 `error.message`를 정책 메시지로 가정하지 않는다.
+- null/명시적 DIRECT 유형과 null/공백/명시적 legacy 입금 문자열의 생성·수정 결과를 함께 검증한다. 경매 생성의 기본 입금 상태/방법·독립 필수 메시지·일반 거래처 금지, 일반 전표에 경매 유형을 보낸 수정 요청의 우선 거절도 고정했다. 기존 fixture를 확장하며 별도 데이터 생성 계층을 복제하지 않는다.
+- 신규 PostgreSQL 회귀는 품목 개수 변경이 기존 예약 해제 뒤 거절되어도 전표·판매일·기존 예약·재고 이동·Mutation·감사를 보존하는지 확인한다. 일반 HTTP fixture의 테스트 트랜잭션만으로 rollback을 주장하지 않고 실제 최상위 service 트랜잭션을 실패시켜 원장 대사까지 검증한다.
+
+### 검증
+
+- 제품 변경 전 집중 일반 12건·신규 PostgreSQL 1건 성공(42초). 변경 후 집중 HTTP/상태/금액/영속 지문/architecture 5개 클래스 54건 성공(20초).
+- 최종 백엔드 전체 `./gradlew test`: 132개 클래스 701건 성공. 관련 PostgreSQL `workE2eTest`: 판매 재고 21건·생성 접수 30건·배분 잠금 12건·판매 쓰기 query-count 19건, 총 4개 클래스 82건 성공. 시험의 실패·오류·생략은 없다. 일반/PG 시험과 첫 포맷 검사 시도는 2분 55초 소요했다.
+- 시험 성공 후 명령의 마지막 `spotlessCheck`가 “0 lint error(s)”로 실패했고 단독 재시도에서도 같았다. 검사 산출물이 원본과 같은 것을 확인한 뒤 `spotlessApply spotlessCheck --rerun-tasks`로 포맷 task를 다시 실행해 7초에 성공했다. 규칙을 변경하거나 검사를 생략하지 않았다. 후속 `compileJava compileTestJava spotlessCheck`도 성공하며 모두 UP-TO-DATE로, 전체 시험의 소스 입력이 유지되는지 확인했다.
+- 프론트엔드 `npm run check`, 최종 백엔드 `spotlessCheck`, `git diff --check`: 성공. 관련 PostgreSQL 검증에는 신규 품목 개수 rollback 외에 기존 생성 지문/replay·동시 생성·다른 요청 키 충돌·최초 snapshot·예약/출고/취소·교차 배분 잠금·최종 실패 rollback·query-count 회귀를 포함한다.
+- HTTP 입력/응답·enum·validation annotation·DB schema·금액/수량/상태 정책·트랜잭션/잠금 구현의 변경은 없다. PostgreSQL 전체·benchmark·브라우저 E2E·운영 대사는 실행하지 않는다. OpenAPI/TypeScript 재생성·Flyway 추가는 필요하지 않다. 도메인/화면/운영 정책과 모듈 경계가 그대로이므로 기존 기능/architecture 문서에 클래스 목록을 추가하지 않는다.
+- 전체 시험 이후에는 포맷 task의 산출물/검사 상태와 진행 문서의 완료 결과를 갱신했다. Java와 시험의 소스 입력 변경이 없어 전체 시험을 다시 실행하지 않았다. HTTP/저장 계약도 변경하지 않았다.
+
+### 남은 범위
+
+- BE-023은 실제 생성/수정의 공통 필수·거래처 제한과 입금 기본값 참조를 완료 범위로 삼는다. 전체 paymentStatus/salesStatus 문자열 모델(BE-026), 일반 metadata 수정 정책과 보정/실사 제한(BE-009), 입금 취소/보정 등의 후속 기능은 별도다.
+- 다음 변경은 BE-024의 호출되지 않는 전략 옵션·주입 의존을 검토한다. 사용되지 않는 옵션을 새 기능으로 연결하는 것은 이번 정책 중복 정리의 범위가 아니다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1275,7 +1307,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `2ac96878` — BE-019 소비자 기준 값/업무 API·내부 helper 경계·호환/architecture 회귀.
 - `c9505f0d` — BE-020 보정 준비/적용·Work 날짜/감사 조율·rollback/동시성 회귀.
 - `885d7863` — BE-021 포트 취소 업무 API·Farm adapter·저장 호환/rollback/architecture 회귀.
-- BE-022 — `refactor: keep sales payment audits in sales`. 전표 입금 감사 소유권·내부 helper 가시성·감사/rollback/architecture 회귀를 별도 커밋으로 저장한다.
+- `646e0db6` — BE-022 전표 입금 감사 소유권·내부 helper 가시성·감사/rollback/architecture 회귀.
+- BE-023 — `refactor: centralize sales slip input policy`. 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1305,5 +1338,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-019의 현재 소비자 Entity/helper 공개 경계 정리와 architecture/입력 호환 회귀는 31차 범위다. 새 비 HTTP 채널의 검증·주체·인가·감사 context는 채널 도입 시 필요한 조건부 범위다. Work 보정 조율 소유권은 32차 BE-020에서 이어진다.
 - BE-020의 보정 callback 제거·Work 날짜/감사 조율과 Farm 준비/적용·rollback/동시성 회귀는 32차 범위다.
 - BE-021의 Farm Receipt helper 의존 제거·입고 포트 취소 업무 API·저장 호환/rollback/architecture 회귀는 33차 범위다.
-- BE-022의 전표 입금 감사 소유권·내부 helper 공개 범위 정리·감사/rollback/architecture 회귀는 34차 범위다. 다음 변경은 BE-023의 직접 판매 생성·수정 공통 입력 정책 중복을 검토한다.
+- BE-022의 전표 입금 감사 소유권·내부 helper 공개 범위 정리·감사/rollback/architecture 회귀는 34차 범위다.
+- BE-023의 생성/수정 공통 필수/거래처 정책·기본값 참조·HTTP/rollback 회귀는 35차 범위다. 다음 변경은 BE-024의 호출되지 않는 전략 옵션·주입 의존을 검토한다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

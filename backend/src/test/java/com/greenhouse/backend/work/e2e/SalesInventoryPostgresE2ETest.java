@@ -610,6 +610,40 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
     cutover.execute(new OrchidGroupLedgerCutoverCommand(key, DATE, "1.0.0", "1.1.0", true));
   }
 
+  @Test
+  void changingItemCountStillRollsBackTheReleasedReservation() {
+    activate();
+    var request = request(partner(SalesType.DIRECT), SalesType.DIRECT, DATE, 3, 2);
+    var created = creation.create(request);
+    var before = queries.getSalesSlip(created.id());
+    long beforeMovements = movements.count();
+    long beforeMutations =
+        jdbc.queryForObject("SELECT count(*) FROM orchid_group_mutations", Long.class);
+    long beforeAudits = jdbc.queryForObject("SELECT count(*) FROM audit_events", Long.class);
+    var invalid =
+        new SalesSlipCommand(
+            DATE.plusDays(1),
+            SalesType.DIRECT,
+            request.partnerId(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            List.of(request.items().getFirst()));
+    assertThatThrownBy(() -> updates.update(created.id(), invalid))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("품목 개수 변경 수정은 아직 지원하지 않습니다.");
+    assertStock(100, 5);
+    assertThat(queries.getSalesSlip(created.id())).isEqualTo(before);
+    assertThat(movements.count()).isEqualTo(beforeMovements);
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM orchid_group_mutations", Long.class))
+        .isEqualTo(beforeMutations);
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_events", Long.class))
+        .isEqualTo(beforeAudits);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
   private Long seedSecondGroup() {
     return jdbc.queryForObject(
         """

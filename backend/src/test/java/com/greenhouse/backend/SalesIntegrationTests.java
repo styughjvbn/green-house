@@ -9,11 +9,242 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.greenhouse.backend.partner.domain.BusinessPartner;
+import com.greenhouse.backend.partner.domain.PartnerType;
+import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.application.SalesSlipCreationService;
+import com.greenhouse.backend.sales.application.command.SalesSlipAllocationInput;
+import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
+import com.greenhouse.backend.sales.domain.SalesType;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
 class SalesIntegrationTests extends FarmFixtureIntegrationTest {
+
+  @Autowired BusinessPartnerRepository policyPartners;
+  @Autowired SalesSlipCreationService policyCreation;
+
+  @ParameterizedTest
+  @CsvSource({
+    "missingPartner,일반 판매는 거래처를 선택해야 합니다.",
+    "missingBoth,일반 판매는 거래처를 선택해야 합니다.",
+    "emptyItems,일반 판매 품목은 1개 이상 입력해야 합니다.",
+    "auctionPartner,경매장 거래처는 경매 판매 전표에서 사용해야 합니다."
+  })
+  void creationAndUpdateKeepTheSameDirectInputErrors(String violation, String message)
+      throws Exception {
+    var partner = policyPartner(PartnerType.WHOLESALE);
+    var valid = policyRequest(null, partner.getId(), null);
+    var created = policyCreation.create(valid);
+    Long invalidPartner =
+        violation.startsWith("missing")
+            ? null
+            : violation.equals("auctionPartner")
+                ? policyPartner(PartnerType.AUCTION_HOUSE).getId()
+                : partner.getId();
+    var invalid =
+        policyInput(
+            valid,
+            invalidPartner,
+            violation.equals("emptyItems") || violation.equals("missingBoth")
+                ? List.of()
+                : valid.items());
+    var original =
+        mockMvc
+            .perform(get("/api/sales-slips/{id}", created.id()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    mockMvc
+        .perform(
+            post("/api/sales-slips")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(policyJson(invalid)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.error.message").value("요청 값이 올바르지 않습니다."))
+        .andExpect(jsonPath("$.error.details[0]").value(message));
+    mockMvc
+        .perform(
+            put("/api/sales-slips/{id}", created.id())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(policyJson(invalid)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.error.message").value("요청 값이 올바르지 않습니다."))
+        .andExpect(jsonPath("$.error.details[0]").value(message));
+    var after =
+        mockMvc
+            .perform(get("/api/sales-slips/{id}", created.id()))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    assertThat(after).isEqualTo(original);
+  }
+
+  @ParameterizedTest
+  @MethodSource("directPaymentDefaults")
+  void creationAndUpdateKeepPaymentDefaultsAndExplicitLegacyLabels(
+      SalesType type, String input, String expected) throws Exception {
+    var request = policyRequest(type, policyPartner(PartnerType.WHOLESALE).getId(), input);
+    var created =
+        mockMvc
+            .perform(
+                post("/api/sales-slips")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(policyJson(request)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data.salesType").value("DIRECT"))
+            .andExpect(jsonPath("$.data.paymentStatus").value(expected))
+            .andReturn();
+    long id =
+        JsonMapper.builder()
+            .build()
+            .readTree(created.getResponse().getContentAsString())
+            .path("data")
+            .path("id")
+            .asLong();
+    mockMvc
+        .perform(
+            put("/api/sales-slips/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(policyJson(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.paymentStatus").value(expected));
+  }
+
+  static Stream<Arguments> directPaymentDefaults() {
+    return Stream.of(
+        Arguments.of(null, null, "미입금"),
+        Arguments.of(SalesType.DIRECT, null, "미입금"),
+        Arguments.of(SalesType.DIRECT, " \t ", "미입금"),
+        Arguments.of(null, "  입금 보류  ", "입금 보류"));
+  }
+
+  @Test
+  void auctionCreationKeepsItsOwnDefaultsAndRequestTypeStillBlocksDirectEditing() throws Exception {
+    var auctionRequest =
+        policyRequest(SalesType.AUCTION, policyPartner(PartnerType.AUCTION_HOUSE).getId(), null);
+    mockMvc
+        .perform(
+            post("/api/sales-slips")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(policyJson(auctionRequest)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.paymentStatus").value("정산 대기"))
+        .andExpect(jsonPath("$.data.paymentMethod").value("경매 정산"));
+    var direct =
+        policyCreation.create(
+            policyRequest(SalesType.DIRECT, policyPartner(PartnerType.WHOLESALE).getId(), null));
+    var invalid = policyInput(auctionRequest, null, List.of());
+    mockMvc
+        .perform(
+            put("/api/sales-slips/{id}", direct.id())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(policyJson(invalid)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.error.message").value("요청 값이 올바르지 않습니다."))
+        .andExpect(jsonPath("$.error.details[0]").value("경매 판매 전표 수정은 아직 지원하지 않습니다."));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "missingPartner,경매 판매는 경매장을 선택해야 합니다.",
+    "emptyItems,경매 판매는 1개 이상의 lot 품목이 필요합니다.",
+    "directPartner,경매 판매는 경매장 거래처만 선택할 수 있습니다."
+  })
+  void auctionCreationKeepsItsDistinctRequiredInputErrors(String violation, String message)
+      throws Exception {
+    var request =
+        policyRequest(
+            SalesType.AUCTION,
+            policyPartner(
+                    violation.equals("directPartner")
+                        ? PartnerType.WHOLESALE
+                        : PartnerType.AUCTION_HOUSE)
+                .getId(),
+            null);
+    var invalid =
+        policyInput(
+            request,
+            violation.equals("missingPartner") ? null : request.partnerId(),
+            violation.equals("emptyItems") ? List.of() : request.items());
+    mockMvc
+        .perform(
+            post("/api/sales-slips")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(policyJson(invalid)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.error.message").value("요청 값이 올바르지 않습니다."))
+        .andExpect(jsonPath("$.error.details[0]").value(message));
+  }
+
+  private BusinessPartner policyPartner(PartnerType type) {
+    return policyPartners.saveAndFlush(
+        new BusinessPartner("공통 판매 정책 " + type, type, null, null, null, null));
+  }
+
+  private SalesSlipCommand policyRequest(SalesType type, Long partnerId, String paymentStatus) {
+    var group =
+        orchidGroupRepository.findAll().stream()
+            .filter(value -> value.getVariety() != null)
+            .findFirst()
+            .orElseThrow();
+    return new SalesSlipCommand(
+        LocalDate.of(2026, 8, 1),
+        type,
+        partnerId,
+        null,
+        paymentStatus,
+        null,
+        null,
+        null,
+        List.of(
+            new SalesSlipItemInput(
+                group.getVarietyName(),
+                group.getGenus(),
+                "4치",
+                5,
+                100,
+                null,
+                List.of(new SalesSlipAllocationInput(group.getId(), 5)))));
+  }
+
+  private SalesSlipCommand policyInput(
+      SalesSlipCommand request, Long partnerId, List<SalesSlipItemInput> items) {
+    return new SalesSlipCommand(
+        request.saleDate(),
+        request.salesType(),
+        partnerId,
+        request.auctionShipmentId(),
+        request.paymentStatus(),
+        request.salesStatus(),
+        request.paymentMethod(),
+        request.memo(),
+        items);
+  }
+
+  private String policyJson(SalesSlipCommand request) throws Exception {
+    return JsonMapper.builder()
+        .findAndAddModules()
+        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+        .build()
+        .writeValueAsString(request);
+  }
 
   @Test
   void createsBusinessPartnersAndSalesSlipsWithCalculatedAmounts() throws Exception {

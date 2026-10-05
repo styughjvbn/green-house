@@ -6,6 +6,7 @@ import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.domain.SalesSlip;
+import com.greenhouse.backend.sales.domain.SalesSlipInputPolicy;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
@@ -52,17 +53,12 @@ public class SalesSlipUpdateService {
     Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
     validateEditable(salesSlip, request);
-    if (request.partnerId() == null) {
-      throw new IllegalArgumentException("일반 판매는 거래처를 선택해야 합니다.");
-    }
-    if (request.items().isEmpty()) {
-      throw new IllegalArgumentException("일반 판매 품목은 1개 이상 입력해야 합니다.");
-    }
+    SalesSlipInputPolicy.requirePartner(SalesType.DIRECT, request.partnerId());
+    SalesSlipInputPolicy.requireItems(SalesType.DIRECT, request.items().size());
 
     var partner = businessPartnerReader.getActiveInfo(request.partnerId());
-    if (partner.partnerType() == PartnerType.AUCTION_HOUSE) {
-      throw new IllegalArgumentException("경매장 거래처는 경매 판매 전표에서 사용해야 합니다.");
-    }
+    SalesSlipInputPolicy.requirePartnerType(
+        SalesType.DIRECT, partner.partnerType() == PartnerType.AUCTION_HOUSE);
     partnerBalanceService.lockPartners(List.of(previousPartnerId, partner.id()));
     var expectedPaymentDate = paymentDateCalculator.calculate(partner.id(), request.saleDate());
 
@@ -81,7 +77,8 @@ public class SalesSlipUpdateService {
     salesSlip.updateDraftInfo(
         request.saleDate(),
         partner.id(),
-        SalesTextNormalizer.defaultText(request.paymentStatus(), "미입금"),
+        SalesTextNormalizer.defaultText(
+            request.paymentStatus(), SalesType.DIRECT.defaultPaymentStatus()),
         SalesTextNormalizer.normalize(request.paymentMethod()),
         SalesTextNormalizer.normalize(request.memo()));
     for (int index = 0; index < salesSlip.getItems().size(); index++) {
