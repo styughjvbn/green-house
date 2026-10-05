@@ -37,6 +37,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -214,7 +215,7 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
-  void laterFailureRollsBackStockSnapshotsShipmentsAndMovements() {
+  void callerFailureRollsBackParticipatingStockSnapshotsShipmentsAndMovements() {
     activate();
     var created =
         creation.create(request(partner(SalesType.AUCTION), SalesType.AUCTION, DATE, 3, 2));
@@ -242,6 +243,56 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
         .isEqualTo(shipmentsBefore);
     assertThat(queries.getSalesSlip(created.id())).isEqualTo(beforeSlip);
     assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  @Test
+  void standaloneShipmentAuditFailureRollsBackStockSnapshotsAndLedgerThenAllowsRetry() {
+    activate();
+    var created =
+        creation.create(request(partner(SalesType.AUCTION), SalesType.AUCTION, DATE, 3, 2));
+    var request =
+        new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED, null);
+    var before = shipmentState();
+    // Status audit is written after inventory mutation and shipment creation.
+    jdbc.execute(
+        "ALTER TABLE audit_events ADD CONSTRAINT test_shipment_audit CHECK "
+            + "(entity_type <> 'SALES_SLIP' OR entity_id <> "
+            + created.id()
+            + " OR action <> 'UPDATED')");
+    try {
+      PostgresWriteTestSupport.assertStandaloneCheckFailure(
+          () -> statuses.updateStatus(created.id(), request), "test_shipment_audit");
+    } finally {
+      jdbc.execute("ALTER TABLE audit_events DROP CONSTRAINT test_shipment_audit");
+    }
+    assertThat(shipmentState()).isEqualTo(before);
+    assertStock(100, 5);
+    statuses.updateStatus(created.id(), request);
+    assertStock(95, 0);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+    var committed = shipmentState();
+    statuses.updateStatus(created.id(), request);
+    assertThat(shipmentState()).isEqualTo(committed);
+  }
+
+  private Map<String, List<String>> shipmentState() {
+    return PostgresWriteTestSupport.snapshot(
+        jdbc,
+        transactionManager,
+        List.of(
+            "sales_slips",
+            "sales_slip_items",
+            "sales_slip_item_allocations",
+            "sales_orchid_group_snapshots",
+            "sales_inventory_movements",
+            "sales_creation_receipts",
+            "auction_shipments",
+            "auction_shipment_lots",
+            "orchid_groups",
+            "orchid_group_mutations",
+            "orchid_group_mutation_entries",
+            "orchid_group_mutation_relations",
+            "audit_events"));
   }
 
   @ParameterizedTest

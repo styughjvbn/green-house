@@ -1601,6 +1601,16 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 현재 그룹/배치·업무 참조의 전역 검사와 baseline/current fingerprint 입력은 그룹 수에, 전체 오류 보고서는 문제 수에 비례한다. fingerprint 계산은 기존 JSON 직렬화 형식을 그대로 사용하므로 큰 현재 상태의 문자열/byte allocation도 남는다. Work 참조/보정 전체와 보정 Mutation 조회의 누적·큰 입력은 후속 범위다. 이 계약들을 임의로 자르거나 hash 형식을 바꿔 ready를 잘못 확정하지 않는다.
 - 한 snapshot JSON의 크기·DB sort/scan·긴 read transaction과 vacuum 영향·실제 heap/GC는 별도 실측이 필요하다. 500행 fetch cursor는 500행별 commit 또는 독립 snapshot이 아니며 전체 대사의 일관된 root transaction을 유지한다.
 
+## 51차 변경 — BE-037 독립 쓰기 경계·늦은 실패·저장 상태 rollback 회귀
+
+- Work 일괄 취소는 외부 테스트 transaction 없이 application proxy를 호출하고, 실제 `test_batch_failure` CHECK와 PostgreSQL SQLSTATE `23514`를 확인한다. Mutation 적용 뒤 Work 상태 저장에서 실패했음을 확인한 다음 그룹·revision·Mutation/Entry/Relation·작업/대상/실행/효과/연결·접수/membership·감사 전체 행을 변경 전 snapshot과 비교한다.
+- 같은 실패 요청을 실제 HTTP로도 호출해 `409 / DATA_INTEGRITY_CONFLICT`와 저장 상태를 검증한다. CHECK 제거 후 동일 키 재시도 성공·대사 정상·재전송 응답/저장 상태 불변을 확인한다. 더 이른 validation 실패가 rollback 성공으로 통과하던 `>=400` 검증을 제거했다.
+- 경매 출하 완료의 최종 Sales 상태 감사에 CHECK를 넣고 독립 상태 서비스 호출로 검증한다. 전표·항목·배분·생성/출고 snapshot·재고 이력·출하/lot·수량/예약·Mutation 원장·감사의 전체 snapshot rollback과 재시도·동일 상태 재호출 불변을 확인한다.
+- Sales/Settlement 두 입금 감사 실패 위치도 각각 CHECK 이름/SQLSTATE를 확인하고 전표·입금 이벤트·잔액·감사 전체 행을 별도 transaction으로 조회해 비교한다. 동일 키 재시도/replay 금융 검증은 유지한다.
+- 공통 테스트 helper는 standalone 호출 전 외부 transaction 부재를 확인하고, snapshot은 `REQUIRES_NEW / readOnly / REPEATABLE_READ`로 조회한다. SQL용 테이블 이름은 테스트 상수와 형식 검사에 한정한다. 기존 호출자 후속 실패 시험은 참여 시험임을 이름에 명시해 별도로 유지한다.
+- 검증: 관련 PostgreSQL 3개 클래스 54건 통과(Work 취소 13, Sales 재고 22, 거래처 입금/정산 19). 전체 기본 134개 클래스 715건 통과(기존 임시 init script로 test heap 1GiB); frontend `npm run check`, `spotlessCheck`, `git diff --check` 통과. 전체 PostgreSQL suite·benchmark는 재실행하지 않았다. 이후 문서 변경만 반영했다.
+- 범위: 운영 로직·DB/API 계약은 바꾸지 않았다. 기존 H2 MockMvc 전체를 독립 transaction 시험으로 전환하지 않았으며 기존 독립 응답/접수/감사 실패 회귀와 보완 관계다. 모든 writer의 transaction 삭제를 mutation test로 검증한 것은 아니다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1654,7 +1664,9 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `383ec751` — BE-034 `fix: bound calendar history and graph reference retrieval`. 조회 경계와 partial/error 계약·대량 PostgreSQL 회귀·생성 API 계약.
 - `6effe1a2` — BE-035 `refactor: index operational reference and date queries`. 실제 PG 계획·index·계보 MIN 개선과 회귀·배포 절차.
 - `935f042c` — BE-036 정산 `fix: commit settlement initialization per auction house and day`. 정산별 commit·실패/재시작·정확 key/날짜 계획·V42와 회귀.
-- BE-036 원장 — `refactor: stream reconciliation chains without entity accumulation`. 현재 scalar/chain cursor·기존 fingerprint/판정·snapshot 회귀를 별도 목적으로 저장한다.
+- `c085d21f` — BE-036 원장 `refactor: stream reconciliation chains without entity accumulation`. 현재 scalar/chain cursor·기존 fingerprint/판정·snapshot 회귀를 별도 목적으로 저장한다.
+
+- BE-037 — `test: verify standalone writes and late database rollback`. 독립 Work 취소/출하/입금 경계·정확 CHECK·새 transaction snapshot·재시도 회귀.
 
 ## 남은 작업
 
@@ -1700,4 +1712,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-035의 실제 참조/날짜/계보 계획과 index·MIN 반복 개선은 48차 범위다. 미측정 검색/상태/집계/FK·운영 계획과 index 쓰기·배포 비용 검증은 남는다.
 - BE-036의 정산별 초기화 commit·유한 scan·정확 key 조회·날짜 index는 49차 범위다. 한 정산의 크기와 운영 부하 측정은 남는다.
 - BE-036의 원장 대사 scalar 현재 그룹·Entry cursor·일관된 snapshot과 이력/기존 fingerprint 회귀는 50차 범위다. 전체 그룹/오류·업무 참조/보정 누적·fingerprint 직렬화·장기 read transaction과 운영 heap/GC 검증은 남는다.
+- BE-037의 핵심 Work 취소·경매 출하·입금 standalone 경계와 늦은 CHECK/전체 행 rollback은 51차 범위다. H2 전체의 wrapper 전환과 모든 쓰기 경로의 실패 위치 확대는 후속이다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

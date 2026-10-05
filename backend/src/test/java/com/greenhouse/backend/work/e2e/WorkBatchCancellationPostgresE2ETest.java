@@ -10,9 +10,13 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateC
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.support.MovementTestSupport;
 import com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest;
+import com.greenhouse.backend.work.application.operation.WorkOperationVoidService;
+import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -22,12 +26,17 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Tag("work-e2e")
 @org.springframework.context.annotation.Import(MovementTestSupport.class)
 class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired WorkTestDataSeeder seeder;
+
+  @Autowired WorkOperationVoidService cancellations;
+
+  @Autowired PlatformTransactionManager transactionManager;
 
   @Autowired JdbcTemplate jdbc;
 
@@ -266,21 +275,55 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
   @Test
   void failureAfterMutationFlushRollsBackGroupsWorkAndAudit() throws Exception {
     prepare();
+    var before = cancellationState();
     jdbc.execute(
         "ALTER TABLE work_operations ADD CONSTRAINT test_batch_failure CHECK (status <> 'VOIDED')");
     try {
+      PostgresWriteTestSupport.assertStandaloneCheckFailure(
+          () ->
+              cancellations.cancelBatch(
+                  new WorkOperationBatchCancellationRequest(
+                      workIds, Set.copyOf(sourceIds), "rollback", "오등록")),
+          "test_batch_failure");
+      assertThat(cancellationState()).isEqualTo(before);
       var response =
           post("/api/work-operations/cancel-batch", request(workIds, sourceIds, "rollback"));
-      assertThat(response.status()).isGreaterThanOrEqualTo(400);
+      assertThat(response.status()).as(response.body().toString()).isEqualTo(409);
+      assertThat(response.body().path("error").path("code").asText())
+          .isEqualTo("DATA_INTEGRITY_CONFLICT");
+      assertThat(cancellationState()).isEqualTo(before);
       assertUnchanged();
-      assertThat(
-              jdbc.queryForObject(
-                  "SELECT count(*) FROM audit_events WHERE context_data ? 'compensationMutationId'",
-                  Long.class))
-          .isZero();
     } finally {
       jdbc.execute("ALTER TABLE work_operations DROP CONSTRAINT test_batch_failure");
     }
+    var retry = post("/api/work-operations/cancel-batch", request(workIds, sourceIds, "rollback"));
+    assertThat(retry.status()).as(retry.body().toString()).isEqualTo(200);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+    var committed = cancellationState();
+    assertThat(
+            post("/api/work-operations/cancel-batch", request(workIds, sourceIds, "rollback"))
+                .data())
+        .isEqualTo(retry.data());
+    assertThat(cancellationState()).isEqualTo(committed);
+  }
+
+  private Map<String, List<String>> cancellationState() {
+    return PostgresWriteTestSupport.snapshot(
+        jdbc,
+        transactionManager,
+        List.of(
+            "orchid_groups",
+            "orchid_group_mutations",
+            "orchid_group_mutation_entries",
+            "orchid_group_mutation_relations",
+            "work_operations",
+            "work_operation_targets",
+            "work_target_executions",
+            "work_applied_effects",
+            "work_effect_orchid_groups",
+            "work_command_receipts",
+            "work_command_receipt_memberships",
+            "audit_events"));
   }
 
   private void assertUnchanged() {

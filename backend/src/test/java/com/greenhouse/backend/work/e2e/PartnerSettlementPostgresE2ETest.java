@@ -342,7 +342,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
-  void aLaterFailureRollsBackTheSalesPaymentAndAllLedgerEffects() {
+  void callerFailureRollsBackTheParticipatingSalesPaymentAndAllLedgerEffects() {
     var partner = createPartner("입금 전체 rollback");
     var slip = createSlip(partner, "S20400102-803");
     assertThatThrownBy(
@@ -378,7 +378,15 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
     var partner = createPartner("감사 실패 " + entityType);
     var slip = createSlip(partner, "PAY-AUDIT-" + partner.getId());
     var payment = payment(20_000L, "audit-failure");
-    var before = paymentState(partner.getId(), slip.getId());
+    var before =
+        PostgresWriteTestSupport.snapshot(
+            jdbcTemplate,
+            transactionManager,
+            List.of(
+                "sales_slips",
+                "partner_payment_events",
+                "partner_balance_summaries",
+                "audit_events"));
     jdbcTemplate.execute(
         "ALTER TABLE audit_events ADD CONSTRAINT test_payment_audit CHECK (entity_type <> '"
             + entityType
@@ -386,12 +394,21 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
             + partner.getId()
             + "')");
     try {
-      assertThatThrownBy(() -> salesPaymentService.confirmPayment(slip.getId(), payment))
-          .isInstanceOf(DataIntegrityViolationException.class);
+      PostgresWriteTestSupport.assertStandaloneCheckFailure(
+          () -> salesPaymentService.confirmPayment(slip.getId(), payment), "test_payment_audit");
     } finally {
       jdbcTemplate.execute("ALTER TABLE audit_events DROP CONSTRAINT test_payment_audit");
     }
-    assertThat(paymentState(partner.getId(), slip.getId())).isEqualTo(before);
+    assertThat(
+            PostgresWriteTestSupport.snapshot(
+                jdbcTemplate,
+                transactionManager,
+                List.of(
+                    "sales_slips",
+                    "partner_payment_events",
+                    "partner_balance_summaries",
+                    "audit_events")))
+        .isEqualTo(before);
     var retry = salesPaymentService.confirmPayment(slip.getId(), payment);
     assertThat(retry.paidAmount()).isEqualTo(20_000L);
     assertThat(retry.remainingAmount()).isEqualTo(80_000L);
