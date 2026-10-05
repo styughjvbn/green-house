@@ -1660,6 +1660,13 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 검증: 계측 단위 2건, 새 PG 회귀 3건, Work/Search benchmark 2건이 query enforcement와 함께 통과했다(benchmark/PG checkpoint 임시 heap 1GiB). `git diff --check` 통과. 전체 기본/frontend 검증은 BE-044 완료 체크포인트에서 실행한다.
 - 범위: 기존 BE-027~036 경로별 query/Entity/plan·rollback 회귀를 유지했다. JDBC 호출은 driver 내부 round trip이 아니고 소비 행은 DB scan이 아니다. JSON bytes는 재직렬화된 body 기준이며 autocommit·raw unwrap·다른 DataSource·lock 보유 시간·peak heap/GC·전체 할당량은 별도다. 시간 절대값을 CI 실패 기준으로 삼지 않으며 운영 부하 실험은 수행하지 않았다.
 
+## 57차 변경 — BE-043 현행 writer·대상 terminal 정책 문서 일치
+
+- Farm 예약/직접 변경 Legacy 제거 설명은 앞선 수정에서 반영돼 있었다. 남은 구조 변환의 Legacy/Engine 공동 경로 설명을 실제 application 실행기의 원본 잠금/변경 전 계획·단일 Mutation Engine·recorder 역할에 맞췄다.
+- Work 전체 완료 검사와 진행 중 자동 완료에 `CANCELED` 대상 terminal을 명시했다. 비어 있거나 미완료/부분 완료/실패 대상이 있으면 완료할 수 없고, 전체 취소·STOPPED를 자동 완료로 대체하지 않는 의미를 구별했다.
+- 기능 문서의 진행률 100%면 취소할 수 없다는 설명도 실제 완료 작업의 CANCEL/CORRECT action과 맞췄다. 프론트는 진행률 대신 서버 action/취소 가능 조회를 사용한다.
+- 검증: Engine·WorkTargetExecution·WorkOperationProgressService·WorkOperationActionResolver 및 관련 API slice와 현행 문서를 대조했다. `git diff --check` 통과. 문서만 변경했으며 테스트·OpenAPI 재생성은 반복하지 않았다. 일반 metadata 수정 권한(BE-009)의 업무 정책은 변경하지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1724,7 +1731,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `30aca7c2` — BE-040 `test: bound postgres http requests and concurrent waits`. 공통 transport·future·JUnit 상한과 실제 stalled response 회귀.
 
 - `e31b99fa` — BE-041 `test: enforce application members and discover entity writers`. 명시 계약·값 유출·자동 writer 탐지와 부정 회귀.
-- BE-042 — `test: measure jdbc execution rows and work fan out`. JDBC counters·쓰기 commit/replay·fan-out benchmark와 영구 PG 회귀.
+- `d5ad1753` — BE-042 `test: measure jdbc execution rows and work fan out`. JDBC counters·쓰기 commit/replay·fan-out benchmark와 영구 PG 회귀.
+- BE-043 — `docs: align mutation writers and work completion policies`. 단일 writer·취소 대상 terminal·완료 action 문서 일치.
 
 ## 남은 작업
 
@@ -1776,4 +1784,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-040의 공통/별도 PATCH HTTP·번호 발급 future·PG method/benchmark 상한·timeout 진단은 54차 범위다. context 기동/서버 JDBC 강제 취소·모든 executor 종료 정책은 별도다.
 - BE-041의 외부 application member 승인·generic 값 경계·compiled 새 mutator/참조/field write·query root 표기 우회는 55차 범위다. SQL parser·reflection/동적/alias SQL·새 원자 writer와 관련 객체 변화 검토는 남는다.
 - BE-042의 JDBC 실행/행·Work 고정 root의 target/history fan-out과 실제 commit/replay 측정은 56차 범위다. driver 내부 round trip·lock 보유 시간·정산/원장 peak heap·운영 부하 실험은 후속이다.
+- BE-043의 제거된 writer 경로·대상 완료 terminal·진행률과 취소 capability 문서 일치는 57차 범위다. BE-009의 수정 권한 정책은 별도다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
