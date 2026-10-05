@@ -39,15 +39,10 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 
   @EntityGraph(attributePaths = {"lines"})
   @Query(
-      """
-			select distinct settlement from AuctionSettlement settlement
-			where settlement.auctionHouseId in :auctionHouseIds
-			  and settlement.auctionDate between :fromDate and :toDate
-			""")
-  List<AuctionSettlement> findAllWithDetailsForRebuild(
-      @Param("auctionHouseIds") Collection<Long> auctionHouseIds,
-      @Param("fromDate") LocalDate fromDate,
-      @Param("toDate") LocalDate toDate);
+      "select settlement from AuctionSettlement settlement "
+          + "where settlement.auctionHouseId = :auctionHouseId and settlement.auctionDate = :auctionDate")
+  Optional<AuctionSettlement> findWithLinesByHouseAndDate(
+      Long auctionHouseId, LocalDate auctionDate);
 
   @Query(
       value =

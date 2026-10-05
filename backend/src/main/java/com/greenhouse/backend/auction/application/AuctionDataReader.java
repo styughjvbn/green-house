@@ -88,9 +88,22 @@ public class AuctionDataReader {
         .toList();
   }
 
-  public List<Long> getSoldResultIdsAfter(Long afterId, int size) {
-    return resultLineRepository.findSoldIdsAfter(
-        afterId, PageRequest.of(0, Math.min(Math.max(size, 1), 500)));
+  public long getMaximumSoldResultId() {
+    return resultLineRepository.findMaximumSoldId();
+  }
+
+  public List<Long> getSoldResultIdsBetween(long afterId, long maximumId, int size) {
+    return resultLineRepository.findSoldIdsBetween(
+        afterId, maximumId, PageRequest.of(0, Math.min(Math.max(size, 1), RESULT_BATCH_SIZE)));
+  }
+
+  public List<Result> getSoldResultLinesUpTo(
+      Long auctionHouseId, LocalDate auctionDate, long maximumId) {
+    return resultLineRepository
+        .findSoldReadRowsUpTo(auctionHouseId, auctionDate, maximumId)
+        .stream()
+        .map(Result::from)
+        .toList();
   }
 
   public Map<Long, Result> getResults(Collection<Long> resultIds) {

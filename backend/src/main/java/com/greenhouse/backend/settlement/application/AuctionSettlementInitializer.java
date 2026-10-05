@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AuctionSettlementInitializer implements ApplicationRunner {
 
-  private final AuctionSettlementService settlementService;
+  private final AuctionSettlementRebuildService settlementService;
 
   @Override
   public void run(ApplicationArguments args) {

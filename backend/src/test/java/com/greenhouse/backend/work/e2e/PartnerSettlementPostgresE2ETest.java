@@ -26,6 +26,7 @@ import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.settlement.application.AuctionSettlementRebuildService;
 import com.greenhouse.backend.settlement.application.AuctionSettlementService;
 import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
@@ -71,6 +72,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Tag("work-e2e")
 @Timeout(60)
 class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
+
+  @Autowired AuctionSettlementRebuildService settlementRebuild;
 
   @Autowired BusinessPartnerRepository partnerRepository;
 
@@ -724,12 +727,12 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
     shipmentRepository.saveAndFlush(shipment);
     concurrently(
         List.of(
-            settlementService::rebuildExistingResults, settlementService::rebuildExistingResults));
+            settlementRebuild::rebuildExistingResults, settlementRebuild::rebuildExistingResults));
     var settlement =
         settlementRepository.findByAuctionHouseIdAndAuctionDate(house.getId(), date).orElseThrow();
     assertThat(settlementService.getSettlement(settlement.getId()).lines()).hasSize(1);
     assertThat(settlement.getGrossAmount()).isEqualTo(100000);
-    assertThat(settlementService.rebuildExistingResults()).isZero();
+    assertThat(settlementRebuild.rebuildExistingResults()).isZero();
   }
 
   private BusinessPartner createPartner(String name) {

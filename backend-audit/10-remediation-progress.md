@@ -1555,6 +1555,30 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - leading-wildcard/OR/concat 검색·희귀 상태·count/집계·다중 조건·deep offset·generic prepared plan·대형 IN과 미측정 FK·정산 재구성·원장 대사는 남는다. 이번 구성 조건의 Partner contains는 전체 scan을 유지했다. 운영 PostgreSQL 버전·분포·통계·부하로 재검증해야 하며 B-tree만으로 문자열 검색을 해결했다고 취급하지 않는다.
 - V41은 한 Flyway transaction에서 일반 index를 생성한다. 쓰기 중지 시간이 필요하며 `lock_timeout=5s`는 잠금 대기, `statement_timeout=5min`은 각 SQL의 실행 제한이다. 전체 migration 시간/취득 잠금 유지 시간을 보장하지 않는다. 운영 적용·rehearsal·peak build 공간·실제 lock/WAL/HOT 관찰은 미실행이다.
 
+## 49차 변경 — BE-036 정산별 초기화 commit·유한 후보 scan·정확한 key 조회
+
+상태: 정산 초기화의 처리 단위·재시작 의미와 회귀 검증 완료. 운영 최초 대량 처리·heap/GC·lock duration은 미측정이다.
+
+### 구현
+
+- 전체 미연결 Result 누적·정렬과 전체 거래처 선잠금/넓은 min-max 날짜 정산 적재를 제거했다. 시작 시 양수 결과의 최대 ID를 고정하고 read-only 후보 transaction에서 500개 ID/link를 대조하여 정산 key만 writer에 전달한다. 처리 중 생성된 ID와 지나간 cursor 뒤 늦게 commit한 과거 ID는 다음 실행에서 확인한다. 실행 전체의 단일 snapshot이나 전역 날짜 순서를 새로 보장하지 않는다.
+- `AuctionSettlementRebuildService`는 바깥 transaction을 `NEVER`로 거절하고 DI proxy를 통해 기존 application writer를 호출한다. writer는 거래처 하나를 잠근 뒤 해당 경매장·경매일의 상한 이내 결과와 연결을 다시 확인하고 정산 한 건을 commit한다. 같은 key의 결과가 후보 여러 페이지에 걸쳐도 전체 key를 한 transaction에서 처리한다. 전체 EntityManager를 clear해 caller 변경을 버리는 방식은 쓰지 않는다.
+- 기존 정산은 정확한 house/date Entity graph로 해당 line만 읽는다. 미반영 결과만 snapshot으로 추가하고 기존 line의 수량·단가·금액, 입금액·상태와 수동 재계산/입금 경계를 보존한다. 같은 실행의 결과 접수 UTC 시각을 주입 Clock에서 한 번 구해 전달하며 빈 DB fast path에서는 시각을 읽지 않는다.
+- 실패한 정산은 rollback하며 앞서 commit한 정산은 남는다. startup failure를 전체 초기화 rollback으로 취급하지 않는다. 재시작은 연결된 결과를 건너뛰어 미반영 정산만 처리한다. 같은 거래처를 동시에 처리하는 initializer는 잠금 후 연결을 재확인한다. 자동 재시도·진행 상태 테이블·비동기 queue는 추가하지 않았다.
+- 정산별 commit 때문에 반복되는 날짜 조회의 실제 Hibernate SQL을 PostgreSQL 18의 50,000개 다른 날짜 결과로 비교했다. 이전 계획은 결과 49,999개를 filter로 제거했고 shared buffer 578이었다. V42의 `(auction_date,id) WHERE amount>0` 이후 같은 1행에 buffer 12를 읽었다. 기존 attempt FK index는 날짜 선두 조건을 지원하지 않았다. planner를 강제하지 않고 buffer 예산과 이전 대비 차이를 회귀로 둔다. 실행 시간 단일 관측이나 이 조건을 모든 검색의 개선으로 취급하지 않는다.
+- V42는 업무 데이터·constraint를 바꾸지 않는 transaction 방식 index 생성이다. V41과 같은 쓰기 중지·5초 lock wait/각 SQL 5분 제한·rollback/재시도 정책을 문서화했다. 초기화의 부분 commit과 운영 재시작 정책은 판매/정산 기능·도메인 규칙·배포·architecture 문서에 함께 반영했다. HTTP schema·OpenAPI·생성 TypeScript 변경은 없다.
+
+### 검증
+
+- PostgreSQL 정산 관련 3개 클래스 55건 성공: 신규 처리 단위/계획 9, 기존 조회·금융 snapshot·입금·rollback 27, 거래처/정산 경합 19. 신규 검증은 key=1/50/501의 실제 transaction ID 분리·날짜 계산 단계의 managed Entity 수 5 이하, 한 key의 결과 1,501개, 날짜 양 끝의 추가 결과가 있는 501정산 중 root/기존 line 각각 2개 적재, 실제 CHECK에 도달한 후속 정산 실패와 최초 commit 보존·남은 결과 재실행, 최대 ID 이후 추가 결과 보류, 외부 transaction 거절, 실제 Repository SQL의 50,000행 index 전후 계획을 포함한다.
+- 정상 H2 회귀는 초기화 호출 전에 fixture transaction을 실제 commit하도록 바꿨다. writer transaction을 test transaction이 대체하지 않는다. 초기화 fast path SQL은 기존 후보/link 대조에 상한 조회 1회가 추가된 비용으로 기록하고 일반 목록 query gate는 유지한다.
+- 정산/원장 개선이 함께 있는 작업 트리에서 일반 backend 134개 클래스 715건 성공(1분 50초), PostgreSQL 관련 7개 클래스 87건 성공(1분 39초). 일반 test JVM에는 BE-034와 같은 검증용 `maxHeapSize=1g` 임시 init script를 사용했으며 repository 설정은 변경하지 않았다. frontend `npm run check`, backend `spotlessCheck`, `git diff --check` 성공. 이후 제품 변경은 없으며 목적별 커밋을 나눈다. 전체 PostgreSQL/benchmark·운영 부하/배포·heap/GC·index build lock/timeout fault injection은 미실행이다.
+
+### 남은 비용
+
+- 한 정산의 source와 기존 line 전체, 처리한 key의 중복 제거 집합은 여전히 증가한다. 거래처 한 행의 잠금 시간도 해당 정산 크기에 비례한다. commit 분할은 조회/settings round-trip 수를 늘릴 수 있으므로 모든 경로의 SQL 횟수·latency 감소로 설명하지 않는다. 운영 최초 처리·반복 latency·peak heap/GC·WAL·lock 대기/시간과 실제 데이터 분포의 V42 계획은 미측정이다.
+- 시작 시 초기화 활성 정책을 임의로 끄지 않았다. 다른 인스턴스가 있는 운영에서 전체 초기화가 완료된 화면이 필요하면 writer/인스턴스를 중지하고 적용·확인해야 한다. 전체 원장 대사의 Entry 누적 개선은 다음 별도 목적 변경으로 기록한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1606,7 +1630,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - `f9cca5ac` — BE-033 `refactor: index mutation placements within locked batches`. 구역별 scalar 검사·구간 index와 SQL/flush/충돌/rollback/경쟁 회귀.
 - `383ec751` — BE-034 `fix: bound calendar history and graph reference retrieval`. 조회 경계와 partial/error 계약·대량 PostgreSQL 회귀·생성 API 계약.
-- BE-035 — `refactor: index operational reference and date queries`. 실제 PG 계획·index·계보 MIN 개선과 회귀·배포 절차를 목적 단위로 저장한다.
+- `6effe1a2` — BE-035 `refactor: index operational reference and date queries`. 실제 PG 계획·index·계보 MIN 개선과 회귀·배포 절차.
+- BE-036 정산 — `fix: commit settlement initialization per auction house and day`. 정산별 commit·실패/재시작·정확 key/날짜 계획·V42와 회귀를 별도 목적으로 저장한다.
 
 ## 남은 작업
 
@@ -1650,4 +1675,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-033의 배치 placement 조회·Entity/flush 증폭과 중첩 비교 개선은 46차 범위다. 운영 lock 대기·처리량 검증은 별도다.
 - BE-034의 캘린더/호환 작업 이력과 graph 내부 참조·관계 상한/partial 의미는 47차 범위다. 전체 목록·하위 이력 분리·출하 선택지 계약은 남는다.
 - BE-035의 실제 참조/날짜/계보 계획과 index·MIN 반복 개선은 48차 범위다. 미측정 검색/상태/집계/FK·운영 계획과 index 쓰기·배포 비용 검증은 남는다.
+- BE-036의 정산별 초기화 commit·유한 scan·정확 key 조회·날짜 index는 49차 범위다. 한 정산의 크기와 운영 부하 측정은 남는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

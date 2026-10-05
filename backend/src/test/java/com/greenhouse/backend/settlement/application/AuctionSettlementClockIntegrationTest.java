@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.transaction.TestTransaction;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +41,8 @@ class AuctionSettlementClockIntegrationTest {
   private static final LocalDateTime UTC_TIME = LocalDateTime.of(2026, 9, 5, 15, 30);
 
   private static final LocalDateTime FARM_TIME = LocalDateTime.of(2026, 9, 6, 0, 30);
+
+  @Autowired AuctionSettlementRebuildService settlementRebuild;
 
   @Autowired AuctionSettlementService settlementService;
 
@@ -73,6 +76,7 @@ class AuctionSettlementClockIntegrationTest {
   }
 
   @Test
+  @org.springframework.test.annotation.DirtiesContext
   void bulkRebuildMergesOnlyNewSoldLinesAndDoesNothingWhenRepeated() {
     var first = createHouse("일괄 경매장 1");
     var second = createHouse("일괄 경매장 2");
@@ -82,7 +86,9 @@ class AuctionSettlementClockIntegrationTest {
     createResult(first, AUCTION_DATE, 0);
     createResult(second, AUCTION_DATE.plusDays(1), 30_000);
 
-    assertThat(settlementService.rebuildExistingResults()).isEqualTo(2);
+    TestTransaction.flagForCommit();
+    TestTransaction.end();
+    assertThat(settlementRebuild.rebuildExistingResults()).isEqualTo(2);
     var updated = settlementService.getSettlement(original.id());
     assertThat(updated.lines()).hasSize(2);
     assertThat(updated.grossAmount()).isEqualTo(30_000L);
@@ -95,7 +101,7 @@ class AuctionSettlementClockIntegrationTest {
               assertThat(settlement.grossAmount()).isEqualTo(30_000L);
               assertThat(settlement.resultReceivedAt()).isEqualTo(FARM_TIME);
             });
-    assertThat(settlementService.rebuildExistingResults()).isZero();
+    assertThat(settlementRebuild.rebuildExistingResults()).isZero();
     assertThat(settlementService.getSettlement(original.id()).lines()).hasSize(2);
   }
 

@@ -12,6 +12,7 @@ import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
+import com.greenhouse.backend.settlement.application.AuctionSettlementRebuildService;
 import com.greenhouse.backend.settlement.application.AuctionSettlementService;
 import com.greenhouse.backend.settlement.application.PaymentService;
 import com.greenhouse.backend.settlement.domain.AuctionSettlement;
@@ -34,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.transaction.TestTransaction;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,8 @@ import org.springframework.transaction.annotation.Transactional;
 @TestPropertySource(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 @Transactional
 class SettlementPartnerQueryTest {
+
+  @Autowired AuctionSettlementRebuildService settlementRebuild;
 
   @Autowired PaymentService paymentService;
 
@@ -145,6 +149,7 @@ class SettlementPartnerQueryTest {
   }
 
   @Test
+  @org.springframework.test.annotation.DirtiesContext
   void rebuildScansResultIdsInBatchesAndKeepsExistingFinancialSnapshots() {
     var date = LocalDate.of(2043, 1, 1);
     var house = new BusinessPartner("배치 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null);
@@ -173,7 +178,9 @@ class SettlementPartnerQueryTest {
     entityManager.persist(additional);
     flushAndResetStatistics();
 
-    assertThat(settlementService.rebuildExistingResults()).isEqualTo(1);
+    TestTransaction.flagForCommit();
+    TestTransaction.end();
+    assertThat(settlementRebuild.rebuildExistingResults()).isEqualTo(1);
     var updated = settlementService.getSettlement(original.id());
     assertThat(updated.lines()).hasSize(502);
     assertThat(updated.grossAmount()).isEqualTo(503_000L);
@@ -186,11 +193,13 @@ class SettlementPartnerQueryTest {
               assertThat(line.amount()).isEqualTo(1_000L);
               assertThat(line.unitPrice()).isEqualTo(1_000);
             });
-    var statistics = flushAndResetStatistics();
-    assertThat(settlementService.rebuildExistingResults()).isZero();
-    // Two pages of IDs + two local link checks; no source details or settlements are
+    var statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+    statistics.clear();
+    assertThat(settlementRebuild.rebuildExistingResults()).isZero();
+    // Finite cutoff + two pages of IDs + two local link checks; no source details or settlements
+    // are
     // loaded again.
-    assertThat(statistics.getPrepareStatementCount()).isEqualTo(4);
+    assertThat(statistics.getPrepareStatementCount()).isEqualTo(5);
   }
 
   @ParameterizedTest

@@ -32,9 +32,20 @@ public interface AuctionResultLineRepository extends JpaRepository<AuctionResult
   List<AuctionResultReadRow> findSoldReadRows(
       @Param("auctionHouseId") Long auctionHouseId, @Param("auctionDate") LocalDate auctionDate);
 
+  @Query("select coalesce(max(line.id), 0) from AuctionResultLine line where line.amount > 0")
+  long findMaximumSoldId();
+
   @Query(
-      "select line.id from AuctionResultLine line where line.amount > 0 and line.id > :afterId order by line.id")
-  List<Long> findSoldIdsAfter(@Param("afterId") Long afterId, Pageable pageable);
+      "select line.id from AuctionResultLine line where line.amount > 0 and line.id > :afterId "
+          + "and line.id <= :maximumId order by line.id")
+  List<Long> findSoldIdsBetween(long afterId, long maximumId, Pageable pageable);
+
+  @Query(
+      READ_ROWS
+          + "where line.amount > 0 and line.auctionDate = :auctionDate "
+          + "and shipment.auctionHouseId = :auctionHouseId and line.id <= :maximumId order by line.id")
+  List<AuctionResultReadRow> findSoldReadRowsUpTo(
+      Long auctionHouseId, LocalDate auctionDate, long maximumId);
 
   @Query(READ_ROWS + "where line.id in :ids")
   List<AuctionResultReadRow> findReadRowsByIdIn(@Param("ids") Collection<Long> ids);

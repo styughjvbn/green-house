@@ -18,6 +18,7 @@ import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.settlement.application.AuctionSettlementRebuildService;
 import com.greenhouse.backend.settlement.application.AuctionSettlementResponseAssembler;
 import com.greenhouse.backend.settlement.application.AuctionSettlementService;
 import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
@@ -50,6 +51,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 @Tag("work-e2e")
 class SettlementReadQueryPostgresE2ETest extends WorkE2ETestBase {
   private static final LocalDate DATE = LocalDate.of(2026, 10, 4);
+  @Autowired AuctionSettlementRebuildService settlementRebuild;
+
   @Autowired private JdbcTemplate jdbc;
   @Autowired private EntityManagerFactory emf;
   @Autowired private BusinessPartnerRepository partners;
@@ -107,7 +110,7 @@ class SettlementReadQueryPostgresE2ETest extends WorkE2ETestBase {
     stats.clear();
     AuctionSettlementResponse result;
     if (action.equals("INITIALIZER")) {
-      assertThat(settlements.rebuildExistingResults()).isEqualTo(1);
+      assertThat(settlementRebuild.rebuildExistingResults()).isEqualTo(1);
       result = null;
     } else result = execute(action, id);
     report(action + "-" + size, stats);
@@ -141,8 +144,8 @@ class SettlementReadQueryPostgresE2ETest extends WorkE2ETestBase {
     if (action.equals("REPLAY"))
       assertThat(payments.confirmAuctionPayment(id, payment())).isEqualTo(result);
     stats.clear();
-    assertThat(settlements.rebuildExistingResults()).isZero();
-    assertThat(stats.getPrepareStatementCount()).isEqualTo(2 * ((size + 499) / 500));
+    assertThat(settlementRebuild.rebuildExistingResults()).isZero();
+    assertThat(stats.getPrepareStatementCount()).isEqualTo(1 + 2 * ((size + 499) / 500));
     assertThat(auctionEntityLoads(stats)).isZero();
     assertThat(snapshot()).isEqualTo(before);
   }
@@ -158,7 +161,7 @@ class SettlementReadQueryPostgresE2ETest extends WorkE2ETestBase {
     jdbc.update("update business_partners set name = '현재 경매장' where id = ?", house);
     AuctionSettlementResponse result;
     if (action.equals("INITIALIZER")) {
-      assertThat(settlements.rebuildExistingResults()).isZero();
+      assertThat(settlementRebuild.rebuildExistingResults()).isZero();
       result = settlements.getSettlement(first.id());
     } else result = execute(action, first.id());
     assertThat(result.auctionHouseName()).isEqualTo("현재 경매장");
