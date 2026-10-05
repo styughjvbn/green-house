@@ -1,5 +1,6 @@
 package com.greenhouse.backend;
 
+import static com.greenhouse.backend.support.JsonResponseTestSupport.requiredId;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -137,12 +138,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.status").value("PLACED"))
             .andReturn();
-    Long inboundRecordId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long inboundRecordId = requiredId(created.getResponse().getContentAsString(), "/data/id");
 
     assertThat(operationRepository.findAll())
         .singleElement()
@@ -197,12 +193,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
             .andExpect(jsonPath("$.data.availableActions", hasSize(1)))
             .andExpect(jsonPath("$.data.availableActions[0]").value("CANCEL"))
             .andReturn();
-    Long inboundRecordId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long inboundRecordId = requiredId(created.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(
@@ -252,12 +243,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
                             .formatted(inboundRecord.getVariety().getId())))
             .andExpect(status().isCreated())
             .andReturn();
-    Long inboundRecordId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long inboundRecordId = requiredId(created.getResponse().getContentAsString(), "/data/id");
 
     executePotting(inboundRecordId, "first-potting", 8, 10);
     mockMvc
@@ -375,12 +361,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
             .andExpect(jsonPath("$.data.targets[0].targetReferenceType").value("INBOUND_RECORD"))
             .andExpect(jsonPath("$.data.targets[0].inboundRecordId").value(inboundRecord.getId()))
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(created.getResponse().getContentAsString(), "/data/id");
     Long targetId =
         operationTargetRepository
             .findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
@@ -506,12 +487,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.targets[0].quantitySnapshot").value(120))
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            planned
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(planned.getResponse().getContentAsString(), "/data/id");
     var storedTarget =
         operationTargetRepository
             .findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
@@ -628,11 +604,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
             .andExpect(jsonPath("$.data.status").value("POTTING_PENDING"))
             .andReturn();
     Long inboundRecordId =
-        Long.valueOf(
-            createdInbound
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+        requiredId(createdInbound.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(
@@ -719,12 +691,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
                             .formatted(inboundRecord.getId(), secondInbound.getId())))
             .andExpect(status().isCreated())
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            planned
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(planned.getResponse().getContentAsString(), "/data/id");
     mockMvc
         .perform(get("/api/inbound-records/{id}", inboundRecord.getId()))
         .andExpect(status().isOk())
@@ -780,12 +747,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
                             .formatted(inboundRecord.getId())))
             .andExpect(status().isCreated())
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            planned
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(planned.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(post("/api/work-operations/{id}/end-remaining", operationId))
@@ -1143,12 +1105,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
                             .formatted(inboundRecord.getId())))
             .andExpect(status().isCreated())
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            planned
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(planned.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(

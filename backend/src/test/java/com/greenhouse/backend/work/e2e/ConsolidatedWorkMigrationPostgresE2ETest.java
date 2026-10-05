@@ -2,18 +2,21 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 @Tag("work-e2e")
 class ConsolidatedWorkMigrationPostgresE2ETest extends WorkE2ETestBase {
 
-  @Test
-  void upgradesV27DataThroughSevenContextsAndKeepsReceiptsAndInboundOrigins() {
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void upgradesV27DataThroughHistoricalV34AndOptionallyLatestSchema(boolean latest) {
     String database = "consolidated_work_" + UUID.randomUUID().toString().replace("-", "");
     var admin =
         new JdbcTemplate(
@@ -37,6 +40,28 @@ class ConsolidatedWorkMigrationPostgresE2ETest extends WorkE2ETestBase {
                   "SELECT version FROM flyway_schema_history WHERE version::INTEGER > 27 ORDER BY installed_rank",
                   String.class))
           .containsExactly("28", "29", "30", "31", "32", "33", "34");
+      if (latest) {
+        // The V27 -> V34 assertions above deliberately preserve that historical upgrade boundary.
+        upgrade = Flyway.configure().dataSource(dataSource).load();
+        var pending =
+            Arrays.stream(upgrade.info().pending())
+                .filter(migration -> migration.getVersion() != null)
+                .count();
+        assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(Math.toIntExact(pending));
+        assertThat(Arrays.stream(upgrade.info().pending())).isEmpty();
+        var resolved =
+            Arrays.stream(upgrade.info().all())
+                .filter(migration -> migration.getVersion() != null)
+                .map(migration -> migration.getVersion().getVersion())
+                .toList();
+        assertThat(
+                jdbc.queryForList(
+                    "SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank",
+                    String.class))
+            .containsExactlyElementsOf(resolved);
+        assertThat(upgrade.info().current().getVersion().getVersion())
+            .isEqualTo(resolved.getLast());
+      }
       assertThat(
               jdbc.queryForObject("SELECT status FROM inbound_records WHERE id=20", String.class))
           .isEqualTo("POTTING_PENDING");

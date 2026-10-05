@@ -1,5 +1,6 @@
 package com.greenhouse.backend;
 
+import static com.greenhouse.backend.support.JsonResponseTestSupport.requiredId;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -8,16 +9,28 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
+@Import(OrchidGroupIntegrationTests.FixedTime.class)
 class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
+
+  @Override
+  protected List<Integer> fixtureHouseNumbers() {
+    return List.of(3);
+  }
 
   @Test
   void createsUpdatesAndCancelsOrchidGroupWithoutDeletingHistory() throws Exception {
@@ -65,7 +78,7 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
             .andReturn();
 
     var responseBody = createResult.getResponse().getContentAsString();
-    var createdId = Long.valueOf(responseBody.replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+    var createdId = requiredId(responseBody, "/data/id");
 
     mockMvc
         .perform(
@@ -180,7 +193,7 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
         physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
     var sampleZone =
         bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
-    LocalDate inboundDate = LocalDate.now().minusYears(2).minusDays(1);
+    LocalDate inboundDate = LocalDate.of(2024, 10, 4);
 
     var createResult =
         mockMvc
@@ -214,10 +227,14 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
             createResult.getResponse().getContentAsString(), "$.data.createdOrchidGroups[0].id");
     Long createdOrchidGroupId = createdOrchidGroupIdValue.longValue();
 
+    mockMvc
+        .perform(get("/api/orchid-groups/{id}", createdOrchidGroupId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.ageYear").value(3));
     assertThat(
             OrchidGroupResponse.from(
                     orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow(),
-                    TimeConfig.farmToday(Clock.systemUTC()))
+                    LocalDate.of(2026, 10, 5))
                 .ageYear())
         .isEqualTo(3);
   }
@@ -394,11 +411,7 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
             .andExpect(status().isCreated())
             .andReturn();
     var flaskRecordId =
-        Long.valueOf(
-            flaskCreateResult
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+        requiredId(flaskCreateResult.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(
@@ -505,12 +518,7 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
                             .formatted(sourceZone.getId(), sampleVariety.getId())))
             .andExpect(status().isCreated())
             .andReturn();
-    var createdId =
-        Long.valueOf(
-            createResult
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+    var createdId = requiredId(createResult.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(movementRecord(createdId, targetZone.getId(), 0, 1))
@@ -622,12 +630,7 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 					"""))
             .andExpect(status().isCreated())
             .andReturn();
-    var partnerId =
-        Long.valueOf(
-            partnerResult
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+    var partnerId = requiredId(partnerResult.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(
@@ -677,5 +680,15 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
                     "$.data.physicalBeds[?(@.id == %d)].bedZones[0].orchidGroups[?(@.id == %d)]"
                         .formatted(sampleBed.getId(), orchidGroupId))
                 .doesNotExist());
+  }
+
+  @TestConfiguration(proxyBeanMethods = false)
+  static class FixedTime {
+    @Bean
+    @Primary
+    Clock testClock() {
+      // UTC October 4 is already October 5 at the farm.
+      return Clock.fixed(Instant.parse("2026-10-04T15:00:00Z"), ZoneOffset.UTC);
+    }
   }
 }

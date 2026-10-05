@@ -14,9 +14,11 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapsh
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,8 @@ class OrchidGroupStateChainMigrationPostgresE2ETest extends WorkE2ETestBase {
   private static final String MANIFEST_FINGERPRINT = "a".repeat(64);
 
   private static final long DELETED_GROUP_ID = 999_999L;
+
+  @Autowired private Flyway flyway;
 
   @Autowired private WorkTestDataSeeder seeder;
 
@@ -53,7 +57,19 @@ class OrchidGroupStateChainMigrationPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
-  void appliesConsolidatedFinalMutationSchemaWithoutTransitionTables() {
+  void preservesHistoricalV21ThroughV34AndAppliesCurrentSchemaWithoutTransitionTables() {
+    flyway.validate();
+    assertThat(flyway.info().pending()).isEmpty();
+    var resolved =
+        Arrays.stream(flyway.info().all())
+            .filter(migration -> migration.getVersion() != null)
+            .map(migration -> migration.getVersion().getVersion())
+            .toList();
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank",
+                String.class))
+        .containsExactlyElementsOf(resolved);
     assertThat(
             jdbcTemplate.queryForList(
                 """

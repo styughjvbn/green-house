@@ -12,6 +12,8 @@ import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,10 +27,14 @@ abstract class FarmFixtureIntegrationTest extends AbstractBackendIntegrationTest
 
   @Autowired protected EntityManager fixtureEntityManager;
 
+  protected List<Integer> fixtureHouseNumbers() {
+    return IntStream.rangeClosed(1, 15).boxed().toList();
+  }
+
   @BeforeEach
   void createFarmFixture() {
     BedZone occupiedZone = null;
-    for (int number = 1; number <= 15; number++) {
+    for (int number : fixtureHouseNumbers()) {
       var house = new House(number, number + "동");
       for (int bedNumber = 1; bedNumber <= 3; bedNumber++) {
         var bed = new PhysicalBed(bedNumber, bedNumber);

@@ -1,5 +1,6 @@
 package com.greenhouse.backend;
 
+import static com.greenhouse.backend.support.JsonResponseTestSupport.requiredId;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
@@ -507,11 +508,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.workTypeCode").value("DISCARD"))
             .andReturn();
-    return Long.valueOf(
-        result
-            .getResponse()
-            .getContentAsString()
-            .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    return requiredId(result.getResponse().getContentAsString(), "/data/id");
   }
 
   @Test
@@ -537,12 +534,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
             .andExpect(jsonPath("$.data.targets", hasSize(1)))
             .andReturn();
 
-    Long operationId =
-        Long.valueOf(
-            createResult
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(createResult.getResponse().getContentAsString(), "/data/id");
     mockMvc
         .perform(post("/api/work-operations/{id}/start", operationId))
         .andExpect(status().isOk());
@@ -626,8 +618,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
             .andReturn();
 
     String response = createResult.getResponse().getContentAsString();
-    Long operationId =
-        Long.valueOf(response.replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(response, "/data/id");
     Long targetId =
         workOperationTargetRepository
             .findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
@@ -893,12 +884,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
                             .formatted(pesticideType.getId(), sourceHouse.getId())))
             .andExpect(status().isCreated())
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(created.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(get("/api/work-operations").param("view", "MANAGEMENT"))
@@ -953,12 +939,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.targets", hasSize(2)))
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(created.getResponse().getContentAsString(), "/data/id");
     Long completedTargetId =
         workOperationTargetRepository
             .findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)

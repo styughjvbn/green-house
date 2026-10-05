@@ -1623,6 +1623,15 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 최종 검증: 관련 PostgreSQL 6개 클래스 67건 통과(Farm routing 6, Work 보정 20, 안전 취소 6, 입고 취소/포트 10, 일괄 취소 13, Sales 잠금 순서 12). 전체 기본 134개 클래스 715건 통과(기존 임시 init script로 test heap 1GiB); frontend `npm run check`, `spotlessCheck`, `git diff --check` 통과. 추가 회귀 수정과 겹쳤던 포맷 검사 실패는 최종 재검증에서 해소했다. 전체 PostgreSQL suite·benchmark는 재실행하지 않았다. 이후 문서 변경만 반영했다. 운영 코드·DB migration·HTTP/API 계약은 변경하지 않았다.
 - 범위: 기존 DB 전체 대기자 helper 3곳과 200ms 생성 취소 시험, 일괄 취소의 시작 latch만 사용한 경쟁을 보강했다. 전체 concurrent suite의 모든 시작 latch를 제거한 것은 아니며, 다른 경로의 모든 충돌/무교착·고부하 처리량을 증명하지 않는다. HTTP client의 전역 timeout·fixture 공통화는 BE-039/040 후속 범위다.
 
+## 53차 변경 — BE-039 JSON path·고정 업무일·과거/최신 migration 검증
+
+- Work/입고 포트 및 OrchidGroup 통합 시험의 생성 ID 정규식을 JSON pointer 조회로 교체했다. 응답 필드 순서·공백·중첩 ID에 의존하지 않고 숫자/long 범위/양수 여부를 검사한다. helper의 순서/중첩·누락/null/문자열/소수/overflow 부정 회귀도 추가했다.
+- 난 묶음 년생 시험은 UTC `2026-10-04T15:00:00Z`의 주입 Clock과 고정 입고일을 사용한다. 농장 날짜 `2026-10-05`의 실제 HTTP 조회에서 3년생을 검증해 시스템 날짜/UTC 날짜 차이에 의존하지 않는다. 해당 클래스의 농장 fixture는 필요한 3동만 생성하도록 줄였으며 공통 fixture를 사용하는 다른 클래스의 15동 구성은 유지한다.
+- V27→V34의 일곱 migration 목록/건수는 의도한 과거 업그레이드 계약으로 보존한다. 별도 parameter 사례에서 V34→현재 classpath의 마지막 migration까지 적용하고 pending 없음·적용 버전과 resolved 버전 일치·validate·재실행 0건 및 원본 입고/작업/receipt 보존을 확인한다. 최신 version 숫자를 새로 하드코딩하지 않았다.
+- Mutation schema 시험도 V21~34 역사 목록과 전체 최신 적용/validate/pending gate를 구분한다. DB 격리·임시 DB cleanup·기존 pooled sequence 정책을 유지한다.
+- 검증: 집중 기본 4개 클래스 44건 통과; 관련 PostgreSQL 2개 클래스 4건 통과(역사/최신 upgrade 2, Mutation schema/과거 Entry 2); `git diff --check` 통과. 세 finding의 최종 전체 기본/frontend 검증은 55차 체크포인트에서 수행한다.
+- 범위: 생산 코드·migration 파일·API 계약은 바꾸지 않았다. 다른 fixture의 MIN/OFFSET·payload/seed 중복과 긴 lifecycle 전체 분해는 후속 정리다. 과거 upgrade의 고정 버전/정확 hash·API golden은 일반적인 brittle assertion으로 제거하지 않는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1680,7 +1689,9 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - `7b08702e` — BE-037 `test: verify standalone writes and late database rollback`. 독립 Work 취소/출하/입금 경계·정확 CHECK·새 transaction snapshot·재시도 회귀.
 
-- BE-038 — `test: observe postgres conflicts by worker and blocker pid`. 실제 충돌 관측·양쪽 순서·무관 대기자 부정 회귀.
+- `d1abdf7e` — BE-038 `test: observe postgres conflicts by worker and blocker pid`. 실제 충돌 관측·양쪽 순서·무관 대기자 부정 회귀.
+
+- BE-039 — `test: decouple response ids dates and migration head assertions`. JSON path·고정 Clock·작은 농장 fixture·최신 upgrade 회귀.
 
 ## 남은 작업
 
@@ -1728,4 +1739,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-036의 원장 대사 scalar 현재 그룹·Entry cursor·일관된 snapshot과 이력/기존 fingerprint 회귀는 50차 범위다. 전체 그룹/오류·업무 참조/보정 누적·fingerprint 직렬화·장기 read transaction과 운영 heap/GC 검증은 남는다.
 - BE-037의 핵심 Work 취소·경매 출하·입금 standalone 경계와 늦은 CHECK/전체 행 rollback은 51차 범위다. H2 전체의 wrapper 전환과 모든 쓰기 경로의 실패 위치 확대는 후속이다.
 - BE-038의 정확 worker/owner 잠금 관측·Work/입고 양쪽 순서·재전송 중첩과 부정 회귀는 52차 범위다. 전체 writer의 병렬 충돌, BE-039 fixture와 BE-040 전역 timeout 개선은 남는다.
+- BE-039의 대표 JSON parser·년생/농장 날짜·단건 farm fixture·역사/최신 migration 구분은 53차 범위다. 다른 fixture 중복과 lifecycle 분해는 점진 후속이다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
