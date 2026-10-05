@@ -19,6 +19,17 @@ import org.springframework.data.repository.query.Param;
 public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
 
   @Query(
+      """
+      select new com.greenhouse.backend.farm.repository.orchid.ReconciliationGroupRow(
+        g.id, g.stateRevision, g.quantity, g.reservedQuantity, g.status, g.bedZone.id, g.sortOrder,
+        g.startPosition, g.endPosition, g.variety.id, g.genus, g.varietyName, g.ageYear, g.potSizeCode,
+        g.placementType, g.trayCount, g.splitPlacementAllowed, g.inboundRecord.id, g.memo, bed.positionUnitCount)
+      from OrchidGroup g left join g.bedZone z left join z.physicalBed bed
+      where g.id > :afterId order by g.id
+      """)
+  List<ReconciliationGroupRow> findReconciliationGroupsAfter(long afterId, Pageable pageable);
+
+  @Query(
       "select new com.greenhouse.backend.farm.repository.orchid.OrchidPlacementRow("
           + "g.id, g.bedZone.id, g.startPosition, g.endPosition, g.sortOrder) "
           + "from OrchidGroup g where g.bedZone.id in :zoneIds and g.quantity > 0")

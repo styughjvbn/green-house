@@ -401,6 +401,7 @@ Persistence 조회 규칙:
 - 판매 화면의 거래처 순위는 기간 내 모든 거래처별 DB 합계를 현재 이름으로 합산한 뒤 상위 10개를 선택한다. 거래처 분석은 ID별 기간 합계와 양수 잔액이 있는 거래처를 합친 뒤 정렬한다. 독립 페이지의 일부 결과로 전체 순위를 만들지 않는다. 이 조합은 원본 전표 수 대신 거래처 집계 수에 비례하는 메모리를 사용하며, 거래처 수가 커질 때는 측정 후 별도 보고용 projection을 검토한다.
 - 같은 조건의 전체 합계와 분포를 함께 반환할 때는 DB에서 그룹별로 집계한 값을 재사용한다. 작업 전체 건수·유형별 건수·최근 작업일은 이름·템플릿별 집계에서, 판매 가능 재고 합계는 품종별 집계에서 구한다. 최근 기록이나 일부 순위에 적용한 상한을 전체 합계에 적용하지 않는다.
 - DB 집계로 표현 가능한 값을 전체 Entity 조회 후 Java에서 다시 집계하지 않는다. 다만 데이터량이 작고 규칙 표현이 더 명확한 경우에는 측정 근거를 남기고 단순 구현을 유지할 수 있다.
+- 원장 대사의 현재 그룹은 ID 순서의 500행 scalar 조회로 읽고 Entity graph를 적재하지 않는다. 현재/삭제 그룹의 revision chain은 그룹·revision 순 scalar cursor로 읽어 앞뒤 Entry와 chain 시작/말단만 유지한다. fetch size는 500이며 전체 이력을 List나 persistence context에 누적하지 않는다. baseline/current fingerprint의 기존 입력·ID 순서와 누락/불연속/삭제 tombstone 판정은 유지한다. 전역 배치/업무 참조 검사를 위한 현재 그룹 값·baseline·오류 전체와 기존 fingerprint 직렬화는 여전히 크기에 비례하므로 완전한 상수 메모리 대사로 취급하지 않는다.
 
 #### 이력과 스냅샷
 
@@ -417,6 +418,7 @@ Persistence 조회 규칙:
 - Flyway migration은 `nullable 추가 → backfill → 제약 적용`처럼 기존 운영 데이터가 통과할 수 있는 순서를 사용한다. 대용량 table 변경은 lock 범위와 운영 적용 시간을 별도로 검토한다.
 - `NOT VALID` CHECK의 신규/갱신 행 보호와 기존 행 검증 완료를 구분한다. 설치된 CHECK 식·DB 검증 상태·기존 위반을 같은 read-only snapshot에서 확인하고, 이력을 보존한 복구·재대사 후 제약별 validation을 수행한다. 운영 절차는 [배포 문서](07-deployment.md#기존-데이터의-check-제약-대사와-검증)를 따른다. 위반 0건이나 Flyway 성공을 원장·예약·금액의 모든 교차 불변식 검증으로 취급하지 않는다.
 - 수량·금액·정산·migration 변경은 정상 흐름뿐 아니라 rollback과 중복 요청을 검증한다. 동시성 보강은 병렬 실행 테스트, N+1 보강은 query count 상한 테스트를 둔다.
+- 원장 대사의 독립 read-only 호출은 `REPEATABLE_READ`로 그룹·Entry·count·업무 참조를 같은 DB snapshot에서 읽는다. cutover 등 기존 쓰기 transaction에서 호출하면 그 transaction에 참여하며 isolation을 별도로 올리거나 미확정 변경을 clear/commit하지 않는다. 일관된 read snapshot이 writer 중지·cutover 확인 절차를 대체하지 않는다.
 - PostgreSQL 문법, lock, constraint, 원자 갱신은 H2 결과만 신뢰하지 않고 Testcontainers 또는 실제 PostgreSQL 검증을 수행한다.
 
 ## 5. 프론트엔드 구조

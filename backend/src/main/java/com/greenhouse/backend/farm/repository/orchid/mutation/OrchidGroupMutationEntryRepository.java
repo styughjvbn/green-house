@@ -2,18 +2,44 @@ package com.greenhouse.backend.farm.repository.orchid.mutation;
 
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryKind;
+import jakarta.persistence.QueryHint;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 public interface OrchidGroupMutationEntryRepository
     extends JpaRepository<OrchidGroupMutationEntry, Long> {
+
+  String RECONCILIATION_ROWS =
+      """
+      select new com.greenhouse.backend.farm.repository.orchid.mutation.ReconciliationEntryRow(
+        entry.orchidGroupId, entry.entryKind, entry.stateRevisionBefore, entry.stateRevisionAfter,
+        entry.beforeState, entry.afterState, entry.mutation.mutationType,
+        entry.mutation.sourceDomain, entry.mutation.sourceReferenceId)
+      from OrchidGroupMutationEntry entry
+      """;
+
+  @Query(
+      RECONCILIATION_ROWS
+          + "where exists (select g.id from OrchidGroup g where g.id = entry.orchidGroupId) "
+          + "order by entry.orchidGroupId, entry.stateRevisionAfter")
+  @QueryHints(@QueryHint(name = "org.hibernate.fetchSize", value = "500"))
+  Stream<ReconciliationEntryRow> streamCurrentGroupChains();
+
+  @Query(
+      RECONCILIATION_ROWS
+          + "where not exists (select g.id from OrchidGroup g where g.id = entry.orchidGroupId) "
+          + "order by entry.orchidGroupId, entry.stateRevisionAfter")
+  @QueryHints(@QueryHint(name = "org.hibernate.fetchSize", value = "500"))
+  Stream<ReconciliationEntryRow> streamDeletedGroupChains();
 
   interface InboundPottingDateRow {
 
@@ -66,11 +92,4 @@ public interface OrchidGroupMutationEntryRepository
           + "order by entry.mutation.id asc, entry.id asc")
   Slice<OrchidGroupMutationEntry> findGraphEntriesByMutationIdIn(
       @Param("mutationIds") Collection<Long> mutationIds, Pageable pageable);
-
-  @EntityGraph(attributePaths = "mutation")
-  @Query(
-      "select entry from OrchidGroupMutationEntry entry "
-          + "where not exists (select group.id from OrchidGroup group where group.id = entry.orchidGroupId) "
-          + "order by entry.orchidGroupId, entry.stateRevisionAfter")
-  List<OrchidGroupMutationEntry> findChainsWithoutCurrentGroup();
 }

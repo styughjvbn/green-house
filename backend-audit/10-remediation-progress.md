@@ -1579,6 +1579,28 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 한 정산의 source와 기존 line 전체, 처리한 key의 중복 제거 집합은 여전히 증가한다. 거래처 한 행의 잠금 시간도 해당 정산 크기에 비례한다. commit 분할은 조회/settings round-trip 수를 늘릴 수 있으므로 모든 경로의 SQL 횟수·latency 감소로 설명하지 않는다. 운영 최초 처리·반복 latency·peak heap/GC·WAL·lock 대기/시간과 실제 데이터 분포의 V42 계획은 미측정이다.
 - 시작 시 초기화 활성 정책을 임의로 끄지 않았다. 다른 인스턴스가 있는 운영에서 전체 초기화가 완료된 화면이 필요하면 writer/인스턴스를 중지하고 적용·확인해야 한다. 전체 원장 대사의 Entry 누적 개선은 다음 별도 목적 변경으로 기록한다.
 
+## 50차 변경 — BE-036 원장 대사의 scalar 그룹·Entry cursor·snapshot 일치
+
+상태: 현재 그룹/원장 Entity 전체 적재와 revision 이력 누적 개선·회귀 검증 완료. 대사 전체를 상수 메모리로 전환하거나 운영 peak heap/GC를 측정한 결과는 아니다.
+
+### 구현
+
+- 현재 그룹을 ID 순 500행의 소유 Repository scalar projection으로 읽는다. 이전 ID 조회→그룹/구역/배드/농장/품종 Entity graph 적재를 제거했다. 도메인 snapshot 필드·좌표 canonical 변환과 현재 그룹의 순서는 유지하고 Repository projection을 외부 모듈 계약으로 노출하지 않는다.
+- 현재 그룹/삭제 그룹의 Entry chain을 각각 그룹·revision 순서의 scalar `Stream`으로 순회한다. source type/domain/reference와 revision·전후 snapshot의 필요한 값만 선택하고 fetch size 500을 사용한다. Entry/Mutation Entity 또는 전체 group별 history map을 누적하지 않으며 try-with-resources로 cursor를 닫는다. parser가 유지하는 chain 상태는 최초/직전/다음 Entry이고 JDBC fetch window는 500행이다. caller EntityManager를 clear하지 않는다.
+- 현재 revision/마지막 snapshot, chain origin·연속 revision/전후 snapshot, 삭제 tombstone과 PRE_BASELINE/PREPARING/ACTIVE 판정을 보존한다. 현재 그룹의 cutover BASELINE만 기존 ID 순 fingerprint 입력으로 모으며 삭제 그룹을 이 입력에 새로 넣지 않는다. baseline/current fingerprint 구조와 persisted hash, 모든 보고서 필드/오류 코드를 유지한다.
+- 독립 `reconcile()` 호출은 read-only `REPEATABLE_READ`로 현재 그룹·Entry·count·업무 참조를 같은 snapshot에서 검사한다. cutover 등의 기존 쓰기 transaction에 참여하는 경우는 caller 경계/isolation을 유지하여 미확정 import/coverage를 볼 수 있게 한다. 보고서를 위해 caller의 상태를 버리거나 별도 commit하지 않는다. writer 중지·cutover 확인은 계속 필요하다.
+
+### 검증
+
+- 신규 PostgreSQL 8건 성공: 한 그룹 revision=1/500/501/5,001의 현재/Entry/Mutation Entity load 0·SQL 24회 이하·기존 fingerprint 입력과 정확한 hash 일치, cursor 경계의 snapshot 불연속, 현재 그룹=500/501의 전체 count/순서/두 fingerprint, 삭제 chain=1,001의 tombstone 누락/복원 및 중간 불연속, 독립 대사 중 병렬 current+Entry 수정에 대한 repeatable snapshot을 검사한다. 대사 뒤 새 호출은 commit된 새 상태를 관측한다. native fixture는 chain cardinality/판정 실험이며 application writer 처리량 실험은 아니다.
+- 기존 PostgreSQL 전환/활성화 2건, Mutation 9건, 일괄 취소 13건도 성공했다. PREPARING/ACTIVE·import/activation fingerprint·현재 상태/원장·보상/rollback·기존 쓰기 transaction 참여를 검증한다. 정산 55건을 포함해 같은 최종 체크포인트의 7개 클래스 87건이 모두 성공했다(1분 39초).
+- 정산/원장 개선이 함께 있는 작업 트리에서 일반 backend 134개 클래스 715건 성공(1분 50초). 검증용 test heap 1g 임시 init script만 사용했고 repository 설정은 변경하지 않았다. frontend `npm run check`, `spotlessCheck`, `git diff --check` 성공. 전체 검증 이후 변경은 문서뿐이며 목적별 커밋을 나눈다. 전체 PG/benchmark·운영 corpus/부하·peak heap/GC·장기 snapshot의 vacuum 영향은 미실행이다.
+
+### 남은 범위
+
+- 현재 그룹/배치·업무 참조의 전역 검사와 baseline/current fingerprint 입력은 그룹 수에, 전체 오류 보고서는 문제 수에 비례한다. fingerprint 계산은 기존 JSON 직렬화 형식을 그대로 사용하므로 큰 현재 상태의 문자열/byte allocation도 남는다. Work 참조/보정 전체와 보정 Mutation 조회의 누적·큰 입력은 후속 범위다. 이 계약들을 임의로 자르거나 hash 형식을 바꿔 ready를 잘못 확정하지 않는다.
+- 한 snapshot JSON의 크기·DB sort/scan·긴 read transaction과 vacuum 영향·실제 heap/GC는 별도 실측이 필요하다. 500행 fetch cursor는 500행별 commit 또는 독립 snapshot이 아니며 전체 대사의 일관된 root transaction을 유지한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1631,7 +1653,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `f9cca5ac` — BE-033 `refactor: index mutation placements within locked batches`. 구역별 scalar 검사·구간 index와 SQL/flush/충돌/rollback/경쟁 회귀.
 - `383ec751` — BE-034 `fix: bound calendar history and graph reference retrieval`. 조회 경계와 partial/error 계약·대량 PostgreSQL 회귀·생성 API 계약.
 - `6effe1a2` — BE-035 `refactor: index operational reference and date queries`. 실제 PG 계획·index·계보 MIN 개선과 회귀·배포 절차.
-- BE-036 정산 — `fix: commit settlement initialization per auction house and day`. 정산별 commit·실패/재시작·정확 key/날짜 계획·V42와 회귀를 별도 목적으로 저장한다.
+- `935f042c` — BE-036 정산 `fix: commit settlement initialization per auction house and day`. 정산별 commit·실패/재시작·정확 key/날짜 계획·V42와 회귀.
+- BE-036 원장 — `refactor: stream reconciliation chains without entity accumulation`. 현재 scalar/chain cursor·기존 fingerprint/판정·snapshot 회귀를 별도 목적으로 저장한다.
 
 ## 남은 작업
 
@@ -1676,4 +1699,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-034의 캘린더/호환 작업 이력과 graph 내부 참조·관계 상한/partial 의미는 47차 범위다. 전체 목록·하위 이력 분리·출하 선택지 계약은 남는다.
 - BE-035의 실제 참조/날짜/계보 계획과 index·MIN 반복 개선은 48차 범위다. 미측정 검색/상태/집계/FK·운영 계획과 index 쓰기·배포 비용 검증은 남는다.
 - BE-036의 정산별 초기화 commit·유한 scan·정확 key 조회·날짜 index는 49차 범위다. 한 정산의 크기와 운영 부하 측정은 남는다.
+- BE-036의 원장 대사 scalar 현재 그룹·Entry cursor·일관된 snapshot과 이력/기존 fingerprint 회귀는 50차 범위다. 전체 그룹/오류·업무 참조/보정 누적·fingerprint 직렬화·장기 read transaction과 운영 heap/GC 검증은 남는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

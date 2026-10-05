@@ -421,6 +421,10 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 fingerprint를 포함한다. `PRE_BASELINE`, `BASELINE_PREPARING`, `ACTIVE` 단계별로 같은
 명령을 반복해 결과와 소요 시간을 보관한다.
 
+독립 대사는 read-only `REPEATABLE_READ` snapshot에서 현재 그룹·원장·업무 참조·전체 count를 읽는다. 그룹은 500행 scalar batch, 현재/삭제된 revision chain은 500행 fetch cursor로 순회한다. 긴 이력의 Entry/Mutation Entity를 전부 적재하지 않으며 fingerprint 형식과 오류 판정은 유지한다. 현재 그룹·baseline 값과 전체 오류, Work 참조/보정, fingerprint 직렬화는 계속 증가할 수 있다. fetch size는 JSON byte 크기나 전체 peak heap의 상한이 아니다. 대사 하나의 장기 snapshot은 유지되므로 큰 원장은 read 시간·heap/GC·vacuum 영향을 실제 복제본에서 확인한다.
+
+cutover가 쓰기 transaction 안에서 대사를 호출하면 기존 transaction/isolation에 참여한다. 별도 transaction으로 미확정 import·coverage를 재조회하거나 caller의 persistence context를 clear하지 않는다. 독립 대사의 일관된 snapshot만으로 이후 변경이나 cutover의 안전성을 보장하지 않으므로 기존 writer 중지·복원본 rehearsal·최종 확인 절차는 유지한다.
+
 이 명령은 state-chain 생성, coverage 활성화, 데이터 보정을 수행하지 않는다. 오류가
 있으면 대상 ID와 코드로 원인을 보정한 뒤 새 복원본에서 rehearsal을 다시 시작한다.
 
