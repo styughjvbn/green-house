@@ -1642,6 +1642,16 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 검증: HTTP transport 기본 2건 통과. 관련 PG 4개 클래스 20건 통과(전표 번호 1, Farm 코드 5, 입고 취소/포트 10, Work 상태 보호 4); `git diff --check` 통과. 전체 기본/frontend·format은 55차 완료 체크포인트에서 실행한다.
 - 범위: test harness 변경이며 운영 timeout/SLA는 바꾸지 않았다. JUnit method 상한은 Spring context/container 기동·DB 서버 statement·JVM 종료의 강제 종료 보장이 아니다. 무응답 서버의 JDBC 취소나 모든 executor의 종료 정책까지 확대하지 않았다.
 
+## 55차 변경 — BE-041 application member 승인·새 mutator 자동 탐지
+
+- OrchidGroup 상태 메서드 이름 목록을 제거했다. compiled field SET을 가진 method와 그 method로 위임하는 method/reference를 추적해 상태 writer를 발견한다. 외부 직접 field SET도 확인한다. engine/복구 migration의 실제 caller inventory, 생성자·Repository writer 경계는 유지하고 method/constructor reference 탐지를 추가했다.
+- 새 임의 이름 mutator·private 위임·method reference·직접 field write를 가진 bytecode 부정 fixture로 탐지 여부를 검증한다. 순수 getter/constructor는 기존 Entity mutation으로 잘못 분류하지 않는다. constructors는 기존 별도 생성 gate에서 확인한다. 이전 이름 목록에서 빠져 있던 실사/대사도 같은 규칙으로 포함된다.
+- 모듈 밖에서 사용하는 application TYPE/METHOD/CONSTRUCTOR를 별도 검토 목록으로 고정했다(490개 계약 항목). 기존 현재 소비 경계를 읽고 소유 API·값·adapter/port·복구 계약으로 검토했다. 내부 서비스의 모든 public method를 승인하지 않으며 기존 타입의 새 helper 호출/reference도 실패한다. type/member 목록은 caller class/라인/횟수를 포함하지 않고 기존 모듈 의존 방향 gate와 결합한다. 기준 파일은 자동 갱신하지 않으며 사라진 계약도 제거해야 한다.
+- 실제로 쓰는 public method/constructor와 구현한 외부 interface의 generic 입력/반환·nested record 값에서 Entity·Repository projection·storage callback 유출을 검사한다. record 값의 재귀 generic bound도 확인한다. Entity/callback 부정 fixture와 승인된 타입에 미승인 helper를 호출/reference하는 부정 fixture를 추가했다.
+- `@Query`/count root의 schema·FQCN·quoted 식별자 정규화를 추가해 같은 다른 모듈 table을 이름 표기만 바꿔 읽는 우회를 차단한다. 직접 read/write/count root와 association alias를 구별하는 회귀를 추가했다. 완전한 SQL parser는 도입하지 않았다.
+- 검증: 집중 architecture/탐지 helper 6개 클래스 26건 및 최종 전체 기본 139개 클래스 737건 통과(기존 임시 init script로 test heap 1GiB). 관련 PostgreSQL 12개 클래스 90건 통과: 역사/최신 migration 4, 코드 발급 6, 입고/상태 보호 14, Mutation/fence/routing 15, Work 취소/보정 39, Sales 잠금 순서 12. 기존 raw DB fence 부정/Mutation context rollback도 포함했다. frontend `npm run check`, `spotlessCheck`, `git diff --check` 통과. 전체 PostgreSQL suite·benchmark는 재실행하지 않았다. 이후 문서 변경만 반영했다.
+- 범위: 생산 domain/service·DB/API 계약은 바꾸지 않았다. 사용하지 않는 public method의 존재 자체를 금지하지 않으며 새 모듈 외부 사용을 검토한다. reflection·Opaque Object JSON·동적/alias/comma SQL·외부 XML query·새 Repository 원자 writer와 연관 객체 내부 변화는 구조 gate 밖의 검토/PG fence 범위다. architecture 통과를 transaction/수량 불변식 보장으로 확대하지 않는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1703,7 +1713,9 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - `5ed1d575` — BE-039 `test: decouple response ids dates and migration head assertions`. JSON path·고정 Clock·작은 농장 fixture·최신 upgrade 회귀.
 
-- BE-040 — `test: bound postgres http requests and concurrent waits`. 공통 transport·future·JUnit 상한과 실제 stalled response 회귀.
+- `30aca7c2` — BE-040 `test: bound postgres http requests and concurrent waits`. 공통 transport·future·JUnit 상한과 실제 stalled response 회귀.
+
+- BE-041 — `test: enforce application members and discover entity writers`. 명시 계약·값 유출·자동 writer 탐지와 부정 회귀.
 
 ## 남은 작업
 
@@ -1753,4 +1765,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-038의 정확 worker/owner 잠금 관측·Work/입고 양쪽 순서·재전송 중첩과 부정 회귀는 52차 범위다. 전체 writer의 병렬 충돌, BE-039 fixture와 BE-040 전역 timeout 개선은 남는다.
 - BE-039의 대표 JSON parser·년생/농장 날짜·단건 farm fixture·역사/최신 migration 구분은 53차 범위다. 다른 fixture 중복과 lifecycle 분해는 점진 후속이다.
 - BE-040의 공통/별도 PATCH HTTP·번호 발급 future·PG method/benchmark 상한·timeout 진단은 54차 범위다. context 기동/서버 JDBC 강제 취소·모든 executor 종료 정책은 별도다.
+- BE-041의 외부 application member 승인·generic 값 경계·compiled 새 mutator/참조/field write·query root 표기 우회는 55차 범위다. SQL parser·reflection/동적/alias SQL·새 원자 writer와 관련 객체 변화 검토는 남는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

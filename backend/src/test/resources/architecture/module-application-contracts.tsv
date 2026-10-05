@@ -1,0 +1,494 @@
+# Reviewed application contracts used across module boundaries (BE-041).
+# TYPE approves the type, not every public method. METHOD/CONSTRUCTOR approve exact used members.
+# Existing module dependency directions and Entity/Repository/HTTP coupling gates still apply.
+# Never replace this file automatically with the generated report; review additions and remove obsolete entries.
+CONSTRUCTOR	com.greenhouse.backend.auction.application.AuctionShipmentCreator$LotDraft.<init>(java.lang.Long, java.lang.String, java.lang.String, java.lang.String, java.lang.Integer)
+CONSTRUCTOR	com.greenhouse.backend.audit.application.AuditEvent$Target.<init>(java.lang.String, java.lang.Long)
+CONSTRUCTOR	com.greenhouse.backend.audit.application.AuditEvent$Target.<init>(java.lang.String, java.lang.Long, java.lang.Long, java.lang.Long, java.lang.Long, java.lang.Long)
+CONSTRUCTOR	com.greenhouse.backend.common.application.RequestActorProvider.<init>(boolean, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.OrchidGroupUsage.<init>(java.lang.String, java.lang.String, long)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationIssue.<init>(java.lang.String, java.lang.String, java.lang.String, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem.<init>(java.lang.Long, java.lang.Integer)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.sales.application.SalesMetricsReader$PartnerSales.<init>(java.lang.Long, long, long, long, long, java.time.LocalDate)
+CONSTRUCTOR	com.greenhouse.backend.work.application.correction.WorkCorrectionPlan.<init>(java.util.List, java.util.List, com.greenhouse.backend.work.application.correction.StructureChangeMutationReferences)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.InboundPottingCommand.<init>(java.lang.String, java.lang.Long, java.time.LocalDate, java.util.List, java.lang.String, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.InboundPottingResultInput.<init>(java.lang.Long, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.Boolean, java.math.BigDecimal, java.math.BigDecimal, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result.<init>(java.lang.Long, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.Boolean, java.math.BigDecimal, java.math.BigDecimal, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.LegacyRepotCommand.<init>(java.lang.String, java.lang.String, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.Long, java.lang.Integer, java.util.List, java.util.Set)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.StructureChangeCommand.<init>(java.lang.String, java.time.LocalDate, java.lang.String, java.lang.String, java.util.List, java.util.List)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.<init>(java.lang.Long, java.lang.Integer, java.lang.Long, java.lang.String, java.lang.Integer, com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose, java.lang.String, java.lang.Integer, java.lang.Boolean, java.math.BigDecimal, java.math.BigDecimal, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.StructureChangeSourceInput.<init>(java.lang.Long, java.lang.Integer, java.math.BigDecimal, java.math.BigDecimal)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkEffectResults$Adjustment.<init>(java.lang.Long, int, java.lang.String, int, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkEffectResults$Discarded.<init>(java.lang.Long, int, int, int, java.lang.String, java.lang.String, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkEffectResults$Json.<init>(java.util.Map)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkEffectResults$Potted.<init>(java.lang.Long, java.util.List, int)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkEffectResults$ResultGroup.<init>(java.lang.Long, int, com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkEffectResults$Transformation.<init>(java.lang.String, java.util.Map, int, int, java.util.List, java.lang.Integer)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkEffectResults$Transformation.<init>(java.lang.String, java.util.Map, int, int, java.util.List, java.lang.Integer, boolean)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkExecutionResult.<init>(java.lang.String, com.greenhouse.backend.work.application.effect.WorkEffectResultDetails, java.util.List, com.greenhouse.backend.work.application.effect.WorkMutationLink)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkMutationLink.<init>(java.lang.Long, java.util.UUID)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.<init>(java.lang.String, java.lang.String, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.String, java.lang.Integer, java.lang.String, java.lang.Long, java.math.BigDecimal, java.math.BigDecimal)
+CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkStateChainMutationLinkCommand.<init>(java.lang.Long, java.lang.Long, java.util.UUID)
+CONSTRUCTOR	com.greenhouse.backend.work.application.operation.PottingVoidPort$Inspection.<init>(java.util.List, java.util.List)
+CONSTRUCTOR	com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand.<init>(java.lang.Long, java.time.LocalDate, java.lang.Long, java.lang.String, java.lang.Integer, java.lang.String, java.util.Map, java.util.List, java.lang.String, java.lang.String, java.util.Map)
+CONSTRUCTOR	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Blocker.<init>(java.lang.String, java.lang.String, long)
+CONSTRUCTOR	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Inspection.<init>(java.util.List, java.util.List, java.util.List)
+CONSTRUCTOR	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$OrchidGroupSummary.<init>(java.lang.Long, java.lang.String, java.lang.Integer)
+CONSTRUCTOR	com.greenhouse.backend.work.application.operation.WorkExecutionLocation.<init>(java.lang.Integer, java.lang.Integer, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$Edge.<init>(java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$Fragment.<init>(boolean, java.util.List, java.util.List, java.util.List)
+CONSTRUCTOR	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$MutationNode.<init>(java.lang.Long, java.lang.String, java.time.LocalDate, java.time.Instant)
+CONSTRUCTOR	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$State.<init>(java.lang.Integer, java.lang.Integer, java.lang.String, java.lang.Long, java.lang.String, java.lang.String, java.lang.Integer, java.lang.String, java.lang.Long, java.lang.Integer, java.lang.Integer, java.lang.String, java.math.BigDecimal, java.math.BigDecimal)
+CONSTRUCTOR	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$StateNode.<init>(java.lang.String, java.lang.Long, java.lang.Long, com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$State)
+CONSTRUCTOR	com.greenhouse.backend.work.application.target.InboundPottingPlanTarget.<init>(java.lang.Long, java.lang.Long, java.lang.String, java.lang.String, java.lang.Integer, java.lang.Integer, java.lang.String, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.work.application.target.ResolvedWorkTarget.<init>(java.lang.Long, java.lang.Long, java.lang.String, java.lang.Integer, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map)
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Lot.id()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Lot.itemName()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Lot.shipmentGrade()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Lot.shippedQuantity()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Lot.varietyName()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Result.amount()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Result.auctionDate()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Result.auctionHouseId()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Result.id()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Result.lotId()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Result.quantity()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Result.shipmentDate()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Result.shipmentGrade()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Result.unitPrice()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Result.varietyName()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Shipment.auctionHouseId()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Shipment.auctionMarket()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Shipment.id()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Shipment.lots()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader$Shipment.shipmentDate()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader.getLotShipmentIds(java.util.Collection)
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader.getMarketNames(java.util.Collection)
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader.getMaximumSoldResultId()
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader.getResults(java.util.Collection)
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader.getShipmentIdsNewestFirst(int, int)
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader.getShipmentsWithLotsNewestFirst(java.util.Collection)
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader.getSoldResultIdsBetween(long, long, int)
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader.getSoldResultLines(java.lang.Long, java.time.LocalDate)
+METHOD	com.greenhouse.backend.auction.application.AuctionDataReader.getSoldResultLinesUpTo(java.lang.Long, java.time.LocalDate, long)
+METHOD	com.greenhouse.backend.auction.application.AuctionShipmentCreator$CreatedShipment.id()
+METHOD	com.greenhouse.backend.auction.application.AuctionShipmentCreator$CreatedShipment.lotIdsBySourceItemId()
+METHOD	com.greenhouse.backend.auction.application.AuctionShipmentCreator.create(java.time.LocalDate, java.lang.Long, java.util.List)
+METHOD	com.greenhouse.backend.auction.application.AuctionShipmentLifecycleService.deleteDraftShipment(java.lang.Long)
+METHOD	com.greenhouse.backend.auction.application.AuctionShipmentLifecycleService.findNonCancelableShipmentIds(java.util.Collection)
+METHOD	com.greenhouse.backend.audit.application.AuditEventWriter.detectChanges(java.util.Map, java.util.Map)
+METHOD	com.greenhouse.backend.audit.application.AuditEventWriter.record(com.greenhouse.backend.audit.domain.AuditAction, com.greenhouse.backend.audit.domain.AuditSource, com.greenhouse.backend.audit.application.AuditEvent$Target, java.util.Map, java.util.Map, java.util.Map)
+METHOD	com.greenhouse.backend.audit.application.AuditEventWriter.record(com.greenhouse.backend.audit.domain.AuditAction, com.greenhouse.backend.audit.domain.AuditSource, java.lang.String, java.lang.Long, java.util.Map, java.util.Map, java.util.Map)
+METHOD	com.greenhouse.backend.audit.application.AuditEventWriter.recordChanges(com.greenhouse.backend.audit.domain.AuditAction, com.greenhouse.backend.audit.domain.AuditSource, com.greenhouse.backend.audit.application.AuditEvent$Target, java.util.List, java.lang.Object, java.lang.Object, java.util.Map)
+METHOD	com.greenhouse.backend.common.application.RequestActorProvider.resolve(java.lang.String)
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupReader.getStates(java.util.Collection)
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupReader.lockGroups(java.util.Collection)
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupReader.lockStates(java.util.Collection)
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupReader.searchSellable(java.lang.String, java.lang.Long, java.lang.String)
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.ageYear()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.availableQuantity()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.bedZoneId()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.bedZoneName()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.endPosition()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.genus()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.houseId()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.houseNumber()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.id()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.physicalBedId()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.physicalBedNumber()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.potSize()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.potSizeCode()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.quantity()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.reservedQuantity()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.startPosition()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.status()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.varietyId()
+METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.varietyName()
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup.orchidGroupId()
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup.snapshot()
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.consumeReservation(com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand)
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.releaseReservation(com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand)
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.reserve(com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand)
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.restoreOutbound(com.greenhouse.backend.farm.application.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand)
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult.correlationId()
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult.mutationId()
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult.replayed()
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources.sales(java.lang.Long, java.lang.String)
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations.current(java.util.List)
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations.legacy()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$InventorySummary.saleableQuantity()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$InventorySummary.varieties()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$Snapshot.bedZoneCount()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$Snapshot.houseCount()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$Snapshot.orchidGroupCount()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$Snapshot.physicalBedCount()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$Snapshot.warningCount()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$VarietyInventory.saleableQuantity()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$VarietyInventory.varietyName()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$VarietyInventory.warningGroupCount()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader.getInventorySummary()
+METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader.getSnapshot()
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerInfo.id()
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerInfo.name()
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerInfo.partnerType()
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerLock.lockAll(java.util.Collection)
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerReader$Identity.name()
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerReader$Identity.partnerType()
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerReader.findMatchingIds(com.greenhouse.backend.partner.domain.PartnerTextMatch, java.lang.String)
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerReader.findMatchingIds(java.util.Collection)
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerReader.getActiveInfo(java.lang.Long)
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerReader.getAllInfo(java.util.Collection)
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerReader.getIdentities(java.util.Collection)
+METHOD	com.greenhouse.backend.partner.application.BusinessPartnerReader.getInfo(java.lang.Long)
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$NamedAmount.amount()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$NamedAmount.name()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$PartnerSales.latestSaleDate()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$PartnerSales.paidAmount()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$PartnerSales.partnerId()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$PartnerSales.totalSales()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$PartnerSales.transactionCount()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$PartnerSales.unpaidAmount()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$SlipSummary.id()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$SlipSummary.paidAmount()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$SlipSummary.partnerId()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$SlipSummary.paymentStatus()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$SlipSummary.remainingAmount()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$SlipSummary.saleDate()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$SlipSummary.salesStatus()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$SlipSummary.slipNumber()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader$SlipSummary.totalAmount()
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader.monthlySales(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader.partnerSales(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader.paymentBreakdown(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader.recentSlips(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader.sumSales(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader.sumShippedQuantity(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader.sumUnpaidAmount(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader.unpaidSlips(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.application.SalesMetricsReader.varietySales(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.application.SalesQueryService.getSalesSlip(java.lang.Long)
+METHOD	com.greenhouse.backend.sales.application.SalesQueryService.getSalesSlipPage(java.lang.Long, java.time.LocalDate, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.String, int, int)
+METHOD	com.greenhouse.backend.settlement.application.AuctionSettlementReader.existsByAuctionShipmentId(java.lang.Long)
+METHOD	com.greenhouse.backend.settlement.application.AuctionSettlementReader.findSettledAuctionShipmentIds(java.util.Collection)
+METHOD	com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator.calculate(java.lang.Long, java.time.LocalDate)
+METHOD	com.greenhouse.backend.settlement.application.ManualPaymentCommand.amount()
+METHOD	com.greenhouse.backend.settlement.application.PartnerBalanceService$Balance.creditBalance()
+METHOD	com.greenhouse.backend.settlement.application.PartnerBalanceService$Balance.hasPositiveBalance()
+METHOD	com.greenhouse.backend.settlement.application.PartnerBalanceService$Balance.receivableBalance()
+METHOD	com.greenhouse.backend.settlement.application.PartnerBalanceService$Balance.unappliedPaymentAmount()
+METHOD	com.greenhouse.backend.settlement.application.PartnerBalanceService.getNonzeroBalances()
+METHOD	com.greenhouse.backend.settlement.application.PartnerBalanceService.lockPartners(java.util.Collection)
+METHOD	com.greenhouse.backend.settlement.application.PartnerBalanceService.updateReceivable(java.lang.Long, java.lang.Long, java.lang.Long)
+METHOD	com.greenhouse.backend.settlement.application.PaymentEventReader.existsByTarget(com.greenhouse.backend.settlement.domain.PaymentTargetType, java.lang.Long)
+METHOD	com.greenhouse.backend.settlement.application.PaymentEventReader.findExistingTargetIds(com.greenhouse.backend.settlement.domain.PaymentTargetType, java.util.List)
+METHOD	com.greenhouse.backend.settlement.application.PaymentLedgerService.findManualPayment(com.greenhouse.backend.settlement.domain.PaymentTargetType, java.lang.Long, com.greenhouse.backend.settlement.application.ManualPaymentCommand)
+METHOD	com.greenhouse.backend.settlement.application.PaymentLedgerService.recordManualPayment(java.lang.Long, com.greenhouse.backend.settlement.domain.PaymentTargetType, java.lang.Long, com.greenhouse.backend.settlement.application.ManualPaymentCommand)
+METHOD	com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput.orchidGroupId()
+METHOD	com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput.quantity()
+METHOD	com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput.status()
+METHOD	com.greenhouse.backend.work.application.correction.StructureChangeMutationReferences.legacySource()
+METHOD	com.greenhouse.backend.work.application.correction.StructureChangeMutationReferences.mutationIds()
+METHOD	com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader.getActiveOrchidGroupIds(java.lang.Long)
+METHOD	com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader.getCorrectableResultOrchidGroupIds(java.lang.Long)
+METHOD	com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader.getMutationReferences(java.lang.Long, java.util.Set)
+METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionCommand.cancelResultCreation()
+METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionCommand.orchidGroupAdjustments()
+METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionCommand.reason()
+METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionCommand.workDate()
+METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionPlan.adjustments()
+METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionPlan.mutationReferences()
+METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionQuantityService.context(java.lang.Long)
+METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionQuantityService.requireEnabled()
+METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionQuantityService.validate(java.lang.Long, com.greenhouse.backend.work.application.correction.WorkCorrectionCommand)
+METHOD	com.greenhouse.backend.work.application.correction.WorkQuantityBalance.resultQuantities()
+METHOD	com.greenhouse.backend.work.application.correction.WorkQuantityBalanceChange.before()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingCommand.inboundRecordId()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingCommand.memo()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingCommand.pottingDate()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingCommand.results()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec.decode(java.lang.Long, java.util.Map)
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingResultInput.ageYear()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingResultInput.bedZoneId()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingResultInput.endPosition()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingResultInput.memo()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingResultInput.placementType()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingResultInput.potSize()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingResultInput.quantity()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingResultInput.splitPlacementAllowed()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingResultInput.startPosition()
+METHOD	com.greenhouse.backend.work.application.effect.InboundPottingResultInput.trayCount()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result.ageYear()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result.bedZoneId()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result.endPosition()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result.memo()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result.placementType()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result.potSize()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result.quantity()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result.splitPlacementAllowed()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result.startPosition()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result.trayCount()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand.idempotencyKey()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand.inheritCollectionIds()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand.inputQuantity()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand.memo()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand.results()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand.sourceOrchidGroupId()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand.workDate()
+METHOD	com.greenhouse.backend.work.application.effect.LegacyRepotCommand.worker()
+METHOD	com.greenhouse.backend.work.application.effect.MovementQuantityAllocator.allocateMovedBySource(com.greenhouse.backend.work.application.effect.StructureChangeCommand)
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeCommand.completedDate()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeCommand.idempotencyKey()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeCommand.memo()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeCommand.results()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeCommand.sources()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.appliedAt()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.id()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.increaseQuantity()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.lossQuantity()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.results()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.sources()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.structureType()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.workOperationId()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageGroupView.orchidGroupId()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageGroupView.quantity()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageQueryService.findByOrchidGroupId(java.lang.Long)
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.ageYear()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.attributeSourceOrchidGroupId()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.bedZoneId()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.endPosition()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.memo()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.placementType()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.potSize()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.purpose()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.quantity()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.splitPlacementAllowed()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.startPosition()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeResultInput.trayCount()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeSourceInput.inputQuantity()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeSourceInput.releasedEndPosition()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeSourceInput.releasedStartPosition()
+METHOD	com.greenhouse.backend.work.application.effect.StructureChangeSourceInput.sourceOrchidGroupId()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectCommand.effectKey()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectCommand.executedAt()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectCommand.payload()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectCommand.payloadAs(java.lang.Class)
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectCommand.placementExclusionOrchidGroupIds()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectCommand.resultDetails()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectCommand.worker()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectContext$Target.inboundRecordId()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectContext$Target.orchidGroupId()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectContext$Target.referenceType()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectContext.operationId()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectContext.plannedStartDate()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectContext.target()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectContext.workTypeCode()
+METHOD	com.greenhouse.backend.work.application.effect.WorkEffectResults$Adjustment.orchidGroupId()
+METHOD	com.greenhouse.backend.work.application.effect.WorkExecutionResult.resultOrchidGroupIds()
+METHOD	com.greenhouse.backend.work.application.effect.WorkMutationLink.mutationId()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector.inspect()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference.changesGroups()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference.correlationId()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference.id()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference.mutationId()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference.orchidGroupIds()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.corrections()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.effectOrchidGroupIds()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.incompleteMutationLinkEffectIds()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.invalidExecutionIds()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.targetOrchidGroupIds()
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupStateChainMigrationService.linkMutations(java.util.List)
+METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupStateChainMigrationService.resolveSources(java.util.Collection)
+METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.actualBedZoneId()
+METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.actualEndPosition()
+METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.actualQuantity()
+METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.actualStartPosition()
+METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.actualStatus()
+METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.reason()
+METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.workDate()
+METHOD	com.greenhouse.backend.work.application.effect.WorkStateChainMutationSource.effectKey()
+METHOD	com.greenhouse.backend.work.application.effect.WorkStateChainMutationSource.workOperationId()
+METHOD	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService.executeVarietyHistoryForTarget(java.lang.String, java.lang.String, java.lang.String, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.Long, java.util.Map, com.greenhouse.backend.work.application.effect.WorkEffectPayload)
+METHOD	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService.getStructureChangeResultOrchidGroupIds(java.lang.Long, java.lang.String)
+METHOD	com.greenhouse.backend.work.application.operation.InboundPottingOperationService.executeNow(com.greenhouse.backend.work.application.effect.InboundPottingCommand)
+METHOD	com.greenhouse.backend.work.application.operation.InboundPottingOperationService.voidForInbound(java.lang.Long, java.lang.String, java.lang.String)
+METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.cancelForInboundRecord(java.lang.Long)
+METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.findInboundIdsWithUndoablePotting(java.util.Collection)
+METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.lockForInboundChange(java.lang.Long)
+METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.voidInboundRegistrationForCancellation(java.lang.Long, java.lang.String, java.lang.String)
+METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.voidPottingForInboundRecord(java.lang.Long, java.lang.String, java.lang.String)
+METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder.record(com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand, com.greenhouse.backend.work.application.effect.WorkMutationLink)
+METHOD	com.greenhouse.backend.work.application.operation.PottingVoidPort$Effect.inboundRecordId()
+METHOD	com.greenhouse.backend.work.application.operation.PottingVoidPort$Effect.mutationId()
+METHOD	com.greenhouse.backend.work.application.operation.PottingVoidPort$Inspection.blockers()
+METHOD	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Blocker.message()
+METHOD	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Inspection.blockers()
+METHOD	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Inspection.resultOrchidGroups()
+METHOD	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Inspection.sourceOrchidGroups()
+METHOD	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$OrchidGroupSummary.orchidGroupId()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata.id()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata.title()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata.workType()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata.workTypeCode()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader.findByIds(java.util.Collection)
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader.findOriginalsByCorrectionMutationIds(java.util.Collection)
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.id()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.memo()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.sourceScopeType()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.status()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.title()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.workDate()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.workType()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.workTypeTemplate()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.worker()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.latestWorkDate()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.movementCount()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.recentRecords()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.statusCount()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.totalCount()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.typeCounts()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$TypeCount.count()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$TypeCount.name()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader.getLatestWorkDates(java.util.Collection)
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader.getSummary(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$Fragment.empty()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationQueryService.get(java.lang.Long)
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationView.details()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationView.id()
+METHOD	com.greenhouse.backend.work.application.operation.WorkOperationView.sourceScopeId()
+METHOD	com.greenhouse.backend.work.application.target.ResolvedWorkTarget.orchidGroupId()
+METHOD	com.greenhouse.backend.work.application.target.WorkOrchidGroupUsageInspector.countOtherOperations(java.util.Set, java.lang.Long)
+METHOD	com.greenhouse.backend.work.application.target.WorkOrchidGroupUsageInspector.hasReferencesOutside(java.util.Set, java.util.Set)
+METHOD	com.greenhouse.backend.work.application.target.WorkOrchidGroupUsageInspector.hasUncanceledReference(java.lang.Long)
+METHOD	com.greenhouse.backend.work.application.target.WorkTargetSelection.sourceDerivedGroupKey()
+METHOD	com.greenhouse.backend.work.application.target.WorkTargetSelection.sourceOrchidGroupIds()
+METHOD	com.greenhouse.backend.work.application.target.WorkTargetSelection.sourceScopeId()
+METHOD	com.greenhouse.backend.work.application.target.WorkTargetSelection.sourceScopeType()
+TYPE	com.greenhouse.backend.auction.application.AuctionDataReader
+TYPE	com.greenhouse.backend.auction.application.AuctionDataReader$Lot
+TYPE	com.greenhouse.backend.auction.application.AuctionDataReader$Result
+TYPE	com.greenhouse.backend.auction.application.AuctionDataReader$Shipment
+TYPE	com.greenhouse.backend.auction.application.AuctionShipmentCreator
+TYPE	com.greenhouse.backend.auction.application.AuctionShipmentCreator$CreatedShipment
+TYPE	com.greenhouse.backend.auction.application.AuctionShipmentCreator$LotDraft
+TYPE	com.greenhouse.backend.auction.application.AuctionShipmentLifecycleService
+TYPE	com.greenhouse.backend.audit.application.AuditEvent$Target
+TYPE	com.greenhouse.backend.audit.application.AuditEventWriter
+TYPE	com.greenhouse.backend.common.application.RequestActorProvider
+TYPE	com.greenhouse.backend.farm.application.orchid.OrchidGroupReader
+TYPE	com.greenhouse.backend.farm.application.orchid.OrchidGroupState
+TYPE	com.greenhouse.backend.farm.application.orchid.OrchidGroupUsage
+TYPE	com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationIssue
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerRehearsalInspector
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand
+TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader
+TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader$InventorySummary
+TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader$Snapshot
+TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader$VarietyInventory
+TYPE	com.greenhouse.backend.partner.application.BusinessPartnerInfo
+TYPE	com.greenhouse.backend.partner.application.BusinessPartnerLock
+TYPE	com.greenhouse.backend.partner.application.BusinessPartnerReader
+TYPE	com.greenhouse.backend.partner.application.BusinessPartnerReader$Identity
+TYPE	com.greenhouse.backend.sales.application.SalesMetricsReader
+TYPE	com.greenhouse.backend.sales.application.SalesMetricsReader$NamedAmount
+TYPE	com.greenhouse.backend.sales.application.SalesMetricsReader$PartnerSales
+TYPE	com.greenhouse.backend.sales.application.SalesMetricsReader$SlipSummary
+TYPE	com.greenhouse.backend.sales.application.SalesQueryService
+TYPE	com.greenhouse.backend.sales.application.document.SalesSlipDocument
+TYPE	com.greenhouse.backend.sales.application.document.SalesSlipSummary
+TYPE	com.greenhouse.backend.settlement.application.AuctionSettlementReader
+TYPE	com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator
+TYPE	com.greenhouse.backend.settlement.application.ManualPaymentCommand
+TYPE	com.greenhouse.backend.settlement.application.PartnerBalanceService
+TYPE	com.greenhouse.backend.settlement.application.PartnerBalanceService$Balance
+TYPE	com.greenhouse.backend.settlement.application.PaymentEventReader
+TYPE	com.greenhouse.backend.settlement.application.PaymentLedgerService
+TYPE	com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput
+TYPE	com.greenhouse.backend.work.application.correction.StructureChangeMutationReferences
+TYPE	com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader
+TYPE	com.greenhouse.backend.work.application.correction.WorkCorrectionCommand
+TYPE	com.greenhouse.backend.work.application.correction.WorkCorrectionPlan
+TYPE	com.greenhouse.backend.work.application.correction.WorkCorrectionPort
+TYPE	com.greenhouse.backend.work.application.correction.WorkCorrectionQuantityService
+TYPE	com.greenhouse.backend.work.application.correction.WorkQuantityBalance
+TYPE	com.greenhouse.backend.work.application.correction.WorkQuantityBalanceChange
+TYPE	com.greenhouse.backend.work.application.effect.InboundPottingCommand
+TYPE	com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec
+TYPE	com.greenhouse.backend.work.application.effect.InboundPottingResultInput
+TYPE	com.greenhouse.backend.work.application.effect.LegacyRepotCommand
+TYPE	com.greenhouse.backend.work.application.effect.LegacyRepotCommand$Result
+TYPE	com.greenhouse.backend.work.application.effect.MovementQuantityAllocator
+TYPE	com.greenhouse.backend.work.application.effect.StructureChangeCommand
+TYPE	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView
+TYPE	com.greenhouse.backend.work.application.effect.StructureChangeLineageGroupView
+TYPE	com.greenhouse.backend.work.application.effect.StructureChangeLineageQueryService
+TYPE	com.greenhouse.backend.work.application.effect.StructureChangeResultInput
+TYPE	com.greenhouse.backend.work.application.effect.StructureChangeSourceInput
+TYPE	com.greenhouse.backend.work.application.effect.WorkEffectCommand
+TYPE	com.greenhouse.backend.work.application.effect.WorkEffectContext
+TYPE	com.greenhouse.backend.work.application.effect.WorkEffectContext$Target
+TYPE	com.greenhouse.backend.work.application.effect.WorkEffectHandler
+TYPE	com.greenhouse.backend.work.application.effect.WorkEffectResults$Adjustment
+TYPE	com.greenhouse.backend.work.application.effect.WorkEffectResults$Discarded
+TYPE	com.greenhouse.backend.work.application.effect.WorkEffectResults$Json
+TYPE	com.greenhouse.backend.work.application.effect.WorkEffectResults$Potted
+TYPE	com.greenhouse.backend.work.application.effect.WorkEffectResults$ResultGroup
+TYPE	com.greenhouse.backend.work.application.effect.WorkEffectResults$Transformation
+TYPE	com.greenhouse.backend.work.application.effect.WorkExecutionResult
+TYPE	com.greenhouse.backend.work.application.effect.WorkMutationLink
+TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector
+TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport
+TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference
+TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupStateChainMigrationService
+TYPE	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand
+TYPE	com.greenhouse.backend.work.application.effect.WorkStateChainMutationLinkCommand
+TYPE	com.greenhouse.backend.work.application.effect.WorkStateChainMutationSource
+TYPE	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService
+TYPE	com.greenhouse.backend.work.application.operation.InboundPottingOperationService
+TYPE	com.greenhouse.backend.work.application.operation.InboundPottingVoidPort
+TYPE	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService
+TYPE	com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder
+TYPE	com.greenhouse.backend.work.application.operation.PottingVoidPort
+TYPE	com.greenhouse.backend.work.application.operation.PottingVoidPort$Effect
+TYPE	com.greenhouse.backend.work.application.operation.PottingVoidPort$Inspection
+TYPE	com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand
+TYPE	com.greenhouse.backend.work.application.operation.StructureChangeRecordLockPort
+TYPE	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort
+TYPE	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Blocker
+TYPE	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Inspection
+TYPE	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$OrchidGroupSummary
+TYPE	com.greenhouse.backend.work.application.operation.WorkExecutionLocation
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$TypeCount
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$Edge
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$Fragment
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$MutationNode
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$State
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort$StateNode
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationQueryService
+TYPE	com.greenhouse.backend.work.application.operation.WorkOperationView
+TYPE	com.greenhouse.backend.work.application.target.InboundPottingPlanGateway
+TYPE	com.greenhouse.backend.work.application.target.InboundPottingPlanTarget
+TYPE	com.greenhouse.backend.work.application.target.ResolvedWorkTarget
+TYPE	com.greenhouse.backend.work.application.target.WorkExecutionReferenceGateway
+TYPE	com.greenhouse.backend.work.application.target.WorkOrchidGroupUsageInspector
+TYPE	com.greenhouse.backend.work.application.target.WorkTargetResolver
+TYPE	com.greenhouse.backend.work.application.target.WorkTargetSelection

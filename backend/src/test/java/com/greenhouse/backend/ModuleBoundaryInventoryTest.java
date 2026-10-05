@@ -14,11 +14,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-/** Exact, temporary exceptions while module APIs replace persistence and HTTP coupling. */
+/** Exact implementation exceptions and explicitly reviewed cross-module application contracts. */
 class ModuleBoundaryInventoryTest {
 
   private static final String BASE_PACKAGE = "com.greenhouse.backend.";
@@ -31,9 +30,6 @@ class ModuleBoundaryInventoryTest {
   private static final Path INVENTORY_ROOT = Path.of("src/test/resources/architecture");
 
   private static final Path REPORT_ROOT = Path.of("build/reports/architecture");
-
-  private static final Pattern QUERY_TARGET =
-      Pattern.compile("(?i)\\b(?:from|join|update|into)\\s+([a-zA-Z_][\\w.]*)");
 
   @Test
   void compiledDependenciesFollowTheDeclaredModuleGraph() {
@@ -64,6 +60,12 @@ class ModuleBoundaryInventoryTest {
       }
     }
     assertInventory("module-implementation-dependencies.tsv", dependencies);
+  }
+
+  @Test
+  void crossModuleApplicationTypesAndMembersMatchReviewedContracts() throws IOException {
+    assertInventory(
+        "module-application-contracts.tsv", CrossModuleApplicationApiInspection.contracts(CLASSES));
   }
 
   @Test
@@ -118,9 +120,7 @@ class ModuleBoundaryInventoryTest {
         boolean nativeQuery = Boolean.TRUE.equals(annotation.get("nativeQuery").orElse(false));
         for (String attribute : Set.of("value", "countQuery")) {
           String query = annotation.get(attribute).orElse("").toString();
-          var matcher = QUERY_TARGET.matcher(query);
-          while (matcher.find()) {
-            String name = matcher.group(1);
+          for (String name : AnnotatedQueryTargets.names(query, nativeQuery)) {
             JavaClass target = (nativeQuery ? tables : entities).get(name);
             if (target != null && isCrossModule(origin, target)) {
               dependencies.add(

@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.support.EntityWriterInspection;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class OrchidGroupWriterArchitectureTest {
@@ -18,25 +20,6 @@ class OrchidGroupWriterArchitectureTest {
       new ClassFileImporter()
           .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
           .importPackages("com.greenhouse.backend");
-
-  private static final Set<String> ORCHID_GROUP_STATE_METHODS =
-      Set.of(
-          "updateDetails",
-          "moveTo",
-          "assignVariety",
-          "assignInboundRecord",
-          "cancelCreation",
-          "applyRepot",
-          "applyTransformation",
-          "discard",
-          "correctQuantityAndStatus",
-          "reserve",
-          "releaseReserved",
-          "outboundReserved",
-          "restoreOutbound",
-          "establishBaselineRevision",
-          "establishCreationRevision",
-          "advanceStateRevision");
 
   private static final Set<String> TARGET_DIRECT_STATE_WRITER_INVENTORY =
       Set.of("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine");
@@ -75,7 +58,7 @@ class OrchidGroupWriterArchitectureTest {
 
   @Test
   void directStateMutationCallersMatchTheLifecycleInventories() {
-    assertThat(methodCallers(OrchidGroup.class, ORCHID_GROUP_STATE_METHODS))
+    assertThat(EntityWriterInspection.stateCallers(APPLICATION_CLASSES, OrchidGroup.class))
         .containsExactlyInAnyOrderElementsOf(
             union(TARGET_DIRECT_STATE_WRITER_INVENTORY, RECOVERY_DIRECT_STATE_WRITER_INVENTORY));
   }
@@ -84,7 +67,11 @@ class OrchidGroupWriterArchitectureTest {
   void constructorsAndRepositoryWritesMatchTheLifecycleInventories() {
     Set<String> constructorCallers =
         APPLICATION_CLASSES.stream()
-            .flatMap(javaClass -> javaClass.getConstructorCallsFromSelf().stream())
+            .flatMap(
+                javaClass ->
+                    Stream.concat(
+                        javaClass.getConstructorCallsFromSelf().stream(),
+                        javaClass.getConstructorReferencesFromSelf().stream()))
             .filter(call -> call.getTargetOwner().isEquivalentTo(OrchidGroup.class))
             .map(call -> call.getOriginOwner().getName())
             .collect(Collectors.toSet());
@@ -97,7 +84,11 @@ class OrchidGroupWriterArchitectureTest {
 
   private Set<String> methodCallers(Class<?> targetOwner, Set<String> methodNames) {
     return APPLICATION_CLASSES.stream()
-        .flatMap(javaClass -> javaClass.getMethodCallsFromSelf().stream())
+        .flatMap(
+            javaClass ->
+                Stream.concat(
+                    javaClass.getMethodCallsFromSelf().stream(),
+                    javaClass.getMethodReferencesFromSelf().stream()))
         .filter(call -> call.getTargetOwner().isEquivalentTo(targetOwner))
         .filter(call -> !call.getOriginOwner().isEquivalentTo(targetOwner))
         .filter(call -> methodNames.contains(call.getTarget().getName()))
