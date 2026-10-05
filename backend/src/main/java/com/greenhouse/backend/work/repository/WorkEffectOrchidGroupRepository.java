@@ -46,9 +46,17 @@ public interface WorkEffectOrchidGroupRepository
         "workAppliedEffect.workOperation",
         "workAppliedEffect.workOperation.workType"
       })
-  List<WorkEffectOrchidGroup>
+  @Query(
+      "select link from WorkEffectOrchidGroup link where "
+          + "cast(sql('(? = any(?))', link.orchidGroupId, :orchidGroupIds) as boolean) = true "
+          + "order by link.workAppliedEffect.appliedAt desc, link.workAppliedEffect.id desc")
+  List<WorkEffectOrchidGroup> findHistoryLinksByIdArray(Long[] orchidGroupIds);
+
+  default List<WorkEffectOrchidGroup>
       findByOrchidGroupIdInOrderByWorkAppliedEffectAppliedAtDescWorkAppliedEffectIdDesc(
-          Collection<Long> orchidGroupIds);
+          Collection<Long> orchidGroupIds) {
+    return findHistoryLinksByIdArray(orchidGroupIds.toArray(Long[]::new));
+  }
 
   @EntityGraph(
       attributePaths = {
@@ -56,9 +64,18 @@ public interface WorkEffectOrchidGroupRepository
         "workAppliedEffect.workOperation",
         "workAppliedEffect.workOperation.workType"
       })
-  List<WorkEffectOrchidGroup>
+  @Query(
+      "select link from WorkEffectOrchidGroup link where link.workAppliedEffect.workOperation.id in :workOperationIds "
+          + "and cast(sql('(? = any(?))', link.orchidGroupId, :orchidGroupIds) as boolean) = true "
+          + "order by link.workAppliedEffect.workOperation.id, link.id")
+  List<WorkEffectOrchidGroup> findPageHistoryLinksByIdArray(
+      Collection<Long> workOperationIds, Long[] orchidGroupIds);
+
+  default List<WorkEffectOrchidGroup>
       findByWorkAppliedEffectWorkOperationIdInAndOrchidGroupIdInOrderByWorkAppliedEffectWorkOperationIdAscIdAsc(
-          Collection<Long> workOperationIds, Collection<Long> orchidGroupIds);
+          Collection<Long> workOperationIds, Collection<Long> orchidGroupIds) {
+    return findPageHistoryLinksByIdArray(workOperationIds, orchidGroupIds.toArray(Long[]::new));
+  }
 
   boolean existsByOrchidGroupIdAndWorkAppliedEffectWorkOperationStatusNotIn(
       Long orchidGroupId, Collection<WorkOperationStatus> ignoredStatuses);

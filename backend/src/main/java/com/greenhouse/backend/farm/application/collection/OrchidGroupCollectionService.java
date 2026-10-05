@@ -200,7 +200,7 @@ public class OrchidGroupCollectionService {
     Map<Long, OrchidGroup> groupsById =
         groupIds.isEmpty()
             ? Map.of()
-            : orchidGroupRepository.findDetailsByIds(groupIds).stream()
+            : orchidGroupRepository.findDetailsInBatches(groupIds).stream()
                 .collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
     Map<Long, List<OrchidGroupCollectionMember>> membersByCollection =
         members.stream()

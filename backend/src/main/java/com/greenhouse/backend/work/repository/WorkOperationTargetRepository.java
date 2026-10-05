@@ -85,12 +85,29 @@ public interface WorkOperationTargetRepository extends JpaRepository<WorkOperati
           Long orchidGroupId);
 
   @EntityGraph(attributePaths = {"workOperation", "workOperation.workType"})
-  List<WorkOperationTarget>
+  @Query(
+      "select t from WorkOperationTarget t where "
+          + "cast(sql('(? = any(?))', t.orchidGroupId, :orchidGroupIds) as boolean) = true "
+          + "and t.excludedAt is null order by t.workOperation.plannedStartDate desc, t.workOperation.id desc")
+  List<WorkOperationTarget> findHistoryTargetsByIdArray(Long[] orchidGroupIds);
+
+  default List<WorkOperationTarget>
       findByOrchidGroupIdInAndExcludedAtIsNullOrderByWorkOperationPlannedStartDateDescWorkOperationIdDesc(
-          Collection<Long> orchidGroupIds);
+          Collection<Long> orchidGroupIds) {
+    return findHistoryTargetsByIdArray(orchidGroupIds.toArray(Long[]::new));
+  }
 
   @EntityGraph(attributePaths = {"workOperation", "workOperation.workType"})
-  List<WorkOperationTarget>
+  @Query(
+      "select t from WorkOperationTarget t where t.workOperation.id in :workOperationIds "
+          + "and cast(sql('(? = any(?))', t.orchidGroupId, :orchidGroupIds) as boolean) = true "
+          + "and t.excludedAt is null order by t.workOperation.id, t.id")
+  List<WorkOperationTarget> findPageHistoryTargetsByIdArray(
+      Collection<Long> workOperationIds, Long[] orchidGroupIds);
+
+  default List<WorkOperationTarget>
       findByWorkOperationIdInAndOrchidGroupIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(
-          Collection<Long> workOperationIds, Collection<Long> orchidGroupIds);
+          Collection<Long> workOperationIds, Collection<Long> orchidGroupIds) {
+    return findPageHistoryTargetsByIdArray(workOperationIds, orchidGroupIds.toArray(Long[]::new));
+  }
 }

@@ -9,6 +9,7 @@ import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
 import com.greenhouse.backend.auction.domain.AuctionLotSearchCriteria;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
+import com.greenhouse.backend.common.persistence.LongIdMembership;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Expression;
@@ -91,7 +92,7 @@ public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepos
         .and(
             criteria.marketIds() == null
                 ? null
-                : auctionShipment.auctionHouseId.in(criteria.marketIds()))
+                : LongIdMembership.contains(auctionShipment.auctionHouseId, criteria.marketIds()))
         .and(varietyContains(criteria.variety()))
         .and(gradeEq(criteria.grade()))
         .and(statusEq(criteria.status()))
@@ -154,14 +155,18 @@ public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepos
         auctionShipmentLot.itemName.concat(" ").concat(auctionShipmentLot.varietyName).lower();
     var matches =
         new BooleanBuilder(text.contains(criteria.keyword()))
-            .or(auctionShipment.auctionHouseId.in(criteria.keywordMarketIds()));
+            .or(
+                LongIdMembership.contains(
+                    auctionShipment.auctionHouseId, criteria.keywordMarketIds()));
     // Preserve matches spanning the separator before the market name in the original
     // concatenated text.
     criteria
         .boundaryMarketIds()
         .forEach(
             (prefix, ids) ->
-                matches.or(text.endsWith(prefix).and(auctionShipment.auctionHouseId.in(ids))));
+                matches.or(
+                    text.endsWith(prefix)
+                        .and(LongIdMembership.contains(auctionShipment.auctionHouseId, ids))));
     return matches;
   }
 

@@ -25,10 +25,12 @@ import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.PartnerTextMatch;
+import com.greenhouse.backend.partner.domain.PartnerTextSearch;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -84,22 +86,31 @@ public class AuctionTrackingService {
     PageRequests.validate(page, size);
     var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
     String searchText = normalizeOrEmpty(keyword).toLowerCase();
-    var boundaryMarkets = new LinkedHashMap<String, List<Long>>();
+    var boundarySearches = new LinkedHashMap<String, PartnerTextSearch>();
+    var searches = new ArrayList<PartnerTextSearch>();
+    var marketSearch =
+        blank(market) ? null : new PartnerTextSearch(PartnerTextMatch.NAME_EXACT, market.trim());
+    var keywordSearch =
+        searchText.isEmpty()
+            ? null
+            : new PartnerTextSearch(PartnerTextMatch.NAME_CONTAINS, searchText);
+    if (marketSearch != null) searches.add(marketSearch);
+    if (keywordSearch != null) searches.add(keywordSearch);
     for (int i = 0; i < searchText.length(); i++) {
       if (searchText.charAt(i) == ' ') {
-        boundaryMarkets.put(
-            searchText.substring(0, i),
-            partnerReader.findMatchingIds(
-                PartnerTextMatch.NAME_PREFIX, searchText.substring(i + 1)));
+        var term = new PartnerTextSearch(PartnerTextMatch.NAME_PREFIX, searchText.substring(i + 1));
+        boundarySearches.put(searchText.substring(0, i), term);
+        searches.add(term);
       }
     }
+    var matchingIds = partnerReader.findMatchingIds(searches);
+    var boundaryMarkets = new LinkedHashMap<String, List<Long>>();
+    boundarySearches.forEach((prefix, term) -> boundaryMarkets.put(prefix, matchingIds.get(term)));
     var criteria =
         new AuctionLotSearchCriteria(
             from,
             to,
-            blank(market)
-                ? null
-                : partnerReader.findMatchingIds(PartnerTextMatch.NAME_EXACT, market.trim()),
+            marketSearch == null ? null : matchingIds.get(marketSearch),
             normalizeOrEmpty(variety),
             normalizeOrEmpty(grade),
             status,
@@ -107,9 +118,7 @@ public class AuctionTrackingService {
             Boolean.TRUE.equals(returnOnly),
             Boolean.TRUE.equals(waitingOnly),
             searchText,
-            searchText.isEmpty()
-                ? List.of()
-                : partnerReader.findMatchingIds(PartnerTextMatch.NAME_CONTAINS, searchText),
+            keywordSearch == null ? List.of() : matchingIds.get(keywordSearch),
             boundaryMarkets);
     var result = lotRepository.search(criteria, pageable);
     var responses = assembleLots(result.getContent());

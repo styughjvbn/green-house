@@ -2,6 +2,7 @@ package com.greenhouse.backend.sales.repository;
 
 import static com.greenhouse.backend.sales.domain.QSalesSlip.salesSlip;
 
+import com.greenhouse.backend.common.persistence.LongIdMembership;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
@@ -115,7 +116,7 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
     String normalizedKeyword = keyword.trim().toLowerCase();
     return new BooleanBuilder()
         .or(salesSlip.slipNumber.lower().contains(normalizedKeyword))
-        .or(salesSlip.partnerId.in(matchingPartnerIds))
+        .or(LongIdMembership.contains(salesSlip.partnerId, matchingPartnerIds))
         .or(salesSlip.memo.lower().contains(normalizedKeyword));
   }
 

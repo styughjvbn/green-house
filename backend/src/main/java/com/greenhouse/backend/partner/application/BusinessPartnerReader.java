@@ -1,13 +1,17 @@
 package com.greenhouse.backend.partner.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerTextMatch;
+import com.greenhouse.backend.partner.domain.PartnerTextSearch;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -22,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BusinessPartnerReader {
 
   private static final int ID_BATCH_SIZE = 500;
+  private static final int SEARCH_BATCH_SIZE = 32;
 
   private final BusinessPartnerRepository partnerRepository;
 
@@ -35,6 +40,32 @@ public class BusinessPartnerReader {
       if (batch.size() < ID_BATCH_SIZE) return List.copyOf(matches);
       afterId = batch.getLast();
     }
+  }
+
+  public Map<PartnerTextSearch, List<Long>> findMatchingIds(
+      Collection<PartnerTextSearch> searches) {
+    var unique = new ArrayList<>(new LinkedHashSet<>(searches));
+    if (unique.isEmpty()) return Map.of();
+    if (unique.size() == 1) {
+      var term = unique.getFirst();
+      return Map.of(term, findMatchingIds(term.match(), term.value()));
+    }
+    var matches = new LinkedHashMap<PartnerTextSearch, List<Long>>();
+    unique.forEach(term -> matches.put(term, new ArrayList<>()));
+    for (int start = 0; start < unique.size(); start += SEARCH_BATCH_SIZE) {
+      var terms = unique.subList(start, Math.min(start + SEARCH_BATCH_SIZE, unique.size()));
+      long afterId = 0;
+      while (true) {
+        var batch = partnerRepository.findMatchingIds(terms, afterId, ID_BATCH_SIZE);
+        for (var row : batch) {
+          for (var index : row.matchingSearchIndexes()) matches.get(terms.get(index)).add(row.id());
+        }
+        if (batch.size() < ID_BATCH_SIZE) break;
+        afterId = batch.getLast().id();
+      }
+    }
+    matches.replaceAll((term, ids) -> List.copyOf(ids));
+    return Map.copyOf(matches);
   }
 
   public Map<Long, Identity> getIdentities(Collection<Long> partnerIds) {
@@ -74,7 +105,13 @@ public class BusinessPartnerReader {
     if (requestedIds.isEmpty()) {
       return Map.of();
     }
-    var partners = partnerRepository.findAllById(requestedIds);
+    var ids = new ArrayList<>(requestedIds);
+    var partners = new ArrayList<BusinessPartner>();
+    for (int start = 0; start < ids.size(); start += ID_BATCH_SIZE) {
+      partners.addAll(
+          partnerRepository.findAllById(
+              ids.subList(start, Math.min(start + ID_BATCH_SIZE, ids.size()))));
+    }
     if (partners.size() != requestedIds.size()) {
       throw new NotFoundException("거래처를 찾을 수 없습니다.");
     }

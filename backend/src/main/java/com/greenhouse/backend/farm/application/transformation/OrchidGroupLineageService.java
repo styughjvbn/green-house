@@ -80,7 +80,7 @@ public class OrchidGroupLineageService {
             });
     // Also hydrate the managed groups referenced by direct links before their DTO mapper runs.
     var groupsById =
-        orchidGroupRepository.findDetailsByIds(groupIds).stream()
+        orchidGroupRepository.findDetailsInBatches(groupIds).stream()
             .collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
     var transformations =
         transformationViews.stream()

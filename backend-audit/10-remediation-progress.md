@@ -1464,6 +1464,28 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-031 요약 적재 개선 후 BE-032 반복 검색/큰 ID 입력을 진행한다.
 
+## 45차 변경 — BE-032 검색 조건 일괄 조회·대량 ID 바인딩/참조 입력 분할
+
+### 변경 범위
+
+- 기존 SearchScalabilityBenchmark는 일치 거래처 501/5,001개와 문구 공백 하나의 total/마지막 페이지·SQL 수·호출 스레드 할당량을 검사한다. 모듈 소유 경계를 지키는 대신 경매의 각 공백 경계와 전체 이름/경매장 조건이 Partner keyset scan을 반복하고, Sales/Auction root 및 Work history는 전체 ID를 개별 SQL 인자로 확장했다. 기존 Work/계보 query-count 상한만으로 대량 IN 위험을 검출하지 못한다.
+- Partner의 다중 검색 조건을 중복 제거하고 32개씩 묶어 하나의 OR keyset scan에서 조건별 Boolean 일치 값을 읽는다. 각 scan은 500행으로 제한하고 조건별 전체 ID를 보존한다. 단일 조건은 기존 경로를 유지한다. 비활성 거래처, null 대표/전화, DB case/LIKE literal escape와 ID 오름차순은 기존 단일 검색과 일치한다. 경매의 공백 경계·전체 이름·경매장 정확 일치 조건을 한 번에 전달한다.
+- Sales/Auction의 500개 초과 ID membership과 Work 이력의 전체 범위 membership은 Long 배열 하나의 `= ANY` 바인딩으로 바꾼다. Hibernate SQL fragment/명시 boolean cast는 Repository 내부에만 있으며 식별자 값은 인자로 전달한다. 다른 모듈 테이블을 읽지 않고 array containment 연산 대신 scalar equality ANY를 사용한다. Work의 root page/count·계획일/ID 정렬·제외 대상·효과만 연결된 작업·EntityGraph를 유지한다. 여러 범위의 독립 페이지를 합성하지 않는다.
+- Partner 전체 표시 정보, Farm 읽기용 계보/collection 상세 참조와 Work 최신 날짜는 중복 제거한 ID를 500개씩 조회한다. Farm 쓰기 상세/잠금 조회와 작업 효과의 snapshot/transaction 경계는 바꾸지 않는다. HTTP DTO·enum·validation·DB schema 변경이 없어 OpenAPI/타입 생성은 하지 않는다.
+- 전체 matching ID/배열 전송량은 여전히 일치 수에 비례한다. 조건 chunk 수, root 검색 조건 수, 후보 scan/sort와 호환 전체 계보/이력 응답 크기 역시 증가한다. 한 번의 검색 전체가 같은 DB snapshot이라는 보장은 추가하지 않는다. 완전한 상수 메모리·임의 길이 검색의 SQL 상한·운영 plan을 입증했다고 취급하지 않는다. 전체 목록 상한·indexed 검색 정책은 BE-034/035 범위다.
+
+### 검증
+
+- 기존 H2 Core/collection/Work 이력 집중 검증 성공. 신규 H2 5,001개 membership은 실제 전표 1개와 없는 ID를 섞어 total/content를 검증한다. PostgreSQL 신규 9건은 검색 조건 33개/중복/빈 입력과 기존 단일 검색 비교(500/501/5,001명), 표시 참조 0/500/1,001개·중복·누락 오류, Work 범위 1,500/1,503/15,003개에서 최신일/제외 대상·효과만 연결된 작업·페이지 전체 건수/정렬·SQL 인자 수를 검증한다. 계보 기존 3건에 501 source+501 result를 추가해 양방향 응답·순서·현재 연령과 SQL 인자 500개 상한을 확인했다. 집중 일반 22건·PostgreSQL 13건 성공.
+- 기존 검색 benchmark를 501/5,001/70,001명과 공백 1/20개로 확대했다. 전역 total·마지막 한 행을 유지하고 Sales SQL 5/14/144회, Auction 7/16/146회로 공백 수에 따른 scan 증가를 막는다. 이전 공백 한 개 Auction 8/17회에서 7/16회로 줄었다. 최대 SQL 인자는 Sales 5개, Auction 공백 1/20개에서 7/45개이며 일치 수와 무관하다. 실제 PostgreSQL 70,001개의 배열 membership을 통과했지만 구형 경로의 같은 규모 인자 오류를 실행해 재현한 것은 아니다.
+- 로컬 70,001명 Sales 약 568ms/18MB, Auction 공백 1개 약 1,132ms/37MB, 20개 약 4,191ms/112MB의 호출 스레드 할당량을 기록했다. warm-up 후 한 번의 샘플이며 process peak heap·운영 SLA·안정적인 p95가 아니다. keyset/조건 판정·전체 ID 전송 비용은 남는다. `build/work-benchmark/partner-search.json`에 SQL/인자/시간/할당량, `partner-search-plan-*.json`에 소유 Sales scalar 배열 조건의 EXPLAIN ANALYZE/BUFFERS를 저장했다. 해당 plan은 API 전체 조인이 아니며 broad match에서 Seq Scan+Sort, 70,001행에서 external merge 1,520KB/약 101ms가 관측됐다. 작은 fixture plan만으로 운영 index를 추가하지 않는다.
+- 확장 검색 benchmark 1건 성공(43초). 최종 `./gradlew test` 133개 클래스 714건, 관련 PostgreSQL 4개 클래스 25건(신규 참조 9·계보 4·Work 요약 3·품종/자동 그룹 9), 기존 Work benchmark 1건과 `spotlessCheck` 성공(3분 8초). 실패·오류·생략 0건. 검색/Work benchmark는 각각 한 번의 완료 검증으로 실행했다.
+- 프론트 `npm run check`, `git diff --check` 성공. 최종 검증 후 변경은 진행/아키텍처 문서뿐이다. PostgreSQL 전체·전체 benchmark·브라우저 E2E·peak heap·운영 DB/부하/전체 API plan은 미실행.
+
+### 다음 범위
+
+- 요청한 BE-030~032를 마무리한다. 이후 BE-033 경매 대시보드 집계는 이번 요청에 포함하지 않는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1508,9 +1530,10 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `7aa63f7f` — BE-027 `perf: batch load auction write result histories`. 쓰기 결과 행 N+1·순서/접수 호환·query-count 회귀를 별도 커밋으로 저장한다.
 - `c5ee8014` — BE-028 `perf: batch load direct lineage references`. 직접 계보 참조·순서/연령·query-count 회귀를 별도 커밋으로 저장한다.
 - `aa675b08` — BE-029 추가 결함 `fix: flush old placement rules before replacement`. 동일 키 교체·삭제 flush/감사 rollback/retry 회귀를 별도 커밋으로 저장한다.
-- BE-031 — `perf: assemble orchid summaries from scalar queries`. 품종 집계/최신일과 자동 그룹 stream·mapper/연령·Entity 적재 회귀를 별도 커밋으로 저장한다.
-- `a59b862c` — BE-030 `perf: project work summary origins and relation counts`. Work summary 적재·응답/관계/순서·기존 benchmark 회귀를 별도 커밋으로 저장한다.
 - `d8aaa928` — BE-029 `perf: load placement profiles without inventory groups`. profile 전용 graph·응답/감사/재고 보존과 Entity 적재 회귀를 별도 커밋으로 저장한다.
+- `a59b862c` — BE-030 `perf: project work summary origins and relation counts`. Work summary 적재·응답/관계/순서·기존 benchmark 회귀를 별도 커밋으로 저장한다.
+- `dd230cd3` — BE-031 `perf: assemble orchid summaries from scalar queries`. 품종 집계/최신일과 자동 그룹 stream·mapper/연령·Entity 적재 회귀를 별도 커밋으로 저장한다.
+- BE-032 — `refactor: batch partner searches and bound identifier queries`. 다중 검색·배열 membership·참조 입력 분할과 PostgreSQL/검색/Work benchmark 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1549,5 +1572,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-028의 직접 계보 현재 참조 일괄 로딩·순서/연령/query-count 회귀는 40차 범위다.
 - BE-029의 PostgreSQL 동일 키 규칙 교체 오류/rollback 회귀는 41차, profile 전용 graph와 SQL·Entity 적재 회귀는 42차 범위다. BE-030의 Work summary 조회 개선은 43차에 기록한다.
 - BE-030의 summary target/child Entity 제거·입고/관계/receipt/진행 회귀와 기존 benchmark 적재 gate는 43차 범위다. BE-031/032는 44차 이후에 기록한다.
-- BE-031의 품종 DB 집계/최신일·자동 그룹 scalar stream/현재 연령과 관련 적재 회귀는 44차 범위다. 다음은 BE-032다.
+- BE-031의 품종 DB 집계/최신일·자동 그룹 scalar stream/현재 연령과 관련 적재 회귀는 44차 범위다. BE-032 개선은 45차에 이어서 기록했다.
+- BE-032의 다중 검색 scan·배열 ID 바인딩·500개 참조 입력과 대량/검색 의미/페이지/이력 회귀는 45차 범위다. 전체 ID 메모리·호환 응답 상한·운영 부하와 나머지 검색 정책은 별도 후속 범위다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

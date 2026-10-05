@@ -53,12 +53,12 @@ public interface WorkOperationRepository
 			where exists (
 				select t.id from WorkOperationTarget t
 				where t.workOperation = o
-				  and t.orchidGroupId in :orchidGroupIds
+				  and cast(sql('(? = any(?))', t.orchidGroupId, :orchidGroupIds) as boolean) = true
 				  and t.excludedAt is null
 			) or exists (
 				select eg.id from WorkEffectOrchidGroup eg
 				where eg.workAppliedEffect.workOperation = o
-				  and eg.orchidGroupId in :orchidGroupIds
+				  and cast(sql('(? = any(?))', eg.orchidGroupId, :orchidGroupIds) as boolean) = true
 			)
 			""",
       countQuery =
@@ -67,14 +67,18 @@ public interface WorkOperationRepository
 			where exists (
 				select t.id from WorkOperationTarget t
 				where t.workOperation = o
-				  and t.orchidGroupId in :orchidGroupIds
+				  and cast(sql('(? = any(?))', t.orchidGroupId, :orchidGroupIds) as boolean) = true
 				  and t.excludedAt is null
 			) or exists (
 				select eg.id from WorkEffectOrchidGroup eg
 				where eg.workAppliedEffect.workOperation = o
-				  and eg.orchidGroupId in :orchidGroupIds
+				  and cast(sql('(? = any(?))', eg.orchidGroupId, :orchidGroupIds) as boolean) = true
 			)
 			""")
-  Page<WorkOperation> findHistoryPage(
-      @Param("orchidGroupIds") Collection<Long> orchidGroupIds, Pageable pageable);
+  Page<WorkOperation> findHistoryPageByIdArray(
+      @Param("orchidGroupIds") Long[] orchidGroupIds, Pageable pageable);
+
+  default Page<WorkOperation> findHistoryPage(Collection<Long> orchidGroupIds, Pageable pageable) {
+    return findHistoryPageByIdArray(orchidGroupIds.toArray(Long[]::new), pageable);
+  }
 }

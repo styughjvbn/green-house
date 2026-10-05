@@ -42,6 +42,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
@@ -305,7 +306,39 @@ class CoreQueryRegressionTest {
             });
     // Two scalar Partner matches preserve this phrase across the market-name
     // separator.
-    assertThat(queries).isEqualTo(7);
+    assertThat(queries).isLessThanOrEqualTo(6);
+  }
+
+  @Test
+  void largePartnerMembershipKeepsTheCompleteResultOnH2() {
+    var partner =
+        partnerRepository.save(
+            new BusinessPartner("대량 ID 회귀", PartnerType.WHOLESALE, null, null, null, null));
+    var slip =
+        salesSlipRepository.save(
+            new SalesSlip(
+                "ARRAY-SEARCH",
+                LocalDate.of(2041, 1, 1),
+                SalesType.DIRECT,
+                null,
+                partner.getId(),
+                "미입금",
+                "작성중",
+                null,
+                null));
+    var ids = new ArrayList<Long>();
+    for (long id = -5000; id < 0; id++) ids.add(id);
+    ids.add(partner.getId());
+    measure(
+        () -> {
+          var page =
+              salesSlipRepository.searchPage(
+                  null, null, null, null, null, "absent", ids, PageRequest.of(0, 1));
+          assertThat(page.getTotalElements()).isEqualTo(1);
+          assertThat(page.getContent())
+              .extracting(row -> row.getId())
+              .containsExactly(slip.getId());
+        });
   }
 
   @Test

@@ -13,13 +13,17 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.LongStream;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Tag("work-benchmark")
+@Import(QueryShapeCapture.Configuration.class)
 class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
 
   @Autowired JdbcTemplate jdbc;
@@ -30,12 +34,14 @@ class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
 
   @Autowired EntityManagerFactory entityManagerFactory;
 
+  @Autowired QueryShapeCapture capture;
+
   @Test
   void preservesGlobalPaginationWithThousandsOfMatchingPartners() throws Exception {
     var allocations = (ThreadMXBean) ManagementFactory.getThreadMXBean();
     var stats = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
     List<Map<String, Object>> samples = new ArrayList<>();
-    for (int count : List.of(501, 5001)) {
+    for (int count : List.of(501, 5001, 70001)) {
       jdbc.execute("TRUNCATE TABLE business_partners, sales_slips CONTINUE IDENTITY CASCADE");
       jdbc.update(
           """
@@ -66,6 +72,7 @@ class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
       // request.
       sales.getSalesSlipPage(null, null, null, null, null, "Scalability Contact", count / 100, 100);
       stats.clear();
+      capture.start();
       long allocatedBefore = allocations.getThreadAllocatedBytes(Thread.currentThread().threadId());
       long started = System.nanoTime();
       var page =
@@ -75,55 +82,71 @@ class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
       long salesBytes =
           allocations.getThreadAllocatedBytes(Thread.currentThread().threadId()) - allocatedBefore;
       long salesQueries = stats.getPrepareStatementCount();
+      long salesParameters = QueryShapeCapture.maxParameters(capture.stop());
       assertThat(page.totalElements()).isEqualTo(count);
       assertThat(page.content()).hasSize(1);
       assertThat(salesQueries).isEqualTo(count / 500 + 4);
-      auctions.getLots(
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          false,
-          false,
-          false,
-          "White Scalability",
-          count / 100,
-          100);
-      stats.clear();
-      allocatedBefore = allocations.getThreadAllocatedBytes(Thread.currentThread().threadId());
-      started = System.nanoTime();
-      var lots =
-          auctions.getLots(
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              false,
-              false,
-              false,
-              "White Scalability",
-              count / 100,
-              100);
-      long auctionNanos = System.nanoTime() - started;
-      long auctionBytes =
-          allocations.getThreadAllocatedBytes(Thread.currentThread().threadId()) - allocatedBefore;
-      long auctionQueries = stats.getPrepareStatementCount();
-      assertThat(lots.totalElements()).isEqualTo(count);
-      assertThat(lots.content()).hasSize(1);
-      assertThat(auctionQueries).isEqualTo(count / 500 + 7);
-      var sample = new LinkedHashMap<String, Object>();
-      sample.put("matchingPartners", count);
-      sample.put("salesQueries", salesQueries);
-      sample.put("auctionQueries", auctionQueries);
-      sample.put("salesAllocatedBytes", salesBytes);
-      sample.put("auctionAllocatedBytes", auctionBytes);
-      sample.put("salesElapsedMs", salesNanos / 1000000.0);
-      sample.put("auctionElapsedMs", auctionNanos / 1000000.0);
-      samples.add(sample);
+      assertThat(salesParameters).isLessThanOrEqualTo(500);
+      for (int spaces : List.of(1, 20)) {
+        String words = "word ".repeat(spaces - 1);
+        String keyword = "white " + words + "scalability";
+        jdbc.update(
+            "update auction_shipment_lots set variety_name = ?", ("Snow White " + words).trim());
+        auctions.getLots(
+            null, null, null, null, null, null, false, false, false, keyword, count / 100, 100);
+        stats.clear();
+        capture.start();
+        allocatedBefore = allocations.getThreadAllocatedBytes(Thread.currentThread().threadId());
+        started = System.nanoTime();
+        var lots =
+            auctions.getLots(
+                null, null, null, null, null, null, false, false, false, keyword, count / 100, 100);
+        long auctionNanos = System.nanoTime() - started;
+        long auctionBytes =
+            allocations.getThreadAllocatedBytes(Thread.currentThread().threadId())
+                - allocatedBefore;
+        long auctionQueries = stats.getPrepareStatementCount();
+        long auctionParameters = QueryShapeCapture.maxParameters(capture.stop());
+        assertThat(lots.totalElements()).isEqualTo(count);
+        assertThat(lots.content()).hasSize(1);
+        assertThat(auctionQueries).isEqualTo(count / 500 + 6);
+        assertThat(auctionParameters).isLessThanOrEqualTo(500);
+        var sample = new LinkedHashMap<String, Object>();
+        sample.put("matchingPartners", count);
+        sample.put("keywordSpaces", spaces);
+        sample.put("salesQueries", salesQueries);
+        sample.put("auctionQueries", auctionQueries);
+        sample.put("salesMaxParameters", salesParameters);
+        sample.put("auctionMaxParameters", auctionParameters);
+        sample.put("salesAllocatedBytes", salesBytes);
+        sample.put("auctionAllocatedBytes", auctionBytes);
+        sample.put("salesElapsedMs", salesNanos / 1000000.0);
+        sample.put("auctionElapsedMs", auctionNanos / 1000000.0);
+        samples.add(sample);
+      }
+      // A local scalar ownership predicate, not the complete API query plan.
+      var ids = LongStream.rangeClosed(1, count).map(n -> 1000000 + n).boxed().toArray(Long[]::new);
+      String plan =
+          jdbc.execute(
+              (ConnectionCallback<String>)
+                  connection -> {
+                    var array = connection.createArrayOf("bigint", ids);
+                    try (var statement =
+                        connection.prepareStatement(
+                            "explain (analyze, buffers, format json) select id from sales_slips where partner_id = any (?) order by sale_date desc, id desc offset ? limit 100")) {
+                      statement.setArray(1, array);
+                      statement.setInt(2, count / 100 * 100);
+                      try (var result = statement.executeQuery()) {
+                        result.next();
+                        return result.getString(1);
+                      }
+                    } finally {
+                      array.free();
+                    }
+                  });
+      var planPath = Path.of("build/work-benchmark/partner-search-plan-" + count + ".json");
+      Files.createDirectories(planPath.getParent());
+      Files.writeString(planPath, plan);
     }
     var path = Path.of("build/work-benchmark/partner-search.json");
     Files.createDirectories(path.getParent());

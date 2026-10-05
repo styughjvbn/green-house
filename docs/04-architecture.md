@@ -379,7 +379,8 @@ Persistence 조회 규칙:
 | CTE·Window Function·PostgreSQL 원자 연산 | 근거를 남긴 Native SQL |
 
 - root 목록과 collection을 한 쿼리에 억지로 합치지 않는다. 페이지 또는 제한된 root ID를 먼저 조회하고 연관 데이터를 `IN` 쿼리로 읽어 application 계층에서 조립한다.
-- 거래처 이름·대표자·연락처 검색은 Partner가 scalar ID를 500건씩 조회하고 Sales·Auction은 식별자 조건을 자기 검색에 결합한다. 전체 matching ID를 사용해 최종 페이지와 전체 건수를 계산하며, 거래처 한 페이지의 일부만으로 전표·lot 결과를 자르지 않는다. 경매는 품목·품종·경매장 이름을 연결했던 기존 문구 검색을 유지한다. 검색어가 없으면 추가 거래처 검색은 하지 않는다. 검색 조건과 일치하는 거래처 ID 수가 메모리·SQL 인자 크기를 결정하므로 큰 거래처 집합의 추가 최적화는 측정 후 검토한다.
+- 거래처 이름·대표자·연락처 검색은 Partner가 scalar ID를 500건씩 keyset 조회하고 Sales·Auction은 식별자 조건을 자기 검색에 결합한다. 경매의 이름 전체/각 공백 경계/경매장 일치 조건은 중복 제거한 32개 조건씩 묶어 조회하며 조건별 DB 일치 값을 반환한다. 전체 matching ID를 사용해 최종 페이지와 전체 건수를 계산하고 과거 검색의 비활성 거래처·문구/공백·LIKE escape 의미를 유지한다. 검색어와 경매장 조건이 없으면 추가 거래처 검색은 하지 않는다. Sales·Auction의 500개 초과 ID 조건과 Work history의 범위 ID 조건은 소유 Repository 안에서 Long 배열 하나를 바인딩해 `= ANY`로 처리한다. 다른 모듈 테이블을 SQL로 join하지 않는다. 전체 ID 집합과 배열의 전송/메모리 크기, 검색어의 경계 조건 수는 여전히 증가하며 임의 상한으로 결과를 자르지 않는다. 분할 검색은 단일 DB snapshot을 보장하지 않는다.
+- Partner 전체 표시 값, Farm의 읽기용 계보/collection 상세 참조와 Work 최신 날짜 입력은 ID 중복을 제거하고 500개씩 조회한다. Work history는 전체 범위에 대해 root page/count를 계산한 뒤 페이지 작업의 대상/효과를 읽는다. 범위 ID를 여러 개의 독립 페이지로 나눠 total이나 정렬을 합성하지 않는다. Farm 쓰기의 상세 로딩·잠금 경로는 읽기용 분할 helper와 구분한다.
 - 출하 선택지는 Auction이 최신 후보 ID를 페이지로 제공하고 Sales가 자기 전표에 연결된 ID를 제외한다. 미사용 200건을 채우거나 후보가 끝날 때까지 확인한 뒤 선택된 출하·lot만 일괄 조회한다. 다른 모듈의 Entity를 JPQL 하위 쿼리에 직접 넣지 않는다.
 - Farm 구조 조회는 동·다이·구역을 읽은 뒤 다이 ID로 난 묶음과 참조를 일괄 조회해 조립한다. 맵은 필요한 값만 JPQL projection으로 읽고 전체 난 묶음 상세 DTO나 Entity graph를 만들지 않는다. 저장소 projection은 Farm application 안에서 응답으로 변환하며 외부 계약으로 노출하지 않는다.
 - DTO mapper가 lazy association을 순회하지 않게 조회 범위를 명시한다. mapper 호출 전 필요한 연관 데이터가 이미 로딩됐는지 확인한다.
@@ -555,7 +556,7 @@ cd backend
 - `workBenchmark`: 작업 100건과 대상 2,000건을 고정 생성하고 작업 목록·상세·난 묶음 통합 이력
   조회의 쿼리 수를 검증한다. API별 3회 워밍업 후 20회 측정한 median/p95는
   `backend/build/work-benchmark/results.json`에 기록한다.
-- 같은 `workBenchmark`의 거래처 검색 실험은 501개·5,001개의 일치 거래처에서 판매·경매 검색의 전체 건수와 마지막 페이지를 검증한다. `partner-search.json`에 SQL 수·응답 시간·호출 스레드의 할당 바이트를 기록한다. 할당량은 프로세스 전체나 최대 상주 메모리 측정값이 아니다. 500개 단위 식별자 조회 횟수는 항상 검사한다.
+- 같은 `workBenchmark`의 거래처 검색 실험은 501개·5,001개·70,001개의 일치 거래처와 경매 문구의 공백 1/20개에서 판매·경매 검색의 전체 건수와 마지막 페이지를 검증한다. `partner-search.json`에 SQL 수·최대 바인딩 인자 수·응답 시간·호출 스레드의 할당 바이트를 기록한다. 별도의 `partner-search-plan-*.json`은 Sales 소유 배열 ID 조건의 EXPLAIN ANALYZE/BUFFERS이며 전체 API 쿼리 plan은 아니다. 할당량은 프로세스 전체나 최대 상주 메모리 측정값이 아니다. 500개 단위 식별자 조회 횟수와 검색 문구 경계의 반복 조회 방어를 항상 검사한다.
 - 기능 결과와 DB 불변식은 자동 실패 조건으로 사용한다. 응답 시간은 실행 환경 영향을 받으므로
   전후 결과를 수동 비교하고 CI의 강한 실패 조건으로 사용하지 않는다. 기본 벤치마크는
   리팩터링 전 기준값도 남길 수 있도록 쿼리 상한을 기록만 하며, `-PworkBenchmarkEnforce=true`를
@@ -563,7 +564,7 @@ cd backend
 - 전후 비교가 필요하면 각 대상 커밋에서 `clean workE2eTest workBenchmark`를 실행하고 생성된
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
 - `FarmQueryPostgresE2ETest`는 다이 1·10·50개와 다이별 복수 구역에서 전체 구조·맵 SQL 3회, 다이·구역 목록 SQL 2회와 맵의 난 묶음·품종 Entity 로딩 0건을 검증한다. Work 정형 상세는 보정 0·1·10·50건에서 SQL 4회로 고정한다.
-- 거래처 검색 경계를 거치는 판매 검색은 1·10·50행에서 SQL 4회, 품종과 경매장 이름에 걸친 경매 문구 검색은 7회다. 각각 기존 3회·5회에서 scalar 검색이 추가된 값이며 행별 반복 조회는 없다. 검색 없는 경매 페이지의 기존 5회 상한은 유지한다.
+- 거래처 검색 경계를 거치는 판매 검색은 1·10·50행에서 SQL 4회, 품종과 경매장 이름에 걸친 경매 문구 검색은 6회 이내다. 기존 3회·5회에 scalar 검색이 추가되며 경매의 다중 검색은 일괄 처리해 행별 반복 조회를 피한다. 검색 없는 경매 페이지의 기존 5회 상한은 유지한다.
 - `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 5회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
 - 사용자 그룹 목록은 1·10·50개에서 SQL 3회, 난 묶음별 소속 그룹 조회는 5회 이내인지 검증한다. 보관·탈퇴 제외와 소속 순서도 함께 확인한다.
 - CI의 기본 job은 `check`와 `bootJar`, `backend-postgres` job은 Docker 확인 후 `workE2eTest`와 `workBenchmark -PworkBenchmarkEnforce=true`를 각각 실행한다. Docker가 없으면 PostgreSQL 검사는 실패하며 조용히 건너뛰지 않는다. 검사별 결과는 Actions Summary에 기록하고 테스트·벤치마크 보고서는 14일간 artifact로 보관한다. 기본 architecture 검사도 테스트 비활성화와 모듈 내부·직접 시간 조회 예외의 재도입을 막는다.

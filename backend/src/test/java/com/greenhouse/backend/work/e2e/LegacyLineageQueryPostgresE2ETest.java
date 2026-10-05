@@ -34,16 +34,19 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Tag("work-e2e")
+@Import(QueryShapeCapture.Configuration.class)
 class LegacyLineageQueryPostgresE2ETest extends WorkE2ETestBase {
   @Autowired OrchidGroupLineageService lineage;
   @Autowired EntityManager em;
   @Autowired EntityManagerFactory emf;
   @Autowired TransactionTemplate transactions;
   @MockitoBean Clock clock;
+  @Autowired QueryShapeCapture capture;
 
   @BeforeEach
   void fixedBusinessDate() {
@@ -52,14 +55,16 @@ class LegacyLineageQueryPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @ParameterizedTest
-  @ValueSource(ints = {1, 10, 50})
+  @ValueSource(ints = {1, 10, 50, 501})
   void directLineageLoadsIndependentReferencesInBulk(int count) throws Exception {
     var fixture = transactions.execute(tx -> seed(count));
     var stats = emf.unwrap(SessionFactory.class).getStatistics();
     stats.clear();
+    capture.start();
     // A fresh service transaction must assemble the whole response, including age and location.
     var response = lineage.getLineage(fixture.center().id());
     long statements = stats.getPrepareStatementCount();
+    assertThat(QueryShapeCapture.maxParameters(capture.stop())).isLessThanOrEqualTo(500);
     var path = Path.of("build/work-query-count/legacy-lineage-" + count + ".json");
     Files.createDirectories(path.getParent());
     objectMapper

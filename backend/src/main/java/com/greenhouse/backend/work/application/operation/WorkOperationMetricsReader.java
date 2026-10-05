@@ -11,9 +11,11 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -98,6 +100,15 @@ public class WorkOperationMetricsReader {
     if (orchidGroupIds == null || orchidGroupIds.isEmpty()) {
       return Map.of();
     }
+    var ids = new ArrayList<>(new LinkedHashSet<>(orchidGroupIds));
+    var result = new HashMap<Long, LocalDate>();
+    for (int start = 0; start < ids.size(); start += 500) {
+      result.putAll(latestWorkDateBatch(ids.subList(start, Math.min(start + 500, ids.size()))));
+    }
+    return result;
+  }
+
+  private Map<Long, LocalDate> latestWorkDateBatch(Collection<Long> orchidGroupIds) {
     var latestWorkDate = workOperation.plannedStartDate.max();
     return queryFactory
         .select(workOperationTarget.orchidGroupId, latestWorkDate)

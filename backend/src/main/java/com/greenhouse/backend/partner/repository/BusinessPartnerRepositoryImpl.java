@@ -4,10 +4,13 @@ import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPar
 
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerTextMatch;
+import com.greenhouse.backend.partner.domain.PartnerTextSearch;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
@@ -22,26 +25,60 @@ public class BusinessPartnerRepositoryImpl implements BusinessPartnerRepositoryC
 
   @Override
   public List<Long> findMatchingIds(PartnerTextMatch match, String value, long afterId, int limit) {
-    var condition =
-        switch (match) {
-          case CONTACT_CONTAINS ->
-              businessPartner
-                  .name
-                  .lower()
-                  .contains(value)
-                  .or(businessPartner.ownerName.lower().contains(value))
-                  .or(businessPartner.phone.lower().contains(value));
-          case NAME_CONTAINS -> businessPartner.name.lower().contains(value);
-          case NAME_PREFIX -> businessPartner.name.lower().startsWith(value);
-          case NAME_EXACT -> businessPartner.name.equalsIgnoreCase(value);
-        };
     return queryFactory
         .select(businessPartner.id)
         .from(businessPartner)
-        .where(businessPartner.id.gt(afterId), condition)
+        .where(businessPartner.id.gt(afterId), textCondition(new PartnerTextSearch(match, value)))
         .orderBy(businessPartner.id.asc())
         .limit(limit)
         .fetch();
+  }
+
+  @Override
+  public List<PartnerSearchMatchRow> findMatchingIds(
+      List<PartnerTextSearch> searches, long afterId, int limit) {
+    var conditions = searches.stream().map(this::textCondition).toList();
+    var matchingAny = new BooleanBuilder();
+    var fields = new ArrayList<Expression<?>>();
+    fields.add(businessPartner.id);
+    conditions.forEach(
+        condition -> {
+          matchingAny.or(condition);
+          fields.add(condition);
+        });
+    return queryFactory
+        .select(fields.toArray(Expression[]::new))
+        .from(businessPartner)
+        .where(businessPartner.id.gt(afterId), matchingAny)
+        .orderBy(businessPartner.id.asc())
+        .limit(limit)
+        .fetch()
+        .stream()
+        .map(
+            row -> {
+              var matchedIndexes = new ArrayList<Integer>();
+              for (int i = 0; i < conditions.size(); i++) {
+                if (Boolean.TRUE.equals(row.get(i + 1, Boolean.class))) matchedIndexes.add(i);
+              }
+              return new PartnerSearchMatchRow(row.get(0, Long.class), List.copyOf(matchedIndexes));
+            })
+        .toList();
+  }
+
+  private BooleanExpression textCondition(PartnerTextSearch search) {
+    var value = search.value();
+    return switch (search.match()) {
+      case CONTACT_CONTAINS ->
+          businessPartner
+              .name
+              .lower()
+              .contains(value)
+              .or(businessPartner.ownerName.lower().contains(value))
+              .or(businessPartner.phone.lower().contains(value));
+      case NAME_CONTAINS -> businessPartner.name.lower().contains(value);
+      case NAME_PREFIX -> businessPartner.name.lower().startsWith(value);
+      case NAME_EXACT -> businessPartner.name.equalsIgnoreCase(value);
+    };
   }
 
   @Override

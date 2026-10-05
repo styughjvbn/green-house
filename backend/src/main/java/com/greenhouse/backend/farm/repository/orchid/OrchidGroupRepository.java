@@ -5,7 +5,9 @@ import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -348,6 +350,15 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			where g.id in :orchidGroupIds
 			""")
   List<OrchidGroup> findDetailsByIds(@Param("orchidGroupIds") Collection<Long> orchidGroupIds);
+
+  default List<OrchidGroup> findDetailsInBatches(Collection<Long> orchidGroupIds) {
+    var ids = new ArrayList<>(new LinkedHashSet<>(orchidGroupIds));
+    var details = new ArrayList<OrchidGroup>();
+    for (int start = 0; start < ids.size(); start += 500) {
+      details.addAll(findDetailsByIds(ids.subList(start, Math.min(start + 500, ids.size()))));
+    }
+    return details;
+  }
 
   @Query(
       """
