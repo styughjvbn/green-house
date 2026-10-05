@@ -2,9 +2,11 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.support.JdbcMeasurement;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import jakarta.persistence.EntityManagerFactory;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -15,19 +17,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 
 @Tag("work-benchmark")
 @Timeout(value = 15, unit = TimeUnit.MINUTES)
+@Import(JdbcMeasurement.Configuration.class)
 class WorkOperationBenchmarkTest extends WorkE2ETestBase {
 
   private static final int OPERATION_COUNT = 100;
 
-  private static final int TARGETS_PER_OPERATION = 20;
+  private int targetsPerOperation;
 
   private static final int WARMUP_COUNT = 3;
 
@@ -45,39 +48,50 @@ class WorkOperationBenchmarkTest extends WorkE2ETestBase {
   @Autowired private WorkTestDataSeeder seeder;
 
   @Autowired private EntityManagerFactory entityManagerFactory;
+  @Autowired private JdbcMeasurement jdbcMeasurement;
 
   private WorkTestDataSeeder.BenchmarkScenario scenario;
 
-  @BeforeEach
-  void setUp() {
-    seeder.reset();
-    scenario = seeder.seedBenchmark(OPERATION_COUNT, TARGETS_PER_OPERATION);
-  }
-
   @Test
   void measuresMajorWorkQueryApis() throws Exception {
-    List<Map<String, Object>> measurements =
-        List.of(
-            measure(
-                "work-operation-list-100",
-                "/api/work-operations?view=ALL&size=100",
-                LIST_MAX_QUERY_COUNT,
-                this::assertListResponse),
-            measure(
-                "work-operation-detail-20-targets",
-                "/api/work-operations/%d".formatted(scenario.firstOperationId()),
-                DETAIL_MAX_QUERY_COUNT,
-                this::assertDetailResponse),
-            measure(
-                "orchid-group-work-history",
-                "/api/orchid-groups/%d/work-history".formatted(scenario.firstOrchidGroupId()),
-                HISTORY_MAX_QUERY_COUNT,
-                this::assertHistoryResponse));
+    List<Map<String, Object>> measurements = new ArrayList<>();
+    for (int targets : List.of(1, 20, 100)) {
+      targetsPerOperation = targets;
+      seeder.resetKeepingSequences();
+      scenario = seeder.seedBenchmark(OPERATION_COUNT, targets);
+      measurements.addAll(
+          List.of(
+              measure(
+                  "work-operation-list-100",
+                  "/api/work-operations?view=ALL&size=100",
+                  LIST_MAX_QUERY_COUNT,
+                  this::assertListResponse),
+              measure(
+                  "work-operation-detail",
+                  "/api/work-operations/%d".formatted(scenario.firstOperationId()),
+                  DETAIL_MAX_QUERY_COUNT,
+                  this::assertDetailResponse),
+              measure(
+                  "orchid-group-work-history",
+                  "/api/orchid-groups/%d/work-history".formatted(scenario.firstOrchidGroupId()),
+                  HISTORY_MAX_QUERY_COUNT,
+                  this::assertHistoryResponse)));
+      // Fixed group, increasing history fan-out, independent of root pagination.
+      seeder.attachBenchmarkHistory(scenario.firstOrchidGroupId());
+      measurements.add(
+          measure(
+              "orchid-group-work-history-100",
+              "/api/orchid-groups/%d/work-history".formatted(scenario.firstOrchidGroupId()),
+              HISTORY_MAX_QUERY_COUNT,
+              response -> {
+                assertThat(response.status()).isEqualTo(200);
+                assertThat(response.data()).hasSize(OPERATION_COUNT);
+              }));
+    }
 
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("operationCount", scenario.operationCount());
-    result.put("targetCount", scenario.targetCount());
-    result.put("targetsPerOperation", TARGETS_PER_OPERATION);
+    result.put("targetsPerOperationScenarios", List.of(1, 20, 100));
     result.put("warmupCount", WARMUP_COUNT);
     result.put("sampleCount", SAMPLE_COUNT);
     result.put("queryLimitsEnforced", ENFORCE_QUERY_LIMITS);
@@ -97,9 +111,18 @@ class WorkOperationBenchmarkTest extends WorkE2ETestBase {
 
     Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
     statistics.clear();
-    responseAssertion.accept(get(path));
+    jdbcMeasurement.start();
+    ApiResult response;
+    JdbcMeasurement.Sample jdbcSample;
+    try {
+      response = get(path);
+    } finally {
+      jdbcSample = jdbcMeasurement.stop();
+    }
+    responseAssertion.accept(response);
     long queryCount = statistics.getPrepareStatementCount();
     long entityLoads = statistics.getEntityLoadCount();
+    long flushes = statistics.getFlushCount();
     long targetLoads =
         statistics.getEntityStatistics(WorkOperationTarget.class.getName()).getLoadCount();
     long operationLoads =
@@ -107,6 +130,9 @@ class WorkOperationBenchmarkTest extends WorkE2ETestBase {
     if (name.equals("work-operation-list-100")) {
       assertThat(targetLoads).as("summary must not materialize target snapshots").isZero();
       assertThat(operationLoads).isLessThanOrEqualTo(OPERATION_COUNT);
+      assertThat(jdbcSample.rows())
+          .as("summary rows must be bounded independently of targets")
+          .isLessThanOrEqualTo(OPERATION_COUNT * 12L);
     }
 
     List<Double> responseTimesMs = new ArrayList<>(SAMPLE_COUNT);
@@ -121,12 +147,20 @@ class WorkOperationBenchmarkTest extends WorkE2ETestBase {
       assertThat(queryCount)
           .as("%s 쿼리 수가 일괄 조회 상한을 지켜야 합니다", name)
           .isLessThanOrEqualTo(queryCountLimit);
+      assertThat(jdbcSample.executions())
+          .as("all JDBC execute calls, including JdbcTemplate")
+          .isLessThanOrEqualTo(queryCountLimit);
     }
 
     Map<String, Object> measurement = new LinkedHashMap<>();
+    measurement.put("targetsPerOperation", targetsPerOperation);
     measurement.put("name", name);
     measurement.put("endpoint", "GET " + path);
     measurement.put("queryCount", queryCount);
+    measurement.put("jdbc", jdbcSample);
+    measurement.put(
+        "responseJsonBytes", response.body().toString().getBytes(StandardCharsets.UTF_8).length);
+    measurement.put("hibernateFlushes", flushes);
     measurement.put("entityLoads", entityLoads);
     measurement.put("targetLoads", targetLoads);
     measurement.put("operationLoads", operationLoads);
@@ -141,14 +175,14 @@ class WorkOperationBenchmarkTest extends WorkE2ETestBase {
     assertThat(response.status()).isEqualTo(200);
     assertThat(response.data().path("content")).hasSize(OPERATION_COUNT);
     assertThat(response.data().path("content").get(0).path("progress").path("total").asInt())
-        .isEqualTo(TARGETS_PER_OPERATION);
+        .isEqualTo(targetsPerOperation);
     assertThat(response.data().path("content").get(0).has("targets")).isFalse();
   }
 
   private void assertDetailResponse(ApiResult response) {
     assertThat(response.status()).isEqualTo(200);
     assertThat(response.data().path("id").asLong()).isEqualTo(scenario.firstOperationId());
-    assertThat(response.data().path("targets")).hasSize(TARGETS_PER_OPERATION);
+    assertThat(response.data().path("targets")).hasSize(targetsPerOperation);
   }
 
   private void assertHistoryResponse(ApiResult response) {

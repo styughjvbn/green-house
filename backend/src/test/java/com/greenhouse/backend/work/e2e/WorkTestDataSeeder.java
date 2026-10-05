@@ -225,6 +225,15 @@ class WorkTestDataSeeder {
         });
   }
 
+  void attachBenchmarkHistory(Long orchidGroupId) {
+    jdbcTemplate.update(
+        """
+        UPDATE work_operation_targets SET orchid_group_id = ?
+        WHERE id IN (SELECT MIN(id) FROM work_operation_targets GROUP BY work_operation_id)
+        """,
+        orchidGroupId);
+  }
+
   private Long insertVariety(String code, String name) {
     return jdbcTemplate.queryForObject(
         """

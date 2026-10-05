@@ -149,6 +149,7 @@ jobs:
             backend/build/reports/tests
             backend/build/test-results
             backend/build/work-benchmark
+            backend/build/test-measurements
           if-no-files-found: ignore
           retention-days: 14
       - name: Write PostgreSQL summary

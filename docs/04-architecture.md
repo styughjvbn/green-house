@@ -562,9 +562,11 @@ cd backend
 - 쓰기 rollback 회귀는 테스트 외부 transaction 없이 DI application proxy 또는 HTTP를 호출하고, 별도 read-only transaction에서 변경 전후 저장 상태를 비교한다. 늦은 실패를 주입할 때는 의도한 CHECK 이름·SQLSTATE 또는 정확한 실패 원인을 검증한 뒤 원장·업무 이력·접수·감사의 atomicity와 재시도를 확인한다. 호출자 transaction 참여 시험은 별도로 유지하며 최상위 transaction 검증을 대신하지 않는다.
 - 잠금 경쟁 회귀는 실제 application transaction 안에서 worker DB PID를 기록하고 `pg_blocking_pids`의 직접·대기열 차단 관계가 지정한 잠금 보유자까지 이어지는지 확인한다. 시간 경과·DB 전체 대기자 수만으로 요청의 충돌을 추정하지 않는다. worker 진입과 잠금 관측·결과 대기에는 상한을 두고, 잠금 해제 뒤 양쪽 실행 순서의 상태·업무 오류·이력 불변식을 확인한다. 테스트용 관측은 최상위 쓰기 transaction을 대신 만들지 않는다.
 - 실제 HTTP 회귀는 연결 10초·응답 60초 상한과 요청 method/path 진단을 공유한다. request body는 전송 실패 로그에 넣지 않는다. PostgreSQL 테스트 메서드는 기본 5분, 장시간 benchmark는 명시적으로 15분 상한을 사용하며 DB 번호 발급의 병렬 future도 60초 안에 완료해야 한다. `workE2eTest`의 JUnit timeout 시 thread dump를 남긴다. 이 상한은 운영 API SLA나 서버 JDBC 취소 보장이 아니다.
-- `workBenchmark`: 작업 100건과 대상 2,000건을 고정 생성하고 작업 목록·상세·난 묶음 통합 이력
-  조회의 쿼리 수를 검증한다. API별 3회 워밍업 후 20회 측정한 median/p95는
+- `workBenchmark`: 작업 100건을 고정하고 작업당 대상 1·20·100건 및 한 난 묶음의 이력 1·100건으로 하위 fan-out을 늘린다. 작업 목록·상세·이력의 SQL 수와 목록 target Entity/반환 행 상한을 검사한다. API별 3회 워밍업 후 20회 측정한 median/p95는
   `backend/build/work-benchmark/results.json`에 기록한다.
+- 테스트 전용 DataSource 계측은 Hibernate와 JdbcTemplate의 JDBC execute 호출·batch 호출·`ResultSet.next()`로 소비한 행·실패·명시 commit/rollback을 함께 센다. Work 보고서는 Hibernate Entity/flush와 응답 JSON의 UTF-8 byte 수도 보존하고, 검색 보고서는 호출 스레드의 할당 바이트를 함께 기록한다. JSON byte 수는 재직렬화한 body 기준이며 HTTP header·압축 bytes가 아니다. 측정 창은 별도 테스트 context에서 순차 요청 하나를 완전히 끝낸 뒤 닫으며 fixture 준비와 워밍업을 제외한다.
+- `WorkQueryMeasurementPostgresE2ETest`는 root 4건 고정·대상 1·40·100건에서 SQL/반환 행이 증가하지 않고 target Entity가 적재되지 않는지 검사한다. JdbcTemplate만 사용한 조회가 Hibernate 통계 0건이어도 계측되는지 검증하며, 독립 Work 기록의 flush·commit 이후 응답과 replay 비용을 분리해 `build/test-measurements/work-write.json`에 남긴다. 기존 Auction 쓰기·계보·profile·품종·정산·placement 경로별 PostgreSQL 회귀는 그대로 유지한다.
+- JDBC 실행 시간에는 driver/DB/잠금 대기가 섞이고 executeBatch 한 호출의 driver 내부 round trip은 구별하지 못한다. 소비 행은 DB scan 행 수가 아니며, 계측 밖의 다른 DataSource·raw unwrap 접근과 autocommit 경계도 포함하지 않는다. Hibernate flush 횟수·commit 시간과 lock 보유 시간·peak heap/GC·프로세스 전체 할당량은 별도 지표다. 절대 시간·할당량에 환경 의존적인 CI 실패 기준을 추가하지 않는다.
 - 같은 `workBenchmark`의 거래처 검색 실험은 501개·5,001개·70,001개의 일치 거래처와 경매 문구의 공백 1/20개에서 판매·경매 검색의 전체 건수와 마지막 페이지를 검증한다. `partner-search.json`에 SQL 수·최대 바인딩 인자 수·응답 시간·호출 스레드의 할당 바이트를 기록한다. 별도의 `partner-search-plan-*.json`은 Sales 소유 배열 ID 조건의 EXPLAIN ANALYZE/BUFFERS이며 전체 API 쿼리 plan은 아니다. 할당량은 프로세스 전체나 최대 상주 메모리 측정값이 아니다. 500개 단위 식별자 조회 횟수와 검색 문구 경계의 반복 조회 방어를 항상 검사한다.
 - 기능 결과와 DB 불변식은 자동 실패 조건으로 사용한다. 응답 시간은 실행 환경 영향을 받으므로
   전후 결과를 수동 비교하고 CI의 강한 실패 조건으로 사용하지 않는다. 기본 벤치마크는

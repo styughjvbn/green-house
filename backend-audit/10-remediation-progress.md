@@ -1652,6 +1652,14 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 검증: 집중 architecture/탐지 helper 6개 클래스 26건 및 최종 전체 기본 139개 클래스 737건 통과(기존 임시 init script로 test heap 1GiB). 관련 PostgreSQL 12개 클래스 90건 통과: 역사/최신 migration 4, 코드 발급 6, 입고/상태 보호 14, Mutation/fence/routing 15, Work 취소/보정 39, Sales 잠금 순서 12. 기존 raw DB fence 부정/Mutation context rollback도 포함했다. frontend `npm run check`, `spotlessCheck`, `git diff --check` 통과. 전체 PostgreSQL suite·benchmark는 재실행하지 않았다. 이후 문서 변경만 반영했다.
 - 범위: 생산 domain/service·DB/API 계약은 바꾸지 않았다. 사용하지 않는 public method의 존재 자체를 금지하지 않으며 새 모듈 외부 사용을 검토한다. reflection·Opaque Object JSON·동적/alias/comma SQL·외부 XML query·새 Repository 원자 writer와 연관 객체 내부 변화는 구조 gate 밖의 검토/PG fence 범위다. architecture 통과를 transaction/수량 불변식 보장으로 확대하지 않는다.
 
+## 56차 변경 — BE-042 JDBC 실행·반환 행과 하위 fan-out 측정
+
+- 테스트 전용 DataSource wrapper로 Hibernate/JdbcTemplate의 execute·batch 호출, 소비 ResultSet 행, 실패, 명시 commit/rollback 및 실행/commit 시간을 계측한다. SQL·parameter 값은 보관하지 않는다. H2에서 실제 batch/행·commit/rollback·driver 예외 전파와 측정 창 중복 거절을 검증했다.
+- Work benchmark는 root 100건 고정·작업당 대상 1/20/100건과 동일 묶음 이력 1/100건으로 확장했다. Hibernate SQL/Entity/flush·JDBC counters·응답 JSON UTF-8 byte를 기록하며 목록 target Entity 0·반환 행 상한 및 enforcement 시 JDBC 실행 상한을 검사한다. 검색 benchmark의 501/5,001/70,001 거래처·공백 1/20개에도 JDBC counters를 추가했다.
+- 영구 PostgreSQL 회귀는 root 4건·대상 1/40/100건에서 SQL·반환 행 증가가 없음을 확인하고, Hibernate 통계가 0인 JdbcTemplate 조회 17행을 관측한다. 독립 Work 기록은 응답까지 commit 1회·JDBC 실행 37회(batch 호출 21회), 동일 키 replay는 commit 1회·실행 2회로 측정했다. 기존 저장 응답 replay와 flush를 함께 확인하고 `build/test-measurements/work-write.json`을 CI artifact에 포함했다.
+- 검증: 계측 단위 2건, 새 PG 회귀 3건, Work/Search benchmark 2건이 query enforcement와 함께 통과했다(benchmark/PG checkpoint 임시 heap 1GiB). `git diff --check` 통과. 전체 기본/frontend 검증은 BE-044 완료 체크포인트에서 실행한다.
+- 범위: 기존 BE-027~036 경로별 query/Entity/plan·rollback 회귀를 유지했다. JDBC 호출은 driver 내부 round trip이 아니고 소비 행은 DB scan이 아니다. JSON bytes는 재직렬화된 body 기준이며 autocommit·raw unwrap·다른 DataSource·lock 보유 시간·peak heap/GC·전체 할당량은 별도다. 시간 절대값을 CI 실패 기준으로 삼지 않으며 운영 부하 실험은 수행하지 않았다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1715,7 +1723,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - `30aca7c2` — BE-040 `test: bound postgres http requests and concurrent waits`. 공통 transport·future·JUnit 상한과 실제 stalled response 회귀.
 
-- BE-041 — `test: enforce application members and discover entity writers`. 명시 계약·값 유출·자동 writer 탐지와 부정 회귀.
+- `e31b99fa` — BE-041 `test: enforce application members and discover entity writers`. 명시 계약·값 유출·자동 writer 탐지와 부정 회귀.
+- BE-042 — `test: measure jdbc execution rows and work fan out`. JDBC counters·쓰기 commit/replay·fan-out benchmark와 영구 PG 회귀.
 
 ## 남은 작업
 
@@ -1766,4 +1775,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-039의 대표 JSON parser·년생/농장 날짜·단건 farm fixture·역사/최신 migration 구분은 53차 범위다. 다른 fixture 중복과 lifecycle 분해는 점진 후속이다.
 - BE-040의 공통/별도 PATCH HTTP·번호 발급 future·PG method/benchmark 상한·timeout 진단은 54차 범위다. context 기동/서버 JDBC 강제 취소·모든 executor 종료 정책은 별도다.
 - BE-041의 외부 application member 승인·generic 값 경계·compiled 새 mutator/참조/field write·query root 표기 우회는 55차 범위다. SQL parser·reflection/동적/alias SQL·새 원자 writer와 관련 객체 변화 검토는 남는다.
+- BE-042의 JDBC 실행/행·Work 고정 root의 target/history fan-out과 실제 commit/replay 측정은 56차 범위다. driver 내부 round trip·lock 보유 시간·정산/원장 peak heap·운영 부하 실험은 후속이다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

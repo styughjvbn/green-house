@@ -3,7 +3,11 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.auction.application.AuctionTrackingService;
+import com.greenhouse.backend.auction.dto.AuctionLotResponse;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.sales.application.SalesQueryService;
+import com.greenhouse.backend.sales.application.document.SalesSlipSummary;
+import com.greenhouse.backend.support.JdbcMeasurement;
 import com.sun.management.ThreadMXBean;
 import jakarta.persistence.EntityManagerFactory;
 import java.lang.management.ManagementFactory;
@@ -25,7 +29,7 @@ import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Tag("work-benchmark")
-@Import(QueryShapeCapture.Configuration.class)
+@Import({QueryShapeCapture.Configuration.class, JdbcMeasurement.Configuration.class})
 @Timeout(value = 15, unit = TimeUnit.MINUTES)
 class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
 
@@ -38,6 +42,7 @@ class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
   @Autowired EntityManagerFactory entityManagerFactory;
 
   @Autowired QueryShapeCapture capture;
+  @Autowired JdbcMeasurement jdbcMeasurement;
 
   @Test
   void preservesGlobalPaginationWithThousandsOfMatchingPartners() throws Exception {
@@ -76,11 +81,18 @@ class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
       sales.getSalesSlipPage(null, null, null, null, null, "Scalability Contact", count / 100, 100);
       stats.clear();
       capture.start();
+      jdbcMeasurement.start();
       long allocatedBefore = allocations.getThreadAllocatedBytes(Thread.currentThread().threadId());
       long started = System.nanoTime();
-      var page =
-          sales.getSalesSlipPage(
-              null, null, null, null, null, "Scalability Contact", count / 100, 100);
+      PageResponse<SalesSlipSummary> page;
+      JdbcMeasurement.Sample salesJdbc;
+      try {
+        page =
+            sales.getSalesSlipPage(
+                null, null, null, null, null, "Scalability Contact", count / 100, 100);
+      } finally {
+        salesJdbc = jdbcMeasurement.stop();
+      }
       long salesNanos = System.nanoTime() - started;
       long salesBytes =
           allocations.getThreadAllocatedBytes(Thread.currentThread().threadId()) - allocatedBefore;
@@ -99,11 +111,29 @@ class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
             null, null, null, null, null, null, false, false, false, keyword, count / 100, 100);
         stats.clear();
         capture.start();
+        jdbcMeasurement.start();
         allocatedBefore = allocations.getThreadAllocatedBytes(Thread.currentThread().threadId());
         started = System.nanoTime();
-        var lots =
-            auctions.getLots(
-                null, null, null, null, null, null, false, false, false, keyword, count / 100, 100);
+        PageResponse<AuctionLotResponse> lots;
+        JdbcMeasurement.Sample auctionJdbc;
+        try {
+          lots =
+              auctions.getLots(
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  false,
+                  false,
+                  false,
+                  keyword,
+                  count / 100,
+                  100);
+        } finally {
+          auctionJdbc = jdbcMeasurement.stop();
+        }
         long auctionNanos = System.nanoTime() - started;
         long auctionBytes =
             allocations.getThreadAllocatedBytes(Thread.currentThread().threadId())
@@ -119,6 +149,8 @@ class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
         sample.put("keywordSpaces", spaces);
         sample.put("salesQueries", salesQueries);
         sample.put("auctionQueries", auctionQueries);
+        sample.put("salesJdbc", salesJdbc);
+        sample.put("auctionJdbc", auctionJdbc);
         sample.put("salesMaxParameters", salesParameters);
         sample.put("auctionMaxParameters", auctionParameters);
         sample.put("salesAllocatedBytes", salesBytes);
