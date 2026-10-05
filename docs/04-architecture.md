@@ -381,6 +381,7 @@ Persistence 조회 규칙:
 | CTE·Window Function·PostgreSQL 원자 연산 | 근거를 남긴 Native SQL |
 
 - root 목록과 collection을 한 쿼리에 억지로 합치지 않는다. 페이지 또는 제한된 root ID를 먼저 조회하고 연관 데이터를 `IN` 쿼리로 읽어 application 계층에서 조립한다.
+- index 변경은 실제 Repository SQL과 다른 건수·선택도의 PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)`로 근거를 남긴다. query count·Entity 적재 상한과 DB scan·상관 subquery의 반복 횟수는 별도로 검증한다. 작은 fixture의 순차 scan을 실패로 취급하거나 planner의 특정 node·index 이름·실행 시간을 정답으로 고정하지 않는다. 조회 개선과 함께 쓰기/WAL·저장 공간·migration 잠금 비용을 확인한다.
 - 거래처 이름·대표자·연락처 검색은 Partner가 scalar ID를 500건씩 keyset 조회하고 Sales·Auction은 식별자 조건을 자기 검색에 결합한다. 경매의 이름 전체/각 공백 경계/경매장 일치 조건은 중복 제거한 32개 조건씩 묶어 조회하며 조건별 DB 일치 값을 반환한다. 전체 matching ID를 사용해 최종 페이지와 전체 건수를 계산하고 과거 검색의 비활성 거래처·문구/공백·LIKE escape 의미를 유지한다. 검색어와 경매장 조건이 없으면 추가 거래처 검색은 하지 않는다. Sales·Auction의 500개 초과 ID 조건과 Work history의 범위 ID 조건은 소유 Repository 안에서 Long 배열 하나를 바인딩해 `= ANY`로 처리한다. 다른 모듈 테이블을 SQL로 join하지 않는다. 전체 ID 집합과 배열의 전송/메모리 크기, 검색어의 경계 조건 수는 여전히 증가하며 임의 상한으로 결과를 자르지 않는다. 분할 검색은 단일 DB snapshot을 보장하지 않는다.
 - Partner 전체 표시 값, Farm의 읽기용 계보/collection 상세 참조와 Work 최신 날짜 입력은 ID 중복을 제거하고 500개씩 조회한다. Work history는 전체 범위에 대해 root page/count를 계산한 뒤 페이지 작업의 대상/효과를 읽는다. 범위 ID를 여러 개의 독립 페이지로 나눠 total이나 정렬을 합성하지 않는다. Farm 쓰기의 상세 로딩·잠금 경로는 읽기용 분할 helper와 구분한다.
 - 출하 선택지는 Auction이 최신 후보 ID를 페이지로 제공하고 Sales가 자기 전표에 연결된 ID를 제외한다. 미사용 200건을 채우거나 후보가 끝날 때까지 확인한 뒤 선택된 출하·lot만 일괄 조회한다. 다른 모듈의 Entity를 JPQL 하위 쿼리에 직접 넣지 않는다.

@@ -1531,6 +1531,30 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 전체 그룹·sellable·derived member·collection/직접 계보의 누적 목록 계약, Work/Inbound/lot/Mutation page의 하위 이력 분리·pagination, 사용된 출하 후보가 많은 Sales 선택지 반복 조회는 남는다. 화면이 전체 구성원을 확정하거나 과거 이력을 표시하는 계약에 임의 cut을 넣지 않는다. 다음 BE-034 변경에서 endpoint·소비자별로 이어서 처리한다.
 - 전체 farm map은 의도된 전체 배치 계약으로 유지했다. graph/캘린더의 반환 행·Entity 상한은 DB scan/sort, snapshot JSON의 byte 크기, 실제 peak heap/latency, multi-query 단일 snapshot을 보장하지 않는다. 계보 최소 ID projection의 운영 plan·index 검증은 BE-035와 함께 남긴다.
 
+## 48차 변경 — BE-035 실제 Repository 계획·참조/날짜 index·계보 MIN 반복
+
+상태: 확인된 조회의 코드/index 개선과 회귀 검증 완료. 운영 DB의 계획·분포·쓰기 부하와 나머지 조건 검증은 남는다.
+
+### 구현과 근거
+
+- 실제 Flyway가 적용된 PostgreSQL 18에서 root 1,000/50,000개·하위 2N개·구역/상태/날짜 동률·계보 source 최대 5,000개를 적재하고 ANALYZE했다. Repository의 실제 첫 SELECT와 별도 표시한 검색/달력 구성 조건 SQL에 대해 index 전후 `EXPLAIN (ANALYZE, BUFFERS, WAL)`을 비교한다. 작은 데이터의 sequential scan은 허용하며 planner를 강제하지 않는다.
+- V41은 확인된 구역/입고/판매/정산 참조와 날짜·ID 정렬, Mutation/결과 쌍의 계보 최초 ID 조회를 지원하는 17개 index를 추가한다. 기존 UNIQUE·index·업무 행·원장·접수·constraint는 보존한다. 5만 root에서 판매 상세 buffer는 1,870→13, 정산 상세는 1,337→8, 전체 판매 최신 page는 1,554→22였다. 전체 FK와 모든 필터를 검증한 결과는 아니다.
+- BE-034의 계보 scalar query에 남은 source별 MIN 호출을 표시 Entry에서 시작하는 쿼리로 바꿨다. 같은 index에서도 라벨 1개의 buffer가 15,091→8, MIN 호출이 source 5,000회→1회다. 101개 Entry는 planner의 hash join 때문에 202회 평가하므로 회귀 기준은 표시 Entry 수에 비례하는 상한으로 둔다. 최초 타입/순서·라벨 없음·graph 계약과 모듈 소유권·transaction/잠금·감사·snapshot을 유지한다.
+- [11 실행 계획 검증](11-index-plan-validation.md)에 fixture·측정 범위·전후 표·추가하지 않은 index·회귀 기준·쓰기를 포함한 비용을 남긴다. 운영 read-only catalog/통계/FK 선두 index 점검 script와 V41 쓰기 중지·timeout/rollback·재시도 절차를 배포 문서에 추가했다. API schema 변경은 없다.
+
+### 검증
+
+- 일반 백엔드 134개 클래스 715건 성공(1분 25초). BE-034에서 확인한 기본 heap 부족을 피하기 위해 동일한 `/tmp/green-house-be034-test-heap.gradle`의 검증용 `maxHeapSize=1g`를 사용했으며 repository 빌드 설정은 변경하지 않았다. H2의 기존 조회/graph·JSON 계약과 architecture 검증도 통과했다.
+- PostgreSQL 관련 회귀 4개 클래스 80건 성공: 배치 query/충돌/replay/rollback 11, 판매 쓰기 query/상태/snapshot/replay/rollback 19, 정산 조회/표시/snapshot/rollback 27, 캘린더/graph/계보 상한·타입/순서 23. 같은 체크포인트에서 새 계획 검증의 초기 assertion은 101 Entry의 hash join MIN 202회를 101회 상한으로 제한해 실패했다. planner의 선형 중복 평가를 확인하고 Entry 수의 두 배 이내 상한으로 조정한 뒤 신규 2건을 별도로 실행하여 성공했다(1분 19초). 이후 제품 변경은 없다.
+- 신규 2건은 실제 Repository 및 명시한 구성 조건/legacy/write 표본 26개를 각각 index 전후로 비교한다. 큰 fixture의 참조/최신 page buffer 상한·이전 계획 대비 개선, 선택적 구역, 계보 라벨 1/101개와 MIN 호출 상한, 이전 쿼리와의 차이, 같은 반환 행 수·rollback 후 catalog index 복원·read-only 점검 script 실행을 검증했다. 반환 값 회귀는 기존 기능 검증과 함께 판단하며 plan의 같은 행 수만으로 의미가 같다고 가정하지 않는다.
+- 프론트 `npm run check`, backend `spotlessCheck`, `git diff --check` 성공. 전체 PostgreSQL/benchmark·운영 DB 계획/부하·실제 writer 처리량·cold cache·peak heap·migration 중 lock 경쟁/timeout fault injection은 미실행. query count 검증과 계획/행/loop 비용을 구분한다. 전체 일반 검증 뒤 변경은 문서뿐이다.
+
+### 남은 범위와 비용
+
+- 합성 5만 root의 신규 index 합계는 약 41.47MiB다. native 수량 200건 변경 표본의 WAL은 129,072→177,429 bytes로 늘었으며 실제 Mutation writer 처리량 실험은 아니다. 활성 partial predicate의 quantity 변경은 HOT update에 영향을 준다. 조회 개선을 쓰기 비용 감소로 설명하지 않는다.
+- leading-wildcard/OR/concat 검색·희귀 상태·count/집계·다중 조건·deep offset·generic prepared plan·대형 IN과 미측정 FK·정산 재구성·원장 대사는 남는다. 이번 구성 조건의 Partner contains는 전체 scan을 유지했다. 운영 PostgreSQL 버전·분포·통계·부하로 재검증해야 하며 B-tree만으로 문자열 검색을 해결했다고 취급하지 않는다.
+- V41은 한 Flyway transaction에서 일반 index를 생성한다. 쓰기 중지 시간이 필요하며 `lock_timeout=5s`는 잠금 대기, `statement_timeout=5min`은 각 SQL의 실행 제한이다. 전체 migration 시간/취득 잠금 유지 시간을 보장하지 않는다. 운영 적용·rehearsal·peak build 공간·실제 lock/WAL/HOT 관찰은 미실행이다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1581,7 +1605,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `bed7e32a` — BE-032 `refactor: batch partner searches and bound identifier queries`. 다중 검색·배열 membership·참조 입력 분할과 PostgreSQL/검색/Work benchmark 회귀를 별도 커밋으로 저장한다.
 
 - `f9cca5ac` — BE-033 `refactor: index mutation placements within locked batches`. 구역별 scalar 검사·구간 index와 SQL/flush/충돌/rollback/경쟁 회귀.
-- BE-034 — `fix: bound calendar history and graph reference retrieval`. 조회 경계와 partial/error 계약·대량 PostgreSQL 회귀·생성 API 계약을 목적 단위로 저장한다.
+- `383ec751` — BE-034 `fix: bound calendar history and graph reference retrieval`. 조회 경계와 partial/error 계약·대량 PostgreSQL 회귀·생성 API 계약.
+- BE-035 — `refactor: index operational reference and date queries`. 실제 PG 계획·index·계보 MIN 개선과 회귀·배포 절차를 목적 단위로 저장한다.
 
 ## 남은 작업
 
@@ -1624,4 +1649,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-032의 다중 검색 scan·배열 ID 바인딩·500개 참조 입력과 대량/검색 의미/페이지/이력 회귀는 45차 범위다. 전체 ID 메모리·호환 응답 상한·운영 부하와 나머지 검색 정책은 별도 후속 범위다.
 - BE-033의 배치 placement 조회·Entity/flush 증폭과 중첩 비교 개선은 46차 범위다. 운영 lock 대기·처리량 검증은 별도다.
 - BE-034의 캘린더/호환 작업 이력과 graph 내부 참조·관계 상한/partial 의미는 47차 범위다. 전체 목록·하위 이력 분리·출하 선택지 계약은 남는다.
+- BE-035의 실제 참조/날짜/계보 계획과 index·MIN 반복 개선은 48차 범위다. 미측정 검색/상태/집계/FK·운영 계획과 index 쓰기·배포 비용 검증은 남는다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

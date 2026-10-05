@@ -24,14 +24,12 @@ public interface OrchidGroupLineageRepository extends JpaRepository<OrchidGroupL
       select new com.greenhouse.backend.farm.repository.transformation.GraphLineageTypeRow(
           lineage.mutationId, lineage.resultOrchidGroup.id, lineage.relationType)
       from OrchidGroupLineage lineage
-      where lineage.mutationId in :mutationIds
-        and exists (select entry.id from OrchidGroupMutationEntry entry
-          where entry.id in :entryIds and entry.mutation.id = lineage.mutationId
-            and entry.orchidGroupId = lineage.resultOrchidGroup.id)
-        and lineage.id = (
-          select min(candidate.id) from OrchidGroupLineage candidate
-          where candidate.mutationId = lineage.mutationId
-            and candidate.resultOrchidGroup.id = lineage.resultOrchidGroup.id)
+      where lineage.id in (
+        select (select min(candidate.id) from OrchidGroupLineage candidate
+          where candidate.mutationId = entry.mutation.id
+            and candidate.resultOrchidGroup.id = entry.orchidGroupId)
+        from OrchidGroupMutationEntry entry
+        where entry.id in :entryIds and entry.mutation.id in :mutationIds)
       order by lineage.id
       """)
   List<GraphLineageTypeRow> findGraphLineageTypes(

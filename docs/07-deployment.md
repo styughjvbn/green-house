@@ -223,9 +223,24 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - V38은 Sales 소유 생성 접수 테이블을 추가하고 기존 전표·예약·출하를 변경하거나 요청 키를 backfill하지 않는다. migration과 새 백엔드 적용 후 생성 키를 사용하는 프론트를 배포한다. 구버전 writer는 새 header를 무시해 재전송을 신규 생성하므로 전환 시 해당 writer의 판매 생성을 중지하고, 접수가 생긴 뒤 구버전 writer로 재시도하지 않는다. 키 없는 기존 연동은 계속 별도 생성이므로 재전송 정책을 별도로 확인한다. 생성 접수는 임의 삭제·TTL 정리하지 않으며 영속 지문·응답 변경은 이전 버전 replay 검증을 포함한다. 성공 여부가 미확인인 브라우저 생성 키도 임의 초기화하지 않는다.
 - V39는 Farm 소유 입고 생성 접수 테이블을 추가하고 기존 입고·품종·난 묶음·Work·Mutation을 변경하거나 생성 키를 backfill하지 않는다. migration·새 백엔드 적용 후 키를 유지하는 입고 프론트를 배포한다. 구버전 writer는 header를 무시해 재전송 입고·작업을 다시 생성하거나 배치 충돌을 반환하므로 전환 시 해당 writer의 입고 생성을 중지하고, 접수가 생긴 뒤 구버전으로 재시도하지 않는다. 키 없는 기존 연동은 별도 생성 계약을 유지한다. 접수의 임의 삭제/TTL과 브라우저의 미확인 키 초기화를 피하며 영속 지문·응답 변경은 이전 replay 호환을 검증한다.
 - V40은 기존 Work Receipt에 선택형 최초 응답 snapshot과 신규 일반 생성 범위의 완료 쌍/응답 ID 일치 제약을 추가한다. 과거 Receipt의 지문·결과 ID·membership과 업무 행은 수정하지 않으며 미상 응답을 backfill하지 않는다. migration·새 백엔드 적용 후 키를 유지하는 일반 Work 등록 화면을 배포하고, header를 무시하는 구버전 writer의 해당 생성을 중지한다. 완료 접수 뒤 구버전 writer로 재시도하거나 접수·미확인 브라우저 키를 임의 삭제/TTL 정리하지 않는다. 기존 구조 변경·즉시 실행·포트의 ID 기반 replay는 유지한다. 지문·응답 schema 변경은 보존된 최초 응답의 호환 검증을 포함한다.
+- V41은 확인된 참조·날짜 정렬·활성 배치·계보 라벨 조회를 위한 index를 추가한다. 업무 행·원장·접수를 backfill하거나 제약을 변경하지 않는다. 쓰기 중지 시간을 확보하고 아래의 적용 절차를 따른다.
 - 실사 수량 조정(`features.stock-count.enabled`)과 작업 기록 수량 정정(`features.work-quantity-correction.enabled`)은 기본값 `false`로 보류한다. 운영에서 활성화하지 않는다. V34와 기존 감사 기록은 보존하고, 작업일·상태 정정 및 결과 생성 취소는 계속 허용한다.
 
 V24 전환 시 기존 코드 발급 방식과 새 방식이 동시에 쓰이지 않도록 이전 백엔드 인스턴스의 쓰기를 중지한 후 migration과 새 버전 기동을 진행한다. 신규 코드 생성 후 구버전으로 단순 rollback하지 않는다. 데이터 수입 등으로 코드를 직접 추가하는 운영 변경은 쓰기를 중지하고 코드 sequence가 추가된 숫자 코드보다 큰지 함께 확인한다.
+
+### 조회 index 점검과 V41 적용
+
+배포 전에 read-only 계정으로 실제 DB의 버전·통계·index를 확인한다. repository root에서 실행한다.
+
+```bash
+psql "$AUDIT_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/performance/inspect-backend-indexes.sql
+```
+
+스크립트는 추정 행 수·ANALYZE 시점, FK의 전체 B-tree 선두 열 지원, index 유효성·사용 횟수·크기를 읽는다. partial/index INCLUDE 열은 전체 FK 지원으로 계산하지 않는다. 사용 횟수는 통계 초기화 이후 값이므로 0회라는 이유만으로 기존 index를 삭제하지 않는다. 필요한 실제 요청 조건의 실행 계획은 별도로 확인한다. 로컬 검증은 PostgreSQL 18의 합성 데이터이며 운영 PostgreSQL 버전·분포·통계의 검증을 대신하지 않는다.
+
+V41은 `CREATE INDEX CONCURRENTLY`가 아닌 일반 index 생성 17개를 **하나의 Flyway transaction**에서 실행한다. 업무 writer와 batch를 중지하고 기존 쓰기 transaction 종료를 확인한 뒤 migration을 적용한다. 조회는 일반적으로 가능하지만 index 생성은 대상 테이블의 쓰기와 충돌하고 취득한 잠금을 commit까지 유지한다. `lock_timeout=5s`는 잠금 대기 제한, `statement_timeout=5min`은 각 SQL의 실행 제한이며 migration 전체 중지 시간을 보장하지 않는다. 큰 테이블은 실제 데이터 복제본에서 시간·디스크 여유를 먼저 확인한다.
+
+실패·timeout이면 V41의 index 생성 전체가 rollback된다. 충돌·용량 원인을 해소하고 같은 release의 Flyway로 재시도한다. 기존 migration 파일을 수정하거나 일부 index를 수동으로 생성하여 실패를 우회하지 않는다. 성공 후 catalog의 정의·유효성을 확인하고 쓰기를 재개한다. 신규 index의 크기·WAL·수량 갱신의 HOT 비율도 관찰한다. quantity predicate를 사용하는 활성 배치 partial은 양수 수량 변경에도 HOT update에 영향을 줄 수 있다. 상세 비교와 미측정 범위는 [BE-035 실행 계획 검증](../backend-audit/11-index-plan-validation.md)을 따른다.
 
 ### 저장 지문·스냅샷 형식 변경 기준
 
