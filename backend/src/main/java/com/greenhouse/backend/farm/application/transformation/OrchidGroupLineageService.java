@@ -55,13 +55,32 @@ public class OrchidGroupLineageService {
       throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
     }
     var transformationViews = structureChangeLineageQueryService.findByOrchidGroupId(orchidGroupId);
-    var transformationGroupIds =
+    var pooledOperationIds =
+        transformationViews.stream()
+            .map(view -> view.workOperationId())
+            .collect(Collectors.toSet());
+    var sourceLinks =
+        lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(orchidGroupId).stream()
+            .filter(lineage -> !pooledOperationIds.contains(lineage.getWorkOperationId()))
+            .toList();
+    var resultLinks =
+        lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(orchidGroupId).stream()
+            .filter(lineage -> !pooledOperationIds.contains(lineage.getWorkOperationId()))
+            .toList();
+    var groupIds =
         transformationViews.stream()
             .flatMap(view -> Stream.concat(view.sources().stream(), view.results().stream()))
             .map(group -> group.orchidGroupId())
             .collect(Collectors.toSet());
+    Stream.concat(sourceLinks.stream(), resultLinks.stream())
+        .forEach(
+            lineage -> {
+              groupIds.add(lineage.getSourceOrchidGroup().getId());
+              groupIds.add(lineage.getResultOrchidGroup().getId());
+            });
+    // Also hydrate the managed groups referenced by direct links before their DTO mapper runs.
     var groupsById =
-        orchidGroupRepository.findDetailsByIds(transformationGroupIds).stream()
+        orchidGroupRepository.findDetailsByIds(groupIds).stream()
             .collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
     var transformations =
         transformationViews.stream()
@@ -93,18 +112,12 @@ public class OrchidGroupLineageService {
                                             groupsById.get(group.orchidGroupId()), businessDate)))
                             .toList()))
             .toList();
-    var pooledOperationIds =
-        transformations.stream()
-            .map(OrchidGroupLineageTransformationResponse::workOperationId)
-            .collect(Collectors.toSet());
     var sources =
-        lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(orchidGroupId).stream()
-            .filter(lineage -> !pooledOperationIds.contains(lineage.getWorkOperationId()))
+        sourceLinks.stream()
             .map(lineage -> OrchidGroupLineageItemResponse.from(lineage, businessDate))
             .toList();
     var results =
-        lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(orchidGroupId).stream()
-            .filter(lineage -> !pooledOperationIds.contains(lineage.getWorkOperationId()))
+        resultLinks.stream()
             .map(lineage -> OrchidGroupLineageItemResponse.from(lineage, businessDate))
             .toList();
     return new OrchidGroupLineageResponse(orchidGroupId, sources, results, transformations);

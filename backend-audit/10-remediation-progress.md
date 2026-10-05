@@ -1366,6 +1366,25 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-027 완료. 요청한 다음 단계는 BE-028 직접 계보 조회와 BE-029 배치 profile의 적재 범위 정리다. 각각 별도 커밋으로 진행한다.
 
+## 40차 변경 — BE-028 직접 계보의 현재 참조 N+1 제거
+
+### 완료 범위
+
+- Work application 조회의 실행 ID로 이미 포함된 직접 연결을 먼저 제외한다. 남은 sources/results 연결의 양 끝 그룹 ID와 Work 계보의 그룹 ID를 합쳐 기존 Farm 소유 상세 Repository로 한 번에 로딩한다. 같은 persistence context의 직접 연결 Entity에도 위치 tree·품종·입고가 초기화되므로 기존 mapper를 유지한다.
+- 직접 연결의 생성 시각/ID 순서, Work 실행 계보의 관계·순서, 현재 품종/위치와 농장 업무일 기준 연령 의미를 유지한다. 최상위 readOnly 트랜잭션·404·원장/효과 snapshot·쓰기/잠금은 바꾸지 않는다. 조회 시점의 현재 참조를 과거 snapshot으로 대체하지 않았으며 API/DB schema 변경은 없다.
+- 전체 계보 응답의 Entity 적재량은 연결 수에 비례한다. 대형 IN 분할·하위 계보 상한은 BE-032/034의 별도 범위이며 이번 수정으로 heap/무제한 이력 위험까지 해결한 것으로 표시하지 않는다.
+
+### 측정·회귀와 검증
+
+- 새 PostgreSQL 회귀는 들어오는 연결과 나가는 연결 각각 1/10/50개를 생성한다. 중심과 각 연결의 위치·품종·입고는 독립적이며 fixture commit 후 서비스의 새 트랜잭션에서 전체 DTO를 조립한다. 연결 ID/관계/작업/수량/순서, 현재 위치·품종·입고일 기반 7년생을 함께 검증한다.
+- 제품 변경 전 SQL 20/110/510회, 변경 후 5/5/5회. 최초 3건은 응답 assertion 통과 후 조회 상한에서만 실패했다. 양방향·입고를 포함하는 fixture여서 감사 당시 단방향 실험의 수치와 다르다. Entity load 20/146/706은 전후 동일하고 collection fetch 0회다. `build/work-query-count/legacy-lineage-*.json`에 측정 증적을 기록한다.
+- 관련 일반 계보 integration/codec 조회 및 신규 PostgreSQL 3건 집중 검증 성공(42초). 최종 일반 `./gradlew test`: 133개 클래스 711건 성공. 관련 PostgreSQL 직접 계보 3건·구조 handler/계보/취소/replay 및 잘못된 결과 rollback 7건, 2개 클래스 10건 성공. 실패·오류·생략 0건; 백엔드 검사 2분 27초.
+- 프론트 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check` 성공. PostgreSQL 전체·benchmark 전체·브라우저 E2E·운영 heap/지연 실측은 미실행. 최종 검증 후 진행 문서만 수정했다.
+
+### 다음 범위
+
+- BE-028의 조회 수 문제를 해결했다. 다음은 BE-029 배치 profile의 불필요한 난 묶음 적재 제거다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1407,7 +1426,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `f7f5cf90` — BE-024 미사용 주입/전략 옵션 제거·기존 실행 회귀.
 - `6c95e7a0` — BE-025 즉시 명령 전달·actor 정규화·지문/실행 호환 회귀.
 - `6bb0bac9` — BE-026 입금 키 충돌 오류·소비자/명세·금융 상태/경쟁 회귀.
-- BE-027 — `perf: batch load auction write result histories`. 쓰기 결과 행 N+1·순서/접수 호환·query-count 회귀를 별도 커밋으로 저장한다.
+- BE-028 — `perf: batch load direct lineage references`. 직접 계보 참조·순서/연령·query-count 회귀를 별도 커밋으로 저장한다.
+- `7aa63f7f` — BE-027 `perf: batch load auction write result histories`. 쓰기 결과 행 N+1·순서/접수 호환·query-count 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1443,4 +1463,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-025의 즉시 실행 명령 전달·actor 정규화와 지문/실행 호환 회귀는 37차 범위다.
 - BE-026의 수동 입금 키 충돌 오류 계약·소비자/명세·금융 상태/경쟁 회귀는 38차 범위다. 다음 변경은 BE-028 직접 계보와 BE-029 배치 profile의 적재 범위를 검토한다.
 - BE-027의 쓰기 결과 행 N+1 제거와 조회/순서/접수 회귀는 39차 범위다.
+- BE-028의 직접 계보 현재 참조 일괄 로딩·순서/연령/query-count 회귀는 40차 범위다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
