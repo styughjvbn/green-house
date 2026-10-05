@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+/** Internal Work composition helpers; other modules call Work use-case APIs. */
 @Component
 public class WorkOperationSupport {
 

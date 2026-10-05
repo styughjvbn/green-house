@@ -11,6 +11,7 @@ import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
@@ -50,16 +51,19 @@ public class ImmediateWorkExecutionService {
 
   private final WorkCommandReceipts receipts;
 
-  public WorkOperationView executeForTarget(
+  /** Creates the automatic history title from the caller's source variety snapshot. */
+  public WorkOperationView executeVarietyHistoryForTarget(
       String requestKey,
       String workTypeCode,
-      String title,
+      String varietyName,
       LocalDate workDate,
       String worker,
       String memo,
       Long orchidGroupId,
       Map<String, Object> details,
       WorkEffectPayload payload) {
+    String title =
+        support.varietyHistoryTitle(varietyName, WorkTypeDefinition.forCode(workTypeCode));
     String key = WorkCommandReceipts.normalizeKey(requestKey);
     String actor = support.actor(worker);
     var command =

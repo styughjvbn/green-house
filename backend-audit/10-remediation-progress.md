@@ -1112,6 +1112,38 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 - BE-018은 국소 출력 조립과 종류별 생성 정리를 완료 범위로 삼는다. 출력 상한을 DB 탐색량·하위 이력 적재량 상한으로 해석하지 않는다. 내부 조회 fan-out·메모리·truncation 의미 개선은 별도 BE-034 범위에서 API 소비자와 함께 검토한다. 과거 snapshot을 현재 Entity 값으로 복원하는 변경도 포함하지 않는다.
 
+## 31차 변경 — BE-019 소비자 기준 공개 값/업무 계약과 내부 helper 경계
+
+작업일: 2026-10-05. 상태: 소비자 기준 공개 계약·내부 helper 경계·호환/architecture 회귀·최종 검증 완료. BE-019 현재 소비자 범위 완료.
+
+### 원인과 범위
+
+- `OrchidGroupReader`는 Sales가 사용하는 현재 상태·판매 선택·잠금 API와 `Optional<OrchidGroup>` 조회를 함께 public으로 노출했다. Entity 반환의 제품 소비자는 Farm 현장 동기화 한 곳이며, 기본 `findById` wrapper는 사용되지 않았다. 현재 Sales의 Entity 접근 위반을 수정한 것이 아니라 승인된 외부 계약과 내부 JPA 접근을 구분한 변경이다.
+- Entity 반환 메서드 둘을 제거한다. Farm 현장 동기화는 소유 Repository의 같은 상세 조회를 기존 최상위 쓰기 트랜잭션 안에서 사용한다. 외부 Reader의 상태 값·판매 선택·`MANDATORY` 잠금, ID 정렬·500개 분할·snapshot 조회 시점은 유지한다. Entity를 값으로 바꾸어 Farm 내부 변경 감지를 끊거나 같은 내용을 감싼 내부 Reader/interface를 추가하지 않는다.
+- Farm 분갈이·현장 동기화가 Work 내부 제목 helper를 주입하던 의존을 제거한다. Work의 기존 대상 즉시 실행 진입점은 품종명 값을 받는 `executeVarietyHistoryForTarget`으로 좁히고 Work가 자동 제목을 생성한 뒤 기존 접수·효과·응답 경로를 실행한다. 두 실제 소비자만 사용하던 자유 제목 진입점을 별도 호환 wrapper로 남기지 않는다. 이름만 바꾼 public 제목 formatter도 추가하지 않는다.
+- 분갈이는 기존 원본 묶음 선잠금에서 읽은 품종명을, 현장 동기화는 기존 상세 조회에서 읽은 품종명을 전달한다. Work가 품종명을 재조회하지 않으며 Work title·요청 원문 title·payload·actor 정규화·영속 지문 입력은 각각 기존 의미를 보존한다. 요청 원문 title이 자동 제목에 표시되지 않아도 변경된 원문은 같은 키로 재실행할 수 없다.
+- 이동 시험 fixture도 제거된 Entity 반환 API 대신 같은 소유 Repository 상세 조회를 사용한다. 제품의 조회 조건·managed Entity·트랜잭션 annotation·DI proxy·receipt/membership·효과/Mutation/감사 연결·HTTP/DB 계약은 유지한다. 현장 동기화 HTTP의 `FEATURE_ON_HOLD` 정책을 해제하지 않는다.
+
+### 회귀 방어
+
+- 제품 수정 전에 신규 분갈이 HTTP 회귀 2건을 포함한 8건을 통과시켰다. 품종명의 앞뒤 공백·자동 제목의 150자 상한·worker 정규화, 자동 제목과 원문 title의 분리·동일 요청 replay·원문 title만 다른 재요청 거절 및 수량/작업/계보 무중복을 확인한다.
+- 기존 현장 동기화 application 입력의 JSON·고정 지문 golden을 유지한다. 공개 Reader의 기존 잠금 순서/빈 입력/누락 ID·batch query count와 이동 fixture 흐름도 함께 확인한다.
+- 신규 architecture 검증은 공개 Reader의 반환/입력 generic container와 중첩 record에서 Entity를 검출한다. 별도 compiled dependency 검증은 Work 외부의 `WorkOperationSupport` 참조를 차단한다. 다른 Work service 전체를 무조건 interface/DTO로 나누거나 모든 application 클래스를 내부로 숨기는 규칙은 만들지 않는다.
+
+### 검증
+
+- 제품 수정 후 집중 일반/integration/architecture 8개 클래스 53건 성공. 실패·오류·생략은 없고 42초 소요했다. Entity API를 사용하던 이동 fixture의 컴파일 실패는 Repository 주입 전환으로 수정했다.
+- Architecture gate 자체도 검증했다. 과거 Reader의 public `Optional<Entity>` 메서드와 Farm의 Work helper dependency를 임시 복원하자 두 gate가 각각 의도대로 실패했다. 제품 소스는 자동 복원했고 이후 최종 전체 검증을 실행했다. 이 의도적 거절 결과를 성공 시험 수에 포함하지 않는다.
+- 최종 백엔드 전체 `./gradlew test`: 132개 클래스 683건 성공. 실패·오류·생략은 없고 2분 소요했다. 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`도 성공했다.
+- PostgreSQL 집중 `workE2eTest`: 5개 클래스 61건 성공. 실패·오류·생략은 없고 1분 2초 소요했다. 구형 분갈이/현장 동기화 접수 지문·payload snapshot·재전송·다른 원문 거절·효과 DB 실패 시 Work/Mutation/감사/접수 rollback과 재시도, 판매 교차 수정 잠금/재고·이동/일괄 취소 회귀를 확인했다. SQL·schema·트랜잭션/잠금 경계를 바꾸지 않아 PostgreSQL 전체 62개 클래스는 재실행하지 않았다.
+- 공개 HTTP 필드·enum·Controller·DB schema 변경이 없어 OpenAPI/TypeScript 재생성·Flyway 추가는 필요하지 않다. benchmark·브라우저 E2E·운영 DB 대사는 실행하지 않았다.
+- `git diff --check`: 성공. 최종 전체 검증 이후에는 진행 문서의 완료 상태와 검증 결과만 갱신했다. 제품 코드·시험·HTTP/저장 계약은 변경하지 않았다.
+
+### 남은 범위
+
+- BE-019의 현재 소비자 기준 Entity/helper 공개 경계 정리를 완료 대상으로 삼는다. Work Receipt의 외부 노출(BE-021), Farm 보정 adapter의 Work 조율(BE-020), 이외 실제 HTTP DTO/application 경계(BE-022)는 별도 finding이며 이번 변경에 끼워 넣지 않는다.
+- 새 비 HTTP 채널은 아직 도입하지 않는다. 향후 채널이 생길 때 입력 검증·신뢰된 주체·인가·감사 context·DI proxy·업무별 재시도 계약을 함께 제공한다는 기준만 architecture 문서에 명시한다. 이번 변경을 비 HTTP 권한/context 자동 적용이나 운영 과거 요청 corpus의 호환 증명으로 해석하지 않는다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1144,7 +1176,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `6d3baa09` — BE-015 정산 원본 Entity graph 대체·500 ID 분할·snapshot/query-count/rollback/replay 회귀.
 - `1d62c3c3` — BE-016 중간 생성 DTO 매핑 제거와 네 구조 유형의 배치 속성 회귀.
 - `389cbd9b` — BE-017 검사·선택 범위 검증·보상 단계와 취소 정책 회귀.
-- BE-018 — `refactor: encapsulate work graph assembly`. 그래프 출력 상태·노드 factory·상한/순서/JSON 회귀를 별도 커밋으로 저장한다.
+- `dee4ca93` — BE-018 그래프 출력 상태·노드 factory·상한/순서/JSON 회귀.
+- BE-019 — `refactor: narrow public farm and work contracts`. 소비자 기준 값/업무 API·내부 helper 경계·호환/architecture 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1171,4 +1204,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-016의 구조 결과 생성 DTO 경유 제거와 속성·순서·상속 회귀는 28차 범위다.
 - BE-017의 취소 검사·수집·종류별 처리·응답 단계 정리와 차단 우선순위/잠금 재검사/snapshot 회귀는 29차 범위다.
 - BE-018의 그래프 조립 상태·종류별 생성과 상한/순서/JSON 회귀는 30차 범위다. 내부 조회량과 truncation 의미 개선은 BE-034에 남긴다.
+- BE-019의 현재 소비자 Entity/helper 공개 경계 정리와 architecture/입력 호환 회귀는 31차 범위다. 새 비 HTTP 채널의 검증·주체·인가·감사 context는 채널 도입 시 필요한 조건부 범위다. 다음 변경은 BE-020의 Work 보정 조율 소유권을 검토한다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

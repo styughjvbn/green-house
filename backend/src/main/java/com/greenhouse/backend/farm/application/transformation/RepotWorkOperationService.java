@@ -8,7 +8,6 @@ import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationResponse
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
-import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.time.Clock;
 import java.util.LinkedHashMap;
@@ -32,21 +31,17 @@ public class RepotWorkOperationService {
 
   private final OrchidGroupRepository orchidGroupRepository;
 
-  private final WorkOperationSupport workOperationSupport;
-
   public RepotWorkOperationService(
       ImmediateWorkExecutionService immediateWorkExecutionService,
       WorkOperationQueryService queryService,
       OrchidGroupRepository orchidGroupRepository,
       Clock clock,
-      WorkOperationSupport workOperationSupport,
       LegacyStructureChangeRequestMapper legacyRequestMapper) {
     this.immediateWorkExecutionService = immediateWorkExecutionService;
     this.queryService = queryService;
     this.orchidGroupRepository = orchidGroupRepository;
     this.clock = clock;
     this.legacyRequestMapper = legacyRequestMapper;
-    this.workOperationSupport = workOperationSupport;
   }
 
   public RepotWorkOperationResponse execute(RepotWorkOperationRequest request) {
@@ -66,11 +61,10 @@ public class RepotWorkOperationService {
     details.put("increaseQuantity", increaseQuantity);
     details.put("resultCount", request.results().size());
     var operation =
-        immediateWorkExecutionService.executeForTarget(
+        immediateWorkExecutionService.executeVarietyHistoryForTarget(
             normalizeRequired(request.idempotencyKey()),
             WorkTypeDefinition.REPOT.name(),
-            workOperationSupport.varietyHistoryTitle(
-                sourceGroup.getVarietyName(), WorkTypeDefinition.REPOT),
+            sourceGroup.getVarietyName(),
             request.workDate(),
             normalize(request.worker()),
             normalize(request.memo()),

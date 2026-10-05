@@ -348,6 +348,70 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
     assertThat(lineageRepository.count()).isEqualTo(1);
   }
 
+  @Test
+  void automaticHistoryTitleTrimsAndTruncatesVarietyWhileKeepingActorNormalization()
+      throws Exception {
+    variety =
+        varietyRepository.save(
+            new Variety(
+                "REPOT-LONG",
+                "팔레놉시스",
+                " " + "가".repeat(148) + " ",
+                null,
+                "3.5치",
+                true,
+                true,
+                null,
+                null));
+    OrchidGroup source = createSource(100, "0", "2");
+    String request =
+        repotRequest("repot-long-title", source.getId(), 40, 0, null, 40, "2", "4", "")
+            .replace("\"worker\": \"테스터\"", "\"worker\": \"  작업자  \"");
+    mockMvc
+        .perform(
+            post("/api/work-operations/repot")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.operation.title").value("가".repeat(144) + " · 분갈이"))
+        .andExpect(jsonPath("$.data.operation.worker").value("작업자"));
+    assertThat(operationRepository.findByRequestKey("repot-long-title").orElseThrow().getTitle())
+        .hasSize(150);
+  }
+
+  @Test
+  void originalRequestedTitleStillParticipatesInIdempotencyDespiteTheAutomaticTitle()
+      throws Exception {
+    OrchidGroup source = createSource(100, "0", "2");
+    String request =
+        repotRequest("repot-title-fingerprint", source.getId(), 40, 0, null, 40, "2", "4", "");
+    mockMvc
+        .perform(
+            post("/api/work-operations/repot")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.operation.title").value("분갈이 테스트 · 분갈이"));
+    mockMvc
+        .perform(
+            post("/api/work-operations/repot")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.operation.title").value("분갈이 테스트 · 분갈이"));
+    mockMvc
+        .perform(
+            post("/api/work-operations/repot")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request.replace("분갈이 실행", "다른 요청 제목")))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"));
+    assertThat(operationRepository.count()).isEqualTo(1);
+    assertThat(lineageRepository.count()).isEqualTo(1);
+    assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity())
+        .isEqualTo(60);
+  }
+
   private OrchidGroup createSource(int quantity, String start, String end) {
     OrchidGroup group =
         new OrchidGroup(

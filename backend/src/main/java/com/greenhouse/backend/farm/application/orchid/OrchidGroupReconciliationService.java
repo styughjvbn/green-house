@@ -2,9 +2,9 @@ package com.greenhouse.backend.farm.application.orchid;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupReconciliationRequest;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkReconciliationCommand;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
-import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.util.Map;
@@ -19,20 +19,17 @@ public class OrchidGroupReconciliationService {
 
   private final ImmediateWorkExecutionService immediateWorkExecutionService;
 
-  private final OrchidGroupReader orchidGroupReader;
-
-  private final WorkOperationSupport workOperationSupport;
+  private final OrchidGroupRepository orchidGroupRepository;
 
   public WorkOperationView reconcile(Long orchidGroupId, OrchidGroupReconciliationRequest request) {
     var orchidGroup =
-        orchidGroupReader
+        orchidGroupRepository
             .findDetailById(orchidGroupId)
             .orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
-    return immediateWorkExecutionService.executeForTarget(
+    return immediateWorkExecutionService.executeVarietyHistoryForTarget(
         request.idempotencyKey(),
         WorkTypeDefinition.RECONCILIATION.name(),
-        workOperationSupport.varietyHistoryTitle(
-            orchidGroup.getVarietyName(), WorkTypeDefinition.RECONCILIATION),
+        orchidGroup.getVarietyName(),
         request.workDate(),
         request.worker(),
         request.memo(),

@@ -1,8 +1,8 @@
 package com.greenhouse.backend.support;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.application.effect.StructureChangeResultInput;
 import com.greenhouse.backend.work.application.effect.StructureChangeSourceInput;
@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MovementTestSupport {
 
-  private final OrchidGroupReader groups;
+  private final OrchidGroupRepository groups;
 
   private final StructureChangeRecordService records;
 

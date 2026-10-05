@@ -24,9 +24,7 @@ import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectPayload;
 import com.greenhouse.backend.work.application.effect.WorkReconciliationCommand;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
-import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
 import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -110,20 +108,17 @@ class WorkReconciliationPayloadTest {
 
   private WorkReconciliationCommand capturedCommand(OrchidGroupReconciliationRequest request) {
     var immediate = mock(ImmediateWorkExecutionService.class);
-    var reader = mock(OrchidGroupReader.class);
-    var support = mock(WorkOperationSupport.class);
+    var groups = mock(OrchidGroupRepository.class);
     var group = mock(OrchidGroup.class);
     when(group.getVarietyName()).thenReturn("기존 품종");
-    when(reader.findDetailById(31L)).thenReturn(Optional.of(group));
-    when(support.varietyHistoryTitle("기존 품종", WorkTypeDefinition.RECONCILIATION))
-        .thenReturn("자동 제목");
-    new OrchidGroupReconciliationService(immediate, reader, support).reconcile(31L, request);
+    when(groups.findDetailById(31L)).thenReturn(Optional.of(group));
+    new OrchidGroupReconciliationService(immediate, groups).reconcile(31L, request);
     var payload = ArgumentCaptor.forClass(WorkEffectPayload.class);
     verify(immediate)
-        .executeForTarget(
+        .executeVarietyHistoryForTarget(
             eq(request.idempotencyKey()),
             eq("RECONCILIATION"),
-            eq("자동 제목"),
+            eq("기존 품종"),
             eq(request.workDate()),
             eq(request.worker()),
             eq(request.memo()),

@@ -1,14 +1,12 @@
 package com.greenhouse.backend.farm.application.orchid;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -22,14 +20,6 @@ public class OrchidGroupReader {
   private static final int ID_BATCH_SIZE = 500;
 
   private final OrchidGroupRepository orchidGroupRepository;
-
-  public Optional<OrchidGroup> findById(Long orchidGroupId) {
-    return orchidGroupRepository.findById(orchidGroupId);
-  }
-
-  public Optional<OrchidGroup> findDetailById(Long orchidGroupId) {
-    return orchidGroupRepository.findDetailById(orchidGroupId);
-  }
 
   @Transactional(propagation = Propagation.MANDATORY)
   public Map<Long, OrchidGroupState> lockStates(Collection<Long> orchidGroupIds) {
