@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.correction;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.operation.WorkCommandReceipts;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
 import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
@@ -57,12 +58,33 @@ public class WorkOperationCorrectionService {
             support.actor(request.worker()),
             normalize(request.memo()),
             support.now());
-    var result =
-        correctionPort.correct(
-            originalId, () -> correctionRepository.save(correction).getId(), request);
-    var link = result.mutationLink();
+    var beforeWorkDate = original.getPlannedStartDate();
+    boolean workDateChanged = !beforeWorkDate.equals(request.workDate());
+    if (request.cancelResultCreation() && workDateChanged) {
+      throw new IllegalArgumentException("결과 생성 취소와 작업일 보정은 별도로 처리해야 합니다.");
+    }
+    var plan =
+        isDateOnly(request)
+            ? WorkCorrectionPlan.noChanges()
+            : correctionPort.prepare(originalId, request);
+    if (!plan.hasChanges() && !workDateChanged) {
+      throw new IllegalArgumentException("수량, 상태 또는 작업일 중 현재 값과 다른 보정 값이 필요합니다.");
+    }
+    correctionRepository.save(correction);
+    var link =
+        plan.adjustments().isEmpty()
+            ? null
+            : correctionPort.apply(correction.getId(), request, plan);
+    original.correctWorkDate(request.workDate());
+    var resultDetails =
+        new WorkEffectResults.Corrected(
+            originalId,
+            beforeWorkDate,
+            original.getPlannedStartDate(),
+            plan.adjustments(),
+            plan.quantityBalances());
     correction.complete(
-        result.storedDetails(),
+        resultDetails.toMap(),
         link == null ? null : link.mutationId(),
         link == null ? null : link.correlationId());
     receipt.complete(correction.getId());
@@ -88,6 +110,12 @@ public class WorkOperationCorrectionService {
   }
 
   private record Request(Long originalId, WorkCorrectionCommand command) {}
+
+  private boolean isDateOnly(WorkCorrectionCommand request) {
+    return !request.cancelResultCreation()
+        && request.orchidGroupAdjustments().isEmpty()
+        && (request.quantityCorrections() == null || request.quantityCorrections().isEmpty());
+  }
 
   private String normalize(String value) {
     return value == null || value.isBlank() ? null : value.trim();

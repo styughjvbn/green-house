@@ -1,0 +1,24 @@
+package com.greenhouse.backend.work.application.correction;
+
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
+import java.util.List;
+
+/** Values prepared under Farm locks, retained in the calling Work transaction. */
+public record WorkCorrectionPlan(
+    List<WorkEffectResults.Adjustment> adjustments,
+    List<WorkQuantityBalanceChange> quantityBalances,
+    StructureChangeMutationReferences mutationReferences) {
+
+  public WorkCorrectionPlan {
+    adjustments = List.copyOf(adjustments);
+    quantityBalances = List.copyOf(quantityBalances);
+  }
+
+  public static WorkCorrectionPlan noChanges() {
+    return new WorkCorrectionPlan(List.of(), List.of(), StructureChangeMutationReferences.legacy());
+  }
+
+  public boolean hasChanges() {
+    return !adjustments.isEmpty() || !quantityBalances.isEmpty();
+  }
+}

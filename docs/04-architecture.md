@@ -300,6 +300,8 @@ Persistence 조회 규칙:
 - 포트 전용 실행은 `InboundPottingCommand`를 Work 진행·효과 handler·Farm 실행까지 유지한다. Map은 효과 저장·지문 비교에 사용하고, 구형 대상 완료의 Map 입력은 전용 codec에서 같은 application 명령으로 해석한다. HTTP DTO로 재복원하지 않으며 기존 JSON 키·날짜 표현·null·결과 순서와 효과 identity를 유지한다.
 - 외부 시스템은 application port 뒤의 adapter로 추가한다. 외부 시스템 DTO와 오류를 domain에 전파하지 않는다.
 - 작업 수량 수지는 Work 소유 실행 스냅샷·정정 감사 이벤트에서 복원하며 현재 Farm Entity를 과거 사실의 근거로 사용하지 않는다. Farm adapter는 결과 잠금 아래 현재 상태·실사·후속 참조를 검증한다. 실사는 Farm 소유 접수/감사 기록 → 난 묶음 → 논리 구역 순으로 잠그고 같은 트랜잭션에서 Mutation과 수량을 확정한다. 두 흐름 모두 최초 실행 스냅샷을 덮어쓰지 않는다.
+- 작업 보정은 Work가 접수 → 원본 잠금 → Farm 준비 → 감사 ID 확보 → Farm Mutation 적용 → 원본 작업일·감사 결과·접수 완료를 조율한다. Farm은 잠금 아래 현재 상태·후속 참조·실사·수량을 검증하고 변경 전후 값과 원본 Mutation 참조를 계획 값으로 반환한다. 준비와 적용은 같은 명령·호출 트랜잭션에서 실행하며 Farm 포트는 `MANDATORY`로 잠금을 유지한다. 저장 callback이나 Work Entity를 Farm에 넘기지 않는다.
+- 보정 날짜의 미래일·생성 취소 병행 제한·무변경 판단과 최종 감사 JSON 조립은 Work가 소유한다. 감사 ID는 Farm Mutation의 출처를 만들기 전에 확보하고, 날짜 변경은 이미 잠근 원본 Entity에 적용한다. 빈 난 묶음 조정·빈 수량 정정 목록의 날짜 전용 요청은 Farm 보정 포트를 호출하지 않는다. 동일 값 난 묶음 행을 포함한 요청은 기존 Farm 검증을 유지하며, 최종 응답의 참조 조회는 기존 조회 계약을 따른다. 접수·감사·작업일·Mutation은 함께 확정/rollback하고, 원본 기간 길이·완료 상태·최초 실행 스냅샷과 취소 후 replay를 보존한다.
 
 ```text
 호출 모듈 application → 제공 모듈 application API

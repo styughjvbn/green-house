@@ -1,10 +1,11 @@
 package com.greenhouse.backend.work.application.correction;
 
-import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import java.util.function.Supplier;
+import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 
+/** Prepare and apply the same command within the caller's transaction, retaining Farm locks. */
 public interface WorkCorrectionPort {
 
-  WorkExecutionResult correct(
-      Long originalOperationId, Supplier<Long> correctionId, WorkCorrectionCommand request);
+  WorkCorrectionPlan prepare(Long originalOperationId, WorkCorrectionCommand request);
+
+  WorkMutationLink apply(Long correctionId, WorkCorrectionCommand request, WorkCorrectionPlan plan);
 }

@@ -4,6 +4,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionPort;
 import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -32,6 +33,17 @@ class PublicApplicationContractArchitectureTest {
   }
 
   @Test
+  void correctionPortExposesValuesInsteadOfStorageCallbacks() {
+    for (var method : WorkCorrectionPort.class.getDeclaredMethods()) {
+      var visited = new HashSet<Type>();
+      assertValueType(method.getGenericReturnType(), visited);
+      for (Type parameter : method.getGenericParameterTypes()) {
+        assertValueType(parameter, visited);
+      }
+    }
+  }
+
+  @Test
   void workCompositionSupportIsUsedOnlyInsideWork() {
     var classes =
         new ClassFileImporter()
@@ -49,8 +61,11 @@ class PublicApplicationContractArchitectureTest {
   private void assertValueType(Type type, Set<Type> visited) {
     if (!visited.add(type)) return;
     if (type instanceof Class<?> value) {
+      assertThat(value.getPackageName())
+          .as("Storage callback in a public value contract: %s", value.getName())
+          .isNotEqualTo("java.util.function");
       assertThat(value.isAnnotationPresent(Entity.class))
-          .as("Entity in the public OrchidGroupReader contract: %s", value.getName())
+          .as("Entity in a public value contract: %s", value.getName())
           .isFalse();
       if (value.isArray()) assertValueType(value.getComponentType(), visited);
       if (value.isRecord()) {

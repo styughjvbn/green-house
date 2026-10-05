@@ -16,29 +16,28 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidStockCountRepository;
 import com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput;
 import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionPlan;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionPort;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionQuantityService;
-import com.greenhouse.backend.work.application.correction.WorkOperationDateCorrectionService;
 import com.greenhouse.backend.work.application.effect.WorkEffectResults;
-import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
+@Transactional(propagation = Propagation.MANDATORY)
 @RequiredArgsConstructor
 public class FarmWorkCorrectionAdapter implements WorkCorrectionPort {
 
   private final StructureChangeReferenceReader structureChangeReferenceReader;
-
-  private final WorkOperationDateCorrectionService workOperationDateCorrectionService;
 
   private final OrchidGroupRepository orchidGroupRepository;
 
@@ -51,8 +50,7 @@ public class FarmWorkCorrectionAdapter implements WorkCorrectionPort {
   private final OrchidStockCountRepository stockCounts;
 
   @Override
-  public WorkExecutionResult correct(
-      Long originalOperationId, Supplier<Long> correctionId, WorkCorrectionCommand request) {
+  public WorkCorrectionPlan prepare(Long originalOperationId, WorkCorrectionCommand request) {
     List<Long> correctableIds =
         structureChangeReferenceReader.getCorrectableResultOrchidGroupIds(originalOperationId);
     Set<Long> adjustmentIds =
@@ -93,16 +91,6 @@ public class FarmWorkCorrectionAdapter implements WorkCorrectionPort {
             .collect(Collectors.toSet())
             .containsAll(changedQuantities))
       throw new IllegalArgumentException("당시 수량 수지를 확인할 수 없는 결과입니다. 현재 실사 수량 조정을 사용하세요.");
-    boolean workDateChanged =
-        !workOperationDateCorrectionService
-            .getWorkDate(originalOperationId)
-            .equals(request.workDate());
-    if (request.cancelResultCreation() && workDateChanged) {
-      throw new IllegalArgumentException("결과 생성 취소와 작업일 보정은 별도로 처리해야 합니다.");
-    }
-    if (changedAdjustmentIds.isEmpty() && !workDateChanged && quantityChanges.isEmpty()) {
-      throw new IllegalArgumentException("수량, 상태 또는 작업일 중 현재 값과 다른 보정 값이 필요합니다.");
-    }
     var guardIds = new LinkedHashSet<>(changedAdjustmentIds);
     quantityChanges.forEach(change -> guardIds.addAll(change.before().resultQuantities().keySet()));
     if (!guardIds.isEmpty()) {
@@ -153,56 +141,51 @@ public class FarmWorkCorrectionAdapter implements WorkCorrectionPort {
                       adjustment.status().trim());
                 })
             .toList();
-    Long eventId = correctionId.get();
-    WorkMutationLink mutationLink = null;
-    if (!changedAdjustmentIds.isEmpty()) {
-      var references =
-          structureChangeReferenceReader.getMutationReferences(
-              originalOperationId, changedAdjustmentIds);
-      RelatedOrchidGroupMutations related =
-          references.legacySource()
-              ? RelatedOrchidGroupMutations.legacy()
-              : RelatedOrchidGroupMutations.current(references.mutationIds());
-      var source = OrchidGroupMutationSources.workCorrection(eventId);
-      var mutation =
-          request.cancelResultCreation()
-              ? mutationEngine.cancelCreation(
-                  new CancelOrchidGroupCreationMutationCommand(
-                      source,
-                      changedAdjustmentIds.iterator().next(),
-                      related,
-                      request.workDate(),
-                      request.reason()))
-              : mutationEngine.correct(
-                  new CorrectOrchidGroupsMutationCommand(
-                      source,
-                      request.orchidGroupAdjustments().stream()
-                          .filter(
-                              adjustment ->
-                                  changedAdjustmentIds.contains(adjustment.orchidGroupId()))
-                          .map(
-                              adjustment ->
-                                  new CorrectOrchidGroupMutationItem(
-                                      adjustment.orchidGroupId(),
-                                      adjustment.quantity(),
-                                      adjustment.status()))
-                          .toList(),
-                      related,
-                      request.workDate(),
-                      request.reason()));
-      mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
-    }
-    var dateCorrection =
-        workOperationDateCorrectionService.correct(originalOperationId, request.workDate());
-    var resultDetails =
-        new WorkEffectResults.Corrected(
-            originalOperationId,
-            dateCorrection.before(),
-            dateCorrection.after(),
-            auditRows,
-            quantityChanges);
-    return new WorkExecutionResult(
-        "CORRECTION", resultDetails, List.copyOf(changedAdjustmentIds), mutationLink);
+    var references =
+        structureChangeReferenceReader.getMutationReferences(
+            originalOperationId, changedAdjustmentIds);
+    return new WorkCorrectionPlan(auditRows, quantityChanges, references);
+  }
+
+  @Override
+  public WorkMutationLink apply(
+      Long correctionId, WorkCorrectionCommand request, WorkCorrectionPlan plan) {
+    if (plan.adjustments().isEmpty()) return null;
+    var changedIds =
+        plan.adjustments().stream()
+            .map(WorkEffectResults.Adjustment::orchidGroupId)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+    var references = plan.mutationReferences();
+    RelatedOrchidGroupMutations related =
+        references.legacySource()
+            ? RelatedOrchidGroupMutations.legacy()
+            : RelatedOrchidGroupMutations.current(references.mutationIds());
+    var source = OrchidGroupMutationSources.workCorrection(correctionId);
+    var mutation =
+        request.cancelResultCreation()
+            ? mutationEngine.cancelCreation(
+                new CancelOrchidGroupCreationMutationCommand(
+                    source,
+                    changedIds.iterator().next(),
+                    related,
+                    request.workDate(),
+                    request.reason()))
+            : mutationEngine.correct(
+                new CorrectOrchidGroupsMutationCommand(
+                    source,
+                    request.orchidGroupAdjustments().stream()
+                        .filter(adjustment -> changedIds.contains(adjustment.orchidGroupId()))
+                        .map(
+                            adjustment ->
+                                new CorrectOrchidGroupMutationItem(
+                                    adjustment.orchidGroupId(),
+                                    adjustment.quantity(),
+                                    adjustment.status()))
+                        .toList(),
+                    related,
+                    request.workDate(),
+                    request.reason()));
+    return new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
   }
 
   private Set<Long> changedAdjustmentIds(

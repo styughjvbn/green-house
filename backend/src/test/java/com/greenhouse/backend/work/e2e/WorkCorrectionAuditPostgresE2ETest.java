@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
@@ -11,9 +12,14 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionPlan;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionPort;
 import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -25,11 +31,14 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.IllegalTransactionStateException;
 
 @Tag("work-e2e")
 @org.springframework.test.context.TestPropertySource(
     properties = "features.work-quantity-correction.enabled=true")
 class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
+
+  @Autowired WorkCorrectionPort correctionPort;
 
   @Autowired WorkTestDataSeeder seeder;
 
@@ -405,6 +414,146 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
                 originalId))
         .isEqualTo("CANCEL_CREATION");
     assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  @Test
+  void farmCorrectionPhasesRequireTheCallingTransaction() throws Exception {
+    var request =
+        objectMapper.readValue(request("mandatory", 55, "2026-07-15"), WorkCorrectionCommand.class);
+    assertThatThrownBy(() -> correctionPort.prepare(originalId, request))
+        .isInstanceOf(IllegalTransactionStateException.class);
+    assertThatThrownBy(() -> correctionPort.apply(1L, request, WorkCorrectionPlan.noChanges()))
+        .isInstanceOf(IllegalTransactionStateException.class);
+    assertThat(count("work_operation_corrections")).isZero();
+    assertThat(count("work_correction_receipts")).isZero();
+  }
+
+  @Test
+  void unchangedCorrectionRollsBackItsReceiptAndCanRetryWithAChangedDate() throws Exception {
+    var groupsBefore = jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id");
+    long mutationsBefore = count("orchid_group_mutations");
+    String unchanged = request("no-change", 60, "2026-07-15");
+    var failed = post(path(), unchanged);
+    assertThat(failed.status()).as(failed.body().toString()).isEqualTo(400);
+    assertThat(failed.body().toString()).contains("현재 값과 다른 보정 값이 필요");
+    assertThat(count("work_operation_corrections")).isZero();
+    assertThat(count("work_correction_receipts")).isZero();
+    assertThat(jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id"))
+        .isEqualTo(groupsBefore);
+    assertThat(count("orchid_group_mutations")).isEqualTo(mutationsBefore);
+    assertThat(post(path(), unchanged.replace("2026-07-15", "2026-07-14")).status()).isEqualTo(201);
+    assertThat(count("work_operation_corrections")).isEqualTo(1);
+    assertThat(count("orchid_group_mutations")).isEqualTo(mutationsBefore);
+  }
+
+  @Test
+  void resultCreationCancellationCannotAlsoChangeTheWorkDate() throws Exception {
+    String request =
+        """
+        {"idempotencyKey":"cancel-and-date","workDate":"2026-07-14","reason":"오생성",
+         "cancelResultCreation":true,
+         "orchidGroupAdjustments":[{"orchidGroupId":%d,"quantity":60,"status":"정상"}]}
+        """
+            .formatted(resultIds.getFirst());
+    var groupsBefore = jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id");
+    long mutationsBefore = count("orchid_group_mutations");
+    var failed = post(path(), request);
+    assertThat(failed.status()).as(failed.body().toString()).isEqualTo(400);
+    assertThat(failed.body().toString()).contains("결과 생성 취소와 작업일 보정은 별도로 처리");
+    assertThat(count("work_operation_corrections")).isZero();
+    assertThat(count("work_correction_receipts")).isZero();
+    assertThat(jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id"))
+        .isEqualTo(groupsBefore);
+    assertThat(count("orchid_group_mutations")).isEqualTo(mutationsBefore);
+    assertThat(post(path(), request.replace("2026-07-14", "2026-07-15")).status()).isEqualTo(201);
+  }
+
+  @Test
+  void finalAuditFailureRollsBackMutationDateSnapshotsAndReceipt() throws Exception {
+    var before = correctionState();
+    String request = request("audit-completion-failure", 55, "2026-07-14");
+    jdbc.execute(
+        "ALTER TABLE work_operation_corrections ADD CONSTRAINT test_correction_completion CHECK (result_details = '{}'::jsonb)");
+    ApiResult failed;
+    try {
+      failed = post(path(), request);
+    } finally {
+      jdbc.execute(
+          "ALTER TABLE work_operation_corrections DROP CONSTRAINT test_correction_completion");
+    }
+    assertThat(failed.status()).as(failed.body().toString()).isBetween(400, 599);
+    assertThat(correctionState()).isEqualTo(before);
+    var retry = post(path(), request);
+    assertThat(retry.status()).as(retry.body().toString()).isEqualTo(201);
+    assertThat(retry.data().path("corrections").get(0).path("beforeWorkDate").asText())
+        .isEqualTo("2026-07-15");
+    assertThat(retry.data().path("corrections").get(0).path("afterWorkDate").asText())
+        .isEqualTo("2026-07-14");
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  @Test
+  void dateOnlyDatabaseFailureRollsBackAuditAndAllowsTheSameKeyRetry() throws Exception {
+    var before = correctionState();
+    String request =
+        """
+        {"idempotencyKey":"date-db-failure","workDate":"2026-07-14","reason":"날짜 정정","orchidGroupAdjustments":[]}
+        """;
+    jdbc.execute(
+        "ALTER TABLE work_operations ADD CONSTRAINT test_correction_date CHECK (id <> "
+            + originalId
+            + " OR planned_start_date = DATE '2026-07-15')");
+    ApiResult failed;
+    try {
+      failed = post(path(), request);
+    } finally {
+      jdbc.execute("ALTER TABLE work_operations DROP CONSTRAINT test_correction_date");
+    }
+    assertThat(failed.status()).as(failed.body().toString()).isBetween(400, 599);
+    assertThat(correctionState()).isEqualTo(before);
+    var retry = post(path(), request);
+    assertThat(retry.status()).as(retry.body().toString()).isEqualTo(201);
+    assertThat(
+            jdbc.queryForObject("SELECT mutation_id FROM work_operation_corrections", Long.class))
+        .isNull();
+    assertThat(count("orchid_group_mutations"))
+        .isEqualTo(((List<?>) before.get("mutations")).size());
+  }
+
+  @Test
+  void concurrentDateAndQuantityCorrectionsPreserveAContinuousBeforeAfterHistory()
+      throws Exception {
+    var responses =
+        parallel(request("date-first", 55, "2026-07-14"), request("date-second", 50, "2026-07-13"));
+    assertThat(responses).extracting(ApiResult::status).containsOnly(201);
+    var rows = get(path()).data().path("corrections");
+    assertThat(rows).hasSize(2);
+    assertThat(rows.get(0).path("beforeWorkDate").asText()).isEqualTo("2026-07-15");
+    assertThat(rows.get(1).path("beforeWorkDate")).isEqualTo(rows.get(0).path("afterWorkDate"));
+    assertThat(rows.get(1).path("adjustments").get(0).path("beforeQuantity"))
+        .isEqualTo(rows.get(0).path("adjustments").get(0).path("afterQuantity"));
+    assertThat(get(path()).data().path("originalOperation").path("plannedStartDate"))
+        .isEqualTo(rows.get(1).path("afterWorkDate"));
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  private Map<String, Object> correctionState() {
+    var state = new LinkedHashMap<String, Object>();
+    for (String table :
+        List.of(
+            "work_operations",
+            "work_operation_corrections",
+            "work_correction_receipts",
+            "work_applied_effects",
+            "orchid_groups",
+            "orchid_group_mutation_entries",
+            "orchid_group_mutation_relations",
+            "audit_events")) {
+      String order = table.equals("work_correction_receipts") ? "request_key" : "id";
+      state.put(table, jdbc.queryForList("SELECT * FROM " + table + " ORDER BY " + order));
+    }
+    state.put("mutations", jdbc.queryForList("SELECT * FROM orchid_group_mutations ORDER BY id"));
+    return state;
   }
 
   private List<ApiResult> parallel(String first, String second) throws Exception {

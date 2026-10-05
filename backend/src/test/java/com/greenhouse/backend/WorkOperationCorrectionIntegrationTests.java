@@ -2,11 +2,15 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
@@ -19,6 +23,7 @@ import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionPort;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
@@ -34,12 +39,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
 @org.springframework.test.context.TestPropertySource(
     properties = "features.work-quantity-correction.enabled=true")
 class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegrationTest {
+
+  @MockitoSpyBean private WorkCorrectionPort correctionPort;
 
   @Autowired private WorkOperationCorrectionRepository correctionRepository;
 
@@ -221,11 +229,52 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
         .andExpect(jsonPath("$.data.corrections[0].adjustments", hasSize(0)));
 
     var original = operationRepository.findWithWorkTypeById(originalId).orElseThrow();
+    verify(correctionPort, never()).apply(any(), any(), any());
     assertThat(original.getPlannedStartDate()).isEqualTo(LocalDate.of(2026, 7, 14));
     assertThat(original.getPlannedEndDate()).isEqualTo(LocalDate.of(2026, 7, 14));
     var unchangedGroup = orchidGroupRepository.findById(createdGroupId).orElseThrow();
     assertThat(unchangedGroup.getQuantity()).isEqualTo(30);
     assertThat(unchangedGroup.getStatus()).isEqualTo("정상");
+  }
+
+  @Test
+  void rejectsAnUnchangedDateWithoutEnteringFarmOrSavingAnAudit() throws Exception {
+    Long originalId = createRepotOperation();
+    mockMvc
+        .perform(
+            post("/api/work-operations/{id}/corrections", originalId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    dateOnlyCorrectionWithoutAdjustmentsRequest()
+                        .replace("2026-07-14", "2026-07-15")))
+        .andExpect(status().isBadRequest());
+    assertFarmCorrectionWasNotInvoked();
+    assertThat(correctionRepository.count()).isZero();
+    assertThat(operationRepository.findById(originalId).orElseThrow().getPlannedStartDate())
+        .isEqualTo(LocalDate.of(2026, 7, 15));
+  }
+
+  @Test
+  void dateCorrectionPreservesPeriodDurationAndOriginalExecutionSnapshots() throws Exception {
+    Long originalId = createRepotOperation("2026-07-18");
+    var json = new ObjectMapper().findAndRegisterModules();
+    var effect = appliedEffectRepository.findByWorkOperationIdOrderByIdAsc(originalId).getFirst();
+    String commandBefore = json.writeValueAsString(effect.getCommandDetails());
+    String resultBefore = json.writeValueAsString(effect.getResultDetails());
+    mockMvc
+        .perform(
+            post("/api/work-operations/{id}/corrections", originalId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(dateOnlyCorrectionWithoutAdjustmentsRequest()))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.originalOperation.plannedStartDate").value("2026-07-14"))
+        .andExpect(jsonPath("$.data.originalOperation.plannedEndDate").value("2026-07-17"))
+        .andExpect(jsonPath("$.data.originalOperation.status").value("COMPLETED"));
+    assertFarmCorrectionWasNotInvoked();
+    var after = appliedEffectRepository.findByWorkOperationIdOrderByIdAsc(originalId).getFirst();
+    assertThat(json.writeValueAsString(after.getCommandDetails())).isEqualTo(commandBefore);
+    assertThat(json.writeValueAsString(after.getResultDetails())).isEqualTo(resultBefore);
+    assertThat(correctionRepository.findAll().getFirst().getMutationId()).isNull();
   }
 
   @Test
@@ -260,7 +309,16 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
     assertThat(correctionRepository.count()).isZero();
   }
 
+  private void assertFarmCorrectionWasNotInvoked() {
+    verify(correctionPort, never()).prepare(any(), any());
+    verify(correctionPort, never()).apply(any(), any(), any());
+  }
+
   private Long createRepotOperation() throws Exception {
+    return createRepotOperation("2026-07-15");
+  }
+
+  private Long createRepotOperation(String plannedEndDate) throws Exception {
     var createdSource =
         orchidGroupCommandService.create(
             new OrchidGroupCreateRequest(
@@ -288,7 +346,7 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 						          "title": "보정할 분갈이",
 						    "workTypeId": %d,
 						    "plannedStartDate": "2026-07-15",
-						    "plannedEndDate": "2026-07-15",
+						    "plannedEndDate": "%s",
 						    "sourceScopeType": "MANUAL_SELECTION",
 						    "sourceOrchidGroupIds": [%d]
 						  },
@@ -305,7 +363,11 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 						}
 						"""
                         .formatted(
-                            repotType.getId(), source.getId(), source.getId(), bedZone.getId())))
+                            repotType.getId(),
+                            plannedEndDate,
+                            source.getId(),
+                            source.getId(),
+                            bedZone.getId())))
         .andExpect(status().isCreated());
     createdGroupId =
         orchidGroupRepository.findAll().stream()
@@ -333,6 +395,13 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				"""
         .formatted(
             idempotencyKey, createdGroupId, appliedEffectRepository.findAll().getFirst().getId());
+  }
+
+  private String dateOnlyCorrectionWithoutAdjustmentsRequest() {
+    return """
+        {"idempotencyKey":"correction-date-only","workDate":"2026-07-14","worker":"관리자",
+         "reason":"작업일 입력 오류","orchidGroupAdjustments":[]}
+        """;
   }
 
   private String dateOnlyCorrectionRequest() {

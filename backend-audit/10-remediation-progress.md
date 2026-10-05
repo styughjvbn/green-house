@@ -1144,6 +1144,38 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-019의 현재 소비자 기준 Entity/helper 공개 경계 정리를 완료 대상으로 삼는다. Work Receipt의 외부 노출(BE-021), Farm 보정 adapter의 Work 조율(BE-020), 이외 실제 HTTP DTO/application 경계(BE-022)는 별도 finding이며 이번 변경에 끼워 넣지 않는다.
 - 새 비 HTTP 채널은 아직 도입하지 않는다. 향후 채널이 생길 때 입력 검증·신뢰된 주체·인가·감사 context·DI proxy·업무별 재시도 계약을 함께 제공한다는 기준만 architecture 문서에 명시한다. 이번 변경을 비 HTTP 권한/context 자동 적용이나 운영 과거 요청 corpus의 호환 증명으로 해석하지 않는다.
 
+## 32차 변경 — BE-020 Work 보정 순서와 Farm 검증/변경 경계 정리
+
+작업일: 2026-10-05. 상태: Work 조율·Farm 준비/적용 경계·회귀·최종 전체 검증 완료. BE-020 완료.
+
+### 원인과 범위
+
+- Work는 접수·원본 잠금·보정 이벤트 저장소를 소유했지만, 저장 callback을 Farm에 넘겨 감사 ID 확보 시점을 위임했다. Farm adapter가 Work 날짜 조회/변경 서비스와 최종 감사 결과까지 조립해 날짜 전용 보정도 농장 변경 경로를 거쳤다. 기존 rollback 실패를 재현한 수정이 아니라 BE-020의 조율 소유권과 변경 비용을 정리한 변경이다.
+- Work 보정 포트를 `prepare`와 `apply`로 나눈다. Farm은 기존 대상/수량 검증과 묶음 잠금·실사·후속 사용·현재 수량 검사 아래 감사 전후 값·수량 수지 변경·원본 Mutation 참조를 불변 계획 값으로 반환한다. Entity·Repository나 저장 callback을 포트 계약에 노출하지 않는다. 별도 service·registry·일반 workflow framework를 추가하지 않는다.
+- Work는 이미 잠근 원본의 날짜로 미래일·생성 취소 병행·무변경을 판단하고, Farm 준비가 끝난 뒤 보정 이벤트를 저장해 ID를 확보한다. Farm 적용은 이 ID를 Mutation 출처로 사용하고 기존 명령의 수량·원문 상태·사유·업무일과 참조를 유지한다. Work가 같은 managed 원본의 날짜·기간을 바꾸고 기존 `Corrected` JSON·Mutation 연결·접수를 확정한다. Farm이 호출하던 별도 Work 날짜 service는 다른 소비자가 없어 제거했다.
+- Farm 두 단계는 `MANDATORY`로 최상위 Work 트랜잭션에 참여한다. 계획은 같은 명령·트랜잭션 안에서만 사용하며 준비의 잠금이 적용/응답 완료까지 유지된다. 접수 → Work 원본 → 난 묶음의 기존 선잠금과 Mutation 내부 순서, 감사 ID를 Mutation 전에 확보하는 생성 지점·원자성, replay의 기존 접수 우선 판정을 유지한다.
+- 빈 난 묶음 조정·빈 수량 정정 목록의 날짜 전용 요청만 Farm 보정 포트를 우회한다. 동일 값 난 묶음 행을 보내는 기존 날짜 보정은 Farm 검증을 유지한다. 결과 생성 취소/작업일 병행 제한은 Work 원본을 읽은 직후 판정하므로 복수의 잘못된 조건을 함께 보낸 요청에서 날짜 제한이 먼저 반환될 수 있다. 유효 요청의 정책과 단일 위반의 HTTP 오류 code·저장 계약은 유지한다.
+- Date-only에서도 최종 현재 참조 응답·Work 수량 context 조회는 유지한다. 수량 정정/실사의 기본 `FEATURE_ON_HOLD`를 해제하거나 과거 실행 스냅샷·현재 수량을 재구성하지 않는다. 조회 성능·일반 context 중복 적재 개선은 별도 범위다.
+
+### 회귀 방어
+
+- 제품 변경 전에 신규 PostgreSQL 5건을 34초에 통과시켜 무변경 접수 rollback/같은 키 재시도, 결과 생성 취소와 날짜 변경 병행 거절, 최종 감사 JSON DB 실패 시 Mutation·작업일·모든 원장/감사/접수 rollback, 날짜 전용 DB 실패/같은 키 재시도, 동시 날짜+수량 보정의 연속 전후 이력을 고정했다.
+- 일반 integration에서 빈 목록 날짜 전용 요청의 Farm 포트 무호출·무변경 무감사·기간 길이·완료 상태·원본 명령/효과 스냅샷 보존을 추가했다. 기존 날짜 fixture는 동일 값 난 묶음 행을 포함했으므로 그 요청에는 준비 검증을 허용하고 Mutation 적용만 금지해 실제 계약을 구분한다.
+- 새 architecture gate는 보정 포트의 입력·반환 generic/record 안의 Entity와 `java.util.function` callback을 거절한다. 기존 수량 정정의 저장 지문·기본 비활성화·상태/생성 취소 허용 회귀를 유지한다. PostgreSQL에는 호출자 트랜잭션 없는 Farm 준비/적용 거절도 추가했다.
+
+### 검증
+
+- 최종 집중 일반/integration/architecture 5개 클래스 22건 성공. 실패·오류·생략은 없고 29초 소요했다.
+- 최종 백엔드 전체 `./gradlew test`: 132개 클래스 686건 성공. PostgreSQL 전체 `./gradlew workE2eTest`: 62개 클래스 657건 성공. 실패·오류·생략은 없고 최종 백엔드 전체 검증은 9분 34초 소요했다.
+- PostgreSQL 전체에는 신규 6건 외에 기존 보정의 병렬 동일/다른 접수·최초 전후 값·취소 후 replay·지문/저장 snapshot·수량 수지·현재 실사/후속 사용 차단·생성 취소/재활성화·제약 실패 rollback·migration/원장 대사 회귀를 포함한다. 기본 비활성화된 수량 기능과 허용된 날짜/상태/생성 취소 경로도 확인했다.
+- 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. HTTP 필드·enum·Controller·DB schema 변경이 없어 OpenAPI/TypeScript 재생성·Flyway 추가는 필요하지 않다. benchmark·브라우저 E2E·운영 DB 대사는 실행하지 않았다.
+- 최종 전체 검증 이후에는 진행 문서의 완료 상태와 검증 결과만 갱신했다. 제품 코드·시험·HTTP/저장 계약은 변경하지 않았다.
+
+### 남은 범위
+
+- BE-020은 Work 보정의 callback·날짜·최종 감사 결과 조율 소유권을 완료 범위로 삼는다. Farm이 사용하는 Work 소유 실행/Mutation 참조와 수량 snapshot 조회 계약은 유지하며 이 read 경계를 없애기 위한 DTO/interface를 일괄 추가하지 않는다.
+- 보정 수량 context의 반복 적재/Java 집계(BE-037), Work Receipt 외부 노출(BE-021), 다른 HTTP DTO/application 경계(BE-022), 운영 과거 보정 corpus 검증과 과거 감사 복구는 별도다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1177,7 +1209,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `1d62c3c3` — BE-016 중간 생성 DTO 매핑 제거와 네 구조 유형의 배치 속성 회귀.
 - `389cbd9b` — BE-017 검사·선택 범위 검증·보상 단계와 취소 정책 회귀.
 - `dee4ca93` — BE-018 그래프 출력 상태·노드 factory·상한/순서/JSON 회귀.
-- BE-019 — `refactor: narrow public farm and work contracts`. 소비자 기준 값/업무 API·내부 helper 경계·호환/architecture 회귀를 별도 커밋으로 저장한다.
+- `2ac96878` — BE-019 소비자 기준 값/업무 API·내부 helper 경계·호환/architecture 회귀.
+- BE-020 — `refactor: keep work correction orchestration in work`. 보정 준비/적용·Work 날짜/감사 조율·rollback/동시성 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1204,5 +1237,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-016의 구조 결과 생성 DTO 경유 제거와 속성·순서·상속 회귀는 28차 범위다.
 - BE-017의 취소 검사·수집·종류별 처리·응답 단계 정리와 차단 우선순위/잠금 재검사/snapshot 회귀는 29차 범위다.
 - BE-018의 그래프 조립 상태·종류별 생성과 상한/순서/JSON 회귀는 30차 범위다. 내부 조회량과 truncation 의미 개선은 BE-034에 남긴다.
-- BE-019의 현재 소비자 Entity/helper 공개 경계 정리와 architecture/입력 호환 회귀는 31차 범위다. 새 비 HTTP 채널의 검증·주체·인가·감사 context는 채널 도입 시 필요한 조건부 범위다. 다음 변경은 BE-020의 Work 보정 조율 소유권을 검토한다.
+- BE-019의 현재 소비자 Entity/helper 공개 경계 정리와 architecture/입력 호환 회귀는 31차 범위다. 새 비 HTTP 채널의 검증·주체·인가·감사 context는 채널 도입 시 필요한 조건부 범위다. Work 보정 조율 소유권은 32차 BE-020에서 이어진다.
+- BE-020의 보정 callback 제거·Work 날짜/감사 조율과 Farm 준비/적용·rollback/동시성 회귀는 32차 범위다. 다음 변경은 BE-021의 Farm에 노출된 Work Receipt 계약을 검토한다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
