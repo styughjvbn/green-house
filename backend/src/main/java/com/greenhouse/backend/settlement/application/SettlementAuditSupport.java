@@ -14,11 +14,11 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class SettlementAuditSupport {
+class SettlementAuditSupport {
 
   private final AuditEventWriter auditWriter;
 
-  public Map<String, Object> settingsSnapshot(PartnerSettlementSettings settings) {
+  Map<String, Object> settingsSnapshot(PartnerSettlementSettings settings) {
     var data = new LinkedHashMap<String, Object>();
     data.put("settlementUnit", settings.getSettlementUnit());
     data.put("paymentDelayDays", settings.getPaymentDelayDays());
@@ -33,7 +33,7 @@ public class SettlementAuditSupport {
     return data;
   }
 
-  public void recordSettingsUpdate(
+  void recordSettingsUpdate(
       PartnerSettlementSettings settings, Map<String, Object> before, Map<String, Object> after) {
     auditWriter.record(
         AuditAction.UPDATED,
@@ -45,37 +45,31 @@ public class SettlementAuditSupport {
         Map.of("partnerId", settings.getPartnerId()));
   }
 
-  public Map<String, Object> auctionPaymentSnapshot(AuctionSettlement settlement) {
-    return paymentSnapshot(
-        settlement.getPaidAmount(), settlement.getRemainingAmount(), settlement.getStatus().name());
-  }
-
-  public Map<String, Object> paymentSnapshot(Long paidAmount, Long remainingAmount, String status) {
+  Map<String, Object> auctionPaymentSnapshot(AuctionSettlement settlement) {
     var data = new LinkedHashMap<String, Object>();
-    data.put("paidAmount", paidAmount);
-    data.put("remainingAmount", remainingAmount);
-    data.put("paymentStatus", status);
+    data.put("paidAmount", settlement.getPaidAmount());
+    data.put("remainingAmount", settlement.getRemainingAmount());
+    data.put("paymentStatus", settlement.getStatus().name());
     return data;
   }
 
-  public void recordTargetPayment(
-      String entityType,
-      Long entityId,
-      Long partnerId,
-      PaymentTargetType targetType,
-      Map<String, Object> before,
-      Map<String, Object> after) {
+  void recordAuctionPayment(
+      AuctionSettlement settlement, Map<String, Object> before, Map<String, Object> after) {
     auditWriter.record(
         AuditAction.UPDATED,
         AuditSource.SETTLEMENT_MANAGEMENT,
-        entityType,
-        entityId,
+        "AUCTION_SETTLEMENT",
+        settlement.getId(),
         before,
         after,
-        Map.of("partnerId", partnerId, "targetType", targetType.name()));
+        Map.of(
+            "partnerId",
+            settlement.getAuctionHouseId(),
+            "targetType",
+            PaymentTargetType.AUCTION_SETTLEMENT.name()));
   }
 
-  public void recordManualPayment(PartnerPaymentEvent event) {
+  void recordManualPayment(PartnerPaymentEvent event) {
     var after = new LinkedHashMap<String, Object>();
     after.put("partnerId", event.getPartnerId());
     after.put("eventType", event.getEventType());

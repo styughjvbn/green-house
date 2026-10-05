@@ -47,6 +47,7 @@ import com.greenhouse.backend.settlement.repository.PartnerSettlementSettingsRep
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -54,6 +55,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
@@ -371,6 +374,72 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
                 .filter(event -> event.getEntityType().equals("SALES_SLIP"))
                 .filter(event -> event.getEntityId().equals(slip.getId())))
         .isEmpty();
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"SALES_SLIP", "PAYMENT_EVENT"})
+  void eitherPaymentAuditFailureRollsBackTheEntirePaymentAndAllowsSameKeyRetry(String entityType) {
+    var partner = createPartner("감사 실패 " + entityType);
+    var slip = createSlip(partner, "PAY-AUDIT-" + partner.getId());
+    var payment = payment(20_000L, "audit-failure");
+    var before = paymentState(partner.getId(), slip.getId());
+    jdbcTemplate.execute(
+        "ALTER TABLE audit_events ADD CONSTRAINT test_payment_audit CHECK (entity_type <> '"
+            + entityType
+            + "' OR context_data ->> 'partnerId' <> '"
+            + partner.getId()
+            + "')");
+    try {
+      assertThatThrownBy(() -> salesPaymentService.confirmPayment(slip.getId(), payment))
+          .isInstanceOf(DataIntegrityViolationException.class);
+    } finally {
+      jdbcTemplate.execute("ALTER TABLE audit_events DROP CONSTRAINT test_payment_audit");
+    }
+    assertThat(paymentState(partner.getId(), slip.getId())).isEqualTo(before);
+    var retry = salesPaymentService.confirmPayment(slip.getId(), payment);
+    assertThat(retry.paidAmount()).isEqualTo(20_000L);
+    assertThat(retry.remainingAmount()).isEqualTo(80_000L);
+    assertThat(balanceService.getBalance(partner.getId()).receivableBalance()).isEqualTo(80_000L);
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT entity_type FROM audit_events WHERE context_data ->> 'partnerId' = ? ORDER BY id",
+                String.class,
+                partner.getId().toString()))
+        .containsExactly("PAYMENT_EVENT", "SALES_SLIP");
+    assertThat(
+            eventRepository
+                .search(partner.getId(), null, null, null, PageRequest.of(0, 100))
+                .getContent())
+        .extracting(PartnerPaymentEvent::getEventType)
+        .containsExactly(
+            PaymentEventType.MANUAL_MATCH_CONFIRMED, PaymentEventType.PAYMENT_RECEIVED);
+    var after = paymentState(partner.getId(), slip.getId());
+    salesPaymentService.confirmPayment(slip.getId(), payment);
+    assertThat(paymentState(partner.getId(), slip.getId())).isEqualTo(after);
+  }
+
+  private Map<String, Object> paymentState(Long partnerId, Long slipId) {
+    return Map.of(
+        "slip",
+            jdbcTemplate.queryForList(
+                "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM sales_slips WHERE id = ?) snapshot",
+                String.class,
+                slipId),
+        "events",
+            jdbcTemplate.queryForList(
+                "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM partner_payment_events WHERE partner_id = ? ORDER BY id) snapshot",
+                String.class,
+                partnerId),
+        "balance",
+            jdbcTemplate.queryForList(
+                "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM partner_balance_summaries WHERE partner_id = ?) snapshot",
+                String.class,
+                partnerId),
+        "audit",
+            jdbcTemplate.queryForList(
+                "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM audit_events WHERE context_data ->> 'partnerId' = ? ORDER BY id) snapshot",
+                String.class,
+                partnerId.toString()));
   }
 
   @Test

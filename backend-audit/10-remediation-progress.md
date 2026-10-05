@@ -1208,6 +1208,37 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-021은 실제 Farm 소비자의 Receipt 메커니즘 의존 제거와 업무별 접수 소유권을 완료 범위로 삼는다. Work 내부의 Receipt 공용 helper는 여러 Work application 경로가 사용하므로 유지한다. 입고 전체 취소의 별도 child key 의미와 키 없는 신규 채널의 재시도 정책을 이 취소 API에 일괄 통합하지 않는다.
 - 다음 변경은 BE-022의 Sales 감사와 Settlement 내부 helper 결합을 검토한다. 과거 접수의 운영 corpus 검증과 실제 저장 version 전환은 BE-013의 별도 범위다.
 
+## 34차 변경 — BE-022 전표 입금 감사의 Sales 소유권 정리
+
+작업일: 2026-10-05. 상태: 소유권/가시성 정리·감사/rollback/architecture 회귀·최종 검증 완료. BE-022 완료.
+
+### 원인과 범위
+
+- Sales 입금이 Settlement의 감사 helper에 전표 상태 값·target 종류·식별자를 전달했다. helper에는 Settlement Entity 감사도 함께 있어 입금 원장 API와 별개인 내부 구현 의존이 생겼다. 현재 금융 오류를 재현한 버그 수정이 아니라 감사 조립 소유권과 변경 결합을 정리하는 BE-022 변경이다.
+- 기존 Sales 감사 helper가 전표의 입금 전후 스냅샷과 감사 조립을 소유한다. Sales 입금은 Settlement의 기존 수동 입금 원장·거래처 잔액 API를 계속 사용하며 감사는 공통 Audit 값 계약으로 기록한다. 전표 감사에 전체 품목·배분을 추가로 읽거나 새 공용 Payment Audit API/복제 DTO를 만들지 않는다.
+- Sales와 Settlement의 감사 helper 클래스·메서드를 package-private으로 제한한다. Settlement의 범용 target 감사 입력은 소유 경매 정산의 전용 감사 메서드로 좁히고, 이제 외부 소비자가 없는 scalar payment snapshot 메서드는 제거한다. 설정/입금 이벤트 감사는 같은 Settlement helper에 유지한다.
+- 전표 입금 감사의 기존 `UPDATED`·`SETTLEMENT_MANAGEMENT`·`SALES_SLIP`과 세 상태 필드·변경 필드 순서·partner/target context를 보존한다. 경매 정산의 기존 source/target/context/상태 표현도 유지한다. 감사 출처는 저장·조회 계약이며 helper의 코드 소유 모듈명과 일치해야 하는 것은 아니다.
+- 전표 상태 감사와 `PAYMENT_EVENT` 생성 감사는 서로 다른 사실이므로 둘 다 남긴다. 최상위 입금 트랜잭션·root/거래처 잠금 순서·원장 접수 키·같은 요청의 replay 우선 판정·잔액 재계산·최종 응답 조립 순서는 변경하지 않는다. 일반 판매 수정/생성/취소 감사의 `SALES_MANAGEMENT` 출처도 유지한다.
+
+### 회귀 방어
+
+- 제품 변경 전 기존 일반 입금 시험에 부분입금→완납의 정확한 감사 전후 JSON·source/action·변경 필드 순서·entity ID·context를 추가해 통과시켰다. 재시도·다른 금액/날짜의 키 재사용·과입금 거절이 감사 건수를 늘리지 않고, 입금 이벤트 감사에서 입금자명/메모를 제외하는 기존 검증을 유지한다. 경매 정산 감사의 독립 상태 표현도 고정했다.
+- 신규 PostgreSQL 2건은 전표 상태 감사와 입금 이벤트 감사 각각의 실제 DB CHECK 실패를 주입한다. 전표·수동 원장/매칭 이벤트·잔액·감사 행의 전체 rollback, 같은 키 재시도 성공, 두 감사 사실 보존, 추가 replay의 무변경을 제품 변경 전후 확인한다. sequence 번호 공백은 실패 복구 정책의 검증 대상이 아니다.
+- 컴파일된 dependency architecture gate는 다른 모듈의 Sales/Settlement 감사 helper 참조를 거절한다. 변경 전 Sales 입금/Settlement helper를 일시 복원한 음성 대조에서 기존 직접 의존으로 예상한 1건 실패를 확인한 뒤 현재 소스를 복원했다. package-private 가시성도 Java 컴파일 단계에서 외부 참조를 제한한다.
+
+### 검증
+
+- 제품 변경 전 집중 일반 2건·신규 PostgreSQL 2건 성공(34초). 변경 후 집중 입금/감사/원장/architecture 5개 클래스 42건 성공(34초).
+- 최종 백엔드 전체 `./gradlew test`: 132개 클래스 689건 성공. 관련 PostgreSQL `workE2eTest`: 거래처/판매·경매 입금 13건·판매 쓰기 query-count 19건·정산 조회 query-count 27건, 총 3개 클래스 59건 성공. 실패·오류·생략은 없고 최종 백엔드 검증은 2분 42초 소요했다.
+- 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. PostgreSQL 검증에는 신규 두 감사 실패 회귀 외에 기존 동시 입금/replay·거래처 잠금·최종 응답 실패 rollback·금융 snapshot/query-count 회귀를 포함한다.
+- HTTP 입력/응답·enum·Controller·DB schema·금액 정책·트랜잭션/잠금 구현의 변경은 없다. PostgreSQL 전체·benchmark·브라우저 E2E·운영 과거 감사 대사는 실행하지 않는다. OpenAPI/TypeScript 재생성·Flyway 추가는 필요하지 않다.
+- 최종 검증 이후에는 진행 문서의 완료 상태/결과와 architecture 문서의 주어를 명확히 하는 문구만 갱신했다. 제품 코드·시험·HTTP/저장 계약은 변경하지 않았다.
+
+### 남은 범위
+
+- BE-022는 실제 Sales 소비자의 Settlement 감사 내부 의존과 불필요한 공개 target helper 제거를 완료 범위로 삼는다. 입금 원장·잔액 API와 기존 감사 사실의 출처를 통합하거나 과거 감사를 재작성하지 않는다.
+- 다음 변경은 BE-023의 직접 판매 생성·수정 공통 입력 정책 중복을 검토한다. 신규 입금 취소/보정·예치금·자동 매칭 등의 MVP 후속 기능은 별도 업무 범위다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1243,7 +1274,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `dee4ca93` — BE-018 그래프 출력 상태·노드 factory·상한/순서/JSON 회귀.
 - `2ac96878` — BE-019 소비자 기준 값/업무 API·내부 helper 경계·호환/architecture 회귀.
 - `c9505f0d` — BE-020 보정 준비/적용·Work 날짜/감사 조율·rollback/동시성 회귀.
-- BE-021 — `refactor: keep inbound potting void receipts in work`. 포트 취소 업무 API·Farm adapter·저장 호환/rollback/architecture 회귀를 별도 커밋으로 저장한다.
+- `885d7863` — BE-021 포트 취소 업무 API·Farm adapter·저장 호환/rollback/architecture 회귀.
+- BE-022 — `refactor: keep sales payment audits in sales`. 전표 입금 감사 소유권·내부 helper 가시성·감사/rollback/architecture 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1272,5 +1304,6 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-018의 그래프 조립 상태·종류별 생성과 상한/순서/JSON 회귀는 30차 범위다. 내부 조회량과 truncation 의미 개선은 BE-034에 남긴다.
 - BE-019의 현재 소비자 Entity/helper 공개 경계 정리와 architecture/입력 호환 회귀는 31차 범위다. 새 비 HTTP 채널의 검증·주체·인가·감사 context는 채널 도입 시 필요한 조건부 범위다. Work 보정 조율 소유권은 32차 BE-020에서 이어진다.
 - BE-020의 보정 callback 제거·Work 날짜/감사 조율과 Farm 준비/적용·rollback/동시성 회귀는 32차 범위다.
-- BE-021의 Farm Receipt helper 의존 제거·입고 포트 취소 업무 API·저장 호환/rollback/architecture 회귀는 33차 범위다. 다음 변경은 BE-022의 Sales 감사와 Settlement 내부 helper 결합을 검토한다.
+- BE-021의 Farm Receipt helper 의존 제거·입고 포트 취소 업무 API·저장 호환/rollback/architecture 회귀는 33차 범위다.
+- BE-022의 전표 입금 감사 소유권·내부 helper 공개 범위 정리·감사/rollback/architecture 회귀는 34차 범위다. 다음 변경은 BE-023의 직접 판매 생성·수정 공통 입력 정책 중복을 검토한다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.

@@ -75,13 +75,7 @@ public class PaymentService {
             payment);
     partnerBalanceService.recordActivity(settlement.getAuctionHouseId(), receivedEventId);
     var saved = auctionSettlementRepository.save(settlement);
-    auditSupport.recordTargetPayment(
-        "AUCTION_SETTLEMENT",
-        saved.getId(),
-        saved.getAuctionHouseId(),
-        PaymentTargetType.AUCTION_SETTLEMENT,
-        before,
-        auditSupport.auctionPaymentSnapshot(saved));
+    auditSupport.recordAuctionPayment(saved, before, auditSupport.auctionPaymentSnapshot(saved));
     return settlementResponseAssembler.assemble(saved);
   }
 

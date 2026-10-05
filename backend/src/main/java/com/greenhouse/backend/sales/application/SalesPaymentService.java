@@ -5,7 +5,6 @@ import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import com.greenhouse.backend.settlement.application.PaymentLedgerService;
-import com.greenhouse.backend.settlement.application.SettlementAuditSupport;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,7 @@ public class SalesPaymentService {
 
   private final PartnerBalanceService partnerBalanceService;
 
-  private final SettlementAuditSupport auditSupport;
+  private final SalesSlipAuditSupport auditSupport;
 
   private final SalesSlipDocumentAssembler responseAssembler;
 
@@ -39,11 +38,7 @@ public class SalesPaymentService {
       return responseAssembler.assemble(salesSlip);
     }
 
-    var before =
-        auditSupport.paymentSnapshot(
-            salesSlip.getPaidAmount(),
-            salesSlip.getRemainingAmount(),
-            salesSlip.getPaymentStatus());
+    var before = auditSupport.paymentSnapshot(salesSlip);
     salesSlip.recordPayment(payment.amount());
     var saved = salesSlipRepository.save(salesSlip);
     var receivedEventId =
@@ -53,14 +48,7 @@ public class SalesPaymentService {
         salesSlip.getPartnerId(),
         salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartnerId()),
         receivedEventId);
-    auditSupport.recordTargetPayment(
-        "SALES_SLIP",
-        saved.getId(),
-        saved.getPartnerId(),
-        PaymentTargetType.SALES_SLIP,
-        before,
-        auditSupport.paymentSnapshot(
-            saved.getPaidAmount(), saved.getRemainingAmount(), saved.getPaymentStatus()));
+    auditSupport.recordPayment(saved, before, auditSupport.paymentSnapshot(saved));
     return responseAssembler.assemble(saved);
   }
 }

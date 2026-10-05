@@ -12,11 +12,11 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class SalesSlipAuditSupport {
+class SalesSlipAuditSupport {
 
   private final AuditEventWriter auditWriter;
 
-  public Map<String, Object> snapshot(SalesSlip slip) {
+  Map<String, Object> snapshot(SalesSlip slip) {
     var data = new LinkedHashMap<String, Object>();
     data.put("slipNumber", slip.getSlipNumber());
     data.put("saleDate", slip.getSaleDate());
@@ -63,7 +63,7 @@ public class SalesSlipAuditSupport {
     return data;
   }
 
-  public Long record(
+  Long record(
       AuditAction action, SalesSlip slip, Map<String, Object> before, Map<String, Object> after) {
     return auditWriter.record(
         action,
@@ -73,5 +73,25 @@ public class SalesSlipAuditSupport {
         before,
         after,
         Map.of("salesType", slip.getSalesType().name()));
+  }
+
+  Map<String, Object> paymentSnapshot(SalesSlip slip) {
+    var data = new LinkedHashMap<String, Object>();
+    data.put("paidAmount", slip.getPaidAmount());
+    data.put("remainingAmount", slip.getRemainingAmount());
+    data.put("paymentStatus", slip.getPaymentStatus());
+    return data;
+  }
+
+  void recordPayment(SalesSlip slip, Map<String, Object> before, Map<String, Object> after) {
+    // Preserve the historical payment source used by audit queries, regardless of module ownership.
+    auditWriter.record(
+        AuditAction.UPDATED,
+        AuditSource.SETTLEMENT_MANAGEMENT,
+        "SALES_SLIP",
+        slip.getId(),
+        before,
+        after,
+        Map.of("partnerId", slip.getPartnerId(), "targetType", "SALES_SLIP"));
   }
 }

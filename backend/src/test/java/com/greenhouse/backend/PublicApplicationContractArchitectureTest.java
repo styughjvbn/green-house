@@ -90,6 +90,28 @@ class PublicApplicationContractArchitectureTest {
         .check(classes);
   }
 
+  @Test
+  void aggregateAuditSupportIsUsedOnlyInsideItsOwningModule() {
+    var classes =
+        new ClassFileImporter()
+            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+            .importPackages("com.greenhouse.backend");
+    for (String module : List.of("sales", "settlement")) {
+      String helper =
+          "com.greenhouse.backend."
+              + module
+              + ".application."
+              + (module.equals("sales") ? "SalesSlipAuditSupport" : "SettlementAuditSupport");
+      noClasses()
+          .that()
+          .resideOutsideOfPackage(".." + module + "..")
+          .should()
+          .dependOnClassesThat()
+          .haveFullyQualifiedName(helper)
+          .check(classes);
+    }
+  }
+
   private void assertValueType(Type type, Set<Type> visited) {
     if (!visited.add(type)) return;
     if (type instanceof Class<?> value) {

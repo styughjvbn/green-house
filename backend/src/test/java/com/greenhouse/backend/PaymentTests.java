@@ -17,6 +17,7 @@ import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.audit.domain.AuditEventEntity;
 import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.audit.repository.AuditEventRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
@@ -268,6 +269,20 @@ class PaymentTests {
         .allSatisfy(
             event ->
                 assertThat(event.getAfterData().toString()).doesNotContain("테스트 입금자", "수동 확인"));
+    assertPaymentAudit(
+        audits.get(1),
+        partner.getId(),
+        "SALES_SLIP",
+        "{\"paidAmount\":0,\"remainingAmount\":100000,\"paymentStatus\":\"미입금\"}",
+        "{\"paidAmount\":30000,\"remainingAmount\":70000,\"paymentStatus\":\"부분입금\"}");
+    assertPaymentAudit(
+        audits.get(3),
+        partner.getId(),
+        "SALES_SLIP",
+        "{\"paidAmount\":30000,\"remainingAmount\":70000,\"paymentStatus\":\"부분입금\"}",
+        "{\"paidAmount\":100000,\"remainingAmount\":0,\"paymentStatus\":\"입금 완료\"}");
+    assertThat(audits.get(1).getEntityId()).isEqualTo(slip.getId());
+    assertThat(audits.get(3).getEntityId()).isEqualTo(slip.getId());
 
     mockMvc
         .perform(get("/api/business-partners/{id}/balance-summary", partner.getId()))
@@ -362,6 +377,34 @@ class PaymentTests {
         .containsExactly("PAYMENT_EVENT", "AUCTION_SETTLEMENT");
     assertThat(audits.getLast().getChangedFields())
         .containsExactly("paidAmount", "remainingAmount", "paymentStatus");
+    assertPaymentAudit(
+        audits.getLast(),
+        auctionHouse.getId(),
+        "AUCTION_SETTLEMENT",
+        "{\"paidAmount\":0,\"remainingAmount\":100000,\"paymentStatus\":\"PAYMENT_WAITING\"}",
+        "{\"paidAmount\":40000,\"remainingAmount\":60000,\"paymentStatus\":\"PARTIALLY_PAID\"}");
+    assertThat(audits.getLast().getEntityId()).isEqualTo(settlement.id());
+  }
+
+  private void assertPaymentAudit(
+      AuditEventEntity event,
+      Long partnerId,
+      String targetType,
+      String beforeJson,
+      String afterJson) {
+    var mapper = JsonMapper.builder().build();
+    assertThat(event.getSource()).isEqualTo(AuditSource.SETTLEMENT_MANAGEMENT);
+    assertThat(event.getAction()).isEqualTo(AuditAction.UPDATED);
+    assertThat(event.getChangedFields())
+        .containsExactly("paidAmount", "remainingAmount", "paymentStatus");
+    assertThat(mapper.readTree(mapper.writeValueAsString(event.getBeforeData())))
+        .isEqualTo(mapper.readTree(beforeJson));
+    assertThat(mapper.readTree(mapper.writeValueAsString(event.getAfterData())))
+        .isEqualTo(mapper.readTree(afterJson));
+    assertThat(mapper.readTree(mapper.writeValueAsString(event.getContextData())))
+        .isEqualTo(
+            mapper.readTree(
+                "{\"partnerId\":" + partnerId + ",\"targetType\":\"" + targetType + "\"}"));
   }
 
   @Test
