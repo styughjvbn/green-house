@@ -11,7 +11,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGr
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.application.effect.StructureChangeResultInput;
@@ -265,8 +264,8 @@ public class BatchStructureTransformationExecutor {
               StructureChangeResultPurpose purpose =
                   inherit ? StructureChangeResultPurpose.NORMAL : row.purpose();
               return new ResultPlan(
-                  new OrchidGroupCreateRequest(
-                      row.bedZoneId(),
+                  row.bedZoneId(),
+                  new OrchidGroupMutationDetails(
                       source.getVariety().getId(),
                       row.quantity(),
                       inherit ? source.getPotSize() : row.potSize(),
@@ -303,24 +302,7 @@ public class BatchStructureTransformationExecutor {
             .toList();
     List<TransformOrchidGroupMutationResult> mutationResults =
         plannedResults.stream()
-            .map(
-                plan -> {
-                  var row = plan.creation();
-                  return new TransformOrchidGroupMutationResult(
-                      row.bedZoneId(),
-                      new OrchidGroupMutationDetails(
-                          row.varietyId(),
-                          row.quantity(),
-                          row.potSize(),
-                          row.ageYear(),
-                          row.status(),
-                          row.placementType(),
-                          row.trayCount(),
-                          row.splitPlacementAllowed(),
-                          row.startPosition(),
-                          row.endPosition(),
-                          row.memo()));
-                })
+            .map(plan -> new TransformOrchidGroupMutationResult(plan.bedZoneId(), plan.details()))
             .toList();
     return new TransformOrchidGroupsMutationCommand(
         OrchidGroupMutationSources.work(operationId, "EXECUTION:" + request.idempotencyKey()),
@@ -332,7 +314,7 @@ public class BatchStructureTransformationExecutor {
   }
 
   private record ResultPlan(
-      OrchidGroupCreateRequest creation, StructureChangeResultPurpose purpose) {}
+      Long bedZoneId, OrchidGroupMutationDetails details, StructureChangeResultPurpose purpose) {}
 
   private String resultStatus(String sourceStatus, StructureChangeResultPurpose purpose) {
     return switch (purpose) {

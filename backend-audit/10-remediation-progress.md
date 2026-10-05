@@ -1,6 +1,6 @@
 # Backend 감사 개선 진행
 
-- 작업일: 2026-10-03~2026-10-04
+- 작업일: 2026-10-03~2026-10-05
 - 브랜치: `fix/backend-sales-reservation-consistency`
 - 시작 기준: `80106917232a671b5a489ad8e59d37b63a06dffe` (`develop`)
 - 우선순위 기준: [08 통합 findings](08-findings.md), [09 최종 평가](09-final-assessment.md)의 P0. 기존 감사 문서는 수정 전 판단의 근거로 보존한다.
@@ -1024,6 +1024,34 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-015의 중간 상세 응답 제거는 23~25차, Sales의 쓰기 aggregate/중복 재조회는 26차, 정산의 불필요한 경매 Entity 적재는 27차다. 최종 전체 검증을 통과해 감사에서 추적한 코드 개선 범위를 완료 처리한다. Farm의 잠금 후 재확인·시점별 snapshot과 정산 금융/현재 표시의 별도 조회는 정확성에 필요한 경계로 유지한다.
 - 운영 부하·lock 대기·peak heap, 매우 큰 미연결 초기화의 transaction/메모리와 기존 index 대사는 남는다. 이는 BE-015의 임의 조회 삭제로 해결하지 않으며 별도의 성능·조회량·index finding 범위에서 다룬다. 500개 ID 분할이 전체 메모리 적재 상한이나 정산 단위 commit을 의미하지 않는다.
 
+## 28차 변경 — BE-016 구조 변경 결과의 생성 DTO 경유 제거
+
+작업일: 2026-10-05. 상태: 내부 결과 계획의 직접 Mutation 값 생성·PostgreSQL 회귀 보강·최종 전체 검증 완료. BE-016 완료.
+
+### 원인과 범위
+
+- `BatchStructureTransformationExecutor`는 결과를 `OrchidGroupCreateRequest`에 담은 뒤 같은 속성을 `OrchidGroupMutationDetails`에 다시 복사했다. 중간 생성 요청에는 HTTP 호출이나 Bean Validation 실행이 없고, 속성 추가 시 수정 지점만 늘어났다.
+- 내부 `ResultPlan`이 논리 구역 ID·Mutation 상세 값·결과 목적을 직접 보유한다. 기존 Mutation 상세 생성자의 검증·정규화를 계획 시점에 수행하며 새로운 mapper/service나 공개 계약을 추가하지 않는다.
+- 원본 행 잠금 후 차감 전에 상속 값을 확보한다. 이동의 원본 화분·연차·상태 상속과 `NORMAL` 목적, 다른 구조 변경의 입력 화분·연차 및 목적별 상태, 결과 순서와 기본 속성 원본 선택을 유지한다. 적용 후 실제 결과 수량·ID를 읽어 Work 효과와 계보를 기록하는 경계도 유지한다.
+- 1:1 전량 이동의 기존 ID 보존 분기, 최상위 트랜잭션·잠금 순서, Work/Mutation/계보 원자성, 저장 JSON·지문·요청 replay 계약은 변경하지 않는다. API·도메인 정책·DB schema 변경이 없으며 기존 application 명령 경계 안의 리팩터링이라 별도 구조 정책을 추가하지 않는다.
+
+### 회귀 방어
+
+- 기존 PostgreSQL 네 유형(`REPOT`, `DIVIDE`, `MERGE`, `MOVEMENT`) 회귀에 품종·논리 구역·배치 유형·트레이 수·분할 허용·위치·메모 검증을 보강했다. 명시 값과 null/빈 문자열을 서로 다른 두 결과에 전달해 정규화·기본값과 순서별 보존을 함께 확인한다. 시험 전용 실행기나 호출 횟수 mock을 만들지 않는다.
+- 기존 원본 차감 전 상태 상속·목적별 상태·수량 수지·계보/Mutation 연결 및 두 번째 결과 위치 실패의 전체 rollback 검증을 유지한다. 보강한 PostgreSQL 5건은 제품 수정 전 통과했다.
+- 집중 검증은 이동 ID 보존·취소/replay·역사 handler·잘못된 handler rollback, 일반 분갈이·분주/합식·배치 이동 및 저장 지문 호환·모듈 경계를 함께 실행한다.
+
+### 검증
+
+- 수정 후 집중 일반/integration/architecture 6개 클래스 41건·PostgreSQL 4개 클래스 19건, 총 60건 성공. 실패·오류·생략은 없고 1분 14초 소요했다.
+- 백엔드 전체 `./gradlew test`: 131개 클래스 662건 성공. PostgreSQL 전체 `./gradlew workE2eTest`: 62개 클래스 651건 성공. 실패·오류·생략은 없고 전체 백엔드 검증은 9분 25초 소요했다.
+- 프론트엔드 `npm run check`, 백엔드 `spotlessCheck`, `git diff --check`: 성공. 공개 API·생성 타입·DB schema 변경이 없어 OpenAPI/TypeScript 재생성과 Flyway 추가는 필요하지 않다. benchmark·브라우저 E2E·운영 DB 대사는 실행하지 않았다.
+- 전체 검증 이후에는 진행 문서의 완료 상태와 검증 결과만 갱신했다. 제품 코드·시험·HTTP/저장 계약은 변경하지 않았다.
+
+### 남은 범위
+
+- BE-016은 이 단일 실행기의 중간 DTO 매핑 제거를 완료 범위로 삼는다. HTTP 입력을 application 명령으로 변환하는 실제 경계와 구형 요청 호환 mapper는 유지한다. Work 취소 서비스의 책임 분리는 별도 BE-017 범위다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1053,7 +1081,8 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `372efc20` — BE-015 포트 중간 상세/중복 완료 제거·경로별 query-count·snapshot/rollback/replay 회귀.
 - `95f594fa` — BE-015 품종별 계획/폐기 중간 상세 제거·query-count·연계 취소/replay·rollback 회귀.
 - `8ac145d7` — BE-015 판매 소유 배분/snapshot 일괄 로딩·중복 재조회 제거·query-count·snapshot/replay/rollback 회귀.
-- BE-015 정산 — `refactor: project auction result reads for settlement`. 원본 Entity graph 대체·500 ID 분할·snapshot/query-count/rollback/replay 회귀를 별도 커밋으로 저장한다.
+- `6d3baa09` — BE-015 정산 원본 Entity graph 대체·500 ID 분할·snapshot/query-count/rollback/replay 회귀.
+- BE-016 — `refactor: build structure mutation details directly`. 중간 생성 DTO 매핑 제거와 네 구조 유형의 배치 속성 회귀를 별도 커밋으로 저장한다.
 
 ## 남은 작업
 
@@ -1077,4 +1106,5 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - BE-015의 연계/독립 폐기·품종별 일반 계획 중간 상세 제거와 query-count·수량 배분·공동 취소/replay·rollback 회귀는 25차 범위다.
 - BE-015의 판매 수정·상태 전환·입금의 소유 배분/snapshot N+1과 수정 후 재조회 제거는 26차 범위다.
 - BE-015의 정산 원본 Entity graph 제거·500 ID 분할과 snapshot/query-count/rollback/replay 회귀는 27차 범위다. Farm 재잠금·snapshot 시점·최종 현재 상태와 정산의 금융/표시 별도 조회는 유지한다. 운영 실측·큰 초기화의 전체 적재/transaction·index는 별도 후속 범위다.
+- BE-016의 구조 결과 생성 DTO 경유 제거와 속성·순서·상속 회귀는 28차 범위다. BE-017 취소 판단 책임 분리는 후속 작업이다.
 - 성능·추상화·테스트 체계의 나머지 finding도 후속 변경으로 남긴다. P0 5건의 신규 쓰기 방어를 수정해도 과거 데이터 대사와 다른 정합성 위험은 남는다.
