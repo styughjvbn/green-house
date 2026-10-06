@@ -1743,6 +1743,16 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 후속은 benchmark 관계 통계·prepared plan 시작 조건 명시와 scan/loop/buffer 계획 회귀 보강, 필요 범위의 Repository query 개선이다. 원인 조사 완료를 production 성능 수정 완료나 large/운영 검증 완료로 집계하지 않는다. BE-009 보류 유지.
 - 사용자 후속 결정: 별도 일괄 정산 구현 후 시작 자동 정산을 제거한다. 시작 실행기·일괄 서비스·원본/연결 조회에 TODO를 표시하고 시작 경로 성능 수정은 보류했다. 정산 계획·대량 처리 검증은 새 기능에서 해당 조회를 재사용할 때 반영한다. 현재 실행 동작·설정은 유지하며 원장 후속과 BE-009 보류는 별개다.
 
+## 66차 조사 — 목록·하위 이력·선택지의 조회 경계
+
+- [15번 조회 경계 조사](15-read-boundary-review.md)에 Controller → application/Repository → 실제 소비자 → 기존 회귀를 대조했다. BE-032/034의 후속 조사이며 `RB-*`는 보고서 내부 추적 번호다. 제품 코드·API·도메인 정책은 변경하지 않았다.
+- 일반/판매/품종 묶음 목록, collection 전체 members, derived member, 경매 lot의 모든 시도/결과/상태 이력, Work 단건 targets/effects/corrections, 직접 계보, dev Mutation entries의 경계를 구분했다. root 최대 100·500 ID 분할·scalar stream만으로 전체 응답/메모리가 제한되지 않는 경로를 확인했다. 자동/사용자 그룹 resolver의 active ID 단일 `IN`은 잠금의 500 ID 분할과 별개다.
+- 구조 작업의 몇 개 결과 ID 복원에 전체 농장 목록을 쓰는 소비, collection 목록부터 모든 members를 쓰는 소비, 경매 목록 DTO를 선택 상세로 사용하는 계약을 확인했다. Work 보정 응답은 전체 보정을 수지 계산에서도 다시 읽는다. 수지 계산은 전체 저장 사실을 보존하며 표시 pagination과 분리해야 한다.
+- Sales 출하 선택지는 최종 200건을 채우려고 사용된 후보 page를 반복 조회한다. 현재 프론트 UI 호출은 발견하지 못했고 Inbound의 일반 포트 입력 최대 100개·Mutation Controller의 dev 조건을 반영해 후순위로 분류했다. Work 카드의 묶음 조회는 편집 때만 활성화되어 일반 표시 N+1로 판정하지 않았다.
+- Work summary의 fan-out 행 제한, 캘린더·구형 작업 이력·그래프 상한과 거래처 검색 대량 benchmark는 이미 방어된 범위로 남겼다. 이번에 운영 지연/heap·새 응답량을 측정하거나 미측정 경로 전체의 결함을 확정한 것은 아니다.
+- 다음 구현 순서는 판매 선택지의 페이지 이전 필터·전체 동별 집계·선택 ID 복원, collection summary/member 분리, 경매 summary/선택 상세/이력 분리다. 일반/자동 그룹·Work/계보 후속은 완전 대상 snapshot·capability·과거 수지·기존 응답 호환을 유지하는 목적별 변경으로 진행한다. 기존 전체 목록을 임의 cut하지 않았다.
+- 문서 링크·`git diff --check` 확인. 문서만 변경하여 backend 전체/frontend check/PG E2E/benchmark는 반복하지 않았다. 마지막 일반 검증은 65차의 backend 748건·frontend check, 전체 PG는 59차의 780건이다. 시작 자동 정산 성능 수정과 BE-009 정책 보류는 유지한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1817,10 +1827,11 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `5519974f` — `docs: analyze standard settlement and ledger measurements`. 사용자 standard 분석·원시 sample 증적 보존.
 - `c1b4bd95` — `refactor: bound ledger correction references without entity loading`. Work/Farm scalar 참조·500건 분할·공통 저장 결과 reader·PG 회귀.
 - `82444a86` — `docs: compare ledger benchmark after scalar reference reads`. 두 standard 비교·Work 할당량/조회 비용·미확정 지연과 증적.
+- `c8590c4e` — `test: add isolated postgres performance diagnosis`. 계획·원장/Work 격리 진단·증적과 시작 정산 제거 예정 TODO/정책 보류.
 
 ## 남은 작업
 
-기준: 65차 계획/지연 조사, 64차 standard 전후 비교와 63차 Work 참조 적재 개선, 59차 전체 PostgreSQL 검증을 반영한 현재 후속 목록이다. 앞선 변경 기록의 “남은 범위”는 각 변경 당시의 상태이며 이후 차수에서 해결한 내용을 포함한다. 완료된 구현은 위 변경 기록에 보존하고 여기에서는 중복 집계하지 않는다.
+기준: 66차 목록/하위 이력 경계 조사, 65차 계획/지연 조사, 64차 standard 전후 비교와 63차 Work 참조 적재 개선, 59차 전체 PostgreSQL 검증을 반영한 현재 후속 목록이다. 앞선 변경 기록의 “남은 범위”는 각 변경 당시의 상태이며 이후 차수에서 해결한 내용을 포함한다. 완료된 구현은 위 변경 기록에 보존하고 여기에서는 중복 집계하지 않는다.
 
 아래는 **바로 조사·보강할 기술 작업 5묶음**, **운영 자료·환경이 필요한 검증 4묶음**, **명시적 보류/범위 판단 3건**으로 구분한다. 묶음 수는 미해결 버그 수·필요 커밋 수·일정 추정이 아니다. 미래 확장은 별도로 두며 현재 필수 개선량에 포함하지 않는다.
 
@@ -1829,12 +1840,12 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 | 작업 | 관련 finding | 남은 범위와 완료 기준 |
 | --- | --- | --- |
 | 정산 초기화·원장 대사의 대량 처리 비용 개선·측정 | BE-015/033/036/042 | 61차 도구·62/64차 standard 수집/전후 비교, 63차 Work Entity 누적·큰 ID 조회 개선, 65차 SQL/계획·코드 비교 조사는 완료했다. 별도 일괄 정산 구현 후 시작 자동 정산을 제거하기로 결정해 관련 TODO를 남겼다. 시작 경로 성능 수정은 보류하고, 재현한 통계 미갱신 join·cached 전체 스캔과 benchmark/plan 회귀는 별도 기능에서 조회 재사용 시 검증한다. 원장은 과거 오류/Work 시간 증가가 비교에서 재현되지 않았으며 필요한 후속 측정은 별개다. 정산별 commit·Entry cursor를 유지하며 필요한 large/운영 증적을 남긴다. 상세는 13·14번 참조. |
-| 남은 목록·하위 이력·선택지의 조회 경계 | BE-032/034 | 전체 그룹·sellable·derived member·collection/직접 계보, Work/Inbound/lot/Mutation 상세의 하위 이력, Sales 출하 선택지를 endpoint·소비자별로 조사한다. 전체 matching ID 메모리·응답량·반복 조회를 확인하고 pagination/검색/호환 상한 계약과 필요한 회귀를 정한다. 전체 farm map의 의도된 배치 계약에 임의 cut을 넣지 않는다. |
+| 남은 목록·하위 이력·선택지의 조회 경계 | BE-032/034 | 66차 endpoint/실제 소비자/기존 회귀 조사는 완료했다. 다음은 판매 선택지의 페이지 이전 필터·전체 동별 집계·선택 ID 복원 계약과 구현이다. 이후 collection summary/member·경매 목록/선택 상세/이력을 분리한다. 일반/자동 그룹·resolver 단일 IN·Work 상세/중복 보정 load·계보·사전 scope/검색 ID·출하 후보 scan 등은 완전성/비용을 확인한 목적별 개선으로 남는다. Inbound 입력 상한·dev Mutation을 고려해 후순위로 두며 전체 farm map·작업 snapshot·수지 계산에 임의 cut하지 않는다. 상세와 회귀 완료 기준은 15번 참조. |
 | 미측정 쿼리와 index 비용 검증 | BE-032/035 | contains/OR/concat·희귀 상태·count/집계·복합 조건·deep offset·generic prepared plan·미측정 FK 등의 실제 Repository 계획을 확인한다. 48·49차에서 검증한 참조/날짜/계보 index를 다시 미완료로 세지 않는다. 결과·행/loop/buffer·쓰기 비용을 비교해 필요한 개선만 채택한다. |
 | 기존 접수·응답의 저장 계약 보호 범위 확대 | BE-013 | Mutation 및 Sales/일반 Work 생성의 v1 고정은 완료했다. 그 밖의 Work 실행·구조 기록·포트·취소·보정, Farm 입고·Auction 접수와 저장 응답에서 추가 보호가 필요한 shape/hash를 식별한다. 기존 golden·필드 변경 guard·구형 replay로 보호하며 과거 hash나 응답을 재작성하지 않는다. 신규 version 전환 자체는 아래 조건부 작업이다. |
 | 핵심 경로의 선택적 회귀·해석 경계 보강 | BE-012/037/038/039 | 독립 transaction의 후행 실패·실제 잠금 충돌 관측이 빠진 중요한 writer와 보정 이벤트 수량 수지 해석을 선별한다. 필요한 PG/호환 회귀와 해당 경로의 fixture 정리를 추가한다. 모든 H2 시험의 wrapper 전환·모든 lifecycle 분해·자유 JSON의 일괄 타입화를 완료 목표로 삼지 않는다. |
 
-다음 기술 작업은 **다수 정산 쿼리 비용 조사**이며, 오류 대사 지연 증가의 재현도 후속으로 남긴다. Work 참조 적재 개선과 standard 전후 비교는 완료했지만 속도 개선이나 전체 시간 회귀 부재로 판정하지 않는다. large 한계와 실제 운영 부하는 별도 검증이다. 목록·쿼리 개선은 비용과 소비자 계약을 확인한 뒤 진행할 수 있고, 저장 계약 보호는 해당 필드 변경 전에 보강한다. 마지막 회귀·fixture 항목은 위험이 큰 경로부터 점진적으로 수행한다. 미측정 영역 전체에 성능 결함이 확인됐다는 의미는 아니다.
+다음 기술 작업은 **판매 묶음 선택지의 조회 경계 개선**이다. 목록 조사는 완료했고 API/소비자 전환 구현은 아직 하지 않았다. 다수 정산 비용 조사는 65차에서 수행했으며 시작 경로 성능 수정은 사용자 결정에 따라 보류했다. 필요한 정산 계획 회귀는 별도 일괄 기능의 조회 재사용 시 반영한다. Work 참조 적재 개선과 standard 전후 비교는 완료했지만 속도 개선이나 전체 시간 회귀 부재로 판정하지 않는다. large 한계와 실제 운영 부하는 별도 검증이다. 저장 계약 보호는 해당 필드 변경 전에 보강하고 회귀·fixture는 위험이 큰 경로부터 점진적으로 수행한다. 미측정 영역 전체에 성능 결함이 확인됐다는 의미는 아니다.
 
 ### 2. 운영 자료·환경이 필요한 검증
 
