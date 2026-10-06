@@ -963,5 +963,210 @@
     "constraint-validation-results.json": "04989e6871a234561687f347b0765735f6f65e201ddffc9c1ab76f21706ad15b",
     "release-ledger-report.json": "22bc1d72524266422dbcc3ed94c72f0903a02d797389c6123a44ea577b46a4ea",
     "release-schema-rehearsal.json": "90fab22946371ff113c14103fe8f697353c30fd912504a47c842f39841d024a8"
+  },
+  "afterUnappliedV35Revision": {
+    "serverVersion": "14.24",
+    "migrationMethod": "V34 backup restored, revised V35-V42 SQL transactionally applied; Flyway history unchanged.",
+    "migrationScripts": [
+      "V35__guard_sales_amounts.sql",
+      "V36__auction_command_receipts.sql",
+      "V37__auction_history_quantity_snapshots.sql",
+      "V38__sales_creation_receipts.sql",
+      "V39__inbound_creation_receipts.sql",
+      "V40__work_creation_response_snapshots.sql",
+      "V41__index_operational_reference_and_date_queries.sql",
+      "V42__index_sold_results_for_settlement_rebuild.sql"
+    ],
+    "constraintsBefore": [
+      {
+        "user": "audit_owner",
+        "report": "SNAPSHOT",
+        "database": "greenhouse_audit",
+        "readOnly": "on",
+        "snapshot": "1188:1188:",
+        "isolation": "repeatable read",
+        "transactionStartedAt": "2026-10-06T03:25:34.445116+00:00"
+      },
+      {
+        "kind": "c",
+        "table": "orchid_groups",
+        "schema": "public",
+        "status": "UNVALIDATED",
+        "present": true,
+        "sampleIds": [],
+        "validated": false,
+        "constraint": "ck_orchid_groups_quantity_nonnegative",
+        "definition": "CHECK ((quantity >= 0)) NOT VALID",
+        "expression": "(quantity >= 0)",
+        "violationCount": 0
+      },
+      {
+        "kind": "c",
+        "table": "orchid_groups",
+        "schema": "public",
+        "status": "UNVALIDATED",
+        "present": true,
+        "sampleIds": [],
+        "validated": false,
+        "constraint": "ck_orchid_groups_reserved_quantity",
+        "definition": "CHECK (((reserved_quantity >= 0) AND (reserved_quantity <= quantity))) NOT VALID",
+        "expression": "((reserved_quantity >= 0) AND (reserved_quantity <= quantity))",
+        "violationCount": 0
+      },
+      {
+        "kind": "c",
+        "table": "orchid_groups",
+        "schema": "public",
+        "status": "UNVALIDATED",
+        "present": true,
+        "sampleIds": [],
+        "validated": false,
+        "constraint": "ck_orchid_groups_state_revision",
+        "definition": "CHECK (((state_revision IS NULL) OR (state_revision >= 0))) NOT VALID",
+        "expression": "((state_revision IS NULL) OR (state_revision >= 0))",
+        "violationCount": 0
+      },
+      {
+        "kind": "c",
+        "table": "sales_slip_items",
+        "schema": "public",
+        "status": "UNVALIDATED",
+        "present": true,
+        "sampleIds": [],
+        "validated": false,
+        "constraint": "ck_sales_slip_items_amount",
+        "definition": "CHECK (((quantity <> 0) AND (unit_price >= 0) AND ((amount)::bigint = ((quantity)::bigint * (unit_price)::bigint)))) NOT VALID",
+        "expression": "((quantity <> 0) AND (unit_price >= 0) AND ((amount)::bigint = ((quantity)::bigint * (unit_price)::bigint)))",
+        "violationCount": 0
+      },
+      {
+        "kind": "c",
+        "table": "sales_slips",
+        "schema": "public",
+        "status": "UNVALIDATED",
+        "present": true,
+        "sampleIds": [],
+        "validated": false,
+        "constraint": "ck_sales_slips_sales_status",
+        "definition": "CHECK ((((sales_status)::text = '취소'::text) OR (sales_type IS NULL) OR (((sales_type)::text = 'DIRECT'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출고 완료'::character varying)::text]))) OR (((sales_type)::text = 'AUCTION'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출하 완료'::character varying)::text]))))) NOT VALID",
+        "expression": "(((sales_status)::text = '취소'::text) OR (sales_type IS NULL) OR (((sales_type)::text = 'DIRECT'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출고 완료'::character varying)::text]))) OR (((sales_type)::text = 'AUCTION'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출하 완료'::character varying)::text]))))",
+        "violationCount": 0
+      }
+    ],
+    "constraintsAfter": [
+      {
+        "user": "audit_owner",
+        "report": "SNAPSHOT",
+        "database": "greenhouse_audit",
+        "readOnly": "on",
+        "snapshot": "1193:1193:",
+        "isolation": "repeatable read",
+        "transactionStartedAt": "2026-10-06T03:25:34.890435+00:00"
+      },
+      {
+        "kind": "c",
+        "table": "orchid_groups",
+        "schema": "public",
+        "status": "VALIDATED",
+        "present": true,
+        "sampleIds": [],
+        "validated": true,
+        "constraint": "ck_orchid_groups_quantity_nonnegative",
+        "definition": "CHECK ((quantity >= 0))",
+        "expression": "(quantity >= 0)",
+        "violationCount": 0
+      },
+      {
+        "kind": "c",
+        "table": "orchid_groups",
+        "schema": "public",
+        "status": "VALIDATED",
+        "present": true,
+        "sampleIds": [],
+        "validated": true,
+        "constraint": "ck_orchid_groups_reserved_quantity",
+        "definition": "CHECK (((reserved_quantity >= 0) AND (reserved_quantity <= quantity)))",
+        "expression": "((reserved_quantity >= 0) AND (reserved_quantity <= quantity))",
+        "violationCount": 0
+      },
+      {
+        "kind": "c",
+        "table": "orchid_groups",
+        "schema": "public",
+        "status": "VALIDATED",
+        "present": true,
+        "sampleIds": [],
+        "validated": true,
+        "constraint": "ck_orchid_groups_state_revision",
+        "definition": "CHECK (((state_revision IS NULL) OR (state_revision >= 0)))",
+        "expression": "((state_revision IS NULL) OR (state_revision >= 0))",
+        "violationCount": 0
+      },
+      {
+        "kind": "c",
+        "table": "sales_slip_items",
+        "schema": "public",
+        "status": "VALIDATED",
+        "present": true,
+        "sampleIds": [],
+        "validated": true,
+        "constraint": "ck_sales_slip_items_amount",
+        "definition": "CHECK (((quantity <> 0) AND (unit_price >= 0) AND ((amount)::bigint = ((quantity)::bigint * (unit_price)::bigint))))",
+        "expression": "((quantity <> 0) AND (unit_price >= 0) AND ((amount)::bigint = ((quantity)::bigint * (unit_price)::bigint)))",
+        "violationCount": 0
+      },
+      {
+        "kind": "c",
+        "table": "sales_slips",
+        "schema": "public",
+        "status": "VALIDATED",
+        "present": true,
+        "sampleIds": [],
+        "validated": true,
+        "constraint": "ck_sales_slips_sales_status",
+        "definition": "CHECK ((((sales_status)::text = '취소'::text) OR (sales_type IS NULL) OR (((sales_type)::text = 'DIRECT'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출고 완료'::character varying)::text]))) OR (((sales_type)::text = 'AUCTION'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출하 완료'::character varying)::text])))))",
+        "expression": "(((sales_status)::text = '취소'::text) OR (sales_type IS NULL) OR (((sales_type)::text = 'DIRECT'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출고 완료'::character varying)::text]))) OR (((sales_type)::text = 'AUCTION'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출하 완료'::character varying)::text]))))",
+        "violationCount": 0
+      }
+    ],
+    "validatedChecks": 5,
+    "preservedOriginalTables": 47,
+    "allOriginalRowHashesAndCountsIdentical": true,
+    "dataRepairPerformed": false,
+    "productionDatabaseModified": false,
+    "revisedV35Sha256": "3c66f6894edb2ec5e791f879c78861bd4a9529130bed8dba93d0edd4c5713858",
+    "reason": "User confirmed V35 not applied to production; revise unapplied migration in place. Future signed-quantity/nonnegative-amount transaction model is a plan only.",
+    "temporaryRehearsalContainerRemoved": true,
+    "backupSha256Unchanged": true,
+    "regressionVerification": {
+      "postgresql": {
+        "task": "workE2eTest",
+        "classes": 3,
+        "tests": 41,
+        "failures": 0,
+        "errors": 0,
+        "scope": [
+          "SalesAmountMigrationPostgresE2ETest",
+          "SalesAmountPostgresE2ETest",
+          "DomainConstraintOperationsPostgresE2ETest"
+        ]
+      },
+      "backend": {
+        "task": "test",
+        "classes": 144,
+        "tests": 748,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "initialDefaultHeapRun": "Stopped due to Java heap space; retried with temporary init script setting Test maxHeapSize=2g. No repository build settings modified.",
+        "rerunExitCode": 0
+      },
+      "frontend": {
+        "command": "npm run check",
+        "exitCode": 0
+      },
+      "fullPostgresqlSuiteRerun": false,
+      "benchmarkRerun": false
+    }
   }
 }

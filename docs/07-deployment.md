@@ -832,11 +832,13 @@ blue/green rename과 자동 rollback을 수행하는 별도 systemd timer 절차
 
 ### 기존 데이터의 CHECK 제약 대사와 검증
 
-V14·V21·V35의 재고 수량·예약·revision·판매 상태·금액 CHECK는 기존 행을
+V14·V21·V35의 재고 수량·예약·revision·판매 상태·품목 계산 CHECK는 기존 행을
 보존하기 위해 `NOT VALID`로 추가했다. Flyway 성공과 과거 행 검증 완료를
 구분한다. 설치된 CHECK의 정의와 `convalidated`는 아래 도구로 확인한다.
 신규·갱신 행의 CHECK 적용과 validation의 잠금 의미는
 [PostgreSQL ALTER TABLE](https://www.postgresql.org/docs/18/sql-altertable.html)을 따른다.
+
+V35는 운영 미적용 상태에서 수정했다. 현재 품목 CHECK는 0이 아닌 수량·비음수 단가·정확한 수량×단가를 검사하며, 과거 음수 수량/금액과 음수 전표 총액을 보존한다. 전표 총액의 비음수 CHECK는 설치하지 않는다. 기존 V35를 적용한 개발/리허설 DB는 데이터를 보존한 별도 복원본에서 현재 migration을 재검증한다. checksum만 repair하면 설치 제약은 바뀌지 않으므로 이를 schema 전환으로 취급하지 않는다.
 
 먼저 최신 백업을 복원한 격리 DB에서 대사·검증을 rehearsal한다. libpq service의
 `greenhouse-audit`는 해당 DB와 SELECT 권한 계정에, `greenhouse-maintenance`는
@@ -852,7 +854,7 @@ PGSERVICE=greenhouse-audit psql -XAtq \
 ```
 
 첫 JSON 행의 DB·계정·트랜잭션 시작 시각·snapshot 식별자를 확인한다.
-나머지 6행은 설치된 CHECK 식을
+나머지 5행은 설치된 CHECK 식을
 직접 평가한 위반 건수와 ID 표본(최대 50개)을 포함한다. 설치된 정의가 해당 release의
 migration과 일치하는지도 함께 확인한다. read-only
 `REPEATABLE READ` 트랜잭션으로 같은 snapshot을 사용하며, 메모·품목 원문은
@@ -867,7 +869,7 @@ migration과 일치하는지도 함께 확인한다. read-only
 | `UNVALIDATED` | 현재 snapshot에서 위반은 없지만 DB의 과거 행 검증은 미완료다. 개별 validation 대상으로 검토한다. |
 | `VALIDATED` | 설치된 CHECK의 DB 검증이 완료됐고 현재 snapshot에서도 위반이 없다. |
 
-대사 명령의 종료 코드 0은 조회 완료를 뜻한다. 보고된 6개 제약이 모두
+대사 명령의 종료 코드 0은 조회 완료를 뜻한다. 보고된 5개 제약이 모두
 `VALIDATED`인지 별도로 판단한다. 권한·잠금·실행 시간 초과 등 SQL 오류는
 비정상 종료하며, 부분 보고만으로 전체 대사를 통과 처리하지 않는다.
 제약 식의 FALSE만 위반으로 세므로 CHECK가 허용하는 NULL을 위반으로 간주하지
@@ -882,7 +884,7 @@ PGSERVICE=greenhouse-maintenance psql -XAtq \
   -f scripts/data-audit/validate-domain-constraint.sql
 ```
 
-검증 도구는 공유 inventory의 6개 CHECK만 받는다. 제약 누락·다른 종류·미지정
+검증 도구는 공유 inventory의 5개 CHECK만 받는다. 제약 누락·다른 종류·미지정
 이름은 실패하며, 기존 데이터 수정이나 제약 재생성은 수행하지 않는다.
 이미 검증한 제약은 DDL을 반복하지 않는다. 한 번의 호출은 한 제약의 트랜잭션이며,
 검증 결과는 commit 후 다시 조회한다. 앞서 다른 제약을 검증한 결과는 이후 호출의

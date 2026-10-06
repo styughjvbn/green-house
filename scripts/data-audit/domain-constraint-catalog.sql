@@ -6,7 +6,6 @@ WITH expected(table_name, constraint_name) AS (
         ('orchid_groups', 'ck_orchid_groups_reserved_quantity'),
         ('orchid_groups', 'ck_orchid_groups_state_revision'),
         ('sales_slips', 'ck_sales_slips_sales_status'),
-        ('sales_slips', 'ck_sales_slips_total_amount'),
         ('sales_slip_items', 'ck_sales_slip_items_amount')
 )
 SELECT jsonb_agg(jsonb_build_object(

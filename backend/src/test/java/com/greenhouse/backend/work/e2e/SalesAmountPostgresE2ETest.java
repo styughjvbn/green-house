@@ -179,6 +179,8 @@ class SalesAmountPostgresE2ETest extends WorkE2ETestBase {
   @CsvSource({
     "2,1500000000,-1294967296",
     "3,1500000000,205032704",
+    "-2,1500000000,1294967296",
+    "-3,1500000000,-205032704",
     "1,1000,999",
     "1,-100,-100",
     "0,100,0"
@@ -200,14 +202,21 @@ class SalesAmountPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
-  void rejectsNegativeSlipTotalsWhenSqlBypassesDomainGuards() {
+  void preservesHistoricalSignedReturnAmountsWithoutRelaxingTheApplicationContract() {
     var created = creation.create(request(1, 1000, 1000));
+    jdbc.update(
+        "UPDATE sales_slip_items SET quantity = -1, amount = -1000 WHERE sales_slip_id = ?",
+        created.id());
+    jdbc.update("UPDATE sales_slips SET total_amount = -2000 WHERE id = ?", created.id());
     var before = snapshot();
-    assertThatThrownBy(
-            () ->
-                jdbc.update("UPDATE sales_slips SET total_amount = -1 WHERE id = ?", created.id()))
-        .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("ck_sales_slips_total_amount");
+    jdbc.execute("ALTER TABLE sales_slip_items VALIDATE CONSTRAINT ck_sales_slip_items_amount");
+    assertThat(snapshot()).isEqualTo(before);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT total_amount FROM sales_slips WHERE id = ?", Integer.class, created.id()))
+        .isEqualTo(-2000);
+    assertThatThrownBy(() -> creation.create(request(-1, 1000, 1000)))
+        .isInstanceOf(IllegalArgumentException.class);
     assertThat(snapshot()).isEqualTo(before);
   }
 

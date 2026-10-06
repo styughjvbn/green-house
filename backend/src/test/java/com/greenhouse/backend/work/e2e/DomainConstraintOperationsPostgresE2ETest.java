@@ -50,7 +50,6 @@ class DomainConstraintOperationsPostgresE2ETest {
               "orchid_groups", "ck_orchid_groups_reserved_quantity", "reserved_quantity = 101"),
           new Target("orchid_groups", "ck_orchid_groups_state_revision", "state_revision = -1"),
           new Target("sales_slips", "ck_sales_slips_sales_status", "sales_status = '출하 완료'"),
-          new Target("sales_slips", "ck_sales_slips_total_amount", "total_amount = -1"),
           new Target("sales_slip_items", "ck_sales_slip_items_amount", "amount = 1999"));
   private final ObjectMapper mapper = new ObjectMapper();
   private JdbcTemplate admin;
@@ -126,7 +125,7 @@ class DomainConstraintOperationsPostgresE2ETest {
     var rows = rows();
     var catalog = catalog();
     var reports = readSuccess(run("audit-domain-constraints.sql", null, readerRole));
-    assertThat(reports).hasSize(7);
+    assertThat(reports).hasSize(TARGETS.size() + 1);
     assertThat(reports.getFirst().path("readOnly").asText()).isEqualTo("on");
     assertThat(reports.getFirst().path("isolation").asText()).isEqualTo("repeatable read");
     assertThat(reports.getFirst().path("user").asText()).isEqualTo(readerRole);
