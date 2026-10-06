@@ -1,5 +1,7 @@
 # Backend 평가 계획
 
+> 보관 문서: 당시 코드·감사·검증 이력이며 현재 구현의 기준이 아니다. 미해결/운영 검증/보류 상태는 [현재 작업 목록](../10-remediation-progress.md)을 따른다.
+
 ## 1. 기준과 현재 단계
 
 - 조사일: 2026-10-03, Asia/Seoul.
@@ -43,7 +45,7 @@
 | 시간·migration | UTC 저장과 농장 업무일이 분리되는가? backfill·제약·복구·재실행의 전제가 무엇인가? | Clock/TimeConfig, migration 본문, PostgreSQL migration 테스트 |
 | 검증 가능성 | 기존 테스트가 어떤 요구를 실제 검증하는가? H2와 PostgreSQL의 확인 범위가 무엇인가? | 테스트 메서드·assertion, 실행 task/tag, 실제 실행 보고서 |
 
-평가 원칙의 기준 문서는 [AGENTS.md](../AGENTS.md)와 [docs/04-architecture.md](../docs/04-architecture.md)의 백엔드 구현 기준이다. 문서의 준수 선언 자체를 검증 결과로 사용하지 않는다. 파일 길이·클래스 수·이름만으로 품질을 판정하지 않는다.
+평가 원칙의 기준 문서는 [AGENTS.md](../../AGENTS.md)와 [docs/04-architecture.md](../../docs/04-architecture.md)의 백엔드 구현 기준이다. 문서의 준수 선언 자체를 검증 결과로 사용하지 않는다. 파일 길이·클래스 수·이름만으로 품질을 판정하지 않는다.
 
 ## 4. 조사 순서와 단계별 확인 항목
 

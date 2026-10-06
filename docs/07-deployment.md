@@ -241,7 +241,7 @@ psql "$AUDIT_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/performance/inspect-bac
 
 V41은 `CREATE INDEX CONCURRENTLY`가 아닌 일반 index 생성 17개를 **하나의 Flyway transaction**에서 실행한다. 업무 writer와 batch를 중지하고 기존 쓰기 transaction 종료를 확인한 뒤 migration을 적용한다. 조회는 일반적으로 가능하지만 index 생성은 대상 테이블의 쓰기와 충돌하고 취득한 잠금을 commit까지 유지한다. `lock_timeout=5s`는 잠금 대기 제한, `statement_timeout=5min`은 각 SQL의 실행 제한이며 migration 전체 중지 시간을 보장하지 않는다. 큰 테이블은 실제 데이터 복제본에서 시간·디스크 여유를 먼저 확인한다.
 
-실패·timeout이면 V41의 index 생성 전체가 rollback된다. 충돌·용량 원인을 해소하고 같은 release의 Flyway로 재시도한다. 기존 migration 파일을 수정하거나 일부 index를 수동으로 생성하여 실패를 우회하지 않는다. 성공 후 catalog의 정의·유효성을 확인하고 쓰기를 재개한다. 신규 index의 크기·WAL·수량 갱신의 HOT 비율도 관찰한다. quantity predicate를 사용하는 활성 배치 partial은 양수 수량 변경에도 HOT update에 영향을 줄 수 있다. 상세 비교와 미측정 범위는 [BE-035 실행 계획 검증](../backend-audit/11-index-plan-validation.md)을 따른다.
+실패·timeout이면 V41의 index 생성 전체가 rollback된다. 충돌·용량 원인을 해소하고 같은 release의 Flyway로 재시도한다. 기존 migration 파일을 수정하거나 일부 index를 수동으로 생성하여 실패를 우회하지 않는다. 성공 후 catalog의 정의·유효성을 확인하고 쓰기를 재개한다. 신규 index의 크기·WAL·수량 갱신의 HOT 비율도 관찰한다. quantity predicate를 사용하는 활성 배치 partial은 양수 수량 변경에도 HOT update에 영향을 줄 수 있다. 상세 비교와 미측정 범위는 [BE-035 실행 계획 검증](../backend-audit/archive/11-index-plan-validation.md)을 따른다.
 
 ### 정산 초기화의 처리 단위와 재시작
 

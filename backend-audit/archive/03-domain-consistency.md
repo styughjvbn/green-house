@@ -1,8 +1,10 @@
 # Backend 도메인·트랜잭션·일관성 평가
 
+> 보관 문서: 당시 코드·감사·검증 이력이며 현재 구현의 기준이 아니다. 미해결/운영 검증/보류 상태는 [현재 작업 목록](../10-remediation-progress.md)을 따른다.
+
 평가일: 2026-10-03, Asia/Seoul. 기준: `develop`, HEAD `80106917232a671b5a489ad8e59d37b63a06dffe`, 조사 시작 시 작업 트리 clean.
 
-현재 Controller → application → domain/policy → Repository → Flyway 제약을 추적했다. 이전 평가 문서의 commit과 이번 기준은 다르다. 정책 기준은 [도메인 모델](../docs/02-domain-model.md), [백엔드 구현 기준](../docs/04-architecture.md), [작업 정책](../docs/features/work-operation-and-orchid-collection.md), [판매·경매·정산 정책](../docs/features/sales-auction-settlement.md), [DOMAIN_RULES](../docs/api/DOMAIN_RULES.md), [ADR-001](../docs/adr/ADR-001-orchid-group-mutation-engine.md)이다. archive는 현재 정책의 근거로 사용하지 않았다.
+현재 Controller → application → domain/policy → Repository → Flyway 제약을 추적했다. 이전 평가 문서의 commit과 이번 기준은 다르다. 정책 기준은 [도메인 모델](../../docs/02-domain-model.md), [백엔드 구현 기준](../../docs/04-architecture.md), [작업 정책](../../docs/features/work-operation-and-orchid-collection.md), [판매·경매·정산 정책](../../docs/features/sales-auction-settlement.md), [DOMAIN_RULES](../../docs/api/DOMAIN_RULES.md), [ADR-001](../../docs/adr/ADR-001-orchid-group-mutation-engine.md)이다. archive는 현재 정책의 근거로 사용하지 않았다.
 
 ## 1. 결론
 
@@ -33,7 +35,7 @@ High는 금액·수량·과거 사실의 잘못된 확정/삭제, Medium은 정�
 
 private overload 호출은 최상위 public method가 이미 transaction을 연 경우에 사용된다. transaction 개시를 self invocation에 의존하는 문제로 판정하지 않았다. sequence/pooled ID는 rollback되어도 번호 공백을 허용하며, 업무 사실의 부분 commit과 구분한다.
 
-감사 원자성 근거: [JpaAuditRecorder.record](../backend/src/main/java/com/greenhouse/backend/audit/application/JpaAuditRecorder.java), [AuditEventWriter.recordChanges](../backend/src/main/java/com/greenhouse/backend/audit/application/AuditEventWriter.java). 감사 저장은 caller와 함께 rollback된다. 다만 변경 필드가 없으면 이벤트를 만들지 않으며, 모든 업무 생성·수정에 AuditEvent가 있다는 보장은 별개다.
+감사 원자성 근거: [JpaAuditRecorder.record](../../backend/src/main/java/com/greenhouse/backend/audit/application/JpaAuditRecorder.java), [AuditEventWriter.recordChanges](../../backend/src/main/java/com/greenhouse/backend/audit/application/AuditEventWriter.java). 감사 저장은 caller와 함께 rollback된다. 다만 변경 필드가 없으면 이벤트를 만들지 않으며, 모든 업무 생성·수정에 AuditEvent가 있다는 보장은 별개다.
 
 ## 3. OrchidGroup invariant와 Mutation Engine
 
@@ -41,11 +43,11 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 
 | 불변식 | 적용 지점 | 보장 및 한계 |
 | --- | --- | --- |
-| `quantity >= 0`, `0 <= reservedQuantity <= quantity` | [OrchidGroup](../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroup.java) 생성/수정/보정/reserve/release/outbound; V14 CHECK | 예약 침해 감소·음수 수량 방어. DB CHECK는 `NOT VALID`: 기존 위반 행의 정리가 증명된 상태는 아님 |
+| `quantity >= 0`, `0 <= reservedQuantity <= quantity` | [OrchidGroup](../../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroup.java) 생성/수정/보정/reserve/release/outbound; V14 CHECK | 예약 침해 감소·음수 수량 방어. DB CHECK는 `NOT VALID`: 기존 위반 행의 정리가 증명된 상태는 아님 |
 | 구조 변경·폐기의 사용량은 가용 수량 이하 | `applyTransformation`, `discard` | 예약된 수량을 구조 변경/폐기로 소비하지 않음 |
-| 논리 구역에 배치, 범위·충돌 검증 | `bed_zone_id` NOT NULL/FK, [OrchidPlacementPolicy](../backend/src/main/java/com/greenhouse/backend/farm/application/structure/OrchidPlacementPolicy.java), Engine zone lock | 양수 수량의 배치 충돌은 application 정책으로 검사. DB exclusion constraint는 없음 |
+| 논리 구역에 배치, 범위·충돌 검증 | `bed_zone_id` NOT NULL/FK, [OrchidPlacementPolicy](../../backend/src/main/java/com/greenhouse/backend/farm/application/structure/OrchidPlacementPolicy.java), Engine zone lock | 양수 수량의 배치 충돌은 application 정책으로 검사. DB exclusion constraint는 없음 |
 | 예약 합계 = 작성중 allocation 합계 | Sales 유스케이스의 reserve/release 조율 | 개별 Entity CHECK로는 보장되지 않음. DC-01에서 실제 불일치 발생 |
-| 판매 가능 상태 | [OrchidGroupStatusPolicy.isSaleable](../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroupStatusPolicy.java) | 목록/집계의 정책이 예약 명령에 적용되지 않음: DC-03 |
+| 판매 가능 상태 | [OrchidGroupStatusPolicy.isSaleable](../../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroupStatusPolicy.java) | 목록/집계의 정책이 예약 명령에 적용되지 않음: DC-03 |
 | 과거 결과의 안전한 취소 | usage inspector + effective-head 검사 + compensation | 후속 상태를 과거 snapshot으로 덮어쓰지 않도록 방어 |
 | version과 상태 revision | `@Version`과 `stateRevision` 분리 | version은 ORM 충돌, revision은 원장 상태 순서. 판매 업무 멱등 identity로 version을 사용하는 것은 DC-01의 원인 |
 
@@ -53,7 +55,7 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 
 ### 3.2 Engine의 실행 순서
 
-[OrchidGroupMutationEngine](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEngine.java)의 create/transform/update/move/quantity/correct/compensate 경로를 확인했다.
+[OrchidGroupMutationEngine](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEngine.java)의 create/transform/update/move/quantity/correct/compensate 경로를 확인했다.
 
 1. typed command 정규화·fingerprint 계산 → source identity로 기존 Mutation 확인.
 2. 대상 root lock → 같은 identity 재확인. 그룹·목적지 구역의 다건 조회는 ID 오름차순.
@@ -61,13 +63,13 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 4. 상태 변경과 revision 증가 → header/context/Entry 저장. create/transform은 신규 그룹 저장 전에 header와 context를 설정한다. 일부 update/quantity 경로는 메모리 변경 뒤 recorder가 header/context를 설정한다.
 5. WorkEffect·SalesInventoryMovement·Lineage·Audit 등 caller의 후속 저장과 함께 commit. 보정·보상은 원본 Mutation과 relation 저장.
 
-원장 저장: [MutationRecorder](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationRecorder.java). 재요청: [MutationReplayResolver](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationReplayResolver.java). 같은 source/fingerprint는 저장된 Entry 결과를 반환하고, 다른 payload는 ConflictException이다. 이는 **source key를 올바르게 발급한 경우**의 보장이다. caller가 새 업무에 과거 key를 재사용하면 Engine은 이를 신규 변경으로 판단할 수 없다.
+원장 저장: [MutationRecorder](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationRecorder.java). 재요청: [MutationReplayResolver](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationReplayResolver.java). 같은 source/fingerprint는 저장된 Entry 결과를 반환하고, 다른 payload는 ConflictException이다. 이는 **source key를 올바르게 발급한 경우**의 보장이다. caller가 새 업무에 과거 key를 재사용하면 Engine은 이를 신규 변경으로 판단할 수 없다.
 
-보상은 선택한 Mutation의 연속 chain, 이미 보상했는지, 현재 effective head, 복구 위치·표시 순서 충돌을 검사한다. 원본 Entry를 삭제하지 않고 새 COMPENSATION과 COMPENSATES relation을 추가한다. [EffectiveHeadPolicy](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEffectiveHeadPolicy.java)는 이미 상쇄된 구간을 실제 revision/snapshot 연결로 검사한다.
+보상은 선택한 Mutation의 연속 chain, 이미 보상했는지, 현재 effective head, 복구 위치·표시 순서 충돌을 검사한다. 원본 Entry를 삭제하지 않고 새 COMPENSATION과 COMPENSATES relation을 추가한다. [EffectiveHeadPolicy](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEffectiveHeadPolicy.java)는 이미 상쇄된 구간을 실제 revision/snapshot 연결로 검사한다.
 
 ### 3.3 DB fence의 실제 보장 범위
 
-[V21](../backend/src/main/resources/db/migration/V21__add_orchid_group_mutation_engine.sql)은 source UNIQUE, 그룹별 revision UNIQUE, Mutation별 그룹 UNIQUE, Entry kind/revision/snapshot 존재 조건을 제공한다. [V22](../backend/src/main/resources/db/migration/V22__enforce_orchid_group_mutation_write_fence.sql)은 ACTIVE일 때 context 없는 INSERT/UPDATE와 모든 물리 DELETE를 차단하고, revision 증가와 대응 Entry 존재를 commit 시 검사한다.
+[V21](../../backend/src/main/resources/db/migration/V21__add_orchid_group_mutation_engine.sql)은 source UNIQUE, 그룹별 revision UNIQUE, Mutation별 그룹 UNIQUE, Entry kind/revision/snapshot 존재 조건을 제공한다. [V22](../../backend/src/main/resources/db/migration/V22__enforce_orchid_group_mutation_write_fence.sql)은 ACTIVE일 때 context 없는 INSERT/UPDATE와 모든 물리 DELETE를 차단하고, revision 증가와 대응 Entry 존재를 commit 시 검사한다.
 
 한계는 다음과 같다.
 
@@ -76,7 +78,7 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 - 원장 테이블 자체의 일반 UPDATE/DELETE를 막는 append-only trigger는 확인되지 않았다. Entry에 orchid_groups FK를 두지 않은 것은 과거 삭제 tombstone 보존과 양립하는 설계다.
 - ACTIVE coverage가 없으면 fence는 우회된다. startup guard는 baseline 누락/PREPARING/minimum writer version을 검사하지만, 모든 기동에 전체 reconciliation을 수행하지 않는다.
 
-따라서 DB fence를 완전한 원장·snapshot 동치 보장으로 표현하면 과장이다. 일반 application write에서는 Engine과 도메인 검증이 추가 보호한다. [LedgerReconciliationService](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupLedgerReconciliationService.java)와 [SalesRehearsalInspector](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesOrchidGroupLedgerRehearsalInspector.java)는 chain/current state/예약 합계를 사후 검출한다. 사후 진단은 잘못된 commit을 막는 constraint와 다르다.
+따라서 DB fence를 완전한 원장·snapshot 동치 보장으로 표현하면 과장이다. 일반 application write에서는 Engine과 도메인 검증이 추가 보호한다. [LedgerReconciliationService](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupLedgerReconciliationService.java)와 [SalesRehearsalInspector](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesOrchidGroupLedgerRehearsalInspector.java)는 chain/current state/예약 합계를 사후 검출한다. 사후 진단은 잘못된 commit을 막는 constraint와 다르다.
 
 ## 4. Work와 구조 변경의 end-to-end 추적
 
@@ -84,16 +86,16 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 
 `WorkOperationController → WorkOperationPlanService → WorkTargetResolver → WorkOperationAggregateCreator → WorkOperation/Target/Execution`.
 
-- [PlanService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationPlanService.java)는 선택 범위를 resolve하고 제외 대상·품종별 계획 규칙을 검증한다.
-- [AggregateCreator](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationAggregateCreator.java)는 저장 전 대상 그룹을 잠그고 활성 여부를 다시 확인한다. 선택 당시 수량·품종·위치 등은 Work target snapshot으로 보존된다.
+- [PlanService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationPlanService.java)는 선택 범위를 resolve하고 제외 대상·품종별 계획 규칙을 검증한다.
+- [AggregateCreator](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationAggregateCreator.java)는 저장 전 대상 그룹을 잠그고 활성 여부를 다시 확인한다. 선택 당시 수량·품종·위치 등은 Work target snapshot으로 보존된다.
 - **잠금 전 조회의 stale snapshot 가설을 실제 병렬 실행으로 확인했다.** resolve 이후 다른 transaction이 수량 100→60을 변경한 경우 Farm resolver의 pessimistic 조회에서 version 충돌을 잡아 `WORK_TARGET_CHANGED`로 거절했고, Work target은 저장되지 않았다. 이번 실험을 snapshot 오염 결함으로 분류하지 않는다.
-- 계획/키 없는 일반 기록 API의 HTTP 재전송은 새 작업을 만들 수 있다. [작업 정책](../docs/features/work-operation-and-orchid-collection.md)의 명시된 범위와 일치하며, 키 있는 즉시 실행·구조 변경·포트 기록과 구분해야 한다.
+- 계획/키 없는 일반 기록 API의 HTTP 재전송은 새 작업을 만들 수 있다. [작업 정책](../../docs/features/work-operation-and-orchid-collection.md)의 명시된 범위와 일치하며, 키 있는 즉시 실행·구조 변경·포트 기록과 구분해야 한다.
 
 `ProgressService.completeTarget → WorkEffectProcessor → handler → Farm Engine → WorkEffectStore → Execution 완료 → 전체 완료 판정`.
 
-[ProgressService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationProgressService.java)는 Work root와 대상 실행을 잠그고 완료 효과의 replay를 먼저 확인한다. 신규 효과만 IN_PROGRESS 조건을 요구한다. 효과 identity는 `(workOperationId, effectKey)`이며 [V26](../backend/src/main/resources/db/migration/V26__align_work_effect_idempotency.sql)의 UNIQUE가 effectKind와 무관하게 중복을 막는다. 마지막 대상 실패 시 같은 transaction의 앞 효과도 rollback된다.
+[ProgressService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationProgressService.java)는 Work root와 대상 실행을 잠그고 완료 효과의 replay를 먼저 확인한다. 신규 효과만 IN_PROGRESS 조건을 요구한다. 효과 identity는 `(workOperationId, effectKey)`이며 [V26](../../backend/src/main/resources/db/migration/V26__align_work_effect_idempotency.sql)의 UNIQUE가 effectKind와 무관하게 중복을 막는다. 마지막 대상 실패 시 같은 transaction의 앞 효과도 rollback된다.
 
-[WorkEffectStore](../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkEffectStore.java)는 원문 지문, 실행 시점, worker, command/result, 그룹 SOURCE/RESULT 링크, mutationId/correlationId를 함께 저장한다. 기록 전용 효과는 Mutation이 없어도 정상이다. 모든 handler에 Mutation이 있다고 가정하면 안 된다.
+[WorkEffectStore](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkEffectStore.java)는 원문 지문, 실행 시점, worker, command/result, 그룹 SOURCE/RESULT 링크, mutationId/correlationId를 함께 저장한다. 기록 전용 효과는 Mutation이 없어도 정상이다. 모든 handler에 Mutation이 있다고 가정하면 안 된다.
 
 전체 완료는 대상 terminal 여부를 검사한다. 실제 `isTerminalForCompletion`은 COMPLETED/SKIPPED뿐 아니라 CANCELED도 포함한다. 입고 부분 취소와 연결된 동작이다. DOMAIN_RULES의 “모든 대상 COMPLETED 또는 SKIPPED” 설명은 이 예외를 반영할 필요가 있다.
 
@@ -112,20 +114,20 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 | 전량 1:1 이동 | 기존 그룹 ID와 속성을 유지하고 MOVE 저장. 그 밖의 이동은 결과 생성과 MOVED_TO 회차 연결 |
 | 이동 잔량 폐기 | 이동 후 잔량을 별도 MOVEMENT_DISCARD Work로 비례 배분·차감. 부모 이동/연관 폐기/여러 Mutation/WorkEffect가 같은 최상위 transaction |
 
-근거: [StructureChangeExecutionService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/StructureChangeExecutionService.java), [BatchStructureTransformationExecutor](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/BatchStructureTransformationExecutor.java), [StructureChangeStrategy](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/StructureChangeStrategy.java), [DiscardRecordService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/DiscardRecordService.java).
+근거: [StructureChangeExecutionService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/StructureChangeExecutionService.java), [BatchStructureTransformationExecutor](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/BatchStructureTransformationExecutor.java), [StructureChangeStrategy](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/StructureChangeStrategy.java), [DiscardRecordService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/DiscardRecordService.java).
 
 ### 4.3 취소·보정
 
-- [WorkOperationVoidService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationVoidService.java)의 가능 여부 조회는 advisory다. 실행은 root/execution/group lock 이후 Farm port에서 외부 참조·후속 Mutation·복구 위치를 재검증한다.
+- [WorkOperationVoidService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationVoidService.java)의 가능 여부 조회는 advisory다. 실행은 root/execution/group lock 이후 Farm port에서 외부 참조·후속 Mutation·복구 위치를 재검증한다.
 - 구조 변경/폐기의 단건·일괄 취소는 새 compensation → effect 취소 시각 → 원본 VOIDED와 compensation ID를 함께 저장한다. 원래 완료 실행·효과·Entry를 삭제하지 않는다. 연관 폐기는 부모 이동과 함께 취소한다.
 - 포트 취소는 생성 그룹의 CREATE를 보상하고 입고를 POTTING_PENDING으로 다시 연다. 그룹에 후속 변경·판매·다른 유효 Work가 있으면 거절한다.
-- [WorkOperationCorrectionService](../backend/src/main/java/com/greenhouse/backend/work/application/correction/WorkOperationCorrectionService.java)는 correction receipt → 원본 root lock → Farm 검증 → correction event ID 확정 → Mutation → 작업일/보정 결과 저장 순서다. 보정은 독립 WorkOperation이 아니다. 날짜만 변경하면 Mutation을 만들지 않는다.
-- [FarmWorkCorrectionAdapter](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/FarmWorkCorrectionAdapter.java)는 결과 대상·후속 사용·실사 이후 변경·수량 수지를 검사한다. 보정 실패 시 receipt/event/Mutation/전체 결과가 rollback된다.
+- [WorkOperationCorrectionService](../../backend/src/main/java/com/greenhouse/backend/work/application/correction/WorkOperationCorrectionService.java)는 correction receipt → 원본 root lock → Farm 검증 → correction event ID 확정 → Mutation → 작업일/보정 결과 저장 순서다. 보정은 독립 WorkOperation이 아니다. 날짜만 변경하면 Mutation을 만들지 않는다.
+- [FarmWorkCorrectionAdapter](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/FarmWorkCorrectionAdapter.java)는 결과 대상·후속 사용·실사 이후 변경·수량 수지를 검사한다. 보정 실패 시 receipt/event/Mutation/전체 결과가 rollback된다.
 - `features.work-quantity-correction.enabled`, stock-count gate가 비활성화된 상태와 활성화 테스트를 구분했다. 실사·수량 정정 보류가 모든 일반 PATCH 수량 변경까지 금지한다는 의미는 아니다.
 
-근거: [FarmStructureChangeVoidAdapter](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/FarmStructureChangeVoidAdapter.java), [FarmPottingVoidAdapter](../backend/src/main/java/com/greenhouse/backend/farm/application/inbound/FarmPottingVoidAdapter.java), [WorkQuantityBalancePolicy](../backend/src/main/java/com/greenhouse/backend/work/domain/correction/WorkQuantityBalancePolicy.java), [OrchidStockCountService](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidStockCountService.java).
+근거: [FarmStructureChangeVoidAdapter](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/FarmStructureChangeVoidAdapter.java), [FarmPottingVoidAdapter](../../backend/src/main/java/com/greenhouse/backend/farm/application/inbound/FarmPottingVoidAdapter.java), [WorkQuantityBalancePolicy](../../backend/src/main/java/com/greenhouse/backend/work/domain/correction/WorkQuantityBalancePolicy.java), [OrchidStockCountService](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidStockCountService.java).
 
-농장 기준 구조의 배치 수용 프로필 변경도 확인했다. [BedPlacementProfileService.updateProfile](../backend/src/main/java/com/greenhouse/backend/farm/application/structure/BedPlacementProfileService.java)는 전체 규칙 검증 → capacities 교체 → Audit을 한 transaction에 저장한다. BedZone의 row lock/@Version 없이 교체하므로 동시 편집 직렬화는 보장되지 않는다. 규칙 자연키 UNIQUE는 중복 행을 막지만 전체 프로필의 lost update까지 막는 장치는 아니다. 실제 동시 편집 재현은 미실행이다.
+농장 기준 구조의 배치 수용 프로필 변경도 확인했다. [BedPlacementProfileService.updateProfile](../../backend/src/main/java/com/greenhouse/backend/farm/application/structure/BedPlacementProfileService.java)는 전체 규칙 검증 → capacities 교체 → Audit을 한 transaction에 저장한다. BedZone의 row lock/@Version 없이 교체하므로 동시 편집 직렬화는 보장되지 않는다. 규칙 자연키 UNIQUE는 중복 행을 막지만 전체 프로필의 lost update까지 막는 장치는 아니다. 실제 동시 편집 재현은 미실행이다.
 
 ## 5. Inbound의 end-to-end 추적
 
@@ -138,7 +140,7 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 | 포트 무효화 | 기존 요청 receipt 확인 → 연결 입고/Work/group lock → 생성 보상 → Work VOIDED/effect canceled → 입고 PENDING → Audit | replacement 포트 작업이 생긴 뒤 과거 undo 재요청으로 새 작업을 되돌리지 않음 |
 | 입고 취소 | 연결 Work/형제 입고 lock → 필요하면 CREATE 보상 → 연결 작업 취소/무효화 → Inbound CANCELED → Audit | 입고 기록 물리 삭제 없음. 이후 참조·변경이 있으면 거절 |
 
-근거: [InboundRecordService](../backend/src/main/java/com/greenhouse/backend/farm/application/inbound/InboundRecordService.java), [InboundPottingOperationService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/InboundPottingOperationService.java), [InboundPottingService](../backend/src/main/java/com/greenhouse/backend/farm/application/inbound/InboundPottingService.java), [InboundWorkOperationLifecycleService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/InboundWorkOperationLifecycleService.java), [InboundRecord](../backend/src/main/java/com/greenhouse/backend/farm/domain/inbound/InboundRecord.java).
+근거: [InboundRecordService](../../backend/src/main/java/com/greenhouse/backend/farm/application/inbound/InboundRecordService.java), [InboundPottingOperationService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/InboundPottingOperationService.java), [InboundPottingService](../../backend/src/main/java/com/greenhouse/backend/farm/application/inbound/InboundPottingService.java), [InboundWorkOperationLifecycleService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/InboundWorkOperationLifecycleService.java), [InboundRecord](../../backend/src/main/java/com/greenhouse/backend/farm/domain/inbound/InboundRecord.java).
 
 입고 생성 자체에는 요청 receipt/key가 없다. 같은 HTTP body를 재전송하면 새 Inbound ID와 새 Work가 생성될 수 있다. Engine의 입고 ID별 중복 방어는 **동일 입고의 중복 결과 생성**을 막으며 **중복 입고 생성 요청**을 막지는 않는다. 취소는 이미 CANCELED이면 현재 결과를 반환하지만 바뀐 취소 사유를 같은 요청으로 검증하는 receipt 계약은 없다. 포트 실행/무효화의 엄격한 멱등성 범위와 구분해야 한다.
 
@@ -152,9 +154,9 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 | 작성중 취소 | Slip lock → DIRECT partner lock/입금 이력 검사 → release → 경매 취소 검증 → Slip 취소/잔액/Audit | 실수량을 늘리지 않음 |
 | 완료 취소 | Slip lock → 입금/경매 결과·정산 조건 검사 → group lock/복원 배치 검증 → restore outbound → 경매 삭제 → Slip 취소/잔액/Audit | 수량 복구와 movement/Mutation 원자 처리. 현존 outbound Mutation에 COMPENSATES; 전환 전 자료는 legacy source |
 
-근거: [CreationService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipCreationService.java), [UpdateService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java), [StatusService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipStatusService.java), [OutboundService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipOutboundService.java), [InventoryService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipInventoryService.java), [AllocationFactory](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipAllocationFactory.java).
+근거: [CreationService](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipCreationService.java), [UpdateService](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java), [StatusService](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipStatusService.java), [OutboundService](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipOutboundService.java), [InventoryService](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipInventoryService.java), [AllocationFactory](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipAllocationFactory.java).
 
-일별 전표 번호는 [SalesSlipNumberRepository](../backend/src/main/java/com/greenhouse/backend/sales/repository/SalesSlipNumberRepository.java)의 PostgreSQL UPSERT RETURNING으로 직렬화한다. 번호 유일성은 생성 요청 멱등성과 다르다. 같은 판매 생성 body를 재전송하면 새 번호/Slip/reserve가 생길 수 있다.
+일별 전표 번호는 [SalesSlipNumberRepository](../../backend/src/main/java/com/greenhouse/backend/sales/repository/SalesSlipNumberRepository.java)의 PostgreSQL UPSERT RETURNING으로 직렬화한다. 번호 유일성은 생성 요청 멱등성과 다르다. 같은 판매 생성 body를 재전송하면 새 번호/Slip/reserve가 생길 수 있다.
 
 ### DC-01 — High: 판매 수정의 version 기반 Mutation key가 예약을 누락
 
@@ -170,7 +172,7 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 
 같은 조건에서 allocation만 다른 그룹으로 바꾸면 기존 `RESERVE:0`과 fingerprint가 달라 ConflictException으로 정상 수정이 거절되는 것도 재현했다. 문제는 Engine replay 구현보다 **caller의 업무 identity 발급**이다.
 
-근거: [InventoryService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipInventoryService.java) `reserve/releaseForEdit/recordMovements`, [UpdateService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java) 70행 이후, [SalesSlip](../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlip.java)의 root version/amount 갱신, [SalesSlipItem](../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlipItem.java)의 독립 수정.
+근거: [InventoryService](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipInventoryService.java) `reserve/releaseForEdit/recordMovements`, [UpdateService](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java) 70행 이후, [SalesSlip](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlip.java)의 root version/amount 갱신, [SalesSlipItem](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlipItem.java)의 독립 수정.
 
 영향: 예약이 없어 다음 출고/취소가 실패하거나, 같은 그룹의 다른 전표 예약을 사용할 수 있다. 실제 후속 전표 간 예약 소비까지는 이번 probe에서 실행하지 않았다. `SalesOrchidGroupLedgerRehearsalInspector`는 사후 `SALES_RESERVATION_MISMATCH` 검출을 제공하지만 수정 commit을 막지 않는다.
 
@@ -180,7 +182,7 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 
 실제 PostgreSQL에서 수량 2, 단가 1,500,000,000원의 전표가 `total_amount=-1,294,967,296`으로 저장되고 2개가 예약됐다. 입력은 기존 양수/0 이상 validation 범위 안이다.
 
-[SalesSlipItem](../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlipItem.java) 78/103행의 `quantity * unitPrice`, [SalesSlip.recalculateAmounts](../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlip.java) 237행의 `mapToInt(...).sum()`에 범위 검사가 없다. Java probe에서는 각 1,500,000,000원인 두 품목 합계도 음수였고 잔액은 0으로 clamp됐다. DB에는 해당 금액의 비음수·계산 동치 CHECK가 없다.
+[SalesSlipItem](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlipItem.java) 78/103행의 `quantity * unitPrice`, [SalesSlip.recalculateAmounts](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlip.java) 237행의 `mapToInt(...).sum()`에 범위 검사가 없다. Java probe에서는 각 1,500,000,000원인 두 품목 합계도 음수였고 잔액은 0으로 clamp됐다. DB에는 해당 금액의 비음수·계산 동치 CHECK가 없다.
 
 경매 낙찰의 단일 행은 `Math.multiplyExact`로 거절하므로 일반 판매와 정책 구현이 다르다. 개선: 금액 계산을 domain에서 long/정확 연산으로 모으고 저장 범위를 검증한다. 품목 곱·전표 합계·잔액 각각의 경계값 테스트와 DB 제약 검토가 필요하다.
 
@@ -188,7 +190,7 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 
 상태가 `병해충`인 100개 그룹으로 전표를 생성했고 PostgreSQL에서 예약 10이 확정됐다.
 
-[AllocationFactory](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipAllocationFactory.java)는 품종명/배분 합계만 검사한다. Engine.reserve → [OrchidGroup.reserve](../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroup.java) 313행은 가용량만 검사하며 `isSaleable`을 호출하지 않는다. `searchSellable` 쿼리도 가용량/선택 status 조건만 적용하므로 검색 단계에서도 제외 정책이 강제되지 않는다.
+[AllocationFactory](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipAllocationFactory.java)는 품종명/배분 합계만 검사한다. Engine.reserve → [OrchidGroup.reserve](../../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroup.java) 313행은 가용량만 검사하며 `isSaleable`을 호출하지 않는다. `searchSellable` 쿼리도 가용량/선택 status 조건만 적용하므로 검색 단계에서도 제외 정책이 강제되지 않는다.
 
 집계는 `OrchidGroupStatusPolicy.unavailableForSaleStatuses`를 적용하지만 명령이 이를 우회한다. 개선: 예약 가능 상태를 Farm domain/policy의 단일 규칙으로 검증하고 검색/capability도 공유한다. 신규 예약 검사와 기존 예약의 출고/해제 정책은 구분해야 한다.
 
@@ -203,13 +205,13 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 
 각 `IN ... ORDER BY id`가 정렬돼도 **서로 다른 호출에서 누적 취득하는 lock 집합**은 정렬되지 않는다. 같은 거래처 요청은 partner lock으로 직렬화되지만 다른 거래처에서는 보호되지 않는다. 교착 후 DB rollback은 작동한다. 이 probe에서는 다른 요청도 DC-01의 key 충돌로 실패했으므로 “한 요청은 반드시 성공한다”는 보장은 하지 않는다.
 
-개선: 기존/신규 allocation ID 합집합을 첫 수량 변경 전에 정렬해 잠근다. [OrchidGroupCommandService.updateBatch](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupCommandService.java)와 품종별 구조 변경 기록의 입력 순서별 누적 잠금도 같은 패턴의 정적 위험이 있다. 이 두 경로의 실제 교착은 미재현이다.
+개선: 기존/신규 allocation ID 합집합을 첫 수량 변경 전에 정렬해 잠근다. [OrchidGroupCommandService.updateBatch](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupCommandService.java)와 품종별 구조 변경 기록의 입력 순서별 누적 잠금도 같은 패턴의 정적 위험이 있다. 이 두 경로의 실제 교착은 미재현이다.
 
 ## 7. Auction의 end-to-end 추적
 
 `출하 완료 → shipment/lot 생성 → 결과 입력 → attempt/result line → sold/waiting/returned 및 상태 이력 → 반환 확인/수량 보정 → Settlement 재구성`.
 
-[AuctionTrackingService](../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionTrackingService.java)의 모든 쓰기는 lot row lock 후 [AuctionShipmentLot](../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java) 메서드를 호출한다. lot `@Version`, `(lot, auctionDate, attemptNo)` UNIQUE가 동일 차수 충돌을 방어한다. 결과 행/lot 수량/상태 이력은 cascade로 같은 transaction에 저장된다.
+[AuctionTrackingService](../../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionTrackingService.java)의 모든 쓰기는 lot row lock 후 [AuctionShipmentLot](../../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java) 메서드를 호출한다. lot `@Version`, `(lot, auctionDate, attemptNo)` UNIQUE가 동일 차수 충돌을 방어한다. 결과 행/lot 수량/상태 이력은 cascade로 같은 transaction에 저장된다.
 
 낙찰은 남은 수량 전체, 부분 낙찰은 그보다 작은 수량이어야 한다. 유찰은 대기를 유지한다. 반환 추정은 반환 분류로 옮기고 실제 확인은 일부를 다시 대기로 돌릴 수 있다. 반환 확인은 lot 추적이며 **Farm 재입고/재고 복구를 수행하지 않는다**. 해당 API가 실물 재입고까지 처리한다고 가정하면 안 된다.
 
@@ -222,9 +224,9 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 3. 정산 재구성 전 전표를 취소.
 4. 취소 성공. `auction_result_lines`, `auction_attempts`, `auction_lot_status_history`가 모두 0건이 되고 출고 수량이 복구됐다.
 
-[AuctionShipmentLifecycleService.deleteDraftShipment](../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionShipmentLifecycleService.java) 27행은 `currentStatus != WAITING`만 검사한다. `findShipmentIdsWithResults`도 이름과 달리 같은 상태 조건이다. [AuctionShipmentLot.changeStatus](../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java)는 임의 enum 전환을 받아 과거 결과의 존재를 검사하지 않는다. shipment→lot→attempt→result/history cascade 삭제가 과거 사실을 제거한다.
+[AuctionShipmentLifecycleService.deleteDraftShipment](../../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionShipmentLifecycleService.java) 27행은 `currentStatus != WAITING`만 검사한다. `findShipmentIdsWithResults`도 이름과 달리 같은 상태 조건이다. [AuctionShipmentLot.changeStatus](../../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java)는 임의 enum 전환을 받아 과거 결과의 존재를 검사하지 않는다. shipment→lot→attempt→result/history cascade 삭제가 과거 사실을 제거한다.
 
-[AuctionSalesSlipCancellationPolicy](../backend/src/main/java/com/greenhouse/backend/sales/application/AuctionSalesSlipCancellationPolicy.java)는 정산 연결은 별도 검사한다. 이미 정산에 반영됐다면 FK/정산 검사로 방어되므로 재현의 전제는 **결과는 있고 정산은 아직 없음**이다. 결과/정산 존재 검사와 삭제 사이에 lot root를 함께 잠그는 계약도 없다. 별도의 동시 결과 입력/취소 경쟁은 미재현이다.
+[AuctionSalesSlipCancellationPolicy](../../backend/src/main/java/com/greenhouse/backend/sales/application/AuctionSalesSlipCancellationPolicy.java)는 정산 연결은 별도 검사한다. 이미 정산에 반영됐다면 FK/정산 검사로 방어되므로 재현의 전제는 **결과는 있고 정산은 아직 없음**이다. 결과/정산 존재 검사와 삭제 사이에 lot root를 함께 잠그는 계약도 없다. 별도의 동시 결과 입력/취소 경쟁은 미재현이다.
 
 개선: 상태가 아니라 실제 attempt/result/history 참조를 기준으로 취소 가능 여부를 판단하고, lot 잠금 후 재검증한다. 결과가 생긴 shipment는 물리 제거 대상에서 제외한다. 수동 상태 변경의 허용 전이와 결과 수량 관계도 함께 정리해야 한다.
 
@@ -238,7 +240,7 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 
 ### DC-07 — Medium: 수량 변경 사실과 상태 이력의 불일치
 
-`confirmReturn/adjustQuantities → changeStatus`에서 next status가 현재와 같으면 [changeStatus](../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java) 341행이 바로 반환한다. Java probe의 두 번째 부분 반환 및 동일 REAUCTION_WAITING 상태의 수량 보정에서 수량은 바뀌지만 새 history가 없었다. 이 history에는 수량 before/after snapshot 자체도 없다.
+`confirmReturn/adjustQuantities → changeStatus`에서 next status가 현재와 같으면 [changeStatus](../../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java) 341행이 바로 반환한다. Java probe의 두 번째 부분 반환 및 동일 REAUCTION_WAITING 상태의 수량 보정에서 수량은 바뀌지만 새 history가 없었다. 이 history에는 수량 before/after snapshot 자체도 없다.
 
 `adjustQuantities`는 sold+waiting+returned=shipped만 확인하고 기존 낙찰 결과·정산/입금 연결은 확인하지 않는다. 따라서 lot의 sold 수량은 보정되지만 정산은 변경되지 않은 결과 행의 수량/금액을 계속 사용한다. 현재 값과 과거 낙찰 원장을 의도적으로 구분할 수는 있으나, 그 차이의 보정 근거·정산 영향 판정 계약이 없다. 실제 정산 금액을 잘못 변경하는 경로로 단정하지 않는다.
 
@@ -250,9 +252,9 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 
 `AuctionSettlementController/Initializer → AuctionSettlementService → partner lock → AuctionDataReader 결과 조회 → Settlement/Line synchronize → 예상 입금일 → 저장`.
 
-- [AuctionSettlementService](../backend/src/main/java/com/greenhouse/backend/settlement/application/AuctionSettlementService.java)는 경매장+경매일로 모으고 양수 금액 결과만 연결한다. 동일 경매장 root lock이 재구성/입금의 공통 직렬화점이다.
+- [AuctionSettlementService](../../backend/src/main/java/com/greenhouse/backend/settlement/application/AuctionSettlementService.java)는 경매장+경매일로 모으고 양수 금액 결과만 연결한다. 동일 경매장 root lock이 재구성/입금의 공통 직렬화점이다.
 - startup `rebuildExistingResults`는 후보 결과를 일괄 읽고 partner lock 이후 이미 연결된 ID를 다시 제외한다. 기존 결과 line UNIQUE와 `(auctionHouseId, auctionDate)` UNIQUE가 중복 저장을 방어한다.
-- [AuctionSettlement.synchronizeLines](../backend/src/main/java/com/greenhouse/backend/settlement/domain/AuctionSettlement.java)는 이미 연결된 결과 ID의 수량/단가/금액 snapshot을 새 원본 값으로 덮어쓰지 않는다. paidAmount를 보존하고 합계/잔액을 갱신한다.
+- [AuctionSettlement.synchronizeLines](../../backend/src/main/java/com/greenhouse/backend/settlement/domain/AuctionSettlement.java)는 이미 연결된 결과 ID의 수량/단가/금액 snapshot을 새 원본 값으로 덮어쓰지 않는다. paidAmount를 보존하고 합계/잔액을 갱신한다.
 - 결과 입력과 정산 재구성은 별도 유스케이스/transaction이다. 새 낙찰 결과가 재구성 전에 정산에 없는 것은 이 모델의 지연 반영이다. 요청 전체에서 Auction와 Settlement가 항상 동시에 commit된다는 보장은 없다.
 - 결과 수정/삭제가 없다는 전제 아래 snapshot 보존은 적절하다. synchronize는 후보에서 사라진 line을 제거할 수 있고 잔액을 0으로 clamp하므로, 향후 결과 보정/삭제를 도입하면 paidAmount>재구성 총액 처리 정책이 필요하다. 현재 일반 API 결함으로 판정하지 않았다.
 
@@ -263,7 +265,7 @@ private overload 호출은 최상위 public method가 이미 transaction을 연 
 | DIRECT Slip | Slip root → partner root → 기존 payment 확인 → 신규 금액 검증/paid·remaining 변경 → RECEIVED/MANUAL_MATCH → partner balance → Audit | 완납 후에도 같은 금액/날짜 replay 가능. 취소/경매 유형은 대상 검증에서 거절 |
 | AuctionSettlement | 경매장 ID 조회 → partner root → Settlement root → 기존 payment 확인 → 신규 금액 검증/paid·remaining 변경 → 두 이벤트 → balance activity → Audit | 동일 key의 결과 재반영 없음. 재구성과 같은 partner 직렬화점 사용 |
 
-근거: [SalesPaymentService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesPaymentService.java), [PaymentService](../backend/src/main/java/com/greenhouse/backend/settlement/application/PaymentService.java), [PaymentLedgerService](../backend/src/main/java/com/greenhouse/backend/settlement/application/PaymentLedgerService.java), [PartnerBalanceService](../backend/src/main/java/com/greenhouse/backend/settlement/application/PartnerBalanceService.java).
+근거: [SalesPaymentService](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesPaymentService.java), [PaymentService](../../backend/src/main/java/com/greenhouse/backend/settlement/application/PaymentService.java), [PaymentLedgerService](../../backend/src/main/java/com/greenhouse/backend/settlement/application/PaymentLedgerService.java), [PartnerBalanceService](../../backend/src/main/java/com/greenhouse/backend/settlement/application/PartnerBalanceService.java).
 
 Payment identity는 `MANUAL:<targetType>:<targetId>:<trimmed key>`이고 external_uid UNIQUE가 있다. replay 비교는 금액·입금일이며 worker/memo/입금수단까지 동일한 요청을 요구하지 않는다. 현행 문서와 일치한다. 부분입금·완납·초과입금 거절은 Entity에 있고 신규 입금에만 잔액 검사를 적용한다.
 

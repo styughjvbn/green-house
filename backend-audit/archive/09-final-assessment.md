@@ -1,5 +1,7 @@
 # Backend 최종 평가
 
+> 보관 문서: 당시 코드·감사·검증 이력이며 현재 구현의 기준이 아니다. 미해결/운영 검증/보류 상태는 [현재 작업 목록](../10-remediation-progress.md)을 따른다.
+
 평가일: 2026-10-03. 코드 기준: `80106917232a671b5a489ad8e59d37b63a06dffe`, `develop`.
 
 [01 시스템 지도](01-system-map.md), [02 아키텍처](02-architecture.md), [03 도메인·정합성](03-domain-consistency.md), [04 코드 품질](04-code-quality.md), [05 변경 용이성](05-changeability.md), [06 성능](06-performance.md), [07 테스트](07-testing.md), [08 통합 findings](08-findings.md)를 출발점으로 현재 호출·저장·검증 경계를 다시 대조했다. 01·02·04·05는 이전 revision의 보고서이므로 클래스 수나 과거 Legacy 설명을 현재 상태로 그대로 옮기지 않았다. finding 식별자는 08의 BE ID를 사용한다.
@@ -37,7 +39,7 @@
 | 실제 DB 회귀와 계약 보호 | PG migration/constraint/lock/rollback 시험, 저장 fingerprint·상세/출력 golden | 변경 시 보존할 경계가 테스트로 드러남. 단순 mock 중심 suite가 아님 |
 | 시간과 응답 계약 | 주입 Clock·TimeConfig, 공통 응답/오류, 생성 OpenAPI | 업무일·UTC 저장·클라이언트 타입의 공통 기준이 있음 |
 
-현재 [OrchidGroupMutationEngine](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEngine.java), [BusinessPartnerLock](../backend/src/main/java/com/greenhouse/backend/partner/application/BusinessPartnerLock.java), [PaymentLedgerService](../backend/src/main/java/com/greenhouse/backend/settlement/application/PaymentLedgerService.java)의 caller transaction 계약을 다시 확인했다. 모듈 간 port·값 계약이 실제로 사용되므로 이 구조를 이름뿐인 계층화로 평가하지 않는다.
+현재 [OrchidGroupMutationEngine](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEngine.java), [BusinessPartnerLock](../../backend/src/main/java/com/greenhouse/backend/partner/application/BusinessPartnerLock.java), [PaymentLedgerService](../../backend/src/main/java/com/greenhouse/backend/settlement/application/PaymentLedgerService.java)의 caller transaction 계약을 다시 확인했다. 모듈 간 port·값 계약이 실제로 사용되므로 이 구조를 이름뿐인 계층화로 평가하지 않는다.
 
 ## 3. 가장 위험한 문제
 
@@ -51,7 +53,7 @@
 | BE-004 판매 상태 불일치 | 병해충 그룹에 판매 10개 예약 확정 | 집계의 판매불가 정책이 searchSellable/reserve에 연결되지 않음. 조회상 의미와 실제 writer가 분리 |
 | BE-005 재전송 중복 | 자동 차수 부분 낙찰 10개 두 번으로 sold 20; Java 부분 반환 두 번도 누적 | row lock·차수 UNIQUE를 요청 dedup으로 간주. 자동 차수는 재시도마다 새 identity를 만들고 반환은 key가 없음 |
 
-[SalesSlipInventoryService.reserve/recordMovements](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipInventoryService.java), [SalesSlipUpdateService.update](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java), [AuctionShipmentLifecycleService](../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionShipmentLifecycleService.java), [AuctionShipmentLot](../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java), [SalesSlipItem](../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlipItem.java)의 해당 판단이 현재 코드에도 남아 있다.
+[SalesSlipInventoryService.reserve/recordMovements](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipInventoryService.java), [SalesSlipUpdateService.update](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java), [AuctionShipmentLifecycleService](../../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionShipmentLifecycleService.java), [AuctionShipmentLot](../../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java), [SalesSlipItem](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlipItem.java)의 해당 판단이 현재 코드에도 남아 있다.
 
 BE-001은 Engine을 고치거나 `saveAndFlush`를 더 호출하는 것으로 해결되지 않는다. 신규 업무를 고유하게 표현하는 책임은 Sales caller에 있다. BE-002도 상태 enum을 바꾸는 것만으로 해결되지 않는다. 과거 결과가 존재하는 출하의 취소·삭제 가능성을 실제 참조와 보존 정책으로 판단해야 한다.
 
@@ -102,7 +104,7 @@ flowchart TD
 
 ### 4.4 보정의 저장 책임과 실행 순서가 분리되어 있다
 
-[WorkOperationCorrectionService](../backend/src/main/java/com/greenhouse/backend/work/application/correction/WorkOperationCorrectionService.java)는 감사 Entity와 루트 transaction을 소유한다. [FarmWorkCorrectionAdapter](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/FarmWorkCorrectionAdapter.java)는 저장 callback을 호출하고 Work 날짜를 바꾼다. BE-020의 비용은 단순 모듈 왕복이 아니라 **소유자는 Work인데 일부 실행 순서는 Farm이 결정하는 구조**다. Receipt scope/membership을 Farm에서 선택하는 BE-021과 같은 공개 계약 문제로 연결된다.
+[WorkOperationCorrectionService](../../backend/src/main/java/com/greenhouse/backend/work/application/correction/WorkOperationCorrectionService.java)는 감사 Entity와 루트 transaction을 소유한다. [FarmWorkCorrectionAdapter](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/FarmWorkCorrectionAdapter.java)는 저장 callback을 호출하고 Work 날짜를 바꾼다. BE-020의 비용은 단순 모듈 왕복이 아니라 **소유자는 Work인데 일부 실행 순서는 Farm이 결정하는 구조**다. Receipt scope/membership을 Farm에서 선택하는 BE-021과 같은 공개 계약 문제로 연결된다.
 
 Work가 감사 ID·날짜·최종 조립을 조율하고 Farm이 농장 판단/변경 결과를 돌려주는 방향이 적절하다. callback만 별도 service로 포장하면 숨은 순서를 그대로 남긴다. 검증과 쓰기를 다른 transaction으로 분리하면 race를 새로 만든다.
 
@@ -112,17 +114,17 @@ Work가 감사 ID·날짜·최종 조립을 조율하고 Farm이 농장 판단/�
 
 Sales에는 전표 version·재고 movement·Mutation source가 있고 Auction에는 lot status·attempt·result·history가 있다. 필요한 저장 구조가 없어서만 생긴 결함은 아니다. **어느 값이 신규 업무를 식별하고 어느 기록이 취소 가능성의 근거인지 application 계약이 충분히 명시하지 못한다.** 그 결과 기술적으로 유효한 상태를 업무적으로 올바른 상태로 오인한다(BE-001/002/005/007).
 
-금액도 독립적인 품질 문제다. [SalesSlip.recalculateAmounts](../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlip.java)는 int sum 뒤 remaining을 0 이상으로 clamp한다. 곱/합계 overflow를 거절하는 정책이 없으므로 clamp가 잘못된 금액을 정상적인 미수금처럼 보이게 한다. 문자열 정리나 exception 통일보다 이 domain 연산을 먼저 수정해야 한다.
+금액도 독립적인 품질 문제다. [SalesSlip.recalculateAmounts](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlip.java)는 int sum 뒤 remaining을 0 이상으로 clamp한다. 곱/합계 overflow를 거절하는 정책이 없으므로 clamp가 잘못된 금액을 정상적인 미수금처럼 보이게 한다. 문자열 정리나 exception 통일보다 이 domain 연산을 먼저 수정해야 한다.
 
 ### 5.2 타입이 보장하는 구간이 짧다
 
-typed 구조 명령/결과가 있어도 [WorkEffectCommand](../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkEffectCommand.java)는 Object/Map으로 받고 handler가 런타임에 복원한다. 저장 표현을 바꾸면 compiler가 모든 reader를 찾아주지 않는다. 실행 중 타입 소실, 여러 decoder의 fallback 차이, hash 호환이 결합해 코드 리뷰 범위를 크게 만든다(BE-012/013).
+typed 구조 명령/결과가 있어도 [WorkEffectCommand](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkEffectCommand.java)는 Object/Map으로 받고 handler가 런타임에 복원한다. 저장 표현을 바꾸면 compiler가 모든 reader를 찾아주지 않는다. 실행 중 타입 소실, 여러 decoder의 fallback 차이, hash 호환이 결합해 코드 리뷰 범위를 크게 만든다(BE-012/013).
 
 이 문제를 모든 handler의 generic hierarchy나 새 공통 command framework로 풀 필요는 없다. 기존 typed command/result를 어디까지 유지할지와 어디서 JSON으로 변환할지를 먼저 좁히는 것이 효과적이다.
 
 ### 5.3 서비스 복잡도는 필요한 조율과 혼합된 책임의 합이다
 
-[WorkOperationVoidService.inspectCancellation](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationVoidService.java)는 상태별 blocker, 연관 폐기, 효과/Mutation, 기록형/포트/구조 변경, lock 모드, 영향 응답을 처리한다. 취소 가능 여부·보상·동시 재검증이 필요한 이유는 도메인에 있다. 한 지역 상태에서 판단과 표현을 함께 누적하는 비용은 줄일 수 있다(BE-017).
+[WorkOperationVoidService.inspectCancellation](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationVoidService.java)는 상태별 blocker, 연관 폐기, 효과/Mutation, 기록형/포트/구조 변경, lock 모드, 영향 응답을 처리한다. 취소 가능 여부·보상·동시 재검증이 필요한 이유는 도메인에 있다. 한 지역 상태에서 판단과 표현을 함께 누적하는 비용은 줄일 수 있다(BE-017).
 
 따라서 이 service 전체를 domain modeling 부재로 판정하지 않는다. **Auction의 사실/상태 구분과 Sales의 operation identity는 모델 의미를 보완해야 하는 문제이고, Work 취소는 이미 존재하는 정책·결과의 조립 경계를 정리할 문제**다. 둘을 같은 대규모 service 분할로 해결하면 중요한 실행 순서가 더 숨을 수 있다.
 
@@ -140,7 +142,7 @@ BE-018의 위치 기반 graph 생성, BE-024의 호출되지 않는 옵션, BE-0
 | 중간 CreateRequest·상세 WorkOperationView | 내부 결과보다 넓은 계약을 만든 뒤 필요한 값만 다시 꺼냄(BE-015/016) | 기존 내부 계획/결과로 필요한 값 전달 |
 | requiresEverySourceResult 옵션 | override가 있어도 실행에서 사용되지 않음(BE-024) | 제거 또는 실제 정책 변경으로 연결·시험 |
 
-**과거 migration·호환성이 일부 추상화 폭을 설명하지만 모든 폭을 정당화하지는 않는다.** [LegacyStructureChangeRequestMapper](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/LegacyStructureChangeRequestMapper.java)의 과거 입력 변환과 단일-source 호환 결과는 실제 소비자를 지원한다. 반면 정상 신규 포트 실행에서도 typed→Map→요청 DTO로 왕복한다. 과거 입력의 변환을 입구에 유지해도 신규 실행 전체에서 타입을 잃을 필요는 없다. 이 구분은 현재 호출 코드에 근거한 추론이며 migration이 모든 복잡성을 만들었다는 역사적 판정은 아니다.
+**과거 migration·호환성이 일부 추상화 폭을 설명하지만 모든 폭을 정당화하지는 않는다.** [LegacyStructureChangeRequestMapper](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/LegacyStructureChangeRequestMapper.java)의 과거 입력 변환과 단일-source 호환 결과는 실제 소비자를 지원한다. 반면 정상 신규 포트 실행에서도 typed→Map→요청 DTO로 왕복한다. 과거 입력의 변환을 입구에 유지해도 신규 실행 전체에서 타입을 잃을 필요는 없다. 이 구분은 현재 호출 코드에 근거한 추론이며 migration이 모든 복잡성을 만들었다는 역사적 판정은 아니다.
 
 handler/strategy registry·사용 검사 port·AuditRecorder·Mutation recorder/replay/effective-head 분리는 실제 정책/저장 책임을 가진다. 작은 클래스라는 이유로 wrapper로 합치지 않는다. 공통 멱등 프레임워크·모든 서비스 interface화·별도 Mutation 모듈은 현 단계의 필수 개선이 아니다.
 
@@ -170,7 +172,7 @@ Engine의 긴 메서드에는 잠금, replay, before/after, revision, context, E
 | Audit 저장 방식과 이벤트 조립 | 독립 Audit 값 계약, MANDATORY recorder | 모든 업무의 감사 완전성은 별도이며 BE-010은 남음 |
 | 제한된 새 Mutation 명령 | sealed command와 exhaustive fingerprint switch가 누락 탐지 | DB 의미·과거 hash·보상 정책까지 포함한 변경은 국소적이지 않음 |
 
-특히 [WorkEffectProcessor](../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkEffectProcessor.java)는 handler 목록으로 dispatch하고 정의에서 요구하는 구현을 검증한다. 확장점 자체는 활용 가능하다. BE-014의 유형 code/handler code/계보 분류 대응을 보강하면 기존 registry를 유지하면서 실행 후 조회 누락을 줄일 수 있다.
+특히 [WorkEffectProcessor](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkEffectProcessor.java)는 handler 목록으로 dispatch하고 정의에서 요구하는 구현을 검증한다. 확장점 자체는 활용 가능하다. BE-014의 유형 code/handler code/계보 분류 대응을 보강하면 기존 registry를 유지하면서 실행 후 조회 누락을 줄일 수 있다.
 
 비 HTTP 입력도 public application service의 업무 로직·transaction을 재사용할 수 있다. 다만 `@Valid`·HTTP 인가·감사 주체/context가 자동 따라오는 것은 아니므로 완성된 채널 확장으로 평가하지 않는다(BE-019).
 
@@ -202,7 +204,7 @@ Engine의 긴 메서드에는 잠금, replay, before/after, revision, context, E
 | 목록 N+1·불필요한 Entity | 1/10/50 및 500/501, flush/clear 뒤 SQL·일부 Entity load·응답 의미 확인 | CoreQueryRegression/FarmQuery/정산·입금/Analytics 시험 |
 | 구조·저장/응답 호환 | compiled/source boundary, writer inventory, 외부 시스템 시간 금지, golden hash/상세/출력 | architecture·MutationFingerprintCompatibility·contract 시험 |
 
-현재 [WorkCommandReceipts](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkCommandReceipts.java)의 claim→lock→fingerprint→action→완료/membership 흐름과 [SalesPaymentService.confirmPayment](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesPaymentService.java)의 replay를 신규 금액 검사 전에 처리하는 순서를 다시 확인했다. 완납 후 재시도를 신규 입금처럼 거절하는 회귀를 피해야 한다.
+현재 [WorkCommandReceipts](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkCommandReceipts.java)의 claim→lock→fingerprint→action→완료/membership 흐름과 [SalesPaymentService.confirmPayment](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesPaymentService.java)의 replay를 신규 금액 검사 전에 처리하는 순서를 다시 확인했다. 완납 후 재시도를 신규 입금처럼 거절하는 회귀를 피해야 한다.
 
 기본 525 invocation·전체 PG 177 invocation·benchmark 2 invocation의 기존 성공 결과를 재사용했다. 이 숫자는 각각 다른 업무 시나리오 수나 전체 방어력 점수가 아니다. H2는 HTTP/application 조립에, PG는 Flyway/실제 DB 경계에 서로 다른 역할을 한다. PG task에는 HTTP뿐 아니라 service/JDBC 시험도 포함된다.
 
@@ -231,7 +233,7 @@ root 수 고정 상태에서 target/attempt/capacity/Entry를 늘리고 Entity/r
 ### 11.3 통과해도 보호 범위를 과대평가할 수 있는 시험
 
 - 외부 test transaction/TransactionTemplate는 caller 합류를 증명하지만 최상위 transaction annotation 제거를 가릴 수 있다(BE-037).
-- [WorkBatchCancellationPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkBatchCancellationPostgresE2ETest.java)의 `status >= 400`은 의도한 후속 CHECK보다 먼저 거절돼도 통과할 여지가 있다. late 실패 지점 도달을 추가 확인해야 한다.
+- [WorkBatchCancellationPostgresE2ETest](../../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkBatchCancellationPostgresE2ETest.java)의 `status >= 400`은 의도한 후속 CHECK보다 먼저 거절돼도 통과할 여지가 있다. late 실패 지점 도달을 추가 확인해야 한다.
 - 200ms 미완료는 worker scheduling 지연일 수 있다. 실제 worker의 lock wait를 관측해야 한다. 전체 DB waiter count는 향후 병렬화 때 오인 가능성이 있다(BE-038).
 - architecture의 regex/메서드 inventory는 새 writer나 모든 동적 SQL을 자동으로 포함하지 않는다(BE-041).
 - JSON 정규식 ID 추출·최신 migration 34/7개 고정·seed MIN/OFFSET·system date는 업무 의미와 무관한 변경 민감도를 만든다. 무제한 HTTP/future 대기는 CI 진단을 늦출 수 있다(BE-039/040).

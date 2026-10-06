@@ -1,5 +1,7 @@
 # 정산·원장 성능 측정 실행 가이드
 
+현재 도구 사용법이다. 이전 실행 결과는 `archive/`에 보관하고, 실행 필요 여부와 미완료 범위는 [현재 작업 목록](10-remediation-progress.md)을 따른다. 시작 자동 정산은 별도 일괄 기능 구현 후 제거할 예정이며 현재 성능 수정은 보류다.
+
 사용자 환경에서 측정을 실행하고 `result.json` 하나를 전달하면 결과를 분석할 수 있다. 실제 application service를 호출하며 Testcontainers의 PostgreSQL 18 격리 DB에 합성 자료를 만든다. 실행마다 새 컨테이너와 새 결과 디렉터리를 사용한다.
 
 ## 실행
@@ -66,11 +68,11 @@ runner는 Gradle 종료 코드와 report의 설정·scenario/sample 수·개별 
 
 ## 분석 기록
 
-2026-10-05 사용자 제공 standard 결과의 수치·코드 대조·후속 우선순위는 [측정 결과 분석](13-domain-performance-results.md)에 기록했다. 10개 scenario·45개 sample 성공과 확인된 잔여 비용을 구분하며, 이후 전후 비교에는 동일한 profile/설정을 사용한다.
+2026-10-05 사용자 제공 standard 결과의 수치·코드 대조·후속 우선순위는 [측정 결과 분석](archive/13-domain-performance-results.md)에 기록했다. 10개 scenario·45개 sample 성공과 확인된 잔여 비용을 구분하며, 이후 전후 비교에는 동일한 profile/설정을 사용한다.
 
 ## 원인 조사용 별도 task
 
-2026-10-06 [지연 원인 조사](14-performance-diagnosis.md)에 사용한 수동 도구다. 일반 benchmark 결과와 분리한다. 프로젝트 루트에서 다음처럼 실행한다. 출력 디렉터리는 실행마다 새 경로를 지정하고 `diagnosis.revision`에는 조사할 production revision을 기록한다. 도구 자체의 수정 여부는 이 값으로 보증하지 않는다.
+2026-10-06 [지연 원인 조사](archive/14-performance-diagnosis.md)에 사용한 수동 도구다. 일반 benchmark 결과와 분리한다. 프로젝트 루트에서 다음처럼 실행한다. 출력 디렉터리는 실행마다 새 경로를 지정하고 `diagnosis.revision`에는 조사할 production revision을 기록한다. 도구 자체의 수정 여부는 이 값으로 보증하지 않는다.
 
 ```bash
 cd backend

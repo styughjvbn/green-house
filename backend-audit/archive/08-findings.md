@@ -1,5 +1,7 @@
 # Backend 통합 findings
 
+> 보관 문서: 당시 코드·감사·검증 이력이며 현재 구현의 기준이 아니다. 미해결/운영 검증/보류 상태는 [현재 작업 목록](../10-remediation-progress.md)을 따른다.
+
 - 평가일: 2026-10-03
 - 재검토 기준: `80106917232a671b5a489ad8e59d37b63a06dffe` (`develop`). 코드 수정 없이 문서만 작성했다.
 - 출처: [02 아키텍처](02-architecture.md), [03 도메인·정합성](03-domain-consistency.md), [04 코드 품질](04-code-quality.md), [05 변경 용이성](05-changeability.md), [06 성능](06-performance.md), [07 테스트](07-testing.md).
@@ -27,7 +29,7 @@ ID: BE-001
 Severity: High  
 Category: Domain consistency / Idempotency  
 Affected modules: sales, farm, settlement  
-Evidence: **PostgreSQL 재현**, 03 DC-01·07 §9. [SalesSlipUpdateService.update](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java)가 기존 예약 해제 후 root를 flush하고 재예약한다. [SalesSlipInventoryService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipInventoryService.java)는 `RESERVE:<version>`을 사용한다. spec만 수정하면 allocation=10인데 reserved=0, reserve movement=2가 저장됐다.  
+Evidence: **PostgreSQL 재현**, 03 DC-01·07 §9. [SalesSlipUpdateService.update](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java)가 기존 예약 해제 후 root를 flush하고 재예약한다. [SalesSlipInventoryService](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipInventoryService.java)는 `RESERVE:<version>`을 사용한다. spec만 수정하면 allocation=10인데 reserved=0, reserve movement=2가 저장됐다.\
 Problem: 자식 품목만 변경되면 root JPA version이 증가하지 않아 신규 예약이 기존 Mutation replay로 처리된다. 같은 총액의 다른 그룹 배분은 fingerprint 충돌로 정상 수정이 거부된다.  
 Why it matters: 전표와 예약이 불일치한 채 성공 응답한다. 이후 출고·취소 실패와 다른 전표 예약 소비 가능성이 있다. 후자는 아직 재현하지 않았다. 단일 transaction과 원장 fence도 잘못된 업무 identity를 교정하지 않는다.  
 Example change scenario: 품목 규격·메모만 수정하거나 총액을 유지한 채 배분 그룹을 바꾼 후 출고한다.  
@@ -42,7 +44,7 @@ ID: BE-002
 Severity: High  
 Category: History preservation / Cancellation  
 Affected modules: auction, sales, farm, settlement  
-Evidence: **PostgreSQL 재현**, 03 DC-04·07 §9. [AuctionShipmentLifecycleService.deleteDraftShipment/findShipmentIdsWithResults](../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionShipmentLifecycleService.java)는 실제 결과 참조 대신 `currentStatus != WAITING`을 검사한다. SOLD 결과→수동 WAITING→정산 전 전표 취소 후 result/attempt/history가 모두 0건이 됐다.  
+Evidence: **PostgreSQL 재현**, 03 DC-04·07 §9. [AuctionShipmentLifecycleService.deleteDraftShipment/findShipmentIdsWithResults](../../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionShipmentLifecycleService.java)는 실제 결과 참조 대신 `currentStatus != WAITING`을 검사한다. SOLD 결과→수동 WAITING→정산 전 전표 취소 후 result/attempt/history가 모두 0건이 됐다.\
 Problem: 변경 가능한 현재 상태를 과거 결과 존재 여부로 사용하고 shipment cascade 삭제를 허용한다. 취소 검사와 삭제에 lot 잠금 후 사실 재확인 계약도 없다.  
 Why it matters: 이미 발생한 경매 이력이 사라지고 재고가 복구된다. 정산 연결된 경우는 별도 검사/FK로 보호되므로 결과가 있고 정산은 없는 구간이 실제 위험 범위다. 동시 결과 입력/취소는 미재현이다.  
 Example change scenario: 운영자가 상태를 대기로 보정한 다음 출하 전표를 취소한다.  
@@ -57,7 +59,7 @@ ID: BE-003
 Severity: High  
 Category: Financial integrity / DB constraints  
 Affected modules: sales, settlement, analytics, print  
-Evidence: **PostgreSQL·Java 재현**, 03 DC-02·07 §9. [SalesSlipItem](../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlipItem.java)의 `quantity * unitPrice`, [SalesSlip.recalculateAmounts](../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlip.java)의 int 합계. 수량 2×단가 1,500,000,000 입력이 total=-1,294,967,296으로 저장되고 재고도 예약됐다. 두 품목 합계 overflow도 확인했다.  
+Evidence: **PostgreSQL·Java 재현**, 03 DC-02·07 §9. [SalesSlipItem](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlipItem.java)의 `quantity * unitPrice`, [SalesSlip.recalculateAmounts](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlip.java)의 int 합계. 수량 2×단가 1,500,000,000 입력이 total=-1,294,967,296으로 저장되고 재고도 예약됐다. 두 품목 합계 overflow도 확인했다.\
 Problem: 입력값 각각의 validation은 통과하지만 곱·합계의 범위를 검증하지 않는다. 음수 금액을 막는 DB 제약도 없다. 경매 결과에는 별도의 정확 연산 검사가 있다.  
 Why it matters: 매출·미수금·입금 가능액·출력에 잘못된 금액이 확정된다. 잔액의 0 clamp는 계산 오류를 숨길 수 있다.  
 Example change scenario: 단가 한도 확대 또는 여러 고액 품목을 한 전표로 합친다.  
@@ -72,7 +74,7 @@ ID: BE-004
 Severity: High  
 Category: Domain policy / Duplicated rules  
 Affected modules: farm, sales, work, analytics, dashboard  
-Evidence: **PostgreSQL 재현**, 03 DC-03, 05 B/C, 07 §9. [OrchidGroup.reserve](../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroup.java)는 가용 수량만 검사하고 [OrchidGroupRepository.searchSellable](../backend/src/main/java/com/greenhouse/backend/farm/repository/orchid/OrchidGroupRepository.java)도 판매불가 정책을 강제하지 않는다. 집계는 [OrchidGroupStatusPolicy](../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroupStatusPolicy.java)를 사용한다. 병해충 그룹 10개 예약이 확정됐다. Work 활성 대상 JPQL에는 비활성 상태 문자열이 별도로 있다.  
+Evidence: **PostgreSQL 재현**, 03 DC-03, 05 B/C, 07 §9. [OrchidGroup.reserve](../../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroup.java)는 가용 수량만 검사하고 [OrchidGroupRepository.searchSellable](../../backend/src/main/java/com/greenhouse/backend/farm/repository/orchid/OrchidGroupRepository.java)도 판매불가 정책을 강제하지 않는다. 집계는 [OrchidGroupStatusPolicy](../../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroupStatusPolicy.java)를 사용한다. 병해충 그룹 10개 예약이 확정됐다. Work 활성 대상 JPQL에는 비활성 상태 문자열이 별도로 있다.\
 Problem: 같은 상태의 의미가 정책·조회 조건·수량 기반 visibility·쓰기 경로로 나뉜다. 실제 판매 예약은 선언된 판매불가 정책을 적용하지 않는다.  
 Why it matters: 판매불가 재고가 판매 업무에 진입한다. 새 상태 추가 때 조회·집계·작업 대상·예약 의미가 더 쉽게 갈라진다. 비활성 문자열의 현재 불일치는 재현하지 않았다.  
 Example change scenario: 새 격리 상태를 판매불가로 등록해도 선택 조회와 예약은 계속 허용된다.  
@@ -87,7 +89,7 @@ ID: BE-005
 Severity: High  
 Category: Idempotency / Duplicate requests  
 Affected modules: auction, settlement  
-Evidence: 03 DC-05·07 §9. **PG 재현**: [AuctionShipmentLot.addResult](../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java)의 자동 차수 요청 10개를 두 번 보내 sold=20/attempt=2. **Java 재현**: 동일 부분 반환 10개 두 번으로 returned=20. [AuctionTrackingService](../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionTrackingService.java)와 반환 요청에 안정적인 replay identity가 없다.  
+Evidence: 03 DC-05·07 §9. **PG 재현**: [AuctionShipmentLot.addResult](../../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java)의 자동 차수 요청 10개를 두 번 보내 sold=20/attempt=2. **Java 재현**: 동일 부분 반환 10개 두 번으로 returned=20. [AuctionTrackingService](../../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionTrackingService.java)와 반환 요청에 안정적인 replay identity가 없다.\
 Problem: `attemptNo=null`은 매 요청 새 차수를 만들고 부분 반환은 누적한다. row lock과 명시 차수 UNIQUE는 네트워크 재전송과 새 업무를 구별하지 못한다.  
 Why it matters: 경매 결과·반환 수량이 중복 확정되고 결과 금액은 정산에 전달될 수 있다. 전량 처리의 두 번째 거절을 부분 처리의 멱등성으로 해석할 수 없다.  
 Example change scenario: 성공 응답을 받지 못해 같은 부분 낙찰·반환 요청을 재시도한다.  
@@ -102,7 +104,7 @@ ID: BE-006
 Severity: Medium  
 Category: Concurrency / Lock ordering  
 Affected modules: sales, farm, work  
-Evidence: **PG deadlock 재현**, 03 DC-06·§9.1, 07 §4/9. [SalesSlipUpdateService.update](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java)는 old group 해제 후 new group 잠금을 취득한다. 다른 거래처 G1↔G2 교차 수정에서 `40P01`을 확인했다. Farm 배치의 입력별 누적 잠금 및 단일/배치의 group↔zone 순서 차이는 **조건부 위험**이다.  
+Evidence: **PG deadlock 재현**, 03 DC-06·§9.1, 07 §4/9. [SalesSlipUpdateService.update](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java)는 old group 해제 후 new group 잠금을 취득한다. 다른 거래처 G1↔G2 교차 수정에서 `40P01`을 확인했다. Farm 배치의 입력별 누적 잠금 및 단일/배치의 group↔zone 순서 차이는 **조건부 위험**이다.\
 Problem: 각 Repository 호출의 ID 정렬은 transaction에서 이미 취득한 잠금과 이후 집합을 함께 정렬하지 못한다.  
 Why it matters: 정상 동시 편집이 실패한다. DB rollback은 작동했으므로 이 근거만으로 데이터 손상·전체 운영 중단으로 올리지 않는다. 같은 partner 직렬화도 다른 partner의 공유 재고를 보호하지 못한다.  
 Example change scenario: 다른 거래처의 전표가 서로의 기존 배분 그룹으로 동시에 변경된다.  
@@ -117,7 +119,7 @@ ID: BE-007
 Severity: Medium  
 Category: Auditability / Result consistency  
 Affected modules: auction, settlement  
-Evidence: **Java 재현**, 03 DC-07·07 §9. [AuctionShipmentLot.confirmReturn/adjustQuantities/changeStatus](../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java)는 같은 next status에서 history 생성을 건너뛴다. 두 번째 부분 반환·같은 상태의 수량 보정에서 수량만 바뀌었다. 결과·정산 참조 검사 없이 lot 수량을 조정할 수 있다.  
+Evidence: **Java 재현**, 03 DC-07·07 §9. [AuctionShipmentLot.confirmReturn/adjustQuantities/changeStatus](../../backend/src/main/java/com/greenhouse/backend/auction/domain/AuctionShipmentLot.java)는 같은 next status에서 history 생성을 건너뛴다. 두 번째 부분 반환·같은 상태의 수량 보정에서 수량만 바뀌었다. 결과·정산 참조 검사 없이 lot 수량을 조정할 수 있다.\
 Problem: 수량 변경 사실을 상태 전이 history에 의존한다. lot 현재 sold 수량과 과거 결과/정산의 차이를 설명하는 보정 계약도 없다.  
 Why it matters: 반환·보정의 사유와 전후 수량을 추적하지 못한다. 정산 snapshot은 보존되지만 현재 lot와 달라진 이유 및 입금 이후 허용 범위를 판단하기 어렵다. 잘못된 정산 금액 갱신은 재현하지 않았다.  
 Example change scenario: REAUCTION_WAITING 상태를 유지한 채 반환 수량을 보정하거나 입금 후 lot sold 수량을 수정한다.  
@@ -132,7 +134,7 @@ ID: BE-008
 Severity: Medium  
 Category: API reliability / Idempotency  
 Affected modules: farm/inbound, work, sales  
-Evidence: **코드 확인**, 03 §9.2·05 F. [InboundRecordService.create](../backend/src/main/java/com/greenhouse/backend/farm/application/inbound/InboundRecordService.java), [WorkOperationPlanService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationPlanService.java), [SalesSlipCreationService.create](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipCreationService.java)는 안정적인 클라이언트 요청 identity로 일반 생성을 dedup하지 않는다. HTTP timeout 재전송 실험은 미실행이다.  
+Evidence: **코드 확인**, 03 §9.2·05 F. [InboundRecordService.create](../../backend/src/main/java/com/greenhouse/backend/farm/application/inbound/InboundRecordService.java), [WorkOperationPlanService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationPlanService.java), [SalesSlipCreationService.create](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipCreationService.java)는 안정적인 클라이언트 요청 identity로 일반 생성을 dedup하지 않는다. HTTP timeout 재전송 실험은 미실행이다.\
 Problem: 내부 Mutation/효과의 멱등성이 일반 생성 요청까지 전달되지 않는다. 같은 입력 두 번이 신규 업무인지 재전송인지 계약으로 구별할 수 없다.  
 Why it matters: 응답 유실 후 재시도에서 입고·계획·전표 및 예약을 중복 생성할 수 있다. 자동 재시도하는 새 채널 도입 시 위험이 커진다. 모든 POST가 멱등이어야 한다는 일반 규칙으로 판단한 것은 아니다.  
 Example change scenario: 저장 성공 뒤 timeout이 난 판매 생성 요청을 앱이나 Agent가 재전송한다.  
@@ -147,7 +149,7 @@ ID: BE-009
 Severity: Medium  
 Category: Domain policy / Change authorization  
 Affected modules: farm, work  
-Evidence: **코드·정책 문서 차이**, 03 §11·05 B/D. [OrchidGroupCommandService.update](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupCommandService.java)→Engine `updateDetails`는 수량·일반 상태·배치 범위를 바꿀 수 있다. [FarmWorkCorrectionAdapter](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/FarmWorkCorrectionAdapter.java)의 후속 사용/실사 gate를 거치지 않는다. ADR-001의 일반 상세 수정 제한 방향과 다르다.  
+Evidence: **코드·정책 문서 차이**, 03 §11·05 B/D. [OrchidGroupCommandService.update](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupCommandService.java)→Engine `updateDetails`는 수량·일반 상태·배치 범위를 바꿀 수 있다. [FarmWorkCorrectionAdapter](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/FarmWorkCorrectionAdapter.java)의 후속 사용/실사 gate를 거치지 않는다. ADR-001의 일반 상세 수정 제한 방향과 다르다.\
 Problem: 동일한 현재 상태 변경의 허용 범위가 명령에 따라 다르고, 어느 차이가 의도된 운영 정책인지 명확하지 않다. Engine/원장 자체를 우회하는 경로는 아니다.  
 Why it matters: 보정·실사의 제한을 일반 수정으로 대체할 여지가 있다. 정책 합의 없이 한 경로만 강화하면 다른 경로와 감사 의미가 갈라진다. 현재 일반 수정이 반드시 금지돼야 한다고 단정하지 않는다.  
 Example change scenario: 실사 이후 과거 보정이 거절된 그룹의 수량을 일반 상세 수정으로 바꾼다.  
@@ -162,7 +164,7 @@ ID: BE-010
 Severity: Medium  
 Category: Audit completeness  
 Affected modules: sales, auction, farm, audit  
-Evidence: **코드 확인**, 03 §10·05 D. [SalesSlipCreationService](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipCreationService.java)는 전표 생성 AuditEvent를 기록하지 않는다. [OrchidGroupAuditSupport](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupAuditSupport.java)의 snapshot/changedFields는 memo·placementType·trayCount 등 모든 필드를 포함하지 않는다. Auction은 일반 AuditEvent 대신 자체 이력을 사용한다.  
+Evidence: **코드 확인**, 03 §10·05 D. [SalesSlipCreationService](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipCreationService.java)는 전표 생성 AuditEvent를 기록하지 않는다. [OrchidGroupAuditSupport](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupAuditSupport.java)의 snapshot/changedFields는 memo·placementType·trayCount 등 모든 필드를 포함하지 않는다. Auction은 일반 AuditEvent 대신 자체 이력을 사용한다.\
 Problem: 변경과 저장되는 기록의 atomicity는 있지만 누가 무엇을 바꿨는지 모든 주요 경로·필드에서 같은 수준으로 확인할 수 없다. WorkEffect·Mutation·자체 history도 업무 기록이므로 일반 AuditEvent 부재만으로 무기록이라 판정하지 않는다.  
 Why it matters: 전표 최초 생성 주체나 metadata 변경 경위를 복원하기 어렵다. 새 속성을 snapshot에만 추가하고 changedFields/values를 빼먹으면 감사 이벤트가 누락될 수 있다.  
 Example change scenario: trayCount나 memo를 변경한 뒤 운영자가 변경 이유와 실행자를 조회한다.  
@@ -177,7 +179,7 @@ ID: BE-011
 Severity: Medium  
 Category: Persistence / Legacy data validation  
 Affected modules: farm, sales  
-Evidence: **DDL 확인·운영 상태 미확인**, 03 §9.3. [V14](../backend/src/main/resources/db/migration/V14__enforce_inventory_and_sales_consistency.sql)의 quantity/reserved/Sales 상태 CHECK 및 [V21](../backend/src/main/resources/db/migration/V21__add_orchid_group_mutation_engine.sql)의 revision CHECK는 `NOT VALID`다. migration에서 대응 `VALIDATE CONSTRAINT`를 찾지 못했다. 운영 DB의 convalidated·기존 불량 행은 조회하지 않았다.  
+Evidence: **DDL 확인·운영 상태 미확인**, 03 §9.3. [V14](../../backend/src/main/resources/db/migration/V14__enforce_inventory_and_sales_consistency.sql)의 quantity/reserved/Sales 상태 CHECK 및 [V21](../../backend/src/main/resources/db/migration/V21__add_orchid_group_mutation_engine.sql)의 revision CHECK는 `NOT VALID`다. migration에서 대응 `VALIDATE CONSTRAINT`를 찾지 못했다. 운영 DB의 convalidated·기존 불량 행은 조회하지 않았다.\
 Problem: 새/변경 행의 제약 적용과 과거 모든 행의 검증 완료가 구별되지 않는다. 보존을 위한 최초 NOT VALID 선택 자체는 타당하다.  
 Why it matters: migration 성공만으로 기존 데이터의 불변식을 신뢰하면 오래된 오류가 조회·수정·대사에 뒤늦게 나타날 수 있다. 실제 불량 행이 존재한다고 주장하지 않는다.  
 Example change scenario: 과거 재고를 새 예약 정책이나 원장 전환의 입력으로 사용한다.  
@@ -194,7 +196,7 @@ ID: BE-012
 Severity: Medium  
 Category: Application contracts / Persistence compatibility  
 Affected modules: work, farm  
-Evidence: **현재 코드 확인**, ARC-005·CQ-003·05 D. [WorkEffectCommand](../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkEffectCommand.java)/[WorkExecutionResult](../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkExecutionResult.java)는 Object/Map 경계다. 포트 실행은 typed→Map→요청 DTO로 변환한다. [WorkEffectDetailCodec](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkEffectDetailCodec.java), [WorkOperationTargetView](../backend/src/main/java/com/greenhouse/backend/work/application/target/WorkOperationTargetView.java), WorkEffectResults는 key/fallback/숫자/결과 ID 해석을 각각 알고 있다.  
+Evidence: **현재 코드 확인**, ARC-005·CQ-003·05 D. [WorkEffectCommand](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkEffectCommand.java)/[WorkExecutionResult](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkExecutionResult.java)는 Object/Map 경계다. 포트 실행은 typed→Map→요청 DTO로 변환한다. [WorkEffectDetailCodec](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkEffectDetailCodec.java), [WorkOperationTargetView](../../backend/src/main/java/com/greenhouse/backend/work/application/target/WorkOperationTargetView.java), WorkEffectResults는 key/fallback/숫자/결과 ID 해석을 각각 알고 있다.\
 Problem: handler/payload 조합과 필드 전달을 컴파일러가 끝까지 검증하지 못한다. legacy HTTP 표현 및 저장 JSON 지식이 업무 실행 경계에 퍼진다.  
 Why it matters: 속성 변경 시 실행·상세·계보·보정·replay를 함께 추적해야 하며 한 reader만 누락될 수 있다. reader의 우선순위/합집합 차이가 현재 잘못된 결과라는 재현은 없다.  
 Example change scenario: 구조 변경 결과에 속성을 추가하고 숫자 문자열을 가진 과거 효과도 계속 읽는다.  
@@ -209,7 +211,7 @@ ID: BE-013
 Severity: Medium  
 Category: Schema evolution / Idempotency compatibility  
 Affected modules: farm, work, sales, audit  
-Evidence: **코드 확인·조건부 위험**, 05 D·07 §3.3. [OrchidGroupMutationFingerprint](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationFingerprint.java), [OrchidGroupMutationCommandFingerprint](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationCommandFingerprint.java), [WorkRequestFingerprint](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkRequestFingerprint.java)는 객체 직렬화를 정규화한다. [OrchidGroupStateSnapshot](../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/mutation/OrchidGroupStateSnapshot.java)의 canonical도 head/대사·복구에 사용된다. 과거 hash를 보존하는 새 필드 version 전환이 자동 제공되지는 않는다.  
+Evidence: **코드 확인·조건부 위험**, 05 D·07 §3.3. [OrchidGroupMutationFingerprint](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationFingerprint.java), [OrchidGroupMutationCommandFingerprint](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationCommandFingerprint.java), [WorkRequestFingerprint](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkRequestFingerprint.java)는 객체 직렬화를 정규화한다. [OrchidGroupStateSnapshot](../../backend/src/main/java/com/greenhouse/backend/farm/domain/orchid/mutation/OrchidGroupStateSnapshot.java)의 canonical도 head/대사·복구에 사용된다. 과거 hash를 보존하는 새 필드 version 전환이 자동 제공되지는 않는다.\
 Problem: nullable 필드 추가도 직렬화에 포함되면 과거 요청 hash나 snapshot equality를 바꿀 수 있다. typed화만으로 해결되지 않는 영속 계약이다.  
 Why it matters: 재배포 후 정상 replay 거절, legacy/current head 불일치, rolling writer의 값 유실 가능성이 있다. 실제 신규 속성을 배포해 장애를 재현한 것은 아니다.  
 Example change scenario: 결과 묶음 속성을 nullable로 추가하고 기존 key 요청을 재시도한다.  
@@ -224,7 +226,7 @@ ID: BE-014
 Severity: Medium  
 Category: Domain extensibility / Classification consistency  
 Affected modules: work, farm  
-Evidence: **현재 코드 확인**, 05 A. [StructureChangeLineageQueryService.isStructureChangeExecution](../backend/src/main/java/com/greenhouse/backend/work/application/effect/StructureChangeLineageQueryService.java)는 저장 handler code를 `WorkTypeDefinition.forCode`에 넣는다. [OrchidGroupLineageService.relationType](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/OrchidGroupLineageService.java)는 MOVEMENT/REPOT/DIVIDE/MERGE switch다. 정의·handler/strategy supports·DB seed는 별도다.  
+Evidence: **현재 코드 확인**, 05 A. [StructureChangeLineageQueryService.isStructureChangeExecution](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/StructureChangeLineageQueryService.java)는 저장 handler code를 `WorkTypeDefinition.forCode`에 넣는다. [OrchidGroupLineageService.relationType](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/OrchidGroupLineageService.java)는 MOVEMENT/REPOT/DIVIDE/MERGE switch다. 정의·handler/strategy supports·DB seed는 별도다.\
 Problem: 유형 code와 handler code가 같은 의미라는 전제가 조회에 숨어 있다. registry의 구현 누락 검사가 계보 분류까지 검증하지 못한다.  
 Why it matters: 신규 실행은 성공하지만 계보에서 빠지거나 조회 default 예외가 날 수 있다. 기존 사용자 기록형 template 추가에는 해당 확장이 필요 없고 현재 등록된 유형 장애는 확인하지 않았다.  
 Example change scenario: 유형과 다른 handler 이름을 사용하는 새 STRUCTURE_CHANGE 유형을 등록한다.  
@@ -239,7 +241,7 @@ ID: BE-015
 Severity: Medium  
 Category: Orchestration / Query amplification  
 Affected modules: work, farm/inbound, sales, settlement  
-Evidence: **현재 코드 확인**, CQ-001·PERF-08·05 F. [StructureChangeRecordService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/StructureChangeRecordService.java)는 계획→시작→실행→최종 조회마다 WorkOperationView를 받는다. [InboundPottingOperationService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/InboundPottingOperationService.java)는 request별 상세 응답으로 target/progress를 읽고 getAll을 반복한다. Sales의 lockStates/Engine/최종 state 조회와 정산 snapshot/표시 참조 재조회도 있다.  
+Evidence: **현재 코드 확인**, CQ-001·PERF-08·05 F. [StructureChangeRecordService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/StructureChangeRecordService.java)는 계획→시작→실행→최종 조회마다 WorkOperationView를 받는다. [InboundPottingOperationService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/InboundPottingOperationService.java)는 request별 상세 응답으로 target/progress를 읽고 getAll을 반복한다. Sales의 lockStates/Engine/최종 state 조회와 정산 snapshot/표시 참조 재조회도 있다.\
 Problem: 내부 상태 전환 결과와 외부 상세 응답 계약이 결합되어 필요한 것보다 넓은 조회·조립이 반복된다. 모든 재조회가 불필요한 것은 아니다.  
 Why it matters: 조회 필드 추가가 쓰기 성능·실패 경로에도 영향을 준다. 배치 record 수에 따라 비용이 증폭되며 기존 일반 즉시 완료 120 target 시험은 구조 변경/포트 경로를 보호하지 않는다.  
 Example change scenario: Work 상세에 새 관계 정보를 추가하면 즉시 포트·배치 구조 기록의 중간 조립도 늘어난다.  
@@ -254,7 +256,7 @@ ID: BE-016
 Severity: Low  
 Category: Change cost / Mapping duplication  
 Affected modules: farm, work  
-Evidence: **현재 코드 확인**, CQ-002·05 D. [BatchStructureTransformationExecutor.planResults/mutationCommand](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/BatchStructureTransformationExecutor.java)는 ResultPlan에 OrchidGroupCreateRequest를 만들고 MutationDetails로 다시 복사한다. 이 중간 DTO 단계에 별도 API 호출/요청 validation은 없다.  
+Evidence: **현재 코드 확인**, CQ-002·05 D. [BatchStructureTransformationExecutor.planResults/mutationCommand](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/BatchStructureTransformationExecutor.java)는 ResultPlan에 OrchidGroupCreateRequest를 만들고 MutationDetails로 다시 복사한다. 이 중간 DTO 단계에 별도 API 호출/요청 validation은 없다.\
 Problem: 원본 확보·상속·원장 실행·결과 기록 사이에 의미를 추가하지 않는 속성 전달이 있다.  
 Why it matters: 결과 속성 변경 때 상속과 보존을 여러 mapper에서 확인해야 한다. 범위가 단일 실행기 중심이고 현재 값 유실은 재현되지 않아 CQ-002의 Medium을 Low로 조정했다.  
 Example change scenario: nullable 속성을 추가하면서 일반 생성 DTO와 구조 결과 계획을 동시에 수정한다.  
@@ -269,7 +271,7 @@ ID: BE-017
 Severity: Medium  
 Category: Change cost / Cancellation policy  
 Affected modules: work, farm  
-Evidence: **현재 코드 확인**, CQ-004. [WorkOperationVoidService.inspectCancellation/cancelOperation/cancelBatch](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationVoidService.java)는 상태별 blocker, 연관 폐기, effect/mutation 수집, 기록형/포트/구조 분기, lock 모드와 영향 응답을 함께 조립한다.  
+Evidence: **현재 코드 확인**, CQ-004. [WorkOperationVoidService.inspectCancellation/cancelOperation/cancelBatch](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationVoidService.java)는 상태별 blocker, 연관 폐기, effect/mutation 수집, 기록형/포트/구조 분기, lock 모드와 영향 응답을 함께 조립한다.\
 Problem: 새 취소 조건이 eligibility·실행·batch·포트에 같은 우선순위로 적용되는지 지역 누적 상태와 early return을 함께 추적해야 한다.  
 Why it matters: 원장 보상 및 연관 작업을 다루는 변경의 검토 범위가 크다. 의존 수·메서드 길이가 아니라 같은 정책의 판단 모드와 표현이 얽힌 비용이다. 현재 취소 원자성 실패를 확인한 것은 아니다.  
 Example change scenario: 실사 이후 취소 blocker를 추가하고 조회와 실제 batch 취소의 결과를 맞춘다.  
@@ -284,7 +286,7 @@ ID: BE-018
 Severity: Low  
 Category: Change cost / Graph assembly  
 Affected modules: work, farm/mutation  
-Evidence: **현재 코드 확인**, CQ-005. [WorkOperationGraphQueryService.addMutationFlow](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationGraphQueryService.java)는 입력 Map와 출력 nodes/edges를 함께 받고 truncated를 별도로 반환한다. 종류별 노드는 21개 component의 응답 생성자에 위치 기반 값/null을 넣는다.  
+Evidence: **현재 코드 확인**, CQ-005. [WorkOperationGraphQueryService.addMutationFlow](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationGraphQueryService.java)는 입력 Map와 출력 nodes/edges를 함께 받고 truncated를 별도로 반환한다. 종류별 노드는 21개 component의 응답 생성자에 위치 기반 값/null을 넣는다.\
 Problem: 추가 노드 필드와 상한 변경이 서로 다른 가변 상태·동일 타입 인자의 대응을 요구한다.  
 Why it matters: 컴파일은 성공해도 필드 위치나 truncated 의미를 틀릴 여지가 있다. 국소 조회 조립이며 실제 오류가 확인되지 않아 CQ-005를 Low로 조정했다. 적재 상한의 성능 위험은 BE-034에서 별도로 다룬다.  
 Example change scenario: 그래프 노드에 새 표시 속성을 추가하고 상한 도달 시 edge/truncated를 변경한다.  
@@ -299,7 +301,7 @@ ID: BE-019
 Severity: Medium  
 Category: Module boundary / Public contracts  
 Affected modules: farm, work, sales; 신규 입력 adapter  
-Evidence: **현재 코드 확인**, ARC-001·05 F·07 §5. [OrchidGroupReader](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupReader.java)는 외부 값 API와 Optional<Entity> API를 함께 public으로 제공한다. Farm은 WorkOperationSupport helper도 사용한다. 일부 application은 HTTP DTO를 사용하고 validation/인가/감사 identity는 주로 HTTP 진입부가 제공한다.  
+Evidence: **현재 코드 확인**, ARC-001·05 F·07 §5. [OrchidGroupReader](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupReader.java)는 외부 값 API와 Optional<Entity> API를 함께 public으로 제공한다. Farm은 WorkOperationSupport helper도 사용한다. 일부 application은 HTTP DTO를 사용하고 validation/인가/감사 identity는 주로 HTTP 진입부가 제공한다.\
 Problem: 소비자가 사용할 승인된 업무 계약과 내부 조립/Entity 경로를 타입 접근 수준에서 구분하기 어렵다. 비 HTTP 소비자는 자동 validation/HTTP 권한/context를 기대할 수 없다.  
 Why it matters: 내부 helper 변경이 다른 모듈에 전파되고 새 채널에서 입력/actor/transaction proxy 전제를 빠뜨릴 수 있다. 현재 타 모듈 Entity 사용 위반이나 비 HTTP 권한 우회 배포는 확인하지 않았다.  
 Example change scenario: Reader 내부 Entity 메서드를 정리하거나 Agent adapter가 기존 서비스에 직접 명령을 전달한다.  
@@ -314,7 +316,7 @@ ID: BE-020
 Severity: Medium  
 Category: Ownership / Transaction orchestration  
 Affected modules: work, farm, audit  
-Evidence: **현재 코드 확인**, ARC-002. [WorkOperationCorrectionService.create](../backend/src/main/java/com/greenhouse/backend/work/application/correction/WorkOperationCorrectionService.java)는 저장 callback을 [WorkCorrectionPort](../backend/src/main/java/com/greenhouse/backend/work/application/correction/WorkCorrectionPort.java)에 넘긴다. [FarmWorkCorrectionAdapter.correct](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/FarmWorkCorrectionAdapter.java)는 callback 실행 시점·Work 날짜 비교/변경·Farm Mutation·결과 조립을 결정한다.  
+Evidence: **현재 코드 확인**, ARC-002. [WorkOperationCorrectionService.create](../../backend/src/main/java/com/greenhouse/backend/work/application/correction/WorkOperationCorrectionService.java)는 저장 callback을 [WorkCorrectionPort](../../backend/src/main/java/com/greenhouse/backend/work/application/correction/WorkCorrectionPort.java)에 넘긴다. [FarmWorkCorrectionAdapter.correct](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/FarmWorkCorrectionAdapter.java)는 callback 실행 시점·Work 날짜 비교/변경·Farm Mutation·결과 조립을 결정한다.\
 Problem: Work가 루트 transaction/저장소를 소유하지만 실제 순서 일부는 Farm adapter가 조율한다.  
 Why it matters: 날짜만 변경하는 보정도 Farm을 통과하고 adapter 수정에 Work 감사 ID·날짜·replay까지 알아야 한다. runtime 재진입은 존재하지만 소스 DAG/Bean 순환 문제나 현재 rollback 실패는 아니다.  
 Example change scenario: 날짜-only 보정이나 새로운 농장 correction adapter를 추가한다.  
@@ -329,7 +331,7 @@ ID: BE-021
 Severity: Medium  
 Category: Application API / Idempotency ownership  
 Affected modules: farm/inbound, work  
-Evidence: **현재 코드 확인**, ARC-003. [InboundRecordService.voidPotting](../backend/src/main/java/com/greenhouse/backend/farm/application/inbound/InboundRecordService.java)는 `INBOUND_POTTING_VOID:` scope·PottingVoidIdentity·callback·Work ID 목록을 [WorkCommandReceipts.executeExisting](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkCommandReceipts.java)에 전달한다. execute/executeExisting 선택이 creation membership 의미를 결정한다.  
+Evidence: **현재 코드 확인**, ARC-003. [InboundRecordService.voidPotting](../../backend/src/main/java/com/greenhouse/backend/farm/application/inbound/InboundRecordService.java)는 `INBOUND_POTTING_VOID:` scope·PottingVoidIdentity·callback·Work ID 목록을 [WorkCommandReceipts.executeExisting](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkCommandReceipts.java)에 전달한다. execute/executeExisting 선택이 creation membership 의미를 결정한다.\
 Problem: Farm이 업무 명령뿐 아니라 Work 접수 namespace·지문 표현·membership 저장 방식을 결정한다.  
 Why it matters: 새 소비자가 잘못된 scope/creation 방식을 고르면 replay나 관계 의미가 달라진다. 현재 입고 취소 멱등성 결함이 재현된 것은 아니다.  
 Example change scenario: 포트 취소의 request identity나 Work receipt membership 모델을 바꾼다.  
@@ -344,7 +346,7 @@ ID: BE-022
 Severity: Low  
 Category: Ownership / Audit contracts  
 Affected modules: sales, settlement, audit  
-Evidence: **현재 코드 확인**, ARC-004. [SalesPaymentService.confirmPayment](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesPaymentService.java)는 [SettlementAuditSupport](../backend/src/main/java/com/greenhouse/backend/settlement/application/SettlementAuditSupport.java)의 전표 snapshot/record helper를 사용한다. 같은 helper에는 Settlement 내부 Entity 감사도 있다.  
+Evidence: **현재 코드 확인**, ARC-004. [SalesPaymentService.confirmPayment](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesPaymentService.java)는 [SettlementAuditSupport](../../backend/src/main/java/com/greenhouse/backend/settlement/application/SettlementAuditSupport.java)의 전표 snapshot/record helper를 사용한다. 같은 helper에는 Settlement 내부 Entity 감사도 있다.\
 Problem: Sales 전표의 감사 표현이 Settlement 내부 기능과 같은 공개 helper에 묶여 있다. 입금 원장 API 의존과 구별되는 불필요한 변경 결합이다.  
 Why it matters: Settlement 감사 내부 변경을 Sales 계약 변경인지 함께 검토해야 한다. 타 모듈 Entity 직접 전달이나 현재 금융 오류는 없다.  
 Example change scenario: Settlement 감사 snapshot 필드 또는 helper 가시성을 변경한다.  
@@ -359,7 +361,7 @@ ID: BE-023
 Severity: Low  
 Category: Domain rule duplication  
 Affected modules: sales  
-Evidence: **현재 코드 확인**, CQ-006. [SalesSlipCreationService.create](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipCreationService.java)와 [SalesSlipUpdateService.update](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java)에 거래처 필수·품목 필수·경매장 금지 조건/메시지가 반복된다. paymentStatus 기본값은 SalesType와 문자열 `미입금`으로 갈린다.  
+Evidence: **현재 코드 확인**, CQ-006. [SalesSlipCreationService.create](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipCreationService.java)와 [SalesSlipUpdateService.update](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipUpdateService.java)에 거래처 필수·품목 필수·경매장 금지 조건/메시지가 반복된다. paymentStatus 기본값은 SalesType와 문자열 `미입금`으로 갈린다.\
 Problem: 동일 직접 판매 입력 정책을 두 유스케이스에서 따로 유지한다. 생성의 경매 분기·수정 가능성 검사는 별도 규칙이다.  
 Why it matters: 거래처 정책·기본값·오류 변경 때 한쪽만 바꿀 가능성이 있다. 현재 다른 업무 결과를 만든다는 재현은 없어 Low다.  
 Example change scenario: 새 거래처 분류의 직접 판매 허용이나 기본 입금 상태를 변경한다.  
@@ -374,7 +376,7 @@ ID: BE-024
 Severity: Low  
 Category: Change cost / Inactive contracts  
 Affected modules: work, farm/transformation  
-Evidence: **현재 참조 검색**, CQ-007. [ImmediateWorkExecutionService](../backend/src/main/java/com/greenhouse/backend/work/application/operation/ImmediateWorkExecutionService.java)의 appliedEffectRepository는 선언만 있다. `requiresEverySourceResult`는 [StructureChangeStrategy](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/StructureChangeStrategy.java)와 [MovementStrategy](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/MovementStrategy.java)에만 선언되고 호출되지 않는다.  
+Evidence: **현재 참조 검색**, CQ-007. [ImmediateWorkExecutionService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/ImmediateWorkExecutionService.java)의 appliedEffectRepository는 선언만 있다. `requiresEverySourceResult`는 [StructureChangeStrategy](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/StructureChangeStrategy.java)와 [MovementStrategy](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/MovementStrategy.java)에만 선언되고 호출되지 않는다.\
 Problem: 필수 협력자처럼 보이는 unused injection과 실제 실행에 영향을 주지 않는 정책 옵션이 있다.  
 Why it matters: 전략 override 변경이 동작을 바꾼다고 잘못 판단할 수 있다. 작은 추적 비용이며 현재 장애는 없다. 실제 registry/handler·CLI·migration 클래스 전체를 dead code로 분류하지 않는다.  
 Example change scenario: 전략 옵션을 바꿔 모든 source의 result 생성을 강제했다고 판단한다.  
@@ -389,7 +391,7 @@ ID: BE-025
 Severity: Low  
 Category: Change cost / Command plumbing  
 Affected modules: work  
-Evidence: **현재 코드 확인**, CQ-010. [ImmediateWorkExecutionService.execute/executeForTarget](../backend/src/main/java/com/greenhouse/backend/work/application/operation/ImmediateWorkExecutionService.java)는 fingerprint용 ImmediateCommand를 만들고 callback/private 메서드에 8/9개 인자를 다시 전달한다. actor도 private 경로에서 다시 정규화한다.  
+Evidence: **현재 코드 확인**, CQ-010. [ImmediateWorkExecutionService.execute/executeForTarget](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/ImmediateWorkExecutionService.java)는 fingerprint용 ImmediateCommand를 만들고 callback/private 메서드에 8/9개 인자를 다시 전달한다. actor도 private 경로에서 다시 정규화한다.\
 Problem: 동일 입력이 record·메서드 서명·callback에 반복된다. 같은 String 인자 위치 오류를 타입 검사가 막지 못한다.  
 Why it matters: 필드·기본값 추가의 국소 변경 비용이 늘어난다. 현재 값 전달 오류나 replay 불일치는 확인하지 않았다.  
 Example change scenario: 즉시 작업의 actor/default 또는 명령 속성을 추가한다.  
@@ -404,7 +406,7 @@ ID: BE-026
 Severity: Low  
 Category: Error contracts / Idempotency  
 Affected modules: work, settlement, common  
-Evidence: **현재 코드 확인**, CQ-009. [WorkCommandReceipt.validate](../backend/src/main/java/com/greenhouse/backend/work/domain/operation/WorkCommandReceipt.java)/WorkCorrectionReceipt는 409 `IDEMPOTENCY_KEY_REUSED`, [PartnerPaymentEvent.validateReplay](../backend/src/main/java/com/greenhouse/backend/settlement/domain/PartnerPaymentEvent.java)는 IllegalArgumentException→400 `VALIDATION_ERROR`다. PaymentTests는 현재 400을 기대한다.  
+Evidence: **현재 코드 확인**, CQ-009. [WorkCommandReceipt.validate](../../backend/src/main/java/com/greenhouse/backend/work/domain/operation/WorkCommandReceipt.java)/WorkCorrectionReceipt는 409 `IDEMPOTENCY_KEY_REUSED`, [PartnerPaymentEvent.validateReplay](../../backend/src/main/java/com/greenhouse/backend/settlement/domain/PartnerPaymentEvent.java)는 IllegalArgumentException→400 `VALIDATION_ERROR`다. PaymentTests는 현재 400을 기대한다.\
 Problem: key 재사용 충돌을 일반 입력 오류와 구별하는 관례가 업무마다 다르다.  
 Why it matters: 클라이언트 분기·새 유스케이스의 오류 선택 기준이 불명확하다. 현재 payment 응답을 금융 처리 버그로 판정하지 않는다.  
 Example change scenario: 같은 key의 다른 금액 요청을 새 API에서 처리한다.  
@@ -421,7 +423,7 @@ ID: BE-027
 Severity: Medium  
 Category: Performance / Lazy loading  
 Affected modules: auction  
-Evidence: **PG 측정**, PERF-01·07 §6/9. [AuctionTrackingService](../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionTrackingService.java) 쓰기→findForUpdate(shipment만 fetch)→[AuctionLotResponse.from](../backend/src/main/java/com/greenhouse/backend/auction/dto/AuctionLotResponse.java)에서 attempt별 resultLines를 읽는다. 시도 1/10/50개에 SQL 5/14/54, Entity load 6/24/104였다. commit DML은 측정에 포함하지 않았다.  
+Evidence: **PG 측정**, PERF-01·07 §6/9. [AuctionTrackingService](../../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionTrackingService.java) 쓰기→findForUpdate(shipment만 fetch)→[AuctionLotResponse.from](../../backend/src/main/java/com/greenhouse/backend/auction/dto/AuctionLotResponse.java)에서 attempt별 resultLines를 읽는다. 시도 1/10/50개에 SQL 5/14/54, Entity load 6/24/104였다. commit DML은 측정에 포함하지 않았다.\
 Problem: GET의 일괄 assembler와 다른 쓰기 응답 경로가 lazy collection을 순회한다.  
 Why it matters: 이력이 누적될수록 변경 응답 및 쓰기 transaction 보유 시간이 늘어난다. GET query 회귀는 이를 잡지 못한다. 운영 SLA 실패는 측정하지 않았다.  
 Example change scenario: 재경매 시도가 오래 누적된 lot의 상태를 보정한다.  
@@ -436,7 +438,7 @@ ID: BE-028
 Severity: Medium  
 Category: Performance / Association loading  
 Affected modules: farm/transformation  
-Evidence: **PG 측정**, PERF-02·07 §6/9. [OrchidGroupLineageService.getLineage](../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/OrchidGroupLineageService.java) 직접 sources/results 경로의 graph에 위치 tree/variety/inbound가 없다. mapper가 현재 위치/년생을 읽어 독립 연결 1/10/50개에서 SQL 11/38/158, Entity load 9/54/254였다.  
+Evidence: **PG 측정**, PERF-02·07 §6/9. [OrchidGroupLineageService.getLineage](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/OrchidGroupLineageService.java) 직접 sources/results 경로의 graph에 위치 tree/variety/inbound가 없다. mapper가 현재 위치/년생을 읽어 독립 연결 1/10/50개에서 SQL 11/38/158, Entity load 9/54/254였다.\
 Problem: Work effect 기반 일괄 조회와 달리 지원 중인 legacy/direct lineage가 불완전 graph로 상세 mapper를 호출한다.  
 Why it matters: 위치 공유 fixture와 1차 cache가 N+1을 숨긴다. 과거 자료의 계보 조회가 누적 연결 수에 비례해 느려진다. 모든 신규 Work 계보가 같은 문제를 겪는 것은 아니다.  
 Example change scenario: 서로 다른 위치·입고·품종을 가진 과거 결과 연결을 조회한다.  
@@ -451,7 +453,7 @@ ID: BE-029
 Severity: Medium  
 Category: Performance / Entity overfetch  
 Affected modules: farm/structure  
-Evidence: **PG 측정**, PERF-03·07 §6/9. [BedPlacementProfileService.findZone](../backend/src/main/java/com/greenhouse/backend/farm/application/structure/BedPlacementProfileService.java)→[BedZoneRepository.findWithDetailsById](../backend/src/main/java/com/greenhouse/backend/farm/repository/structure/BedZoneRepository.java)는 orchidGroups+capacities를 fetch한다. 그룹 1/10/50개에서 SQL은 1회지만 그룹 Entity는 1/10/50개 적재됐다. 두 collection의 G×C join row 증폭은 정적 위험이며 JDBC rows는 미측정이다.  
+Evidence: **PG 측정**, PERF-03·07 §6/9. [BedPlacementProfileService.findZone](../../backend/src/main/java/com/greenhouse/backend/farm/application/structure/BedPlacementProfileService.java)→[BedZoneRepository.findWithDetailsById](../../backend/src/main/java/com/greenhouse/backend/farm/repository/structure/BedZoneRepository.java)는 orchidGroups+capacities를 fetch한다. 그룹 1/10/50개에서 SQL은 1회지만 그룹 Entity는 1/10/50개 적재됐다. 두 collection의 G×C join row 증폭은 정적 위험이며 JDBC rows는 미측정이다.\
 Problem: profile/감사에 필요 없는 난 묶음이 공용 상세 graph 때문에 전부 읽힌다.  
 Why it matters: SQL count가 고정이어도 heap·DB 전송 비용은 증가한다. 정상 profile 기능에 재고 전체 규모가 불필요하게 영향을 준다.  
 Example change scenario: 수천 그룹을 가진 구역의 배치 용량 설정을 조회한다.  
@@ -466,7 +468,7 @@ ID: BE-030
 Severity: Medium  
 Category: Performance / Summary projection  
 Affected modules: work  
-Evidence: **PG 측정**, PERF-04·07 §6/9. [WorkOperationRelationSummaryAssembler.assemble](../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationRelationSummaryAssembler.java)는 inbound 식별자를 얻기 위해 root의 전체 target를 읽고 child Entity로 개수를 센다. 기존 benchmark의 root 100×target 20에서 SQL 7회에 target Entity 2,000개가 적재됐다.  
+Evidence: **PG 측정**, PERF-04·07 §6/9. [WorkOperationRelationSummaryAssembler.assemble](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationRelationSummaryAssembler.java)는 inbound 식별자를 얻기 위해 root의 전체 target를 읽고 child Entity로 개수를 센다. 기존 benchmark의 root 100×target 20에서 SQL 7회에 target Entity 2,000개가 적재됐다.\
 Problem: summary에 필요한 ID/count를 얻기 위해 snapshot JSON 포함 전체 하위 Entity를 로딩한다.  
 Why it matters: root pagination과 query-count 성공으로 target fan-out의 heap 비용을 제한할 수 없다.  
 Example change scenario: root 페이지는 100개지만 각 작업 target가 200개로 증가한다.  
@@ -481,7 +483,7 @@ ID: BE-031
 Severity: Medium  
 Category: Performance / Aggregation and filtering  
 Affected modules: farm, work  
-Evidence: **코드 확인**, PERF-05. [VarietyResponseAssembler](../backend/src/main/java/com/greenhouse/backend/farm/application/variety/VarietyResponseAssembler.java)는 page 품종의 모든 활성 그룹/위치로 합계·최신 작업일을 계산하고 전체 그룹 IDs를 Work IN 조회에 전달한다. [DerivedOrchidGroupService](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/DerivedOrchidGroupService.java)는 전체 candidates의 상세 DTO를 만든 뒤 현재 년생 필터·집계·정렬을 한다.  
+Evidence: **코드 확인**, PERF-05. [VarietyResponseAssembler](../../backend/src/main/java/com/greenhouse/backend/farm/application/variety/VarietyResponseAssembler.java)는 page 품종의 모든 활성 그룹/위치로 합계·최신 작업일을 계산하고 전체 그룹 IDs를 Work IN 조회에 전달한다. [DerivedOrchidGroupService](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/DerivedOrchidGroupService.java)는 전체 candidates의 상세 DTO를 만든 뒤 현재 년생 필터·집계·정렬을 한다.\
 Problem: 응답 summary보다 넓은 Entity/DTO를 전부 적재하고 Java에서 집계·후처리한다. 품종 pagination이 하위 그룹 수를 제한하지 않는다.  
 Why it matters: 그룹 수 증가가 heap·CPU·큰 IN에 직접 반영된다. 잘못된 root pagination 이후 filtering이 발견된 것은 아니며 현재 년생은 업무일/입고일을 반영해야 한다.  
 Example change scenario: 한 품종에 난 묶음이 10,000개이고 자동 그룹 필터의 선택도가 낮다.  
@@ -496,7 +498,7 @@ ID: BE-032
 Severity: Medium  
 Category: Performance / Cross-module query amplification  
 Affected modules: partner, sales, auction, farm, work  
-Evidence: **benchmark 관측·코드 확인**, PERF-06. [BusinessPartnerReader.findMatchingIds](../backend/src/main/java/com/greenhouse/backend/partner/application/BusinessPartnerReader.java)는 500개 keyset batch 결과를 전체 누적한다. [AuctionTrackingService.getLots](../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionTrackingService.java)는 공백별 prefix·전체 contains·market exact 검색을 실행한다. 일치 수 501→5,001에서 Sales SQL 5→14, Auction 8→17 및 allocation 증가를 관측했다. 전체 IDs는 content/count의 IN/OR에 들어간다.  
+Evidence: **benchmark 관측·코드 확인**, PERF-06. [BusinessPartnerReader.findMatchingIds](../../backend/src/main/java/com/greenhouse/backend/partner/application/BusinessPartnerReader.java)는 500개 keyset batch 결과를 전체 누적한다. [AuctionTrackingService.getLots](../../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionTrackingService.java)는 공백별 prefix·전체 contains·market exact 검색을 실행한다. 일치 수 501→5,001에서 Sales SQL 5→14, Auction 8→17 및 allocation 증가를 관측했다. 전체 IDs는 content/count의 IN/OR에 들어간다.\
 Problem: page 크기와 별개로 일치하는 전체 ID 집합을 모으고 같은 의미의 검색을 여러 번 수행한다. getAllInfo 및 일부 lineage/history IN도 일괄 상한 보장이 없다.  
 Why it matters: 흔한 이름·공백 많은 검색어에서 SQL 길이·plan·메모리 비용이 증가한다. 실제 JDBC 인자 한계 초과/운영 지연 임계값은 미측정이다.  
 Example change scenario: 50,000개 거래처와 여러 공백을 가진 검색어로 마지막 1행 page를 요청한다.  
@@ -511,7 +513,7 @@ ID: BE-033
 Severity: Medium  
 Category: Performance / Write transaction duration  
 Affected modules: farm/mutation, farm/structure, work, inbound  
-Evidence: **코드 확인·부하 미측정**, PERF-07·07 §9. [OrchidGroupMutationEngine.transform/createFromInbound/validateBatchMovePlacements](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEngine.java)는 결과/item별 [OrchidPlacementPolicy](../backend/src/main/java/com/greenhouse/backend/farm/application/structure/OrchidPlacementPolicy.java) 조회를 호출한다. 같은 구역의 그룹을 반복 읽고 자동 배치에서 정렬한다. 복구는 bulk query여도 nested 비교가 남는다.  
+Evidence: **코드 확인·부하 미측정**, PERF-07·07 §9. [OrchidGroupMutationEngine.transform/createFromInbound/validateBatchMovePlacements](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEngine.java)는 결과/item별 [OrchidPlacementPolicy](../../backend/src/main/java/com/greenhouse/backend/farm/application/structure/OrchidPlacementPolicy.java) 조회를 호출한다. 같은 구역의 그룹을 반복 읽고 자동 배치에서 정렬한다. 복구는 bulk query여도 nested 비교가 남는다.\
 Problem: R개 결과/G개 기존 그룹의 검증이 대략 R회 구역 조회·O(RG), 새 결과까지 비교하며 O(R²) 비용을 만들 수 있다. 쿼리 사이 저장은 AUTO flush로 insert batching을 끊을 가능성도 있다.  
 Why it matters: group/zone 잠금을 유지한 채 비용이 늘어 공유 구역의 다른 쓰기를 기다리게 한다. 실제 lock 대기/flush/throughput 장애는 측정하지 않아 규모 위험으로 평가했다.  
 Example change scenario: 하나의 구역에 다수 입고 결과를 자동 배치하거나 구조 변경 결과를 대량 생성한다.  
@@ -526,7 +528,7 @@ ID: BE-034
 Severity: Medium  
 Category: Performance / Bounded retrieval  
 Affected modules: farm, work, auction, sales, settlement  
-Evidence: **코드 확인**, PERF-09. 전체 그룹/sellable/derived/collection 및 구형 work-history/lineage는 누적 결과 상한이 없다. Work calendar 기간 폭도 무제한이다. Work/Inbound/lot/Mutation root page는 targets/results/attempts/entries/relations를 제한하지 않는다. [SalesQueryService.getAuctionShipmentOptions](../backend/src/main/java/com/greenhouse/backend/sales/application/SalesQueryService.java)는 used 제외 후 200개를 채울 때까지 후보 pages를 반복한다. 그래프는 내부 참조를 읽은 뒤 출력 nodes를 자르는 부분이 있다.  
+Evidence: **코드 확인**, PERF-09. 전체 그룹/sellable/derived/collection 및 구형 work-history/lineage는 누적 결과 상한이 없다. Work calendar 기간 폭도 무제한이다. Work/Inbound/lot/Mutation root page는 targets/results/attempts/entries/relations를 제한하지 않는다. [SalesQueryService.getAuctionShipmentOptions](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesQueryService.java)는 used 제외 후 200개를 채울 때까지 후보 pages를 반복한다. 그래프는 내부 참조를 읽은 뒤 출력 nodes를 자르는 부분이 있다.\
 Problem: 응답 root/output 상한을 전체 DB scan·하위 Entity·전송량의 상한으로 사용할 수 없다.  
 Why it matters: 오래된 이력과 높은 child fan-out에서 heap·JSON·DB 비용이 계속 증가한다. 후보 후처리는 옳은 결과를 내도 거의 모두 사용된 경우 많은 OFFSET pages를 읽는다. 주요 root pagination 뒤 잘못된 Java 행 필터링은 확인하지 않았다.  
 Example change scenario: 한 lot에 이력이 누적되거나 최근 경매 출하 후보 대부분이 이미 전표에 연결된다.  
@@ -541,7 +543,7 @@ ID: BE-035
 Severity: Medium  
 Category: Persistence / Index and plan risk  
 Affected modules: farm, sales, auction, settlement, partner, work  
-Evidence: **migration/쿼리 확인·plan 미측정**, PERF-10. [V1](../backend/src/main/resources/db/migration/V1__initial_schema.sql) 및 이후 INDEX 검색에서 group bed_zone/inbound, item slip, allocation item/group, movement slip, settlement line parent/lot의 대응 선두 index를 찾지 못했다. 날짜/id 정렬·상태 집계·lower/contains/OR/concat 계획도 확인하지 않았다. Auction FK·Work/Mutation 다수 index는 이미 있다.  
+Evidence: **migration/쿼리 확인·plan 미측정**, PERF-10. [V1](../../backend/src/main/resources/db/migration/V1__initial_schema.sql) 및 이후 INDEX 검색에서 group bed_zone/inbound, item slip, allocation item/group, movement slip, settlement line parent/lot의 대응 선두 index를 찾지 못했다. 날짜/id 정렬·상태 집계·lower/contains/OR/concat 계획도 확인하지 않았다. Auction FK·Work/Mutation 다수 index는 이미 있다.\
 Problem: FK나 기존 UNIQUE/index의 존재를 실제 다른 선두 조건·정렬·문자열 검색 지원으로 간주할 수 없다.  
 Why it matters: 데이터 누적 후 scan/sort/참조 검사 비용과 transaction 시간이 커질 수 있다. 작은 fixture의 sequential scan은 정상일 수 있고 운영 병목으로 확정하지 않았다.  
 Example change scenario: 같은 구역의 재고가 늘거나 전체 기간 정산·공통 이름 검색을 자주 요청한다.  
@@ -556,7 +558,7 @@ ID: BE-036
 Severity: Medium  
 Category: Operational performance / Batch processing  
 Affected modules: settlement, auction, partner, farm/mutation  
-Evidence: **코드 확인**, PERF-11. [AuctionSettlementService.rebuildExistingResults](../backend/src/main/java/com/greenhouse/backend/settlement/application/AuctionSettlementService.java)는 500개 조회 후 미연결 결과 전체를 누적·정렬하고 전체 partner 잠금/정산 merge를 한 transaction에 수행한다. 기본 활성 [AuctionSettlementInitializer](../backend/src/main/java/com/greenhouse/backend/settlement/application/AuctionSettlementInitializer.java)의 startup 경로다. [OrchidGroupLedgerReconciliationService](../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupLedgerReconciliationService.java)는 전체 그룹/Entry를 누적한다.  
+Evidence: **코드 확인**, PERF-11. [AuctionSettlementService.rebuildExistingResults](../../backend/src/main/java/com/greenhouse/backend/settlement/application/AuctionSettlementService.java)는 500개 조회 후 미연결 결과 전체를 누적·정렬하고 전체 partner 잠금/정산 merge를 한 transaction에 수행한다. 기본 활성 [AuctionSettlementInitializer](../../backend/src/main/java/com/greenhouse/backend/settlement/application/AuctionSettlementInitializer.java)의 startup 경로다. [OrchidGroupLedgerReconciliationService](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupLedgerReconciliationService.java)는 전체 그룹/Entry를 누적한다.\
 Problem: 조회 batching을 처리 메모리·commit/clear 단위로 사용하지 않는다. min/max 날짜 사이 기존 정산 전체를 읽는 과다 범위도 있다.  
 Why it matters: 최초 대량 정산은 startup 시간·partner lock·heap을, 대사 CLI는 장기 이력·persistence context를 크게 만들 수 있다. 이미 연결된 결과 fast path 및 일반 page와 다른 위험이며 운영 실패는 미측정이다.  
 Example change scenario: 장기 미연결 결과를 처음 정산하거나 ACTIVE 전환 전에 큰 원장을 대사한다.  
@@ -573,7 +575,7 @@ ID: BE-037
 Severity: Medium  
 Category: Testing / Transaction rollback  
 Affected modules: test infrastructure, work, sales, settlement, farm  
-Evidence: **테스트 코드 확인**, 07 §2/3.2/7. H2 MockMvc의 test-level `@Transactional` 및 Sales/입금의 외부 TransactionTemplate는 caller 참여를 검증하지만 root transaction 누락을 가릴 수 있다. [WorkBatchCancellationPostgresE2ETest.failureAfterMutationFlushRollsBackGroupsWorkAndAudit](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkBatchCancellationPostgresE2ETest.java)는 HTTP ≥400/불변 상태만으로 의도한 후속 CHECK 도달을 확정하지 못한다.  
+Evidence: **테스트 코드 확인**, 07 §2/3.2/7. H2 MockMvc의 test-level `@Transactional` 및 Sales/입금의 외부 TransactionTemplate는 caller 참여를 검증하지만 root transaction 누락을 가릴 수 있다. [WorkBatchCancellationPostgresE2ETest.failureAfterMutationFlushRollsBackGroupsWorkAndAudit](../../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkBatchCancellationPostgresE2ETest.java)는 HTTP ≥400/불변 상태만으로 의도한 후속 CHECK 도달을 확정하지 못한다.\
 Problem: 시험의 바깥 경계가 production root 경계를 대신하거나 early rejection이 late rollback 시험을 통과시킬 여지가 있다.  
 Why it matters: 중요한 수량·입금·취소 변경에서 잘못된 transaction 분리나 실패 주입 위치를 놓칠 수 있다. 실제 HTTP PG·독립 감사 rollback 등 강한 보완 시험도 있으므로 전체 suite가 무효라는 판정은 아니다.  
 Example change scenario: 최상위 @Transactional을 제거하거나 요청이 mutation 적용 전에 거절되게 바뀐다.  
@@ -588,7 +590,7 @@ ID: BE-038
 Severity: Medium  
 Category: Testing / Concurrency  
 Affected modules: farm, sales, work, settlement test suites  
-Evidence: **테스트 코드 확인**, 07 §4/7. [OrchidGroupMutationRoutingPostgresE2ETest.creationCancellationWaitsForTheGroupLock](../backend/src/test/java/com/greenhouse/backend/work/e2e/OrchidGroupMutationRoutingPostgresE2ETest.java)는 시작 신호 후 200ms 미완료를 관찰한다. 일부 경쟁 시험은 latch/executor 제출 뒤 최종 상태만 본다. pg_stat_activity helper는 전체 DB waiter 수를 센다. Sales 생성의 정렬 시험은 old/new 교차 수정과 다른 경로다.  
+Evidence: **테스트 코드 확인**, 07 §4/7. [OrchidGroupMutationRoutingPostgresE2ETest.creationCancellationWaitsForTheGroupLock](../../backend/src/test/java/com/greenhouse/backend/work/e2e/OrchidGroupMutationRoutingPostgresE2ETest.java)는 시작 신호 후 200ms 미완료를 관찰한다. 일부 경쟁 시험은 latch/executor 제출 뒤 최종 상태만 본다. pg_stat_activity helper는 전체 DB waiter 수를 센다. Sales 생성의 정렬 시험은 old/new 교차 수정과 다른 경로다.\
 Problem: worker scheduling 지연을 row-lock 대기로 오인하거나 중요한 pair의 실제 overlap을 보장하지 못할 수 있다. 전역 waiter는 향후 병렬 시험에서 다른 요청과 혼동될 수 있다.  
 Why it matters: lock 제거/순서 변경을 놓칠 수 있다. 실제 lock owner·lock_timeout·wait 관찰·spy barrier를 쓰는 강한 시험도 존재하고 이번 전체 실행에서 flaky failure는 관찰하지 않았다.  
 Example change scenario: 실행기를 변경해 worker 도달이 늦어지거나 suite를 병렬화한다.  
@@ -603,7 +605,7 @@ ID: BE-039
 Severity: Low  
 Category: Testing / Brittleness and fixture maintenance  
 Affected modules: integration/PG test infrastructure, farm, work  
-Evidence: **현재 테스트 확인**, CQ-008·07 §7/8. [InboundPottingPlanIntegrationTests](../backend/src/test/java/com/greenhouse/backend/InboundPottingPlanIntegrationTests.java)/[WorkOperationIntegrationTests](../backend/src/test/java/com/greenhouse/backend/WorkOperationIntegrationTests.java)는 JSON 인접/순서 정규식으로 ID를 읽는다. migration 시험은 최신 34·7개/21~34 목록을 고정한다. 년생 시험에 system LocalDate가 있고 fixture는 SQL/payload/lock helper·seed MIN/OFFSET를 반복하며 일부 단건에도 큰 공통 layout을 만든다.  
+Evidence: **현재 테스트 확인**, CQ-008·07 §7/8. [InboundPottingPlanIntegrationTests](../../backend/src/test/java/com/greenhouse/backend/InboundPottingPlanIntegrationTests.java)/[WorkOperationIntegrationTests](../../backend/src/test/java/com/greenhouse/backend/WorkOperationIntegrationTests.java)는 JSON 인접/순서 정규식으로 ID를 읽는다. migration 시험은 최신 34·7개/21~34 목록을 고정한다. 년생 시험에 system LocalDate가 있고 fixture는 SQL/payload/lock helper·seed MIN/OFFSET를 반복하며 일부 단건에도 큰 공통 layout을 만든다.\
 Problem: 업무 의미와 무관한 JSON·seed·migration head 변경이 실패를 만들 수 있다. 긴 복합 시나리오의 앞 실패는 뒤 보존 검사 실행을 막는다.  
 Why it matters: 변경 때 원인 파악과 fixture 수정 비용이 증가한다. 현재 flaky 실패는 없고 테스트 유지비가 중심이므로 CQ-008의 Medium을 Low로 조정했다.  
 Example change scenario: JSON 필드 순서 변경·V35 추가·기본 farm seed 변경 후 다수 시험이 실패한다.  
@@ -618,7 +620,7 @@ ID: BE-040
 Severity: Low  
 Category: Testing / Execution reliability  
 Affected modules: PostgreSQL test infrastructure  
-Evidence: **코드 확인**, 07 §7. [WorkE2ETestBase](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkE2ETestBase.java)의 HttpClient/HttpRequest에 connect/request timeout이 없다. [SalesSlipNumberPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/SalesSlipNumberPostgresE2ETest.java)의 invokeAll/future.get도 무제한이며 공통 JUnit timeout을 찾지 못했다.  
+Evidence: **코드 확인**, 07 §7. [WorkE2ETestBase](../../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkE2ETestBase.java)의 HttpClient/HttpRequest에 connect/request timeout이 없다. [SalesSlipNumberPostgresE2ETest](../../backend/src/test/java/com/greenhouse/backend/work/e2e/SalesSlipNumberPostgresE2ETest.java)의 invokeAll/future.get도 무제한이며 공통 JUnit timeout을 찾지 못했다.\
 Problem: 서버 응답이나 worker가 멈추면 해당 요청/시험의 대기 상한이 없다.  
 Why it matters: CI가 오래 대기하고 실패 원인 자료를 얻기 어려울 수 있다. 운영 backend 자체의 timeout 결함으로 확대하지 않는다.  
 Example change scenario: 테스트 서버가 deadlock/connection 문제로 응답하지 않는다.  
@@ -633,7 +635,7 @@ ID: BE-041
 Severity: Low  
 Category: Testing / Architecture enforcement  
 Affected modules: architecture tests, farm/mutation, work, sales  
-Evidence: **테스트 코드 확인**, ARC-001·02 §2.3·07 §5. [ModuleBoundaryInventoryTest](../backend/src/test/java/com/greenhouse/backend/ModuleBoundaryInventoryTest.java)는 compiled Entity/Repository 의존을 막지만 모든 application helper 공개 범위를 제한하지 않는다. query 검사는 정규식이다. [OrchidGroupWriterArchitectureTest](../backend/src/test/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupWriterArchitectureTest.java)는 변경 메서드 이름 inventory에 의존한다.  
+Evidence: **테스트 코드 확인**, ARC-001·02 §2.3·07 §5. [ModuleBoundaryInventoryTest](../../backend/src/test/java/com/greenhouse/backend/ModuleBoundaryInventoryTest.java)는 compiled Entity/Repository 의존을 막지만 모든 application helper 공개 범위를 제한하지 않는다. query 검사는 정규식이다. [OrchidGroupWriterArchitectureTest](../../backend/src/test/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupWriterArchitectureTest.java)는 변경 메서드 이름 inventory에 의존한다.\
 Problem: 새 mutator를 목록에 넣지 않거나 동적/alias SQL을 쓰면 일부 위반이 gate 범위 밖에 남는다.  
 Why it matters: structure test 통과를 모든 쓰기·transaction·domain invariant 보장으로 해석하면 잘못된 확신이 생긴다. 현재 예외 inventory 0·compiled gate·PG fence가 보완하므로 실제 ownership 붕괴로 판정하지 않는다.  
 Example change scenario: OrchidGroup에 새 상태 변경 메서드를 추가하거나 internal helper를 타 모듈에서 사용한다.  
@@ -663,7 +665,7 @@ ID: BE-043
 Severity: Low  
 Category: Documentation / Operational contracts  
 Affected modules: farm, work, sales; backend 기준 문서  
-Evidence: **현재 문서/코드 대조**, 03 §11. [docs/04-architecture.md](../docs/04-architecture.md)의 Farm 예약 Legacy/Engine 분기 설명은 현재 Engine 직접 경로와 다르다. [DOMAIN_RULES.md](../docs/api/DOMAIN_RULES.md)의 전체 Work 완료 대상 조건에는 실제 CANCELED terminal 예외 설명이 필요하다. 일반 수정 권한의 ADR 차이는 BE-009로 분리했다.  
+Evidence: **현재 문서/코드 대조**, 03 §11. [docs/04-architecture.md](../../docs/04-architecture.md)의 Farm 예약 Legacy/Engine 분기 설명은 현재 Engine 직접 경로와 다르다. [DOMAIN_RULES.md](../../docs/api/DOMAIN_RULES.md)의 전체 Work 완료 대상 조건에는 실제 CANCELED terminal 예외 설명이 필요하다. 일반 수정 권한의 ADR 차이는 BE-009로 분리했다.\
 Problem: 다음 작업자가 사용할 기준 문서에 제거된 경로와 불완전한 terminal 규칙이 남는다.  
 Why it matters: 개선 시 Legacy 재도입 또는 정상 완료 예외 제거를 유도할 수 있다. 단독 런타임 장애는 없어 Low다.  
 Example change scenario: 문서만 보고 새 예약 경로를 추가하거나 완료 validation을 정리한다.  
@@ -678,7 +680,7 @@ ID: BE-044
 Severity: Low  
 Category: Capability contracts / MVP scope  
 Affected modules: settlement, partner, sales  
-Evidence: **현재 코드 확인**, 05 E. [SettlementUnit](../backend/src/main/java/com/greenhouse/backend/settlement/domain/SettlementUnit.java)에 MONTHLY_BATCH가 있고 [PartnerSettlementSettings](../backend/src/main/java/com/greenhouse/backend/settlement/domain/PartnerSettlementSettings.java)는 settlementUnit/ruleJson/autoSettleEnabled를 저장·응답한다. 실제 실행은 직접 전표 입금과 경매장+경매일 정산이며 이 설정들에 대응하는 방식별 실행 dispatch는 없다.  
+Evidence: **현재 코드 확인**, 05 E. [SettlementUnit](../../backend/src/main/java/com/greenhouse/backend/settlement/domain/SettlementUnit.java)에 MONTHLY_BATCH가 있고 [PartnerSettlementSettings](../../backend/src/main/java/com/greenhouse/backend/settlement/domain/PartnerSettlementSettings.java)는 settlementUnit/ruleJson/autoSettleEnabled를 저장·응답한다. 실제 실행은 직접 전표 입금과 경매장+경매일 정산이며 이 설정들에 대응하는 방식별 실행 dispatch는 없다.\
 Problem: 설정을 표현/저장할 수 있다는 계약과 실제 지원 업무를 쉽게 혼동할 수 있다. 새 주간/월간 정산 aggregate가 없다는 것 자체는 현재 MVP 결함이 아니다.  
 Why it matters: 값 추가/설정만으로 자동 정산이 수행된다고 잘못 판단하면 변경 범위를 과소평가한다. 현재 잘못된 금액 생성이나 자동 정산 promise 위반은 확인하지 않았다.  
 Example change scenario: MONTHLY_BATCH를 설정하거나 새 unit을 추가한 뒤 전표 grouping·입금 분배가 구현됐다고 판단한다.  

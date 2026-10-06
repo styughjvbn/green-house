@@ -1,5 +1,7 @@
 # Backend test suite의 회귀 방어력 평가
 
+> 보관 문서: 당시 코드·감사·검증 이력이며 현재 구현의 기준이 아니다. 미해결/운영 검증/보류 상태는 [현재 작업 목록](../10-remediation-progress.md)을 따른다.
+
 평가일: 2026-10-03. 기준 commit: `80106917232a671b5a489ad8e59d37b63a06dffe` (`develop`).
 
 현재 백엔드 구현 기준, test source/config, Gradle task, CI, 실제 assertion·fixture·동시 실행 제어를 조사했다. 테스트 개수나 클래스명 대신 **어떤 오류가 생겼을 때 실패하는지, 실제 DB/transaction 경계를 통과하는지, 독립적인 기대값을 검사하는지**로 평가했다. 구현·테스트 코드는 수정하지 않았다.
@@ -38,32 +40,32 @@
 
 기본 suite 113개 클래스·525개 invocation, PostgreSQL suite 35개 클래스·177개 invocation, benchmark 2개 invocation이 각각 실패/오류/skip 0이었다. parameterized 실행을 포함한 수치이며 서로 다른 도메인 시나리오 수와 동일하지 않다.
 
-[application-test.properties](../backend/src/test/resources/application-test.properties)는 random UUID H2 DB, `create-drop`, `flyway.enabled=false`, `open-in-view=false`다. [AbstractBackendIntegrationTest](../backend/src/test/java/com/greenhouse/backend/AbstractBackendIntegrationTest.java)는 SpringBoot+MockMvc를 사용한다. HTTP 요청처럼 보이는 MockMvc 호출도 테스트 메서드의 `@Transactional`에 참여할 수 있다.
+[application-test.properties](../../backend/src/test/resources/application-test.properties)는 random UUID H2 DB, `create-drop`, `flyway.enabled=false`, `open-in-view=false`다. [AbstractBackendIntegrationTest](../../backend/src/test/java/com/greenhouse/backend/AbstractBackendIntegrationTest.java)는 SpringBoot+MockMvc를 사용한다. HTTP 요청처럼 보이는 MockMvc 호출도 테스트 메서드의 `@Transactional`에 참여할 수 있다.
 
-[WorkE2ETestBase](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkE2ETestBase.java)와 [application-e2e.yml](../backend/src/test/resources/application-e2e.yml)은 RANDOM_PORT·실제 PostgreSQL·Flyway enabled·Hibernate validate·OSIV false를 사용한다. 기본 auth는 꺼져 있다. HTTP는 서버의 별도 thread/transaction을 통과하지만, Partner/Sales service 직접 호출과 migration DB 검증도 같은 task에 포함된다. 이름의 `workE2eTest`가 검증 범위를 정확히 설명하지는 않는다.
+[WorkE2ETestBase](../../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkE2ETestBase.java)와 [application-e2e.yml](../../backend/src/test/resources/application-e2e.yml)은 RANDOM_PORT·실제 PostgreSQL·Flyway enabled·Hibernate validate·OSIV false를 사용한다. 기본 auth는 꺼져 있다. HTTP는 서버의 별도 thread/transaction을 통과하지만, Partner/Sales service 직접 호출과 migration DB 검증도 같은 task에 포함된다. 이름의 `workE2eTest`가 검증 범위를 정확히 설명하지는 않는다.
 
-[build.gradle.kts](../backend/build.gradle.kts)의 기본 `test/check`는 `work-e2e`, `work-benchmark`를 제외한다. 로컬 기본 테스트만으로 PostgreSQL 통과를 주장할 수 없다. [.github/workflows/verify.yml](../.github/workflows/verify.yml)은 별도 PostgreSQL job에서 Docker를 요구하고 전체 E2E와 `workBenchmark -PworkBenchmarkEnforce=true`를 실행한다. `continue-on-error`로 개별 결과를 수집하지만 마지막 단계에서 실패를 다시 실패시키므로 조용히 통과시키는 구성은 아니다. 보고서는 14일 보관한다. branch protection에서 이 job을 필수로 설정했는지는 저장소 파일만으로 확인할 수 없다.
+[build.gradle.kts](../../backend/build.gradle.kts)의 기본 `test/check`는 `work-e2e`, `work-benchmark`를 제외한다. 로컬 기본 테스트만으로 PostgreSQL 통과를 주장할 수 없다. [.github/workflows/verify.yml](../../.github/workflows/verify.yml)은 별도 PostgreSQL job에서 Docker를 요구하고 전체 E2E와 `workBenchmark -PworkBenchmarkEnforce=true`를 실행한다. `continue-on-error`로 개별 결과를 수집하지만 마지막 단계에서 실패를 다시 실패시키므로 조용히 통과시키는 구성은 아니다. 보고서는 14일 보관한다. branch protection에서 이 job을 필수로 설정했는지는 저장소 파일만으로 확인할 수 없다.
 
 ## 3. 실제로 회귀를 막는 테스트
 
 ### 3.1 Domain unit와 계약 기대값
 
-- [WorkTypeCapabilitiesTest](../backend/src/test/java/com/greenhouse/backend/work/domain/operation/WorkTypeCapabilitiesTest.java)는 code/template/active/system 조합에 독립적으로 작성한 기대 map·CSV를 적용한다. production capability를 그대로 호출해서 기대값을 만드는 검사보다 강하다.
-- [WorkQuantityBalancePolicyTest](../backend/src/test/java/com/greenhouse/backend/work/domain/correction/WorkQuantityBalancePolicyTest.java)는 입력·결과·손실·증가의 관계와 `Long.MAX_VALUE` 범위를 검사한다. [AuctionResultPolicyTest](../backend/src/test/java/com/greenhouse/backend/auction/domain/AuctionResultPolicyTest.java)는 attempt 유형별 결과 합계/이력, 명시적 차수 중복, 금액 overflow와 부분 반환을 검사한다.
-- [OrchidGroupInvariantTest](../backend/src/test/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroupInvariantTest.java)는 생성 취소 재활성화와 예약보다 작은 수량 수정 거부를 검사한다. 이름만 보고 상태·배치·예약·모든 수량 경계를 포괄한다고 판단하면 안 된다. 다른 통합 테스트의 보완 범위를 함께 봐야 한다.
-- [StructureChangeStrategyRegistryTest](../backend/src/test/java/com/greenhouse/backend/farm/application/transformation/StructureChangeStrategyRegistryTest.java), `WorkEffectProcessorTest`의 handler 누락/중복 검사는 새 유형 추가 시 wiring 누락을 기동 전에 실패시킨다. 해당 handler의 DB 효과가 올바른지는 PostgreSQL/통합 검증이 담당한다.
+- [WorkTypeCapabilitiesTest](../../backend/src/test/java/com/greenhouse/backend/work/domain/operation/WorkTypeCapabilitiesTest.java)는 code/template/active/system 조합에 독립적으로 작성한 기대 map·CSV를 적용한다. production capability를 그대로 호출해서 기대값을 만드는 검사보다 강하다.
+- [WorkQuantityBalancePolicyTest](../../backend/src/test/java/com/greenhouse/backend/work/domain/correction/WorkQuantityBalancePolicyTest.java)는 입력·결과·손실·증가의 관계와 `Long.MAX_VALUE` 범위를 검사한다. [AuctionResultPolicyTest](../../backend/src/test/java/com/greenhouse/backend/auction/domain/AuctionResultPolicyTest.java)는 attempt 유형별 결과 합계/이력, 명시적 차수 중복, 금액 overflow와 부분 반환을 검사한다.
+- [OrchidGroupInvariantTest](../../backend/src/test/java/com/greenhouse/backend/farm/domain/orchid/OrchidGroupInvariantTest.java)는 생성 취소 재활성화와 예약보다 작은 수량 수정 거부를 검사한다. 이름만 보고 상태·배치·예약·모든 수량 경계를 포괄한다고 판단하면 안 된다. 다른 통합 테스트의 보완 범위를 함께 봐야 한다.
+- [StructureChangeStrategyRegistryTest](../../backend/src/test/java/com/greenhouse/backend/farm/application/transformation/StructureChangeStrategyRegistryTest.java), `WorkEffectProcessorTest`의 handler 누락/중복 검사는 새 유형 추가 시 wiring 누락을 기동 전에 실패시킨다. 해당 handler의 DB 효과가 올바른지는 PostgreSQL/통합 검증이 담당한다.
 
 ### 3.2 Rollback와 transaction boundary
 
 | 대표 테스트 | 실패 지점과 저장 상태 검사 | 방어하는 회귀 |
 | --- | --- | --- |
-| [OrchidGroupAuditRollbackIntegrationTest.auditFailureRollsBackCorrection](../backend/src/test/java/com/greenhouse/backend/OrchidGroupAuditRollbackIntegrationTest.java) | audit recorder 예외, 호출 뒤 Repository에서 원래 수량 확인; 테스트 메서드 자체의 외부 transaction 없음 | 감사 실패에도 수량만 먼저 저장되는 문제 |
-| [WorkTransformationParityPostgresE2ETest.invalidSecondPlacementRollsBackSourcesResultsLineageAndEffects](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkTransformationParityPostgresE2ETest.java) | 두 번째 결과 배치 충돌, source 수량/상태/revision·effect·lineage·mutation count 확인 | 구조 변경의 중간 결과/원장만 남는 문제 |
-| [WorkIdempotencyPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkIdempotencyPostgresE2ETest.java) | 즉시 실행 실패 및 batch 두 번째 기록 실패 후 receipt/membership/operation·수량 확인; 수정 retry 성공 | 실패한 요청 key가 남거나 앞 기록만 확정되는 문제 |
-| [WorkBatchCancellationPostgresE2ETest.failureAfterMutationFlushRollsBackGroupsWorkAndAudit](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkBatchCancellationPostgresE2ETest.java) | Work 상태 전환에 임시 CHECK 추가; 실패 후 원본/결과·보상 Mutation·audit 확인 | 보상만 저장되고 Work 취소가 실패하는 부분 적용 |
-| [WorkCorrectionAuditPostgresE2ETest.failedBulkCorrectionRollsBackReceiptAuditAndAllQuantityChanges](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkCorrectionAuditPostgresE2ETest.java) | 후속 그룹 갱신에 임시 CHECK, receipt/audit/수량 변화 복구 | 앞 그룹 보정/감사만 저장되는 문제 |
-| [SalesInventoryPostgresE2ETest.laterFailureRollsBackStockSnapshotsShipmentsAndMovements](../backend/src/test/java/com/greenhouse/backend/work/e2e/SalesInventoryPostgresE2ETest.java) | 출하 후 flush와 의도적인 후속 예외; 재고/예약·전표 snapshot·출하·movement·reconciliation 확인 | Farm/Sales/Auction의 transaction 분리 |
-| [PartnerSettlementPostgresE2ETest.aLaterFailureRollsBackTheSalesPaymentAndAllLedgerEffects](../backend/src/test/java/com/greenhouse/backend/work/e2e/PartnerSettlementPostgresE2ETest.java) | 입금 후 flush/예외; paidAmount·event·balance·audit 없음 확인 | 입금 대상/원장/잔액/감사의 부분 commit |
+| [OrchidGroupAuditRollbackIntegrationTest.auditFailureRollsBackCorrection](../../backend/src/test/java/com/greenhouse/backend/OrchidGroupAuditRollbackIntegrationTest.java) | audit recorder 예외, 호출 뒤 Repository에서 원래 수량 확인; 테스트 메서드 자체의 외부 transaction 없음 | 감사 실패에도 수량만 먼저 저장되는 문제 |
+| [WorkTransformationParityPostgresE2ETest.invalidSecondPlacementRollsBackSourcesResultsLineageAndEffects](../../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkTransformationParityPostgresE2ETest.java) | 두 번째 결과 배치 충돌, source 수량/상태/revision·effect·lineage·mutation count 확인 | 구조 변경의 중간 결과/원장만 남는 문제 |
+| [WorkIdempotencyPostgresE2ETest](../../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkIdempotencyPostgresE2ETest.java) | 즉시 실행 실패 및 batch 두 번째 기록 실패 후 receipt/membership/operation·수량 확인; 수정 retry 성공 | 실패한 요청 key가 남거나 앞 기록만 확정되는 문제 |
+| [WorkBatchCancellationPostgresE2ETest.failureAfterMutationFlushRollsBackGroupsWorkAndAudit](../../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkBatchCancellationPostgresE2ETest.java) | Work 상태 전환에 임시 CHECK 추가; 실패 후 원본/결과·보상 Mutation·audit 확인 | 보상만 저장되고 Work 취소가 실패하는 부분 적용 |
+| [WorkCorrectionAuditPostgresE2ETest.failedBulkCorrectionRollsBackReceiptAuditAndAllQuantityChanges](../../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkCorrectionAuditPostgresE2ETest.java) | 후속 그룹 갱신에 임시 CHECK, receipt/audit/수량 변화 복구 | 앞 그룹 보정/감사만 저장되는 문제 |
+| [SalesInventoryPostgresE2ETest.laterFailureRollsBackStockSnapshotsShipmentsAndMovements](../../backend/src/test/java/com/greenhouse/backend/work/e2e/SalesInventoryPostgresE2ETest.java) | 출하 후 flush와 의도적인 후속 예외; 재고/예약·전표 snapshot·출하·movement·reconciliation 확인 | Farm/Sales/Auction의 transaction 분리 |
+| [PartnerSettlementPostgresE2ETest.aLaterFailureRollsBackTheSalesPaymentAndAllLedgerEffects](../../backend/src/test/java/com/greenhouse/backend/work/e2e/PartnerSettlementPostgresE2ETest.java) | 입금 후 flush/예외; paidAmount·event·balance·audit 없음 확인 | 입금 대상/원장/잔액/감사의 부분 commit |
 
 단순 `assertThrows`를 넘어 **실패 이후 새 조회의 결과**를 검사하는 점이 강점이다. 임시 CHECK를 `finally`에서 제거하고 실제 production schema의 실패를 사용하는 사례도 유효하다.
 
@@ -73,9 +75,9 @@
 
 Work는 같은 실행 key의 완료/부분 replay, 숫자 표현 `6`/`6.00`, 다른 payload 거부, legacy fingerprint 없음의 fail-closed, batch 결과 ID 순서, 동시 즉시 요청 한 operation/effect/receipt, 실패 receipt rollback 후 재시도를 검사한다. `WorkCorrectionAuditPostgresE2ETest`는 취소 후 재시도에서도 저장된 audit를 반환하는 조건을 보호한다.
 
-[OrchidGroupMutationEngineIntegrationTest](../backend/src/test/java/com/greenhouse/backend/OrchidGroupMutationEngineIntegrationTest.java)는 같은 source replay와 다른 payload 거부, revision chain을 검사한다. [MutationFingerprintCompatibilityTest](../backend/src/test/java/com/greenhouse/backend/farm/application/orchid/mutation/MutationFingerprintCompatibilityTest.java)는 저장된 fingerprint golden 값과 선택 ID 정규화를 보호한다. 이는 단순 구현 문자열 비교가 아니라 **기존 receipt/원장 replay 호환성**에 필요한 gate다.
+[OrchidGroupMutationEngineIntegrationTest](../../backend/src/test/java/com/greenhouse/backend/OrchidGroupMutationEngineIntegrationTest.java)는 같은 source replay와 다른 payload 거부, revision chain을 검사한다. [MutationFingerprintCompatibilityTest](../../backend/src/test/java/com/greenhouse/backend/farm/application/orchid/mutation/MutationFingerprintCompatibilityTest.java)는 저장된 fingerprint golden 값과 선택 ID 정규화를 보호한다. 이는 단순 구현 문자열 비교가 아니라 **기존 receipt/원장 replay 호환성**에 필요한 gate다.
 
-[PaymentLedgerContractIntegrationTest](../backend/src/test/java/com/greenhouse/backend/settlement/application/PaymentLedgerContractIntegrationTest.java)는 amount/date 변경 key 재사용 거부, caller transaction 요구와 rollback을 검사한다. PostgreSQL의 동시 입금·완납 replay·정산 입금도 실제 저장 event/잔액 중복을 검사한다.
+[PaymentLedgerContractIntegrationTest](../../backend/src/test/java/com/greenhouse/backend/settlement/application/PaymentLedgerContractIntegrationTest.java)는 amount/date 변경 key 재사용 거부, caller transaction 요구와 rollback을 검사한다. PostgreSQL의 동시 입금·완납 replay·정산 입금도 실제 저장 event/잔액 중복을 검사한다.
 
 이 방어는 **올바른 caller key가 들어오는 경우**에 강하다. 새 업무 변경에 과거 key를 잘못 발급하는 문제와 key가 없는 Auction 자동 차수 요청은 다른 층의 회귀다. Engine replay unit만으로 막을 수 없다.
 
@@ -83,9 +85,9 @@ Work는 같은 실행 key의 완료/부분 replay, 숫자 표현 `6`/`6.00`, 다
 
 - `WorkIdempotencyPostgresE2ETest.databaseRejectsSameEffectIdentityWithADifferentKind`는 raw INSERT로 kind가 달라도 동일 effect identity 중복을 DB가 거부하는지 확인한다.
 - `PartnerSettlementPostgresE2ETest.scalarPartnerReferencesRetainTheExistingForeignKeys`, `SalesInventoryPostgresE2ETest.scalarGroupIdsStillRequireExistingFarmRowsInPostgres`는 module 경계의 scalar ID 전환 뒤에도 실제 FK가 남는지 negative 저장으로 검사한다.
-- [OrchidGroupMutationPostgresE2ETest.enforcesTheActiveLedgerWriteFenceAndRollsBackMutationContext](../backend/src/test/java/com/greenhouse/backend/work/e2e/OrchidGroupMutationPostgresE2ETest.java)는 ACTIVE 전환 후 직접 UPDATE/INSERT/DELETE 거부와 Engine 정상 동작·context rollback을 검사한다. H2로 대체할 수 없는 PostgreSQL trigger 경계다.
-- [ConsolidatedWorkMigrationPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/ConsolidatedWorkMigrationPostgresE2ETest.java)는 별도 DB를 V27까지 올리고 기존 기록을 삽입한 뒤 최신 migration과 receipt/inbound origin 보존·validate를 검사한다. 다른 movement/discard/title migration 시험도 과거 자료를 넣는 upgrade 경로다.
-- [WorkCorrectionMigrationPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkCorrectionMigrationPostgresE2ETest.java)는 V32의 처리 불가능한 역사 데이터를 최신 migration이 거부하고 기존 row/column을 보존하는지 검사한다. 빈 DB 부팅만 확인하는 시험보다 강하다.
+- [OrchidGroupMutationPostgresE2ETest.enforcesTheActiveLedgerWriteFenceAndRollsBackMutationContext](../../backend/src/test/java/com/greenhouse/backend/work/e2e/OrchidGroupMutationPostgresE2ETest.java)는 ACTIVE 전환 후 직접 UPDATE/INSERT/DELETE 거부와 Engine 정상 동작·context rollback을 검사한다. H2로 대체할 수 없는 PostgreSQL trigger 경계다.
+- [ConsolidatedWorkMigrationPostgresE2ETest](../../backend/src/test/java/com/greenhouse/backend/work/e2e/ConsolidatedWorkMigrationPostgresE2ETest.java)는 별도 DB를 V27까지 올리고 기존 기록을 삽입한 뒤 최신 migration과 receipt/inbound origin 보존·validate를 검사한다. 다른 movement/discard/title migration 시험도 과거 자료를 넣는 upgrade 경로다.
+- [WorkCorrectionMigrationPostgresE2ETest](../../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkCorrectionMigrationPostgresE2ETest.java)는 V32의 처리 불가능한 역사 데이터를 최신 migration이 거부하고 기존 row/column을 보존하는지 검사한다. 빈 DB 부팅만 확인하는 시험보다 강하다.
 
 모든 Flyway CHECK를 한 항목씩 제거했을 때 실패하는지 검증한 것은 아니다. 수량/예약·금액·revision·snapshot 조합의 **DB constraint와 application validation 각각**에 대응하는 negative 사례 목록이 필요하다. migration 재실행은 Flyway history/validate 경로이며 이미 실행한 SQL 파일 자체의 임의 재실행 허용과 혼동하지 않는다.
 
@@ -112,9 +114,9 @@ Work는 같은 실행 key의 완료/부분 replay, 숫자 표현 `6`/`6.00`, 다
 
 | 테스트 | 강한 gate | 범위 한계 |
 | --- | --- | --- |
-| [ModularArchitectureTests](../backend/src/test/java/com/greenhouse/backend/ModularArchitectureTests.java) | module/layer/feature package·declared DAG·Repository 소유·금지 layer import·테스트 비활성화 방지 | source regex 검사에 syntax/alias/comment 한계. package/import 순서는 구조/format gate이며 도메인 정확성 검사는 아님 |
-| [ModuleBoundaryInventoryTest](../backend/src/test/java/com/greenhouse/backend/ModuleBoundaryInventoryTest.java) | ArchUnit compiled dependency로 FQCN/generic 보완; Entity/Repository/Q/HTTP DTO/Controller 타 모듈 의존; Clock 없는 시스템 시간 호출; annotation query의 foreign root | query regex는 SQL parser가 아님. association alias·동적 JDBC/Native SQL·외부 XML은 별도 검토 필요 |
-| [OrchidGroupWriterArchitectureTest](../backend/src/test/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupWriterArchitectureTest.java) | 직접 상태 mutation/constructor/Repository writer를 Engine 및 recovery inventory로 제한; legacy routing 클래스 재도입 거부 | method 이름 목록 기반. 새로운 상태 변경 method를 목록에 추가하지 않으면 같은 모듈에서 우회 호출할 여지가 있음. DB raw write/fence 보장과는 별개 |
+| [ModularArchitectureTests](../../backend/src/test/java/com/greenhouse/backend/ModularArchitectureTests.java) | module/layer/feature package·declared DAG·Repository 소유·금지 layer import·테스트 비활성화 방지 | source regex 검사에 syntax/alias/comment 한계. package/import 순서는 구조/format gate이며 도메인 정확성 검사는 아님 |
+| [ModuleBoundaryInventoryTest](../../backend/src/test/java/com/greenhouse/backend/ModuleBoundaryInventoryTest.java) | ArchUnit compiled dependency로 FQCN/generic 보완; Entity/Repository/Q/HTTP DTO/Controller 타 모듈 의존; Clock 없는 시스템 시간 호출; annotation query의 foreign root | query regex는 SQL parser가 아님. association alias·동적 JDBC/Native SQL·외부 XML은 별도 검토 필요 |
+| [OrchidGroupWriterArchitectureTest](../../backend/src/test/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupWriterArchitectureTest.java) | 직접 상태 mutation/constructor/Repository writer를 Engine 및 recovery inventory로 제한; legacy routing 클래스 재도입 거부 | method 이름 목록 기반. 새로운 상태 변경 method를 목록에 추가하지 않으면 같은 모듈에서 우회 호출할 여지가 있음. DB raw write/fence 보장과는 별개 |
 
 세 TSV inventory의 현재 예외는 0이고, 사라진 예외를 남겨도 exact 비교가 실패한다. 예외를 무제한 추가해 경계를 승인하는 구조가 아니다. compiled/source 검사를 함께 사용하는 것은 실질적인 방어다.
 
@@ -154,7 +156,7 @@ Work benchmark의 query 상한은 강제 옵션을 쓴 CI에서 gate다. median/
 
 ## 8. Fixture 중복과 격리
 
-공통 [FarmTestFixtures](../backend/src/test/java/com/greenhouse/backend/farm/support/FarmTestFixtures.java), [FarmFixtureIntegrationTest](../backend/src/test/java/com/greenhouse/backend/FarmFixtureIntegrationTest.java), [MovementTestSupport](../backend/src/test/java/com/greenhouse/backend/support/MovementTestSupport.java), [WorkTestDataSeeder](../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkTestDataSeeder.java), [OrchidGroupStateChainTestSupport](../backend/src/test/java/com/greenhouse/backend/OrchidGroupStateChainTestSupport.java)가 있다. fixture가 전혀 없는 suite는 아니다. Movement helper가 실제 Work record workflow를 호출하는 것은 writer 우회만으로 기능을 검증하는 문제를 줄인다.
+공통 [FarmTestFixtures](../../backend/src/test/java/com/greenhouse/backend/farm/support/FarmTestFixtures.java), [FarmFixtureIntegrationTest](../../backend/src/test/java/com/greenhouse/backend/FarmFixtureIntegrationTest.java), [MovementTestSupport](../../backend/src/test/java/com/greenhouse/backend/support/MovementTestSupport.java), [WorkTestDataSeeder](../../backend/src/test/java/com/greenhouse/backend/work/e2e/WorkTestDataSeeder.java), [OrchidGroupStateChainTestSupport](../../backend/src/test/java/com/greenhouse/backend/OrchidGroupStateChainTestSupport.java)가 있다. fixture가 전혀 없는 suite는 아니다. Movement helper가 실제 Work record workflow를 호출하는 것은 writer 우회만으로 기능을 검증하는 문제를 줄인다.
 
 남는 비용과 위험:
 

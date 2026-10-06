@@ -1,18 +1,20 @@
 # BE-035 — PostgreSQL 조회 계획과 index 검증
 
+> 보관 문서: 당시 코드·감사·검증 이력이며 현재 구현의 기준이 아니다. 미해결/운영 검증/보류 상태는 [현재 작업 목록](../10-remediation-progress.md)을 따른다.
+
 검증일: 2026-10-05. [08의 BE-035](08-findings.md#be-035--실제-조회fk검색에-대한-index-검증-부족)의 개선 근거다. 원래 감사 결과는 수정 전 기록으로 보존한다.
 
 ## 측정 범위
 
-[PersistenceIndexPlanPostgresE2ETest](../backend/src/test/java/com/greenhouse/backend/work/e2e/PersistenceIndexPlanPostgresE2ETest.java)는 실제 Flyway를 적용한 Testcontainers PostgreSQL 18에서 root 1,000/50,000개를 각각 적재하고 `ANALYZE`한다. Hibernate가 해당 Repository 호출에서 생성한 첫 SELECT를 캡처하고 fixture의 조건을 바인딩하여 `EXPLAIN (ANALYZE, BUFFERS, WAL, FORMAT JSON)`을 실행한다. planner 옵션으로 index 사용을 강제하지 않는다.
+[PersistenceIndexPlanPostgresE2ETest](../../backend/src/test/java/com/greenhouse/backend/work/e2e/PersistenceIndexPlanPostgresE2ETest.java)는 실제 Flyway를 적용한 Testcontainers PostgreSQL 18에서 root 1,000/50,000개를 각각 적재하고 `ANALYZE`한다. Hibernate가 해당 Repository 호출에서 생성한 첫 SELECT를 캡처하고 fixture의 조건을 바인딩하여 `EXPLAIN (ANALYZE, BUFFERS, WAL, FORMAT JSON)`을 실행한다. planner 옵션으로 index 사용을 강제하지 않는다.
 
 동일 DB에서 V41의 index만 transaction 안에서 제거하여 이전 계획을 측정하고, catalog의 실제 정의로 다시 생성하여 새 계획을 측정한다. 측정 transaction은 rollback한다. 운영 DB에 접속하거나 운영 index를 제거하는 도구가 아니다. 양쪽 반환 행 수와 완료 후 index 복원을 확인한다. page의 count 쿼리·application 응답 조립·전체 HTTP latency를 포함하는 benchmark는 아니다.
 
-fixture는 [PersistencePlanFixtures](../backend/src/test/java/com/greenhouse/backend/work/e2e/PersistencePlanFixtures.java)의 native SQL로 만든 cardinality·분포 실험이다. 각 root 테이블에 N개, 품목·배분·재고 이동·lot·시도·결과·정산 line에 각각 2N개를 만든다. 난 묶음 절반은 한 구역, 나머지는 19개 구역에 분산하며 양수 수량은 20%다. 전표의 10%가 작성중이고 거래처 참조는 100개로 분산한다. 날짜 동률도 포함한다. 계보는 100개의 다른 Mutation/결과 쌍과 같은 결과의 source 최대 5,000개를 포함한다. 표시 Entry는 1개/101개다.
+fixture는 [PersistencePlanFixtures](../../backend/src/test/java/com/greenhouse/backend/work/e2e/PersistencePlanFixtures.java)의 native SQL로 만든 cardinality·분포 실험이다. 각 root 테이블에 N개, 품목·배분·재고 이동·lot·시도·결과·정산 line에 각각 2N개를 만든다. 난 묶음 절반은 한 구역, 나머지는 19개 구역에 분산하며 양수 수량은 20%다. 전표의 10%가 작성중이고 거래처 참조는 100개로 분산한다. 날짜 동률도 포함한다. 계보는 100개의 다른 Mutation/결과 쌍과 같은 결과의 source 최대 5,000개를 포함한다. 표시 Entry는 1개/101개다.
 
 배치 구간은 의도적으로 겹치며 모든 쓰기 원장·감사·snapshot을 생성하지 않는다. 실제 농장 배치 또는 유효한 application 쓰기 처리량을 재현하는 fixture로 사용하지 않는다. 네이티브 수량 변경 표본도 `ACTIVE` 원장 검증을 거치는 Mutation 경로가 아니다.
 
-Partner contains, Sales contains OR, Auction의 넓은 상태 조건, Work의 좁은 날짜 범위는 별도로 명시한 **구성 조건 SQL**이다. 관련 API의 모든 join·EXISTS·필터를 설명했다고 취급하지 않는다. 이전 graph 쿼리만 [captured legacy SQL](../backend/src/test/resources/performance/legacy-graph-lineage.sql)로 별도 비교한다.
+Partner contains, Sales contains OR, Auction의 넓은 상태 조건, Work의 좁은 날짜 범위는 별도로 명시한 **구성 조건 SQL**이다. 관련 API의 모든 join·EXISTS·필터를 설명했다고 취급하지 않는다. 이전 graph 쿼리만 [captured legacy SQL](../../backend/src/test/resources/performance/legacy-graph-lineage.sql)로 별도 비교한다.
 
 ## 50,000 root 행 관측
 
@@ -37,7 +39,7 @@ Partner contains, Sales contains OR, Auction의 넓은 상태 조건, Work의 �
 
 ## index와 쿼리를 함께 수정한 이유
 
-[V41](../backend/src/main/resources/db/migration/V41__index_operational_reference_and_date_queries.sql)은 확인된 조회를 지원하는 B-tree 17개를 추가한다.
+[V41](../../backend/src/main/resources/db/migration/V41__index_operational_reference_and_date_queries.sql)은 확인된 조회를 지원하는 B-tree 17개를 추가한다.
 
 | 묶음 | 목적·선택 이유 |
 | --- | --- |
@@ -48,7 +50,7 @@ Partner contains, Sales contains OR, Auction의 넓은 상태 조건, Work의 �
 | shipment 날짜/id | 기존 날짜/경매장 index의 incremental sort와 추가 스캔을 줄인다. |
 | lineage mutation/result/id | 표시 Entry의 Mutation/결과 쌍에서 최초 계보 ID를 찾는다. 100개의 다른 쌍이 있는 분포에서도 사용을 확인했다. |
 
-BE-034의 계보 projection은 Entity 적재를 없앴지만, 기존 쿼리는 결과에 연결된 source마다 같은 `MIN(id)`를 실행했다. V41 이후에도 source 5,000개에서 subplan을 5,000번 호출했다. [Repository](../backend/src/main/java/com/greenhouse/backend/farm/repository/transformation/OrchidGroupLineageRepository.java)는 표시 Entry에서 MIN을 찾고 선택된 lineage PK만 읽도록 바꿨다. 라벨 1개의 MIN 호출은 1회이고 동일 index에서도 buffer가 15,091→8로 줄었다. 101 Entry에서는 hash join이 MIN 식을 Entry당 두 번 평가해 202회였다. 이는 source fan-out 대신 표시 Entry 수에 비례하는 반복이다. 회귀도 Entry 수의 두 배 이내를 허용하며 join 방식을 강제하지 않는다. SQL 횟수·Entity 적재 상한만 확인한 기존 검증으로는 이 반복을 발견할 수 없었다.
+BE-034의 계보 projection은 Entity 적재를 없앴지만, 기존 쿼리는 결과에 연결된 source마다 같은 `MIN(id)`를 실행했다. V41 이후에도 source 5,000개에서 subplan을 5,000번 호출했다. [Repository](../../backend/src/main/java/com/greenhouse/backend/farm/repository/transformation/OrchidGroupLineageRepository.java)는 표시 Entry에서 MIN을 찾고 선택된 lineage PK만 읽도록 바꿨다. 라벨 1개의 MIN 호출은 1회이고 동일 index에서도 buffer가 15,091→8로 줄었다. 101 Entry에서는 hash join이 MIN 식을 Entry당 두 번 평가해 202회였다. 이는 source fan-out 대신 표시 Entry 수에 비례하는 반복이다. 회귀도 Entry 수의 두 배 이내를 허용하며 join 방식을 강제하지 않는다. SQL 횟수·Entity 적재 상한만 확인한 기존 검증으로는 이 반복을 발견할 수 없었다.
 
 최초 ID의 relation type, 출력 순서, 누락된 계보의 라벨 없음과 graph JSON 계약을 유지한다. 외부 모듈의 테이블을 production SQL로 읽는 경계를 추가하지 않았다. 쓰기 transaction·잠금 순서·접수·감사·snapshot은 유지하며 응답 schema는 바뀌지 않는다.
 
@@ -66,7 +68,7 @@ BE-034의 계보 projection은 Entity 적재를 없앴지만, 기존 쿼리는 �
 
 양수 수량 200개를 `quantity + 1, version + 1`로 변경하고 savepoint로 되돌리는 native 표본에서 50,000 root의 WAL이 **129,072→177,429 bytes**, shared buffer 접근은 **2,968→4,653**이었다. 각각 한 번 관측한 값이며 생성/rollback 뒤의 dead tuple·캐시 상태도 다르다. index별 비용을 분리하거나 실제 Mutation 처리량 감소율을 입증한 실험은 아니다. 활성 partial의 predicate가 quantity에 의존하므로 양수→양수 변경도 HOT update 자격을 잃을 수 있다. 조회 개선을 쓰기 비용 감소로 설명하지 않는다. 운영에서는 조회 빈도·수량 갱신 부하와 WAL·HOT 비율·index 크기를 함께 확인한다.
 
-V41은 일반 `CREATE INDEX`를 한 Flyway transaction으로 적용한다. 쓰기 중지 시간을 확보해야 하며 온라인 무중단 생성으로 취급하지 않는다. `lock_timeout=5s`는 **잠금 획득 대기**, `statement_timeout=5min`은 **각 statement**에 적용된다. 전체 migration 시간이나 획득한 잠금의 유지 시간을 5초/5분으로 제한하지 않는다. 실패하면 transaction 전체가 rollback된다. [배포 절차](../docs/07-deployment.md#조회-index-점검과-v41-적용)를 따른다.
+V41은 일반 `CREATE INDEX`를 한 Flyway transaction으로 적용한다. 쓰기 중지 시간을 확보해야 하며 온라인 무중단 생성으로 취급하지 않는다. `lock_timeout=5s`는 **잠금 획득 대기**, `statement_timeout=5min`은 **각 statement**에 적용된다. 전체 migration 시간이나 획득한 잠금의 유지 시간을 5초/5분으로 제한하지 않는다. 실패하면 transaction 전체가 rollback된다. [배포 절차](../../docs/07-deployment.md#조회-index-점검과-v41-적용)를 따른다.
 
 ## 재현과 회귀 방어
 
@@ -77,4 +79,4 @@ cd backend
 
 결과는 ignored `backend/build/work-query-plans/persistence-{1000,50000}.json`이다. 실제 SQL·index 정의/크기·estimate/actual rows·loops·sort·buffer·WAL을 남긴다. 큰 fixture의 선택적 참조/최신 page는 buffer 150 미만 및 이전 계획의 절반 미만을 요구한다. 작은 fixture는 같은 계획을 강제하지 않는다. 계보는 표시 Entry 수 기준 MIN 호출·buffer 상한, 기존 쿼리와의 큰 fixture 차이를 검사한다. 특정 index 이름·node 종류·밀리초를 성능 정답으로 고정하지 않는다.
 
-기존 query-count/Entity 적재 회귀 및 Work/Search benchmark는 별도의 목적을 유지한다. 이번 계획 검증은 SQL 횟수 gate를 대체하지 않는다. 운영 버전·행 분포·통계·설정·경쟁 쓰기·cold cache·반복 latency/peak heap 측정은 남는다. 운영 점검용 [read-only inventory](../scripts/performance/inspect-backend-indexes.sql)는 테이블 추정 행 수/ANALYZE 시점·실제 FK 선두 index·유효성·사용량·크기를 제공하며 실제 PostgreSQL에서 실행을 검증한다.
+기존 query-count/Entity 적재 회귀 및 Work/Search benchmark는 별도의 목적을 유지한다. 이번 계획 검증은 SQL 횟수 gate를 대체하지 않는다. 운영 버전·행 분포·통계·설정·경쟁 쓰기·cold cache·반복 latency/peak heap 측정은 남는다. 운영 점검용 [read-only inventory](../../scripts/performance/inspect-backend-indexes.sql)는 테이블 추정 행 수/ANALYZE 시점·실제 FK 선두 index·유효성·사용량·크기를 제공하며 실제 PostgreSQL에서 실행을 검증한다.

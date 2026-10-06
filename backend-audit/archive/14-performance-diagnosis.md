@@ -1,5 +1,7 @@
 # 정산·원장 지연 원인 조사
 
+> 보관 문서: 당시 코드·감사·검증 이력이며 현재 구현의 기준이 아니다. 미해결/운영 검증/보류 상태는 [현재 작업 목록](../10-remediation-progress.md)을 따른다.
+
 2026-10-06. [standard 전후 측정](13-domain-performance-results.md)의 501정산 초기화, 오류 5,000건 대사, Work 참조 대사를 실제 application 호출·PostgreSQL 계획·JFR로 조사했다. 운영 코드·index·transaction·보류 중인 RECONCILIATION 정책은 변경하지 않았다.
 
 ## 판정
