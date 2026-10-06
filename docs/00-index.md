@@ -68,9 +68,7 @@ docs/
 | `api/DOMAIN_RULES.md` | API만으로 판단하기 어려운 도메인 규칙 |
 | `api/API_GAP_ANALYSIS.md` | 과거 초안과 현재 구현 API의 차이 |
 | `scripts/data-audit/audit-event-analysis.sql` | 운영 변경 감사 이벤트 조회 예시 |
-| `scripts/data-audit/orchid-history-migration-profile.sql` | complete state-chain manifest 근거와 gap 분석 |
-| `scripts/data-audit/normalize_orchid_state_chain_manifest.py` | profiler manifest를 Engine import 계약으로 정규화·검증 |
-| `scripts/data-audit/orchid-state-chain-migration-manifest.json` | 검토된 복원 DB rehearsal import artifact |
+| `archive/plans/orchid-state-chain-migration-manifest.json` | 완료된 과거 이관의 근거 artifact. 현재 실행 입력 아님 |
 
 ## 기능·운영 특화 문서
 
@@ -79,7 +77,7 @@ docs/
 | [`features/sales-auction-settlement.md`](features/sales-auction-settlement.md) | 판매, 경매 출하, 정산, 입금 정책 |
 | [`features/authentication.md`](features/authentication.md) | 세션 인증·인가와 데모 인증 |
 | [`features/work-operation-and-orchid-collection.md`](features/work-operation-and-orchid-collection.md) | 작업 실행, 대상 스냅샷, 그룹·전파 정책 |
-| [`features/orchid-group-mutation-transition.md`](features/orchid-group-mutation-transition.md) | 난 묶음 Mutation Engine 전환 코드의 수명과 제거 inventory |
+| [`features/orchid-group-mutation-transition.md`](features/orchid-group-mutation-transition.md) | 난 묶음 단일 writer·원장 보존·복원 경계 |
 | [`features/backend-refactoring-plan.md`](features/backend-refactoring-plan.md) | 전체 13개 백엔드 모듈의 현황 진단, 확장 경계와 단계별 리팩터링 계획 |
 | [`features/orchid-group-mutation-refactoring-detail.md`](features/orchid-group-mutation-refactoring-detail.md) | 전체 계획에 포함된 Mutation Engine 및 호출부의 상세 변경·검증 계획 |
 | [`features/demo-operations.md`](features/demo-operations.md) | 운영 PC의 데모 DB·Kubernetes·초기화·모니터링 절차 |

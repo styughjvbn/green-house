@@ -4,16 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
@@ -49,8 +46,7 @@ class InboundPottingContractPostgresE2ETest extends WorkE2ETestBase {
   @Autowired InboundPottingPlanService plans;
   @Autowired WorkOperationProgressService progress;
   @Autowired OrchidGroupRepository groups;
-  @Autowired OrchidGroupStateChainMigrationService migration;
-  @Autowired OrchidGroupLedgerCutoverService cutover;
+  @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
 
   private long inboundId;
@@ -62,8 +58,8 @@ class InboundPottingContractPostgresE2ETest extends WorkE2ETestBase {
     var scenario = seeder.seedContractScenario();
     zoneId = scenario.bedZoneId();
     var key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, DATE, "1.0.0");
-    cutover.execute(new OrchidGroupLedgerCutoverCommand(key, DATE, "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, DATE, "1.0.0");
+    ledgerFixture.activate(key);
     long variety =
         jdbc.queryForObject(
             "select variety_id from orchid_groups where id = ?",

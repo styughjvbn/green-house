@@ -7,12 +7,7 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
@@ -24,6 +19,7 @@ import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import jakarta.persistence.EntityManagerFactory;
 import java.security.MessageDigest;
 import java.time.LocalDate;
@@ -57,9 +53,7 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
   @Autowired private WorkTestDataSeeder seeder;
   @Autowired private BusinessPartnerRepository partners;
   @Autowired private JdbcTemplate jdbc;
-  @Autowired private OrchidGroupStateChainMigrationService migration;
-  @Autowired private OrchidGroupLedgerCutoverService cutover;
-  @Autowired private OrchidGroupRepository groups;
+  @Autowired private OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired private SalesSlipCreationService creation;
   @Autowired private SalesSlipStatusService statuses;
   @Autowired private PlatformTransactionManager transactionManager;
@@ -80,8 +74,8 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
                     "판매 생성 " + UUID.randomUUID(), PartnerType.WHOLESALE, null, null, null, null))
             .getId();
     var key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, DATE, "1.0.0");
-    cutover.execute(new OrchidGroupLedgerCutoverCommand(key, DATE, "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, DATE, "1.0.0");
+    ledgerFixture.activate(key);
   }
 
   @Test

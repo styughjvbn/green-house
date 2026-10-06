@@ -32,7 +32,6 @@ CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkEffectResults$Tra
 CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkExecutionResult.<init>(java.lang.String, com.greenhouse.backend.work.application.effect.WorkEffectResultDetails, java.util.List, com.greenhouse.backend.work.application.effect.WorkMutationLink)
 CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkMutationLink.<init>(java.lang.Long, java.util.UUID)
 CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.<init>(java.lang.String, java.lang.String, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.String, java.lang.Integer, java.lang.String, java.lang.Long, java.math.BigDecimal, java.math.BigDecimal)
-CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkStateChainMutationLinkCommand.<init>(java.lang.Long, java.lang.Long, java.util.UUID)
 CONSTRUCTOR	com.greenhouse.backend.work.application.operation.PottingVoidPort$Inspection.<init>(java.util.List, java.util.List)
 CONSTRUCTOR	com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand.<init>(java.lang.Long, java.time.LocalDate, java.lang.Long, java.lang.String, java.lang.Integer, java.lang.String, java.util.Map, java.util.List, java.lang.String, java.lang.String, java.util.Map)
 CONSTRUCTOR	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Blocker.<init>(java.lang.String, java.lang.String, long)
@@ -300,8 +299,6 @@ METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehea
 METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.incompleteMutationLinkEffectIds()
 METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.invalidExecutionIds()
 METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.targetOrchidGroupIds()
-METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupStateChainMigrationService.linkMutations(java.util.List)
-METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupStateChainMigrationService.resolveSources(java.util.Collection)
 METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.actualBedZoneId()
 METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.actualEndPosition()
 METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.actualQuantity()
@@ -309,8 +306,6 @@ METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.
 METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.actualStatus()
 METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.reason()
 METHOD	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.workDate()
-METHOD	com.greenhouse.backend.work.application.effect.WorkStateChainMutationSource.effectKey()
-METHOD	com.greenhouse.backend.work.application.effect.WorkStateChainMutationSource.workOperationId()
 METHOD	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService.executeVarietyHistoryForTarget(java.lang.String, java.lang.String, java.lang.String, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.Long, java.util.Map, com.greenhouse.backend.work.application.effect.WorkEffectPayload)
 METHOD	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService.getStructureChangeResultOrchidGroupIds(java.lang.Long, java.lang.String)
 METHOD	com.greenhouse.backend.work.application.operation.InboundPottingOperationService.executeNow(com.greenhouse.backend.work.application.effect.InboundPottingCommand)
@@ -452,10 +447,7 @@ TYPE	com.greenhouse.backend.work.application.effect.WorkMutationLink
 TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector
 TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport
 TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference
-TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupStateChainMigrationService
 TYPE	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand
-TYPE	com.greenhouse.backend.work.application.effect.WorkStateChainMutationLinkCommand
-TYPE	com.greenhouse.backend.work.application.effect.WorkStateChainMutationSource
 TYPE	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService
 TYPE	com.greenhouse.backend.work.application.operation.InboundPottingOperationService
 TYPE	com.greenhouse.backend.work.application.operation.InboundPottingVoidPort

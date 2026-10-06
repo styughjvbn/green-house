@@ -3,7 +3,6 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.auction.application.AuctionTrackingService;
 import com.greenhouse.backend.auction.application.RecordAuctionResultCommand;
 import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
@@ -11,10 +10,7 @@ import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.domain.AuctionResultLineInput;
 import com.greenhouse.backend.auction.dto.AuctionLotStatusRequest;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
@@ -30,6 +26,7 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipAction;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
@@ -64,8 +61,7 @@ class AuctionShipmentCancellationPostgresE2ETest extends WorkE2ETestBase {
   @Autowired private SalesSlipStatusService statuses;
   @Autowired private SalesQueryService sales;
   @Autowired private AuctionTrackingService auctions;
-  @Autowired private OrchidGroupStateChainMigrationService migration;
-  @Autowired private OrchidGroupLedgerCutoverService cutover;
+  @Autowired private OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired private OrchidGroupLedgerReconciliationService reconciliation;
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private EntityManager entityManager;
@@ -81,8 +77,8 @@ class AuctionShipmentCancellationPostgresE2ETest extends WorkE2ETestBase {
     seeder.resetKeepingSequences();
     groupId = seeder.seedContractScenario().orchidGroupId();
     UUID key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, DATE, "1.0.0");
-    cutover.execute(new OrchidGroupLedgerCutoverCommand(key, DATE, "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, DATE, "1.0.0");
+    ledgerFixture.activate(key);
     var partner =
         partners.saveAndFlush(
             new BusinessPartner("경매 취소 " + key, PartnerType.AUCTION_HOUSE, null, null, null, null));

@@ -1,5 +1,7 @@
 # 2026-09-08 Engine 전환 검증
 
+> 과거 이관 검증 기록. 2026-10-06에 이관·활성화 실행 도구를 제거했으며 현재 실행 절차가 아니다.
+
 사용자가 최신 백업으로 데이터를 재구성하고 추가 대기 없이 전환·안정화를 진행하도록
 승인했다. 저장소에서 확인한 최신 백업을 PostgreSQL 18의 별도 DB에 복원했다.
 기존 로컬 DB와 운영 Kubernetes에는 쓰지 않았다.
@@ -8,7 +10,7 @@
 
 - 입력: `temp/green-house_20260826_030001.dump.gz` (Flyway V20)
 - 입력 SHA-256: `4b243c7bd095109bcc31018f1fa53acd50902cd569c63d591b872b09a87412dc`
-- manifest: `scripts/data-audit/orchid-state-chain-migration-manifest.json`, schema 2
+- manifest: `docs/archive/plans/orchid-state-chain-migration-manifest.json`, schema 2
 - cutover key: `deb9b0c1-d3a1-4b91-8a5e-202609080001`
 - 적용 업무일: `2026-09-08`, 최소 writer version: `2.0.0`
 - Flyway V21~V26 적용과 Hibernate 검증 성공. 기존 V1~V24 파일 수정 없음.

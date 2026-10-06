@@ -24,10 +24,6 @@ class OrchidGroupWriterArchitectureTest {
   private static final Set<String> TARGET_DIRECT_STATE_WRITER_INVENTORY =
       Set.of("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine");
 
-  private static final Set<String> RECOVERY_DIRECT_STATE_WRITER_INVENTORY =
-      Set.of(
-          "com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService");
-
   private static final Set<String> TARGET_CONSTRUCTOR_WRITER_INVENTORY =
       Set.of("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine");
 
@@ -53,14 +49,16 @@ class OrchidGroupWriterArchitectureTest {
         .doesNotContain(
             "OrchidGroupMutationRoutingPolicy",
             "OrchidGroupLedgerWriterMode",
-            "OrchidGroupReservationService");
+            "OrchidGroupReservationService",
+            "OrchidGroupStateChainMigrationService",
+            "OrchidGroupLedgerCutoverService",
+            "OrchidGroupLedgerPreparationService");
   }
 
   @Test
   void directStateMutationCallersMatchTheLifecycleInventories() {
     assertThat(EntityWriterInspection.stateCallers(APPLICATION_CLASSES, OrchidGroup.class))
-        .containsExactlyInAnyOrderElementsOf(
-            union(TARGET_DIRECT_STATE_WRITER_INVENTORY, RECOVERY_DIRECT_STATE_WRITER_INVENTORY));
+        .containsExactlyInAnyOrderElementsOf(TARGET_DIRECT_STATE_WRITER_INVENTORY);
   }
 
   @Test

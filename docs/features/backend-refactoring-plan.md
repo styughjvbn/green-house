@@ -1155,7 +1155,7 @@ V24 운영 적용 순서는 [배포 문서](../07-deployment.md)에 반영했다
 같은 비웹 기동 방식의 Flyway·Hibernate 검증은 복원 PostgreSQL에서 실행했다.
 
 복원·ACTIVE·API smoke·사후 대사와 산출물은
-[Engine 전환 검증](orchid-engine-cutover-20260908.md)에 기록했다. 깨끗한 전환 DB와
+[Engine 전환 검증](../archive/plans/orchid-engine-cutover-20260908.md)에 기록했다. 깨끗한 전환 DB와
 검증용 복제 DB를 분리했다. 기존 로컬 DB 교체·운영 Kubernetes 배포는 실행하지 않았다.
 키 없는 계획·일반 기록의 신규 멱등 요청 계약, request correlation 확장은 현재
 구현 범위를 넘어서는 별도 API 변경이며 이번 완료 범위에 포함하지 않는다.

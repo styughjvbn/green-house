@@ -62,16 +62,6 @@ public final class OrchidGroupMutationSources {
         "SALES_SLIP:" + salesSlipId);
   }
 
-  public static OrchidGroupMutationSource migration(
-      String sourceType, String referenceId, String operationKey) {
-    return stable(
-        OrchidGroupMutationSourceDomain.MIGRATION,
-        sourceType,
-        referenceId,
-        operationKey,
-        sourceType + ":" + referenceId);
-  }
-
   private static OrchidGroupMutationSource stable(
       OrchidGroupMutationSourceDomain domain,
       String sourceType,

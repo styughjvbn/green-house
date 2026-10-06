@@ -4,14 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.support.MovementTestSupport;
 import com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.application.operation.WorkOperationVoidService;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationRequest;
 import java.math.BigDecimal;
@@ -49,9 +46,7 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired OrchidGroupRepository groups;
 
-  @Autowired OrchidGroupStateChainMigrationService migration;
-
-  @Autowired OrchidGroupLedgerCutoverService cutover;
+  @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
 
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
 
@@ -83,11 +78,8 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
             Long.class,
             scenario.orchidGroupId());
     UUID key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        migration, groups, key, LocalDate.of(2026, 8, 20), "1.0.0");
-    cutover.execute(
-        new OrchidGroupLedgerCutoverCommand(
-            key, LocalDate.of(2026, 8, 20), "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, LocalDate.of(2026, 8, 20), "1.0.0");
+    ledgerFixture.activate(key);
     Long second = createGroup(zone, 50, 6, 8);
     sourceIds = List.of(scenario.orchidGroupId(), second);
     Long outsideId =
@@ -504,11 +496,8 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
             Long.class,
             scenario.orchidGroupId());
     UUID key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        migration, groups, key, LocalDate.of(2026, 8, 20), "1.0.0");
-    cutover.execute(
-        new OrchidGroupLedgerCutoverCommand(
-            key, LocalDate.of(2026, 8, 20), "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, LocalDate.of(2026, 8, 20), "1.0.0");
+    ledgerFixture.activate(key);
     Long destination =
         jdbc.queryForObject(
             "SELECT id FROM bed_zones WHERE id <> ? ORDER BY id LIMIT 1", Long.class, zone);

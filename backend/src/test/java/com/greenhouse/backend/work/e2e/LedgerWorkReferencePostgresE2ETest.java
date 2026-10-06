@@ -5,11 +5,10 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.reset;
 
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.support.JdbcMeasurement;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
 import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
 import jakarta.persistence.EntityManagerFactory;
@@ -32,8 +31,7 @@ class LedgerWorkReferencePostgresE2ETest extends WorkE2ETestBase {
   @Autowired WorkTestDataSeeder seeder;
   @Autowired JdbcTemplate jdbc;
   @Autowired BusinessPartnerRepository partners;
-  @Autowired OrchidGroupRepository groups;
-  @Autowired OrchidGroupStateChainMigrationService migration;
+  @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
   @Autowired EntityManagerFactory emf;
   @Autowired JdbcMeasurement measurement;
@@ -43,7 +41,7 @@ class LedgerWorkReferencePostgresE2ETest extends WorkE2ETestBase {
 
   private void fixture(int count) {
     reset(inspector);
-    new DomainPerformanceFixture(jdbc, seeder, partners, groups, migration)
+    new DomainPerformanceFixture(jdbc, seeder, partners, ledgerFixture)
         .ledger(1, count, true, false);
   }
 

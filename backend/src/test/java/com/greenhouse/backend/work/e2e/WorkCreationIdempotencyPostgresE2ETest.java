@@ -6,12 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.application.operation.WorkOperationRelationQueryService;
@@ -57,9 +53,7 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
   @Autowired private WorkOperationRelationQueryService relations;
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private EntityManagerFactory entityManagerFactory;
-  @Autowired private OrchidGroupStateChainMigrationService migration;
-  @Autowired private OrchidGroupLedgerCutoverService cutover;
-  @Autowired private OrchidGroupRepository groups;
+  @Autowired private OrchidGroupLedgerTestFixture ledgerFixture;
   private Long otherGroupId;
   private Long repotTypeId;
   private Long groupId;
@@ -92,8 +86,8 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
             variety,
             groupId);
     var key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, DATE, "1.0.0");
-    cutover.execute(new OrchidGroupLedgerCutoverCommand(key, DATE, "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, DATE, "1.0.0");
+    ledgerFixture.activate(key);
   }
 
   @Test

@@ -4,15 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.reset;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationFingerprint;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
 import jakarta.persistence.EntityManagerFactory;
 import java.time.LocalDate;
@@ -40,7 +39,7 @@ class LedgerReconciliationStreamPostgresE2ETest extends WorkE2ETestBase {
   @Autowired WorkTestDataSeeder seeder;
   @Autowired JdbcTemplate jdbc;
   @Autowired OrchidGroupRepository groups;
-  @Autowired OrchidGroupStateChainMigrationService migration;
+  @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
   @Autowired OrchidGroupMutationFingerprint fingerprint;
   @Autowired EntityManagerFactory emf;
@@ -179,7 +178,7 @@ class LedgerReconciliationStreamPostgresE2ETest extends WorkE2ETestBase {
   }
 
   private void importBaseline() {
-    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, cutover, DATE, "1.0.0");
+    ledgerFixture.seedBaseline(cutover, DATE, "1.0.0");
   }
 
   private void extendChain(int count) {

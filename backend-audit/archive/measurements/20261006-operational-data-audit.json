@@ -1168,5 +1168,50 @@
       "fullPostgresqlSuiteRerun": false,
       "benchmarkRerun": false
     }
+  },
+  "afterOperatorToolsRemoval": {
+    "postgresVersion": "14.24",
+    "backupSha256": "06be57e9a0998738866b040bcdb28d7d4a9acd7fe655688069d37c595622eac5",
+    "productionDatabaseModified": false,
+    "originalTablesPreserved": 47,
+    "rowHashesIdentical": true,
+    "retainedCliVerification": {
+      "orchidLedgerReconcile": {
+        "exitCode": 0,
+        "stage": "ACTIVE",
+        "ready": true,
+        "issues": [],
+        "orchidGroupCount": 320,
+        "mutationCount": 377,
+        "entryCount": 474
+      },
+      "orchidLedgerStartupVerify": {
+        "exitCode": 0
+      }
+    },
+    "runtimeJarExcludesRemovedOperatorsAndTestFixture": true,
+    "archivedManifestPreserved": true,
+    "temporaryVerificationContainerRemoved": true,
+    "regressionVerification": {
+      "test": {
+        "classes": 142,
+        "tests": 741,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "workE2eTest": {
+        "classes": 77,
+        "tests": 788,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "testHeapGiB": 2,
+      "repositoryHeapConfigurationChanged": false,
+      "frontendCheck": "passed",
+      "bootJar": "passed",
+      "benchmarkRerun": false
+    }
   }
 }

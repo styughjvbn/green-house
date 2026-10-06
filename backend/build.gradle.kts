@@ -100,22 +100,6 @@ tasks.register<JavaExec>("orchidLedgerReconcile") {
 	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationCli")
 }
 
-tasks.register<JavaExec>("orchidLedgerCutover") {
-	group = "verification"
-	description = "Verifies the imported OrchidGroup state-chain and optionally activates it."
-	dependsOn(tasks.named("classes"))
-	classpath = sourceSets["main"].runtimeClasspath
-	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCli")
-}
-
-tasks.register<JavaExec>("orchidStateChainMigrate") {
-	group = "verification"
-	description = "Validates or imports the complete OrchidGroup state-chain manifest."
-	dependsOn(tasks.named("classes"))
-	classpath = sourceSets["main"].runtimeClasspath
-	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationCli")
-}
-
 tasks.register<JavaExec>("orchidLedgerStartupVerify") {
 	group = "verification"
 	description = "Runs Hibernate validation and the OrchidGroup ledger startup guard without HTTP."

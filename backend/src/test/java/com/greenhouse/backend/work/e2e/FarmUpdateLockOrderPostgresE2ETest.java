@@ -5,17 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import com.greenhouse.backend.farm.domain.variety.Variety;
@@ -23,8 +19,8 @@ import com.greenhouse.backend.farm.dto.orchid.OrchidGroupBatchUpdateItem;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupBatchUpdateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.math.BigDecimal;
@@ -57,10 +53,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @TestPropertySource(properties = "app.orchid-ledger.writer-version=1.1.0")
 class FarmUpdateLockOrderPostgresE2ETest extends WorkE2ETestBase {
   @Autowired private WorkTestDataSeeder seeder;
-  @Autowired private OrchidGroupRepository groups;
   @Autowired private OrchidGroupCommandService commands;
-  @Autowired private OrchidGroupStateChainMigrationService migration;
-  @Autowired private OrchidGroupLedgerCutoverService cutover;
+  @Autowired private OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired private OrchidGroupLedgerReconciliationService reconciliation;
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private EntityManager entityManager;
@@ -100,10 +94,8 @@ class FarmUpdateLockOrderPostgresE2ETest extends WorkE2ETestBase {
     jdbc.update("UPDATE orchid_groups SET pot_size = ?", PotSizeCode.POT_3_5.getDisplayValue());
     assertThat(high).isGreaterThan(low);
     var key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        migration, groups, key, LocalDate.of(2045, 1, 1), "1.0.0");
-    cutover.execute(
-        new OrchidGroupLedgerCutoverCommand(key, LocalDate.of(2045, 1, 1), "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, LocalDate.of(2045, 1, 1), "1.0.0");
+    ledgerFixture.activate(key);
     jdbc.execute("TRUNCATE audit_events CONTINUE IDENTITY");
   }
 

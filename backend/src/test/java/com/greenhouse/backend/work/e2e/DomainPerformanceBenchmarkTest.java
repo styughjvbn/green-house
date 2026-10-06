@@ -4,13 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationReport;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.settlement.application.AuctionSettlementRebuildService;
 import com.greenhouse.backend.support.BenchmarkRuntimeMeasurement;
 import com.greenhouse.backend.support.JdbcMeasurement;
 import com.greenhouse.backend.support.JdbcTransactionMeasurement;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.sun.management.OperatingSystemMXBean;
 import jakarta.persistence.EntityManagerFactory;
 import java.lang.management.ManagementFactory;
@@ -47,7 +47,7 @@ class DomainPerformanceBenchmarkTest extends WorkE2ETestBase {
   @Autowired DataSource dataSource;
   @Autowired BusinessPartnerRepository partners;
   @Autowired OrchidGroupRepository groups;
-  @Autowired OrchidGroupStateChainMigrationService migration;
+  @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired AuctionSettlementRebuildService rebuild;
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
   @Autowired EntityManagerFactory emf;
@@ -80,7 +80,7 @@ class DomainPerformanceBenchmarkTest extends WorkE2ETestBase {
         if (!connection.getMetaData().getURL().equals(POSTGRES.getJdbcUrl()))
           throw new IllegalStateException("Domain benchmark requires its Testcontainers database");
       }
-      var fixture = new DomainPerformanceFixture(jdbc, seeder, partners, groups, migration);
+      var fixture = new DomainPerformanceFixture(jdbc, seeder, partners, ledgerFixture);
       for (Case scenario : cases(profile)) {
         if (!selection.equals("all") && !selection.equals(scenario.family())) continue;
         var result = new LinkedHashMap<String, Object>();

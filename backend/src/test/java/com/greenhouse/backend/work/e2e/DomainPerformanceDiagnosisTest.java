@@ -10,13 +10,12 @@ import com.greenhouse.backend.auction.application.AuctionDataReader;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationReport;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationFingerprint;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.settlement.application.AuctionSettlementRebuildService;
 import com.greenhouse.backend.support.BenchmarkRuntimeMeasurement;
 import com.greenhouse.backend.support.JdbcMeasurement;
 import com.greenhouse.backend.support.JdbcTransactionMeasurement;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.zaxxer.hikari.HikariDataSource;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -85,8 +84,7 @@ class DomainPerformanceDiagnosisTest {
   @Autowired JdbcTemplate jdbc;
   @Autowired DataSource source;
   @Autowired BusinessPartnerRepository partners;
-  @Autowired OrchidGroupRepository groups;
-  @Autowired OrchidGroupStateChainMigrationService migration;
+  @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired AuctionSettlementRebuildService rebuild;
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
   @Autowired JdbcMeasurement counters;
@@ -129,7 +127,7 @@ class DomainPerformanceDiagnosisTest {
             "com.zaxxer.hikari")) {
       logging.setLogLevel(logger, LogLevel.WARN);
     }
-    var fixture = new DomainPerformanceFixture(jdbc, seeder, partners, groups, migration);
+    var fixture = new DomainPerformanceFixture(jdbc, seeder, partners, ledgerFixture);
     try {
       for (String mode :
           scope.equals("ledger") || scope.equals("work")

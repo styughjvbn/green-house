@@ -99,18 +99,6 @@ public class OrchidGroupLedgerCoverage {
     this.minimumWriterVersion = minimumWriterVersion.trim();
   }
 
-  public boolean hasSamePreparation(
-      int engineSchemaVersion,
-      int snapshotSchemaVersion,
-      LocalDate effectiveBusinessDate,
-      String minimumWriterVersion) {
-    return this.engineSchemaVersion == engineSchemaVersion
-        && this.snapshotSchemaVersion == snapshotSchemaVersion
-        && this.effectiveBusinessDate.equals(effectiveBusinessDate)
-        && this.minimumWriterVersion.equals(
-            minimumWriterVersion == null ? null : minimumWriterVersion.trim());
-  }
-
   public void startImport(Instant startedAt) {
     if (status != OrchidGroupLedgerCoverageStatus.PREPARING || startedAt == null) {
       throw new IllegalStateException("PREPARING coverage만 state-chain 적재를 시작할 수 있습니다.");

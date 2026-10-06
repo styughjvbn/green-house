@@ -5,12 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.doAnswer;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
@@ -32,6 +28,7 @@ import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import jakarta.persistence.EntityManager;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -82,9 +79,7 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired private SalesQueryService queries;
 
-  @Autowired private OrchidGroupStateChainMigrationService migration;
-
-  @Autowired private OrchidGroupLedgerCutoverService cutover;
+  @Autowired private OrchidGroupLedgerTestFixture ledgerFixture;
 
   @Autowired private OrchidGroupLedgerReconciliationService reconciliation;
 
@@ -657,8 +652,8 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
     // Import a pre-cutover fixture, then exercise the real PostgreSQL write fence.
     assertThat(reconciliation.reconcile().issues()).isEmpty();
     var key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, DATE, "1.0.0");
-    cutover.execute(new OrchidGroupLedgerCutoverCommand(key, DATE, "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, DATE, "1.0.0");
+    ledgerFixture.activate(key);
   }
 
   @Test

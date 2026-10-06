@@ -1,7 +1,7 @@
 # Mutation Engine 및 호출부 리팩터링 상세
 
 > 2026-09-08 후속 적용: 키가 있는 Work 요청 멱등성과 Legacy writer 제거를 완료하는 변경을 진행했다.
-> 최신 구현·복원 근거는 [전환 검증](orchid-engine-cutover-20260908.md)과
+> 최신 구현·복원 근거는 [전환 검증](../archive/plans/orchid-engine-cutover-20260908.md)과
 > [코드·복구 수명](orchid-group-mutation-transition.md)을 기준으로 한다. 아래 발견·계획은 당시 기록이다.
 
 - 작성일: 2026-09-05
@@ -164,7 +164,7 @@ correction operation의 lazy loading도 함께 계측한다. 단순히 effect �
 
 ### F8. importer와 상시 대사의 수명·검증·조회 책임이 한 패키지에 혼재 — P1/P2
 
-근거: [StateChainMigrationService](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupStateChainMigrationService.java), [LedgerReconciliationService](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupLedgerReconciliationService.java).
+근거: 당시 StateChainMigrationService(2026-10-06 제거), [LedgerReconciliationService](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupLedgerReconciliationService.java).
 
 - importer에 입력 검증, source 해석, chain 검증, replay 검증, 적재, Work/Lineage 연결과 coverage 관리가 함께 있다.
 - importer의 `validateChains`와 대사의 `inspectLedger`가 연속 revision·snapshot·terminal 조건을 각각 해석한다.

@@ -1,11 +1,9 @@
 package com.greenhouse.backend.work.e2e;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import java.time.LocalDate;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,20 +15,17 @@ final class DomainPerformanceFixture {
   private final JdbcTemplate jdbc;
   private final WorkTestDataSeeder seeder;
   private final BusinessPartnerRepository partners;
-  private final OrchidGroupRepository groups;
-  private final OrchidGroupStateChainMigrationService migration;
+  private final OrchidGroupLedgerTestFixture ledgerFixture;
 
   DomainPerformanceFixture(
       JdbcTemplate jdbc,
       WorkTestDataSeeder seeder,
       BusinessPartnerRepository partners,
-      OrchidGroupRepository groups,
-      OrchidGroupStateChainMigrationService migration) {
+      OrchidGroupLedgerTestFixture ledgerFixture) {
     this.jdbc = jdbc;
     this.seeder = seeder;
     this.partners = partners;
-    this.groups = groups;
-    this.migration = migration;
+    this.ledgerFixture = ledgerFixture;
   }
 
   void reset() {
@@ -92,8 +87,7 @@ final class DomainPerformanceFixture {
         GROUP_BASE,
         count - 1);
     UUID correlation = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        migration, groups, correlation, DATE, "1.0.0");
+    ledgerFixture.seedBaseline(correlation, DATE, "1.0.0");
     long entries = Math.multiplyExact(count, revisions);
     jdbc.update(
         """

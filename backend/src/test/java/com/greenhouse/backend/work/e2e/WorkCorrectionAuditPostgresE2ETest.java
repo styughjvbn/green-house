@@ -7,15 +7,12 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionPlan;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionPort;
@@ -63,9 +60,7 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
 
-  @Autowired OrchidGroupStateChainMigrationService migration;
-
-  @Autowired OrchidGroupLedgerCutoverService cutover;
+  @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
 
   @Autowired OrchidGroupRepository groups;
 
@@ -79,8 +74,8 @@ class WorkCorrectionAuditPostgresE2ETest extends WorkE2ETestBase {
     var scenario = seeder.seedContractScenario();
     var key = UUID.randomUUID();
     var date = LocalDate.of(2026, 8, 20);
-    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, date, "1.0.0");
-    cutover.execute(new OrchidGroupLedgerCutoverCommand(key, date, "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, date, "1.0.0");
+    ledgerFixture.activate(key);
     var plan =
         post(
             "/api/work-operations",

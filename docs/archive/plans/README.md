@@ -6,3 +6,5 @@
 | 보관 문서 | 현행 문서 |
 |---|---|
 | [난 그룹·작업 실행·이력 전파 기능 구현 계획](난-그룹·작업-실행·이력-전파-기능-구현-계획.md) | [작업 실행과 난 그룹 정책](../../features/work-operation-and-orchid-collection.md) |
+
+[과거 Engine 이관 검증](orchid-engine-cutover-20260908.md)과 [승인된 manifest](orchid-state-chain-migration-manifest.json)는 완료된 이관의 근거다. 현재 실행 도구와 계획이 아니며, 복원·대사는 [배포 가이드](../../07-deployment.md)를 따른다.

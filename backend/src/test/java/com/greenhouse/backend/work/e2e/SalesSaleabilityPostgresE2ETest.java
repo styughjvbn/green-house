@@ -3,16 +3,12 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.DerivedOrchidGroupService;
 import com.greenhouse.backend.farm.application.orchid.FarmWorkTargetResolver;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
@@ -33,6 +29,7 @@ import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import jakarta.persistence.EntityManager;
@@ -71,8 +68,7 @@ class SalesSaleabilityPostgresE2ETest extends WorkE2ETestBase {
   @Autowired private BusinessPartnerRepository partners;
   @Autowired private OrchidGroupRepository groups;
   @Autowired private OrchidGroupReader reader;
-  @Autowired private OrchidGroupStateChainMigrationService migration;
-  @Autowired private OrchidGroupLedgerCutoverService cutover;
+  @Autowired private OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired private OrchidGroupMutationEngine engine;
   @Autowired private SalesSlipCreationService creation;
   @Autowired private SalesSlipUpdateService updates;
@@ -332,8 +328,8 @@ class SalesSaleabilityPostgresE2ETest extends WorkE2ETestBase {
 
   private void activate() {
     var key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, DATE, "1.0.0");
-    cutover.execute(new OrchidGroupLedgerCutoverCommand(key, DATE, "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, DATE, "1.0.0");
+    ledgerFixture.activate(key);
   }
 
   private void changeStatus(Long id, String status) {

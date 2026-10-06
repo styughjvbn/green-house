@@ -2,14 +2,11 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
 import java.time.LocalDate;
 import java.util.List;
@@ -22,6 +19,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @Tag("work-e2e")
 abstract class WorkUndoSafetyTestBase extends WorkE2ETestBase {
+  @Autowired OrchidGroupRepository groups;
 
   @Autowired WorkTestDataSeeder seeder;
 
@@ -37,11 +35,7 @@ abstract class WorkUndoSafetyTestBase extends WorkE2ETestBase {
 
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
 
-  @Autowired OrchidGroupStateChainMigrationService migration;
-
-  @Autowired OrchidGroupLedgerCutoverService cutover;
-
-  @Autowired OrchidGroupRepository groups;
+  @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
 
   private long originalId;
 
@@ -53,8 +47,8 @@ abstract class WorkUndoSafetyTestBase extends WorkE2ETestBase {
     var scenario = seeder.seedContractScenario();
     var key = UUID.randomUUID();
     var date = LocalDate.of(2026, 8, 20);
-    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, date, "1.0.0");
-    cutover.execute(new OrchidGroupLedgerCutoverCommand(key, date, "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, date, "1.0.0");
+    ledgerFixture.activate(key);
     var plan =
         post(
             "/api/work-operations",

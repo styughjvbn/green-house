@@ -2,9 +2,8 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import java.time.LocalDate;
 import java.util.List;
@@ -27,7 +26,7 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired private WorkAppliedEffectRepository effectRepository;
 
-  @Autowired private OrchidGroupStateChainMigrationService migrationService;
+  @Autowired private OrchidGroupLedgerTestFixture migrationService;
 
   private WorkTestDataSeeder.ContractScenario scenario;
 
@@ -37,8 +36,7 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
     scenario = seeder.seedContractScenario();
     jdbcTemplate.update(
         "UPDATE orchid_groups SET status = '관리' WHERE id = ?", scenario.orchidGroupId());
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        migrationService, groupRepository, UUID.randomUUID(), LocalDate.of(2026, 8, 20), "1.0.0");
+    migrationService.seedBaseline(UUID.randomUUID(), LocalDate.of(2026, 8, 20), "1.0.0");
   }
 
   @ParameterizedTest

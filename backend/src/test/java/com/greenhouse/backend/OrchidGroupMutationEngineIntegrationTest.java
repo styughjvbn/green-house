@@ -10,7 +10,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGrou
 import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
@@ -28,6 +27,7 @@ import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -40,7 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegrationTest {
 
-  @Autowired OrchidGroupStateChainMigrationService stateChainMigrationService;
+  @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
 
   @Autowired OrchidGroupMutationEngine mutationEngine;
 
@@ -137,12 +137,7 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
     long mutationCountBefore = mutationRepository.count();
     long entryCountBefore = entryRepository.count();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        stateChainMigrationService,
-        orchidGroupRepository,
-        cutoverKey,
-        businessDate,
-        "mutation-engine-test");
+    ledgerFixture.seedBaseline(cutoverKey, businessDate, "mutation-engine-test");
 
     var updated =
         mutationEngine.updateDetails(
@@ -235,15 +230,9 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
     long entryCountBefore = entryRepository.count();
     UUID cutoverKey = UUID.randomUUID();
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
-    var imported =
-        OrchidGroupStateChainTestSupport.importCurrentGroups(
-            stateChainMigrationService,
-            orchidGroupRepository,
-            cutoverKey,
-            businessDate,
-            "mutation-engine-test");
+    var imported = ledgerFixture.seedBaseline(cutoverKey, businessDate, "mutation-engine-test");
 
-    assertThat(imported.importedMutationCount()).isEqualTo(1);
+    assertThat(imported).isEqualTo(1);
     assertThat(entryRepository.findStateChainByOrchidGroupIdIn(List.of(group.getId())))
         .singleElement()
         .satisfies(
@@ -296,12 +285,7 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
     OrchidGroup group = createOrchidGroup(20);
     UUID cutoverKey = UUID.randomUUID();
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        stateChainMigrationService,
-        orchidGroupRepository,
-        cutoverKey,
-        businessDate,
-        "mutation-engine-test");
+    ledgerFixture.seedBaseline(cutoverKey, businessDate, "mutation-engine-test");
     var source =
         new OrchidGroupMutationSource(
             OrchidGroupMutationSourceDomain.WORK,
@@ -332,12 +316,7 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
         createOrchidGroup(fixture, 30, new BigDecimal("2"), new BigDecimal("4"), 2);
     UUID cutoverKey = UUID.randomUUID();
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        stateChainMigrationService,
-        orchidGroupRepository,
-        cutoverKey,
-        businessDate,
-        "mutation-engine-test");
+    ledgerFixture.seedBaseline(cutoverKey, businessDate, "mutation-engine-test");
     long groupCountBefore = orchidGroupRepository.count();
     long mutationCountBefore = mutationRepository.count();
     long entryCountBefore = entryRepository.count();

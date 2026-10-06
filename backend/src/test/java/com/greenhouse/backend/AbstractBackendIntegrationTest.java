@@ -9,6 +9,7 @@ import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptRepository;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;
 import jakarta.persistence.EntityManager;
@@ -16,6 +17,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,6 +29,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(OrchidGroupLedgerTestFixture.class)
 abstract class AbstractBackendIntegrationTest {
 
   @Autowired protected MockMvc mockMvc;

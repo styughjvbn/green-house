@@ -4,7 +4,7 @@
 
 완료된 1~66차 변경·커밋·검증 기록은 [보관된 개선 이력](archive/10-remediation-progress.md)에 있다. 초기 findings는 당시 판정이며 현재 미완료 목록으로 읽지 않는다. 현재 구현 정책은 `docs/`·코드·OpenAPI를 따른다.
 
-**현재 요청 범위: 과거 운영 데이터 불일치·DB 제약 검증과 운영 미적용 V35 조정.** 제공된 최신 백업의 격리 복원본에서 점검을 완료했다. 나머지 개선 구현은 사용자의 직접 코드 검토까지 보류한다. 판매 선택지 등 아래 기술 목록은 이후 재개 후보다.
+**현재 요청 범위: 과거 운영 데이터·DB 제약 검증, V35 조정과 완료된 원장 이관 도구 제거.** 제공된 최신 백업의 격리 복원본에서 점검을 완료했다. 나머지 개선 구현은 사용자의 직접 코드 검토까지 보류한다. 판매 선택지 등 아래 기술 목록은 이후 재개 후보다.
 
 아래는 기술 작업 5묶음·운영 검증 4묶음·정책 판단 3건이다. 미해결 버그 수나 필요 커밋 수가 아니다. 조건부 확장은 현재 필수 구현량에 포함하지 않는다.
 
@@ -37,6 +37,12 @@ V35~V42 SQL 8개는 복원본에서 성공했지만 Flyway 이력은 변경하�
 
 사용자 확인으로 운영 미적용 V35를 직접 수정했다. 수량/금액 부호와 전표 총액 비음수 조건을 제거하고, 품목의 0이 아닌 수량·비음수 단가·BIGINT 곱셈 일치를 유지한다. 현재 대사 inventory는 5개 CHECK다. 같은 운영 백업의 PostgreSQL 14.24 복원본에서 수정 V35~V42 SQL 적용과 5개 CHECK validation이 모두 통과했다. 기존 47개 테이블의 행 해시·건수와 백업 SHA256은 동일하며, 새 결과는 위 증적의 `afterUnappliedV35Revision`에 추가했다. Java 정확 연산과 일반 판매 입력 규칙은 유지한다. **거래 타입·음수 수량·비음수 금액 모델은 [전환 계획](../docs/features/sales-auction-settlement.md#반품-표현-전환-계획--미구현)만 기록하며 구현·과거 금액 변경은 하지 않는다.**
 
+## 완료된 원장 이관 도구 제거
+
+사용자 요청으로 `orchidStateChainMigrate`·`orchidLedgerCutover`와 전용 CLI·적재/활성화 service·Work 이관 API·profiling/정규화 스크립트·전용 시험을 제거했다. Engine·대사·기동 guard·Mutation/Entry/coverage와 Work/Sales/Lineage의 기존 데이터, Flyway는 보존한다. 이관 manifest와 당시 검증 기록은 `docs/archive/plans/`에 보관한다. 업무 회귀·benchmark의 초기 원장 구성은 운영 importer 대신 test source set의 fixture로 전환했고, 기존 schema 보존 시험도 별도 유지했다.
+
+같은 운영 백업의 PostgreSQL 14.24 복원본에서 남긴 대사·기동 검증 CLI가 모두 성공했다. `ACTIVE`, `ready=true`, `issues=[]`, 묶음 320개·Mutation 377개·Entry 474개이며 원본 47개 테이블과 백업 SHA256은 보존됐다. 이 결과는 기존 JSON 증적의 `afterOperatorToolsRemoval`에 추가했다. 현재 release는 ACTIVE 백업 복원·검증을 사용하며 과거 전환 도구의 재실행은 제공하지 않는다.
+
 ## 운영 자료·환경이 필요한 검증
 
 | 작업 | 관련 finding | 필요한 입력과 완료 기준 |
@@ -68,7 +74,7 @@ V35~V42 SQL 8개는 복원본에서 성공했지만 Flyway 이력은 변경하�
 ## 완료·검증 기준
 
 - 원래 BE-001~044의 구현 결과는 보관 이력에서 확인한다. 해당 기록의 과거 “남은 범위”를 현재 미완료로 중복 집계하지 않는다.
-- 최신 일반 검증: V35 조정 후 backend 144개 클래스·748건, frontend `npm run check` 성공. backend 기본 heap 실행은 메모리 부족으로 중단돼 임시 init script의 test heap 2GiB로 재실행해 통과했다. 마지막 전체 PostgreSQL 검증: 59차 76개 클래스·780건 성공. 이후 집중 검증은 보관 이력에 구분돼 있다.
+- 최신 전체 검증: 원장 이관 도구 제거 후 backend 142개 클래스·741건, PostgreSQL `workE2eTest` 77개 클래스·788건, frontend `npm run check` 성공. 실패·오류·skip은 0건이다. backend 시험은 임시 init script의 test heap 2GiB로 실행했으며 repository의 heap 설정은 변경하지 않았다. `bootJar`와 task 목록도 확인해 제거된 운영 도구·test fixture가 배포 JAR에 포함되지 않음을 검증했다.
 - 66차 조회 조사는 정적 코드/소비자/시험 대조다. 조회 개선 구현·새 부하 측정 완료를 의미하지 않는다.
-- 최초 백업 점검은 실제 PostgreSQL 14.24 대사·원장 CLI·DDL 리허설로, 당시에는 제품 코드 변경 없이 전체 시험을 반복하지 않았다. 이후 V35 조정은 PostgreSQL 회귀 3개 클래스·41건과 운영 백업의 CHECK 5개 validation으로 별도 검증했다. 전체 PostgreSQL suite·benchmark는 재실행하지 않았다. HTTP 계약 변경이 없어 OpenAPI·생성 타입은 변경하지 않았다.
+- 최초 백업 점검은 실제 PostgreSQL 14.24 대사·원장 CLI·DDL 리허설로, 당시에는 제품 코드 변경 없이 전체 시험을 반복하지 않았다. 이후 V35 조정은 PostgreSQL 회귀 3개 클래스·41건과 운영 백업의 CHECK 5개 validation으로 별도 검증했다. 이관 도구 제거 후 전체 PostgreSQL suite와 남긴 대사·기동 CLI를 다시 검증했고 benchmark는 재실행하지 않았다. HTTP 계약 변경이 없어 OpenAPI·생성 타입은 변경하지 않았다.
 - 문서 보관을 운영 자료 대사·제약 validation·보류 정책의 완료로 취급하지 않는다.

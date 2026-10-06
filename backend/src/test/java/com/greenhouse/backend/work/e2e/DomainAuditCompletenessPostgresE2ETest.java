@@ -8,11 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupBatchUpdateItem;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupBatchUpdateRequest;
@@ -24,6 +20,7 @@ import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.application.SalesSlipCreationService;
 import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.domain.SalesType;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,8 +50,7 @@ class DomainAuditCompletenessPostgresE2ETest extends WorkE2ETestBase {
   @Autowired private WorkTestDataSeeder seeder;
   @Autowired private JdbcTemplate jdbc;
   @Autowired private OrchidGroupRepository groups;
-  @Autowired private OrchidGroupStateChainMigrationService migration;
-  @Autowired private OrchidGroupLedgerCutoverService cutover;
+  @Autowired private OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired private BusinessPartnerRepository partners;
   @Autowired private MockMvc mockMvc;
   @Autowired private SalesSlipCreationService sales;
@@ -96,8 +92,8 @@ class DomainAuditCompletenessPostgresE2ETest extends WorkE2ETestBase {
             Long.class,
             groupId);
     var key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, DATE, "1.0.0");
-    cutover.execute(new OrchidGroupLedgerCutoverCommand(key, DATE, "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, DATE, "1.0.0");
+    ledgerFixture.activate(key);
     jdbc.execute("TRUNCATE audit_events CONTINUE IDENTITY");
   }
 

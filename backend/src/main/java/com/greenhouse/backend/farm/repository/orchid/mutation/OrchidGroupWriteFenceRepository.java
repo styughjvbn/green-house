@@ -22,12 +22,6 @@ public class OrchidGroupWriteFenceRepository {
     setTransactionContext("MUTATION:" + mutationId);
   }
 
-  public void lockOrchidGroupsForCutover() {
-    if (isPostgresqlDatabase()) {
-      jdbcTemplate.execute("LOCK TABLE orchid_groups IN SHARE ROW EXCLUSIVE MODE");
-    }
-  }
-
   private void setTransactionContext(String context) {
     if (isPostgresqlDatabase()) {
       jdbcTemplate.queryForObject(

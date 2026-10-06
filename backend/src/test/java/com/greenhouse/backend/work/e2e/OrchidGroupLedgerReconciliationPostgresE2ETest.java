@@ -3,19 +3,15 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationStage;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryKind;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -32,15 +28,11 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired private WorkTestDataSeeder seeder;
 
-  @Autowired private OrchidGroupLedgerCutoverService cutoverService;
-
   @Autowired private OrchidGroupLedgerReconciliationService reconciliationService;
 
   @Autowired private OrchidGroupMutationEngine mutationEngine;
 
-  @Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
-
-  @Autowired private OrchidGroupRepository orchidGroupRepository;
+  @Autowired private OrchidGroupLedgerTestFixture ledgerFixture;
 
   @Autowired private JdbcTemplate jdbcTemplate;
 
@@ -68,12 +60,7 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 
     UUID cutoverKey = UUID.randomUUID();
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        stateChainMigrationService,
-        orchidGroupRepository,
-        cutoverKey,
-        businessDate,
-        "postgres-rehearsal-test");
+    ledgerFixture.seedBaseline(cutoverKey, businessDate, "postgres-rehearsal-test");
 
     var baselineReport = reconciliationService.reconcile();
 
@@ -106,11 +93,10 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
-  void activatesAfterAnEngineCreatedGroupWhileCoverageIsPreparing() {
+  void reconcilesAnEngineCreatedGroupWithAnActiveCoverage() {
     UUID cutoverKey = UUID.randomUUID();
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "1.0.0");
+    ledgerFixture.seedBaseline(cutoverKey, businessDate, "1.0.0");
     Long varietyId =
         jdbcTemplate.queryForObject(
             "SELECT variety_id FROM orchid_groups WHERE id = ?",
@@ -144,10 +130,8 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
                         businessDate.plusDays(1),
                         "PREPARING smoke test 생성")));
 
-    var activated =
-        cutoverService.execute(
-            new OrchidGroupLedgerCutoverCommand(cutoverKey, businessDate, "1.0.0", "1.0.0", true));
-    var report = activated.reconciliation();
+    var activated = ledgerFixture.activate(cutoverKey);
+    var report = activated;
 
     assertThat(created.entries())
         .singleElement()
@@ -156,7 +140,7 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
     assertThat(report.stage()).isEqualTo(OrchidGroupLedgerReconciliationStage.ACTIVE);
     assertThat(report.orchidGroupCount()).isEqualTo(2);
     assertThat(report.baselineGroupCount()).isEqualTo(1);
-    assertThat(activated.activated()).isTrue();
+    assertThat(activated.ready()).isTrue();
     assertThat(report.ready()).isTrue();
     assertThat(report.issues()).isEmpty();
   }

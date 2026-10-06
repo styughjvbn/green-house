@@ -122,13 +122,13 @@ demo
 - 사용자 그룹 목록은 그룹 목록→소속 일괄 조회→난 묶음 상세 일괄 조회 순서로 조립한다. 목록의 각 그룹마다 조회를 반복하지 않는다.
 - 난 묶음 물리 상태 변경과 revision ledger는 `farm.orchid.mutation`이 소유한다. Work·Sales·Inbound는 typed command와 식별자 계약으로 이 경계를 호출하고 업무 lifecycle은 각 모듈에 유지한다.
 - cutover 이전 이력도 같은 Mutation header와 `orchid_group_mutation_entries`의 `BASELINE`·`CREATE`·`CHANGE`·`DELETE`로 저장한다. 모든 Entry는 연속 revision과 full snapshot 규칙을 사용하며 현재 행이 없는 삭제 그룹은 terminal `DELETE`로 보존한다.
-- 전환 전용 importer는 승인된 complete state-chain manifest만 적재한다. Work 효과는 Work application의 제한된 source 조회·연결 API를 사용하고 Lineage 연결은 소유 모듈인 `farm`에서 수행한다. 별도 migration 모듈이나 과거 전용 Entry 모델은 두지 않는다.
+- 운영 이관 완료 후 전환 전용 importer·coverage 준비·활성화 CLI·Work 이관 API는 제거했다. 이미 적재된 원장과 업무 연결은 기존 도메인·조회 계약으로 보존한다. 테스트의 초기 원장 구성은 test source set의 전용 fixture를 사용한다.
 - ledger rehearsal 대사는 `farm`의 현재 상태·revision chain과 모듈별 read-only application 계약을 조합한다. 각 모듈은 Work 진행 상태와 효과 연결, Sales 활성 allocation과 예약 수량처럼 자신이 소유한 정합성만 판정하며 데이터를 자동 보정하지 않는다.
 - ledger coverage가 `ACTIVE`이면 PostgreSQL write fence가 transaction-local Mutation context 없는 `orchid_groups` INSERT·UPDATE와 모든 DELETE를 차단한다. 커밋 시에는 변경 revision에 대응하는 MutationEntry도 확인한다.
 - Farm·Inbound·Work·Sales의 상태 변경은 Engine만 호출한다. Work 효과와 Sales 재고 이동은 같은 트랜잭션에 Mutation ID·correlation ID를 연결한다. Legacy 모드·직접 변경 분기·예약 라우팅 래퍼는 제거했다.
 - startup guard는 원장 없는 난 묶음과 PREPARING coverage의 업무 서버 기동을 거부하고 ACTIVE의 최소 writer version을 검사한다. 빈 DB는 Engine에서 신규 생성할 수 있다. 기본 writer version은 `2.0.0`이다.
-- 복구용 importer와 cutover CLI는 V20 백업 복구를 위해 유지한다. PREPARING 동안 DB fence가 활성화되지 않으므로 적재 작업은 외부 쓰기를 중지한 DB에서만 수행한다. 검증을 통과한 전체 원장만 ACTIVE로 전환한다.
-- Entity 직접 상태 변경자는 Engine과 복구 importer, 생성자·Repository 쓰기는 Engine으로 한정하고 architecture test로 검사한다. 신규 업무 변경은 typed Engine command에 편입한다.
+- 현재 release의 운영 복구는 ACTIVE 원장을 포함한 백업 복원과 대사·기동 검증을 기준으로 한다. 전환 전 백업의 이관 도구는 과거 Git 이력에 보존하며 현재 runtime에 포함하지 않는다.
+- Entity 직접 상태 변경·생성자·Repository 쓰기는 Engine으로 한정하고 architecture test로 검사한다. 신규 업무 변경은 typed Engine command에 편입한다.
 - 과거 Work·Sales·Lineage 데이터와 기존 Flyway 이력은 보존한다. 실행 코드 제거와 복구 도구·데이터 보존 정책은 `features/orchid-group-mutation-transition.md`를 따른다.
 
 `farm`의 각 계층은 동일한 기능 경계를 사용한다.
@@ -165,7 +165,6 @@ application|domain|repository|controller|dto/
 - 작업 목록·캘린더는 대상 배열을 제외한 요약 응답을 사용하고 진행률과 가능한 전체 작업 action은 대상·실행 상태의 DB 집계로 조립한다. 대상별 상세는 사용자가 작업을 선택할 때 단건 조회한다.
 - 분갈이·분주·합식은 공통 구조 변경 실행기와 작업별 Strategy를 사용한다. 기존 분갈이·분주 단일 대상 요청도 변환기를 거쳐 같은 실행 코어로 위임하고, 기존 합식 완료 API만 호환 경로로 남아 있다. 난 묶음 저장소가 필요한 Strategy 구현은 `farm` 모듈에 둔다.
 - 효과 실행과 효과 감사 저장을 분리하고 모든 신규 효과는 공통 저장 컴포넌트를 사용한다. 구조 변경 실행의 `WorkAppliedEffect`는 원본 `SOURCE`와 결과 `RESULT`를 연결하는 계보 노드다.
-- state-chain importer용 Work source 조회와 Mutation link API는 상태 변경 효과만 제한해 제공한다. `farm` importer가 Work Repository나 테이블을 직접 읽지 않게 하는 전환용 모듈 경계다.
 - 신규 즉시 완료 작업은 대상 효과 INSERT와 실행 상태 UPDATE를 JDBC batch로 flush한다. 키가 있는 생성 요청은 Work 접수 기록의 원자 INSERT·행 잠금으로 중복 생성을 막고 요청 지문과 결과 ID를 같은 트랜잭션에 확정한다. 기존 효과 재실행은 원문 지문 비교와 `(workOperationId, effectKey)` DB UNIQUE를 함께 사용한다.
 - DB의 `timestamp without time zone` 시점 값은 UTC로 저장한다. 업무일자는 `Asia/Seoul` 기준으로
   계산하고 API 응답의 시점 값은 UTC에서 `Asia/Seoul`로 변환한다.
