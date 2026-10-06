@@ -72,7 +72,7 @@ tasks.withType<Test> {
 
 tasks.named<Test>("test") {
 	useJUnitPlatform {
-		excludeTags("work-e2e", "work-benchmark", "domain-benchmark")
+		excludeTags("work-e2e", "work-benchmark", "domain-benchmark", "domain-diagnosis")
 	}
 }
 
@@ -176,6 +176,23 @@ tasks.register<Test>("domainBenchmark") {
 		.orElse(layout.buildDirectory.dir("domain-benchmark/direct").map { it.asFile.absolutePath })
 	systemProperty("domainBenchmark.outputDir", reportDirectory.get())
 	outputs.dir(reportDirectory)
+	outputs.upToDateWhen { false }
+	testLogging.showStandardStreams = true
+	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")
+}
+
+tasks.register<Test>("domainDiagnosis") {
+	group = "verification"
+	description = "Profiles selected settlement and ledger paths in isolated PostgreSQL."
+	testClassesDirs = sourceSets["test"].output.classesDirs
+	classpath = sourceSets["test"].runtimeClasspath
+	useJUnitPlatform { includeTags("domain-diagnosis") }
+	maxParallelForks = 1
+	maxHeapSize = "2g"
+	systemProperty("diagnosis.outputDir", providers.gradleProperty("diagnosis.outputDir")
+		.orElse(layout.buildDirectory.dir("domain-diagnosis/direct").map { it.asFile.absolutePath }).get())
+	systemProperty("diagnosis.revision", providers.gradleProperty("diagnosis.revision").orElse("unspecified").get())
+	systemProperty("diagnosis.scope", providers.gradleProperty("diagnosis.scope").orElse("all").get())
 	outputs.upToDateWhen { false }
 	testLogging.showStandardStreams = true
 	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")

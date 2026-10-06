@@ -67,3 +67,26 @@ runner는 Gradle 종료 코드와 report의 설정·scenario/sample 수·개별 
 ## 분석 기록
 
 2026-10-05 사용자 제공 standard 결과의 수치·코드 대조·후속 우선순위는 [측정 결과 분석](13-domain-performance-results.md)에 기록했다. 10개 scenario·45개 sample 성공과 확인된 잔여 비용을 구분하며, 이후 전후 비교에는 동일한 profile/설정을 사용한다.
+
+## 원인 조사용 별도 task
+
+2026-10-06 [지연 원인 조사](14-performance-diagnosis.md)에 사용한 수동 도구다. 일반 benchmark 결과와 분리한다. 프로젝트 루트에서 다음처럼 실행한다. 출력 디렉터리는 실행마다 새 경로를 지정하고 `diagnosis.revision`에는 조사할 production revision을 기록한다. 도구 자체의 수정 여부는 이 값으로 보증하지 않는다.
+
+```bash
+cd backend
+./gradlew domainDiagnosis -Pdiagnosis.scope=plans -Pdiagnosis.revision=82444a86 -Pdiagnosis.outputDir=build/domain-diagnosis/my-plans-run
+```
+
+| scope | 조사 범위 |
+| --- | --- |
+| plans | 통계 미갱신/갱신 조건의 원본 SQL custom/generic 계획, 각 1회 |
+| stats | 위 두 조건의 실제 501정산 초기화, 각 2회·사전/사후 계획 |
+| ledger | 동일 5,000그룹×1revision 정상/오류 교대, warmup 4회·측정 8회 |
+| work | 500그룹×10revision·Work 참조 5,000건, warmup 4회·측정 8회 |
+| all (기본) | stats·앞선 standard 정산 fixture 순서·전체 ANALYZE·custom 강제 조건 및 ledger. Work는 별도 scope로 실행 |
+
+최대 heap은 2GiB다. 실제 application을 호출하고 outcome을 검증하며 결과는 `diagnosis.json`, 원장 JFR은 같은 디렉터리에 남긴다. scope별로 원시 sample 구조가 다르다. `plans`에는 writer의 elapsed/outcome 측정이 없으며, 초기 실패·외부 강제 종료·파일 미완성은 `PASSED`로 취급하지 않는다. 기존 standard runner의 sample 수 guard를 이 별도 도구에 적용하지 않는다.
+
+새 Testcontainers PostgreSQL에만 extension preload·ALTER DATABASE/ANALYZE/plan 설정을 사용하며 운영 DB에 적용할 명령이 아니다. 일반 test/E2E/CI에서는 이 tag를 실행하지 않는다. Docker·JDK 21이 필요하고 15분 test timeout을 적용한다.
+
+계획 비교·pg_stat_statements·JFR·fingerprint spy는 캐시/실행 비용에 영향을 준다. 사전 조회·EXPLAIN은 버퍼와 statement 사용 이력을 바꾸므로 benchmark 전후의 절대 시간과 직접 비교하지 않는다. 서버 통계 `track=all`의 nested FK 시간은 상위 insert 시간과 겹쳐 단순 합산하지 않는다. JFR frame 빈도는 정확한 CPU 시간 비율이 아니다. 원인 재현 후 효과 측정에는 동일 조건의 standard를 사용한다.

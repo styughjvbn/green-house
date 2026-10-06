@@ -40,6 +40,8 @@ public interface AuctionResultLineRepository extends JpaRepository<AuctionResult
           + "and line.id <= :maximumId order by line.id")
   List<Long> findSoldIdsBetween(long afterId, long maximumId, Pageable pageable);
 
+  // TODO: 별도 일괄 정산에서 재사용 시 통계 미갱신의 join 순서와 실제 scan/loop를 검증한다.
+  // 20행 조회가 10,020행을 경유한 재현 근거: backend-audit/14-performance-diagnosis.md
   @Query(
       READ_ROWS
           + "where line.amount > 0 and line.auctionDate = :auctionDate "

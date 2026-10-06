@@ -26,6 +26,8 @@ public class AuctionSettlementRebuildService {
   private final PlatformTransactionManager transactionManager;
   private final Clock clock;
 
+  // TODO: 별도 일괄 정산 구현 시 이 경로의 재사용 여부와 통계/캐시 계획의 대량 처리 비용을 검증한다.
+  // 정산별 commit, 잠금 후 미연결 결과 재확인, 재실행 시 중복 방어를 유지한다.
   @Transactional(propagation = Propagation.NEVER)
   public int rebuildExistingResults() {
     long maximumId = auctionReader.getMaximumSoldResultId();

@@ -30,6 +30,8 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
       "select distinct line.auctionShipmentLotId from AuctionSettlementLine line where line.auctionShipmentLotId in :lotIds")
   List<Long> findSettledLotIds(@Param("lotIds") Collection<Long> lotIds);
 
+  // TODO: 별도 일괄 정산에서 재사용 시 빈 테이블에서 증가한 뒤의 cached generic 계획을 검증한다.
+  // 20/500 ID 입력의 전체 스캔 재현 근거: backend-audit/14-performance-diagnosis.md
   @Query(
       "select line.auctionResultLineId from AuctionSettlementLine line where line.auctionResultLineId in :resultIds")
   List<Long> findLinkedResultIds(@Param("resultIds") Collection<Long> resultIds);
