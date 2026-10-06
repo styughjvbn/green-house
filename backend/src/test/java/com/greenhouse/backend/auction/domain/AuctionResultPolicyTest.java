@@ -9,6 +9,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class AuctionResultPolicyTest {
 
@@ -54,6 +56,38 @@ class AuctionResultPolicyTest {
                   .isEqualTo(sold * 100);
             });
     assertThat(lot.getStatusHistory()).hasSize(1);
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(strings = {"", "   ", " B "})
+  void keepsReportedGradeSeparateFromShipmentGrade(String grade) {
+    var lot = new AuctionShipmentLot("난", "품종", "A", null, 10);
+    lot.recordResult(
+        DATE,
+        null,
+        AuctionAttemptStatus.PARTIALLY_SOLD,
+        List.of(new AuctionResultLineInput(grade, 3, 100, null, null)),
+        null,
+        null,
+        LocalDateTime.of(2026, 9, 8, 1, 2));
+    var rows = lot.getAttempts().getFirst().getResultLines();
+    assertThat(rows.getFirst().getAuctionGrade())
+        .isEqualTo(grade == null || grade.isBlank() ? null : "B");
+    assertThat(rows.getLast().getAuctionGrade()).isNull();
+    assertThat(lot.getShipmentGrade()).isEqualTo("A");
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = AuctionAttemptStatus.class,
+      names = {"FAILED", "RETURN_INFERRED"})
+  void generatedResultsDoNotInferGradeFromShipment(AuctionAttemptStatus status) {
+    var lot = new AuctionShipmentLot("난", "품종", "A", null, 10);
+    lot.recordResult(DATE, null, status, null, null, null, LocalDateTime.of(2026, 9, 8, 1, 2));
+    assertThat(lot.getAttempts().getFirst().getResultLines())
+        .singleElement()
+        .satisfies(line -> assertThat(line.getAuctionGrade()).isNull());
   }
 
   @Test

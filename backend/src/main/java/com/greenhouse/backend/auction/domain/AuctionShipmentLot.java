@@ -164,7 +164,7 @@ public class AuctionShipmentLot extends BaseEntity {
 
     switch (attemptStatus) {
       case SOLD -> {
-        int soldQuantity = addSoldLines(attempt, resultLines, getShipmentGrade());
+        int soldQuantity = addSoldLines(attempt, resultLines);
         if (soldQuantity != waitingQuantity)
           throw new IllegalArgumentException("낙찰 상태에서는 남은 대기 수량 전체를 입력해야 합니다.");
         attempt.recalculateStatus();
@@ -172,13 +172,13 @@ public class AuctionShipmentLot extends BaseEntity {
         applyResult(soldQuantity, 0, false, false, changedAt);
       }
       case PARTIALLY_SOLD -> {
-        int soldQuantity = addSoldLines(attempt, resultLines, getShipmentGrade());
+        int soldQuantity = addSoldLines(attempt, resultLines);
         if (soldQuantity >= waitingQuantity)
           throw new IllegalArgumentException("부분 낙찰은 대기 수량보다 적어야 합니다.");
         attempt.addResultLine(
             new AuctionResultLine(
                 auctionDate,
-                getShipmentGrade(),
+                null,
                 waitingQuantity - soldQuantity,
                 0,
                 0,
@@ -192,7 +192,7 @@ public class AuctionShipmentLot extends BaseEntity {
         attempt.addResultLine(
             new AuctionResultLine(
                 auctionDate,
-                getShipmentGrade(),
+                null,
                 waitingQuantity,
                 0,
                 0,
@@ -206,7 +206,7 @@ public class AuctionShipmentLot extends BaseEntity {
         attempt.addResultLine(
             new AuctionResultLine(
                 auctionDate,
-                getShipmentGrade(),
+                null,
                 waitingQuantity,
                 0,
                 0,
@@ -239,8 +239,7 @@ public class AuctionShipmentLot extends BaseEntity {
     if (duplicate) throw new IllegalArgumentException("같은 경매일과 차수의 결과가 이미 등록되어 있습니다.");
   }
 
-  private int addSoldLines(
-      AuctionAttempt attempt, List<AuctionResultLineInput> lines, String defaultGrade) {
+  private int addSoldLines(AuctionAttempt attempt, List<AuctionResultLineInput> lines) {
     if (lines == null || lines.isEmpty())
       throw new IllegalArgumentException("낙찰 결과 행을 1개 이상 입력해야 합니다.");
     int soldQuantity = 0;
@@ -249,9 +248,7 @@ public class AuctionShipmentLot extends BaseEntity {
       attempt.addResultLine(
           new AuctionResultLine(
               attempt.getAuctionDate(),
-              normalize(line.auctionGrade()) == null
-                  ? defaultGrade
-                  : normalize(line.auctionGrade()),
+              normalize(line.auctionGrade()),
               line.quantity(),
               line.unitPrice(),
               soldAmount(line.quantity(), line.unitPrice()),

@@ -30,7 +30,7 @@ export function AuctionResultDialog({
   const [failedReason, setFailedReason] = useState("");
   const [resultMemo, setResultMemo] = useState("");
   const [resultLines, setResultLines] = useState<ResultLineForm[]>([
-    createResultLine(lot.shipmentGrade, lot.waitingQuantity),
+    createResultLine(lot.waitingQuantity),
   ]);
   const nextAttemptNo =
     lot.attempts.reduce((max, attempt) => Math.max(max, attempt.attemptNo), 0) +
@@ -174,12 +174,7 @@ export function AuctionResultDialog({
                     setResultLines((current) =>
                       current.length > 0
                         ? current
-                        : [
-                            createResultLine(
-                              lot.shipmentGrade,
-                              lot.waitingQuantity,
-                            ),
-                          ],
+                        : [createResultLine(lot.waitingQuantity)],
                     );
                   }
                 }}
@@ -228,7 +223,7 @@ export function AuctionResultDialog({
                   onClick={() =>
                     setResultLines((current) => [
                       ...current,
-                      createResultLine(lot.shipmentGrade, 0),
+                      createResultLine(0),
                     ])
                   }
                 >
@@ -242,7 +237,7 @@ export function AuctionResultDialog({
                     className="grid gap-2 rounded-md border border-[#e5e9e3] p-3 lg:grid-cols-[1fr_100px_120px_1.3fr_40px]"
                   >
                     <InputField
-                      label="등급"
+                      label="경매 결과에 표기된 등급"
                       value={line.auctionGrade}
                       onChange={(value) =>
                         updateResultLine(line.key, "auctionGrade", value)
@@ -336,13 +331,10 @@ export function AuctionResultDialog({
   );
 }
 
-function createResultLine(
-  grade: string | null,
-  quantity: number,
-): ResultLineForm {
+function createResultLine(quantity: number): ResultLineForm {
   return {
     key: `${Date.now()}-${Math.random()}`,
-    auctionGrade: grade ?? "",
+    auctionGrade: "",
     quantity: quantity > 0 ? String(quantity) : "",
     unitPrice: "",
     note: "",

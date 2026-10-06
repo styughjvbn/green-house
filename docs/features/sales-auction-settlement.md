@@ -149,6 +149,8 @@ AuctionShipmentLot
   └─ AuctionLotStatusHistory
 ```
 
+출하 등급은 lot 기준으로 유지한다. 결과 행의 등급은 경매장 원본 결과에 표기된 값으로, 원본 결과와 lot의 매칭 분석에 사용할 수 있는 별도 정보다. 미입력·공백 및 서버가 자동 생성하는 유찰·반환 추정 행의 등급은 미상으로 저장하며 출하 등급으로 채우지 않는다. 기존 결과와 Receipt snapshot의 등급은 변경하지 않는다.
+
 현재 운영 입력 방식:
 
 - 경매 판매 전표가 `출하 완료`로 전환될 때 `AuctionShipmentLot` 생성

@@ -42,6 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -294,6 +295,33 @@ class AuctionCommandIdempotencyPostgresE2ETest extends WorkE2ETestBase {
             post(type.equals("RESULT") ? resultsPath() : returnsPath(), missing.toString())
                 .status())
         .isEqualTo(400);
+    assertThat(snapshot()).isEqualTo(before);
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(strings = {"", "   ", " B "})
+  void persistsReportedGradeWithoutShipmentFallbackAndReplays(String grade) throws Exception {
+    ObjectNode body =
+        (ObjectNode) objectMapper.readTree(resultBody("reported-grade", "PARTIALLY_SOLD", 10));
+    ObjectNode inputLine = (ObjectNode) body.path("resultLines").get(0);
+    if (grade == null) inputLine.remove("auctionGrade");
+    else inputLine.put("auctionGrade", grade);
+    var first = post(resultsPath(), body.toString());
+    assertThat(first.status()).isEqualTo(200);
+    assertThat(first.data().path("shipmentGrade").asText()).isEqualTo("A");
+    var rows = first.data().path("attempts").get(0).path("resultLines");
+    String expected = grade == null || grade.isBlank() ? null : "B";
+    assertThat(rows.get(0).path("auctionGrade").asText(null)).isEqualTo(expected);
+    assertThat(rows.get(1).path("auctionGrade").asText(null)).isNull();
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT r.auction_grade FROM auction_result_lines r JOIN auction_attempts a ON a.id = r.auction_attempt_id WHERE a.shipment_lot_id = ? AND r.quantity = 10",
+                String.class,
+                lotId))
+        .isEqualTo(expected);
+    var before = snapshot();
+    assertThat(post(resultsPath(), body.toString()).data()).isEqualTo(first.data());
     assertThat(snapshot()).isEqualTo(before);
   }
 
