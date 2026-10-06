@@ -1,5 +1,7 @@
 # 정산·원장 standard 측정 결과
 
+최신 판정은 마지막의 **2026-10-06 standard 재측정** 절을 따른다. Work Entity 누적 제거·할당량 감소는 확인했으며, 속도 개선이나 전체 시간 회귀 부재로 판정하지 않았다.
+
 2026-10-05 사용자 제공 결과를 실제 구현과 대조했다. **10개 scenario·45개 sample 모두 성공했지만, 다수 정산의 초기화 비용과 Work 보정 참조의 Entity 누적은 후속 개선 대상으로 남는다.** 이번 변경은 분석과 증적 보존이며 제품 코드는 수정하지 않았다.
 
 ## 증적과 검증
@@ -90,3 +92,58 @@ standard 결과 수집·분석은 완료했다. 확인된 Work 참조 적재와 
 PostgreSQL 회귀에서는 보정 1·499·500·501·5,000건에서 보정/Mutation Entity 적재가 각각 0인지, query count가 batch 수에만 따라가는지와 SQL bind/반환 행 상한을 검사한다. 기준 측정의 Entity 10,001개 중 이 두 종류의 10,000개 적재를 제거하는 범위다. fixture의 그룹 수·revision 분포가 원본 standard Work scenario와 동일하지 않으므로 회귀 테스트의 시간/heap을 직접 전후 benchmark로 비교하지 않는다. standard/large 재측정과 다수 정산 지연의 statement별 원인 조사는 후속으로 남긴다.
 
 실제 회귀 결과: 5,000건에서 전체 Entity 적재 1개(coverage), 보정/Mutation 적재 각각 0개, JDBC 실행 38회·소비 행 15,009개·SQL bind 최대 500개였다. 1/499/500건은 실행 20회, 501건은 22회로 batch 경계에만 증가했다. 날짜 전용 legacy 보정·누락/잘못된 출처·배치 경계의 오류 순서·fingerprint와 동시 수정 시 repeatable snapshot도 통과했다. 관련 PostgreSQL 6개 클래스·49개 고유 시험 및 일반 backend 748건·frontend/format 검증 성공을 [63차 기록](10-remediation-progress.md#63차-변경--work-보정-대사의-scalar-참조mutation-입력-분할)에 남겼다.
+
+## 2026-10-06 standard 재측정 — 메모리 할당 감소와 조회 비용
+
+### 비교 조건과 성공 판정
+
+사용자 제공 실행 `20261006T004212Z-e0775dd9`는 revision `c1b4bd95fb9fc57401066da4e62b3108ee19157b`, 작업 트리 변경 없음, standard/all·warmup 1회·sample 3회·heap 2GiB다. 첫 측정과 보고된 JVM/OS/Docker/PostgreSQL 설정·자원·fixture는 동일하다. 두 revision 사이에 benchmark fixture/계측 코드 변경은 없다. 실행 당시 다른 프로세스의 부하·캐시·DB 통계·GC 시작 상태까지 같았다는 보장은 없다.
+
+원본은 `backend/build/domain-benchmark/20261006T004212Z-e0775dd9/result.json`, SHA-256은 `057b0d1fc0178f0a0d8446df7c374d22a59f59d248769e73e858f323e66ee33e`다. [새 CSV 45행](measurements/20261006T004212Z-e0775dd9-standard.csv)을 보존했다. runner 완료 guard와 summary 재계산 일치를 확인했으며 **10개 scenario·45개 sample 성공**, JDBC 실패/rollback/미종료 transaction 0이다. 정산/원장 outcome은 앞선 실행과 모두 같았다. 전체 실행은 302.330초이며 준비·warmup을 포함하므로 application 개선 효과의 기준으로 사용하지 않는다.
+
+### 전후 처리 시간
+
+중앙값은 ms다. 변화율은 관측 중앙값의 차이이며 3회 sample만으로 통계적 유의성·운영 p95를 판정하지 않는다.
+
+| scenario | phase | 변경 전 ms | 변경 후 ms | 변화율 |
+| --- | --- | ---: | ---: | ---: |
+| settlement-1x100 | initialize | 115.53 | 104.50 | -9.5% |
+| settlement-1x100 | replay | 8.29 | 8.65 | +4.3% |
+| settlement-1x1000 | initialize | 280.82 | 280.74 | 0.0% |
+| settlement-1x1000 | replay | 18.85 | 21.40 | +13.6% |
+| settlement-1x10000 | initialize | 1,676.51 | 1,791.26 | +6.8% |
+| settlement-1x10000 | replay | 136.08 | 133.21 | -2.1% |
+| settlement-50x20 | initialize | 934.69 | 924.73 | -1.1% |
+| settlement-50x20 | replay | 10.57 | 9.67 | -8.5% |
+| settlement-501x20 | initialize | 24,634.56 | 25,022.90 | +1.6% |
+| settlement-501x20 | replay | 76.76 | 79.22 | +3.2% |
+| ledger-500x1 | reconcile | 79.09 | 86.10 | +8.9% |
+| ledger-5000x10 | reconcile | 1,677.49 | 1,720.03 | +2.5% |
+| ledger-1x50001 | reconcile | 1,430.82 | 1,407.36 | -1.6% |
+| ledger-500x10-work | reconcile | 257.76 | 303.61 | +17.8% |
+| ledger-5000x1-errors | reconcile | 241.07 | 377.05 | +56.4% |
+
+### Work 참조: 목표한 Entity 누적 제거, 속도 개선은 아님
+
+| 항목 | 변경 전 | 변경 후 | 판단 |
+| --- | ---: | ---: | --- |
+| Entity 적재 | 10,001 | 1 | coverage만 남으며 보정/Mutation 10,000개 적재 제거 |
+| 측정 스레드 누적 할당량 중앙값 | 104.30MiB | 81.30MiB | 약 22.0% 감소 |
+| sampled heap 최대 | 292.49MiB | 293.18MiB | heap peak 감소 증거 없음 |
+| JDBC 실행 | 30 | 39 | 전체 Mutation ID 1회 조회를 500건씩 10회 조회하는 비용 |
+| 소비한 반환 행 | 16,506 | 16,506 | 필요한 참조/Entry 수 유지 |
+| JDBC execute 누적 시간 중앙값 | 63.77ms | 84.04ms | 약 20ms 증가 |
+| application 시간 중앙값 | 257.76ms | 303.61ms | 약 46ms 증가 |
+| 처리 시간 최소~최대 | 239.36~305.69ms | 279.72~304.53ms | 관측 범위 겹침 |
+
+**이번 개선은 Entity/persistence context 누적과 큰 IN 입력을 줄이는 변경이며, 관측 속도는 좋아지지 않았다.** batch를 늘린 조회 9회가 일부 지연에 기여할 수 있으나 전체 46ms 증가를 그 이유만으로 확정하지 않는다. sample별 GC·heap 시작 상태도 다르다. 누적 할당량과 peak live heap은 별개이므로 “메모리 사용량 전체가 22% 줄었다”라고 기록하지 않는다.
+
+39회 실행은 이 fixture의 500그룹 조회와 10개 Work/Mutation batch에 따른 비용이다. 63차의 1그룹 회귀에서는 38회였으며 그 수치와 다르다고 새 N+1로 판정하지 않는다. 구현의 500 ID 상한과 Entity 적재 0은 실제 PostgreSQL 회귀로 보호한다. 한 번에 전체 Entity/ID를 다시 읽는 방식으로 되돌려 이 비용을 줄이지 않는다. 추가 속도 개선이 필요하면 snapshot과 소유 모듈 경계를 유지하면서 해당 scalar 조회/결과 해석 비용을 측정한다.
+
+### 정산과 오류 대사: 아직 해소되지 않은 비용
+
+501정산 초기화는 중앙값 24.63→25.02초로 여전히 오래 걸린다. 새 sample은 17.68/29.80/25.02초로 이전의 16.99/30.14/24.63초와 모두 비슷한 범위다. 실행 수는 3,781~3,782회로 같고 JDBC execute 누적 15.89~28.28초, commit 호출 누적 약 0.154~0.162초다. 한 transaction 최대는 약 97ms다. Work 참조 변경으로 이 경로가 해결되거나 악화됐다는 근거는 없으며 **statement별 실행/계획 조사 우선순위는 유지**한다.
+
+오류 5,000건 대사는 241→377ms로 증가했다. 새 세 sample 모두 이전 최대 245ms보다 느려 **단순 잡음으로 치부하거나 전체 성능 회귀가 없다고 판정하지 않는다.** JDBC 실행 37회·행 15,006개·Entity 1개는 같고 할당량도 118.37→118.46MiB로 거의 같다. Work 보정이 없는 fixture여서 분할 Mutation 조회 9회의 증가로 이 지연을 설명할 수 없다. 변경 전 GC는 없었지만 변경 후 첫 두 sample에서 young GC 2회/11ms가 관측됐고 세 번째는 GC 없이도 312ms였다. GC만으로 지연을 설명할 수 없으며 DB execute 시간도 약 34~41→51~62ms로 증가했다. 원인은 현재 미확정이다. 이 경로를 필요 범위에서 재현해 쿼리·cursor 소비·오류 조립·fingerprint 직렬화 비용과 실행 환경을 구분한다.
+
+기능 결과·조회량 회귀는 발견되지 않았지만 시간 회귀가 전혀 없다고 결론 내리지 않는다. standard 전후 수집/비교는 완료했으며, 다수 정산 비용 조사와 오류 대사의 지연 재현·필요한 Work 조회 비용 보강이 남는다. large/동시 부하·ACTIVE 전환/운영 데이터 검증은 수행하지 않았다. BE-009 정책 보류도 유지한다.
