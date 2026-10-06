@@ -32,8 +32,14 @@ public interface WorkOperationCorrectionRepository
       "select c.originalWorkOperation.id as operationId, count(c) as total from WorkOperationCorrection c where c.originalWorkOperation.id in :ids group by c.originalWorkOperation.id")
   List<Count> countByOriginalIds(Collection<Long> ids);
 
-  @Query("select c from WorkOperationCorrection c where c.id > :afterId order by c.id")
-  List<WorkOperationCorrection> findAfterId(Long afterId, Pageable pageable);
+  @Query(
+      """
+      select new com.greenhouse.backend.work.repository.WorkCorrectionReconciliationRow(
+          c.id, c.mutationId, c.correlationId, c.resultDetails)
+      from WorkOperationCorrection c where c.id > :afterId order by c.id
+      """)
+  List<WorkCorrectionReconciliationRow> findReconciliationRowsAfterId(
+      Long afterId, Pageable pageable);
 
   interface Count {
 

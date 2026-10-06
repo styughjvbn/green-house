@@ -403,6 +403,7 @@ Persistence 조회 규칙:
 - 같은 조건의 전체 합계와 분포를 함께 반환할 때는 DB에서 그룹별로 집계한 값을 재사용한다. 작업 전체 건수·유형별 건수·최근 작업일은 이름·템플릿별 집계에서, 판매 가능 재고 합계는 품종별 집계에서 구한다. 최근 기록이나 일부 순위에 적용한 상한을 전체 합계에 적용하지 않는다.
 - DB 집계로 표현 가능한 값을 전체 Entity 조회 후 Java에서 다시 집계하지 않는다. 다만 데이터량이 작고 규칙 표현이 더 명확한 경우에는 측정 근거를 남기고 단순 구현을 유지할 수 있다.
 - 원장 대사의 현재 그룹은 ID 순서의 500행 scalar 조회로 읽고 Entity graph를 적재하지 않는다. 현재/삭제 그룹의 revision chain은 그룹·revision 순 scalar cursor로 읽어 앞뒤 Entry와 chain 시작/말단만 유지한다. fetch size는 500이며 전체 이력을 List나 persistence context에 누적하지 않는다. baseline/current fingerprint의 기존 입력·ID 순서와 누락/불연속/삭제 tombstone 판정은 유지한다. 전역 배치/업무 참조 검사를 위한 현재 그룹 값·baseline·오류 전체와 기존 fingerprint 직렬화는 여전히 크기에 비례하므로 완전한 상수 메모리 대사로 취급하지 않는다.
+- 원장 대사의 Work 보정 참조도 ID 순서의 500행 scalar 조회로 읽고, Work 안에서 저장 결과 reader를 통해 application 참조 값으로 변환한다. Farm은 참조 500건씩 중복/null Mutation ID를 정리해 필요한 출처·correlation 값만 조회하며 Entity나 전체 Mutation map을 누적하지 않는다. 보정 결과의 absent/null/date/수량 수지 해석은 상세 응답과 같은 reader를 사용한다. 기존 오류 순서·fingerprint와 호출 transaction의 snapshot을 유지한다. Work의 참조 목록과 그룹 ID 전체가 메모리에 남으므로 이 경로 역시 상수 메모리 계약은 아니다.
 
 #### 이력과 스냅샷
 

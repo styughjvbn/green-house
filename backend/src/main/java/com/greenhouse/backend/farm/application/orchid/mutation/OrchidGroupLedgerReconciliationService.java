@@ -9,11 +9,13 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationTyp
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.orchid.mutation.CorrectionMutationReconciliationRow;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupLedgerCoverageRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.ReconciliationEntryRow;
 import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
+import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.CorrectionReference;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -221,47 +223,7 @@ public class OrchidGroupLedgerReconciliationService {
                         groupId.toString(),
                         "WorkEffectOrchidGroup이 존재하지 않는 난 묶음을 참조합니다.")));
 
-    var correctionMutations =
-        mutationRepository
-            .findAllById(
-                workReport.corrections().stream()
-                    .map(reference -> reference.mutationId())
-                    .filter(Objects::nonNull)
-                    .toList())
-            .stream()
-            .collect(Collectors.toMap(mutation -> mutation.getId(), mutation -> mutation));
-    for (var reference : workReport.corrections()) {
-      reference.orchidGroupIds().stream()
-          .filter(id -> !existingGroupIds.contains(id))
-          .forEach(
-              id ->
-                  issues.add(
-                      issue(
-                          "DANGLING_WORK_CORRECTION_GROUP",
-                          "WORK",
-                          reference.id().toString(),
-                          "보정 내역이 존재하지 않는 난 묶음을 참조합니다.")));
-      var mutation = correctionMutations.get(reference.mutationId());
-      boolean valid =
-          reference.changesGroups()
-              ? mutation != null
-                  && Objects.equals(mutation.getCorrelationId(), reference.correlationId())
-                  && mutation.getSourceDomain() == OrchidGroupMutationSourceDomain.WORK
-                  && Set.of(
-                          OrchidGroupMutationType.CORRECTION,
-                          OrchidGroupMutationType.CANCEL_CREATION)
-                      .contains(mutation.getMutationType())
-                  && mutation.getSourceType().equals("WORK_CORRECTION")
-                  && mutation.getSourceReferenceId().equals(reference.id().toString())
-              : reference.mutationId() == null && reference.correlationId() == null;
-      if (!valid)
-        issues.add(
-            issue(
-                "INVALID_WORK_CORRECTION_MUTATION_LINK",
-                "WORK",
-                reference.id().toString(),
-                "보정 이벤트와 Mutation 출처가 일치하지 않습니다."));
-    }
+    inspectWorkCorrections(workReport.corrections(), existingGroupIds, issues);
     workReport
         .invalidExecutionIds()
         .forEach(
@@ -282,6 +244,59 @@ public class OrchidGroupLedgerReconciliationService {
                         "WORK",
                         effectId.toString(),
                         "WorkAppliedEffect의 mutationId와 correlationId가 함께 설정되지 않았습니다.")));
+  }
+
+  private void inspectWorkCorrections(
+      List<CorrectionReference> references,
+      Set<Long> existingGroupIds,
+      List<OrchidGroupLedgerReconciliationIssue> issues) {
+    for (int start = 0; start < references.size(); start += BATCH_SIZE) {
+      var batch = references.subList(start, Math.min(start + BATCH_SIZE, references.size()));
+      var ids =
+          batch.stream()
+              .map(CorrectionReference::mutationId)
+              .filter(Objects::nonNull)
+              .distinct()
+              .toList();
+      Map<Long, CorrectionMutationReconciliationRow> mutations =
+          ids.isEmpty()
+              ? Map.of()
+              : mutationRepository.findCorrectionReconciliationRowsByIdIn(ids).stream()
+                  .collect(Collectors.toMap(CorrectionMutationReconciliationRow::id, row -> row));
+      for (var reference : batch) {
+        reference.orchidGroupIds().stream()
+            .filter(id -> !existingGroupIds.contains(id))
+            .forEach(
+                id ->
+                    issues.add(
+                        issue(
+                            "DANGLING_WORK_CORRECTION_GROUP",
+                            "WORK",
+                            reference.id().toString(),
+                            "보정 내역이 존재하지 않는 난 묶음을 참조합니다.")));
+        var mutation =
+            reference.mutationId() == null ? null : mutations.get(reference.mutationId());
+        boolean valid =
+            reference.changesGroups()
+                ? mutation != null
+                    && Objects.equals(mutation.correlationId(), reference.correlationId())
+                    && mutation.sourceDomain() == OrchidGroupMutationSourceDomain.WORK
+                    && Set.of(
+                            OrchidGroupMutationType.CORRECTION,
+                            OrchidGroupMutationType.CANCEL_CREATION)
+                        .contains(mutation.mutationType())
+                    && mutation.sourceType().equals("WORK_CORRECTION")
+                    && mutation.sourceReferenceId().equals(reference.id().toString())
+                : reference.mutationId() == null && reference.correlationId() == null;
+        if (!valid)
+          issues.add(
+              issue(
+                  "INVALID_WORK_CORRECTION_MUTATION_LINK",
+                  "WORK",
+                  reference.id().toString(),
+                  "보정 이벤트와 Mutation 출처가 일치하지 않습니다."));
+      }
+    }
   }
 
   private void inspectFarmReferences(

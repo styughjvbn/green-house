@@ -1,7 +1,7 @@
 package com.greenhouse.backend.work.application.effect;
 
+import com.greenhouse.backend.work.application.correction.WorkCorrectionResultDetails;
 import com.greenhouse.backend.work.dto.operation.WorkCorrectionAdjustmentResponse;
-import com.greenhouse.backend.work.dto.operation.WorkCorrectionDetailResponse;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkExecutionReconciliationRow;
@@ -55,19 +55,20 @@ public class WorkOrchidGroupLedgerRehearsalInspector {
     var references = new ArrayList<WorkOrchidGroupLedgerRehearsalReport.CorrectionReference>();
     long afterId = Long.MIN_VALUE;
     while (true) {
-      var rows = correctionRepository.findAfterId(afterId, PageRequest.of(0, 500));
+      var rows =
+          correctionRepository.findReconciliationRowsAfterId(afterId, PageRequest.of(0, 500));
       if (rows.isEmpty()) return List.copyOf(references);
       for (var row : rows) {
-        var detail = WorkCorrectionDetailResponse.from(row);
+        var detail = WorkCorrectionResultDetails.from(row.resultDetails());
         var ids =
             detail.adjustments().stream()
                 .map(WorkCorrectionAdjustmentResponse::orchidGroupId)
                 .toList();
         references.add(
             new WorkOrchidGroupLedgerRehearsalReport.CorrectionReference(
-                row.getId(), row.getMutationId(), row.getCorrelationId(), !ids.isEmpty(), ids));
+                row.id(), row.mutationId(), row.correlationId(), !ids.isEmpty(), ids));
       }
-      afterId = rows.getLast().getId();
+      afterId = rows.getLast().id();
     }
   }
 

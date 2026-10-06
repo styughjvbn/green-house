@@ -3,6 +3,8 @@ package com.greenhouse.backend.farm.repository.orchid.mutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +13,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface OrchidGroupMutationRepository extends JpaRepository<OrchidGroupMutation, Long> {
+
+  @Query(
+      """
+      select new com.greenhouse.backend.farm.repository.orchid.mutation.CorrectionMutationReconciliationRow(
+          m.id, m.correlationId, m.sourceDomain, m.mutationType, m.sourceType, m.sourceReferenceId)
+      from OrchidGroupMutation m where m.id in :ids
+      """)
+  List<CorrectionMutationReconciliationRow> findCorrectionReconciliationRowsByIdIn(
+      Collection<Long> ids);
 
   Optional<OrchidGroupMutation>
       findBySourceDomainAndSourceTypeAndSourceReferenceIdAndSourceOperationKey(

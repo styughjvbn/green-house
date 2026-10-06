@@ -1,6 +1,6 @@
 # Backend 감사 개선 진행
 
-- 작업일: 2026-10-03~2026-10-05
+- 작업일: 2026-10-03~2026-10-06
 - 브랜치: `fix/backend-sales-reservation-consistency`
 - 시작 기준: `80106917232a671b5a489ad8e59d37b63a06dffe` (`develop`)
 - 우선순위 기준: [08 통합 findings](08-findings.md), [09 최종 평가](09-final-assessment.md)의 P0. 기존 감사 문서는 수정 전 판단의 근거로 보존한다.
@@ -1713,6 +1713,16 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - 상세 표·메모리/GC 해석·원인과 가설의 구분·후속 순서는 [결과 분석](13-domain-performance-results.md)에, 원시 sample 45행은 `measurements/20261005T122534Z-e84e1210-standard.csv`에 보존했다. 로컬 원본 JSON의 SHA-256과 환경도 함께 기록했다. sampled heap과 누적 할당량을 혼동하지 않으며 결과를 운영 p95/부하 검증으로 확대하지 않는다.
 - 문서·측정 증적만 변경했다. CSV의 45행·설정·측정값·결과를 원본 JSON과 대조하고 `git diff --check`를 실행했다. 마지막 일반 backend 746건/frontend·spotless, 59차 전체 PostgreSQL 780건을 재실행하지 않았다. standard 수집/분석은 완료, 확인된 비용의 개선/추가 측정·운영 검증은 남음. BE-009 보류 유지.
 
+## 63차 변경 — Work 보정 대사의 scalar 참조·Mutation 입력 분할
+
+- 62차의 Work 참조 5,000건/Entity 10,001개 적재를 후속 개선했다. Work 보정은 ID 순서로 500행씩 `id`·Mutation/correlation·저장 결과만 읽고 Work 내부에서 application 참조 값으로 변환한다. Farm은 보정 참조 500건씩 중복/null Mutation ID를 정리하고 소유 projection에서 검증에 필요한 출처/correlation만 조회한다. 전체 correction/Mutation Entity와 전체 Mutation map을 persistence context/메모리에 누적하지 않는다.
+- 기존 보정 결과의 날짜·adjustments·quantityBalances 해석을 공통 reader로 옮겨 상세 응답과 scalar 대사가 함께 사용한다. 구형 absent/default·숫자 문자열 ID, 명시적 null/잘못된 날짜·수량 수지의 실패 의미를 유지한다. 외부 HTTP/application 참조 계약·저장 JSON·오류 순서·fingerprint·같은 read snapshot은 변경하지 않았다.
+- Work/Farm Repository projection은 소유 모듈 안에서만 사용한다. transaction 경계·잠금·migration·기능 gate는 유지하며 persistence context `clear`나 새 transaction을 추가하지 않았다. 전체 Work 참조 목록/그룹 ID 값은 기존 계약상 남으므로 상수 메모리로 판정하지 않는다.
+- 실제 PostgreSQL에서 1·499·500·501·5,000건의 Entity 적재 0과 명시적 batch 수 기반 조회/반환 행 상한·SQL bind 상한을 확인했다. 배치 경계의 누락/잘못된 Mutation 링크·dangling 그룹 오류 순서와 fingerprint 유지, 날짜만 바뀐 구형 보정, 동시 수정 뒤에도 같은 root repeatable snapshot을 검증한다. 기존 Work 보정/수량 수지/상세 응답·원장 cursor/전환 회귀도 실행한다.
+- 측정 회귀: 보정 5,000건에서 전체 Entity 적재 **1개(coverage)**, 보정/Mutation 각각 0개, JDBC 실행 38회·소비 행 15,009개·SQL bind 최대 500개를 확인했다. 1/499/500건의 실행 수는 모두 20회, 501건은 22회다. 건별 N+1 대신 명시적 batch 경계에서만 증가한다. 이 fixture는 한 그룹의 revision을 늘린 것이며 62차의 500그룹 Work scenario와 시간/heap을 직접 비교하지 않는다.
+- 집중/기능 단위 검증: 공통 reader·H2 대사 집중 검사 통과. PostgreSQL 관련 **6개 클래스·49개 고유 시험 성공**(첫 실행 48건 후 날짜 전용 회귀를 추가해 새 클래스 8건 재실행), 실패·오류·건너뜀 0건. 일반 backend **144개 클래스·748건 성공**, frontend `npm run check`, `spotlessCheck`, `git diff --check` 통과. 일반/PG 검증에는 기존 임시 heap 1GiB 설정을 사용했다. 전체 `workE2eTest` 780건 및 standard/large benchmark 전체 재측정은 반복하지 않았다. 마지막 전체 PG 체크포인트는 59차다.
+- 실제 실행 로그는 `/tmp/green-house-be063-focused.log`, `/tmp/green-house-be063-postgres.log`, `/tmp/green-house-be063-final.log`, `/tmp/green-house-be063-frontend.log`에 보존한다. 최종 검증 뒤에는 문서만 정리했다. 다수 정산의 24.6초 지연 SQL/계획 조사가 다음 기술 작업이며, 운영 부하 검증과 BE-009 보류는 유지한다.
+
 ## 커밋 진행
 
 - `7ff08ffa` — 감사 03·06·07·08·09 문서.
@@ -1784,10 +1794,11 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 - `275bd445` — `docs: record full postgres regression checkpoint`. 전체 PostgreSQL 780건·후속 작업/보류 상태 기록.
 - `7329edc6` — `docs: separate remaining audit work from completed changes`. 현재 후속 목록과 완료 이력 분리.
 - `5c664962` — `test: add self-service settlement and ledger measurements`. 격리 측정·JSON 전달·실행 가이드·smoke 검증.
+- `5519974f` — `docs: analyze standard settlement and ledger measurements`. 사용자 standard 분석·원시 sample 증적 보존.
 
 ## 남은 작업
 
-기준: 62차 사용자 standard 결과 분석과 59차 전체 PostgreSQL 검증을 반영한 현재 후속 목록이다. 앞선 변경 기록의 “남은 범위”는 각 변경 당시의 상태이며 이후 차수에서 해결한 내용을 포함한다. 완료된 구현은 위 변경 기록에 보존하고 여기에서는 중복 집계하지 않는다.
+기준: 63차 Work 참조 적재 개선과 62차 사용자 standard 결과 분석, 59차 전체 PostgreSQL 검증을 반영한 현재 후속 목록이다. 앞선 변경 기록의 “남은 범위”는 각 변경 당시의 상태이며 이후 차수에서 해결한 내용을 포함한다. 완료된 구현은 위 변경 기록에 보존하고 여기에서는 중복 집계하지 않는다.
 
 아래는 **바로 조사·보강할 기술 작업 5묶음**, **운영 자료·환경이 필요한 검증 4묶음**, **명시적 보류/범위 판단 3건**으로 구분한다. 묶음 수는 미해결 버그 수·필요 커밋 수·일정 추정이 아니다. 미래 확장은 별도로 두며 현재 필수 개선량에 포함하지 않는다.
 
@@ -1795,13 +1806,13 @@ Mutation integration test에도 실제 적용/replay 구분 검증을 추가했�
 
 | 작업 | 관련 finding | 남은 범위와 완료 기준 |
 | --- | --- | --- |
-| 정산 초기화·원장 대사의 대량 처리 비용 개선·측정 | BE-015/033/036/042 | 61차 도구와 62차 사용자 standard 수집·분석은 완료했다. 확인된 Work correction/Mutation 참조의 Entity 누적·큰 ID 조회를 우선 개선하고, 다수 정산의 statement별 비용/계획을 조사한다. 49·50차의 정산별 commit·Entry cursor를 유지하며 같은 standard 전후 비교·필요한 large 측정·회귀 증적을 남긴다. 상세 수치는 13번 결과 분석 참조. |
+| 정산 초기화·원장 대사의 대량 처리 비용 개선·측정 | BE-015/033/036/042 | 61차 도구·62차 사용자 standard 분석과 63차 Work correction/Mutation 참조의 Entity 누적·큰 ID 조회 개선을 완료했다. 다수 정산의 statement별 비용/계획을 조사한다. 49·50차의 정산별 commit·Entry cursor를 유지하며 같은 standard 전후 비교·필요한 large 측정·회귀 증적을 남긴다. 상세 수치는 13번 결과 분석 참조. |
 | 남은 목록·하위 이력·선택지의 조회 경계 | BE-032/034 | 전체 그룹·sellable·derived member·collection/직접 계보, Work/Inbound/lot/Mutation 상세의 하위 이력, Sales 출하 선택지를 endpoint·소비자별로 조사한다. 전체 matching ID 메모리·응답량·반복 조회를 확인하고 pagination/검색/호환 상한 계약과 필요한 회귀를 정한다. 전체 farm map의 의도된 배치 계약에 임의 cut을 넣지 않는다. |
 | 미측정 쿼리와 index 비용 검증 | BE-032/035 | contains/OR/concat·희귀 상태·count/집계·복합 조건·deep offset·generic prepared plan·미측정 FK 등의 실제 Repository 계획을 확인한다. 48·49차에서 검증한 참조/날짜/계보 index를 다시 미완료로 세지 않는다. 결과·행/loop/buffer·쓰기 비용을 비교해 필요한 개선만 채택한다. |
 | 기존 접수·응답의 저장 계약 보호 범위 확대 | BE-013 | Mutation 및 Sales/일반 Work 생성의 v1 고정은 완료했다. 그 밖의 Work 실행·구조 기록·포트·취소·보정, Farm 입고·Auction 접수와 저장 응답에서 추가 보호가 필요한 shape/hash를 식별한다. 기존 golden·필드 변경 guard·구형 replay로 보호하며 과거 hash나 응답을 재작성하지 않는다. 신규 version 전환 자체는 아래 조건부 작업이다. |
 | 핵심 경로의 선택적 회귀·해석 경계 보강 | BE-012/037/038/039 | 독립 transaction의 후행 실패·실제 잠금 충돌 관측이 빠진 중요한 writer와 보정 이벤트 수량 수지 해석을 선별한다. 필요한 PG/호환 회귀와 해당 경로의 fixture 정리를 추가한다. 모든 H2 시험의 wrapper 전환·모든 lifecycle 분해·자유 JSON의 일괄 타입화를 완료 목표로 삼지 않는다. |
 
-정산/원장 standard 분석 후 **Work 참조 적재 개선과 다수 정산 쿼리 비용 조사**를 우선한다. 목록·쿼리 개선은 비용과 소비자 계약을 확인한 뒤 진행할 수 있고, 저장 계약 보호는 해당 필드 변경 전에 보강한다. 마지막 회귀·fixture 항목은 위험이 큰 경로부터 점진적으로 수행한다. 미측정 영역 전체에 성능 결함이 확인됐다는 의미는 아니다.
+다음 기술 작업은 **다수 정산 쿼리 비용 조사**다. Work 참조 적재의 구현 개선은 63차에 완료했으며 standard 전후 시간/heap 비교와 large 한계 확인을 별도로 남긴다. 목록·쿼리 개선은 비용과 소비자 계약을 확인한 뒤 진행할 수 있고, 저장 계약 보호는 해당 필드 변경 전에 보강한다. 마지막 회귀·fixture 항목은 위험이 큰 경로부터 점진적으로 수행한다. 미측정 영역 전체에 성능 결함이 확인됐다는 의미는 아니다.
 
 ### 2. 운영 자료·환경이 필요한 검증
 

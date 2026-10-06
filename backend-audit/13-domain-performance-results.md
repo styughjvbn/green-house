@@ -82,3 +82,11 @@
 4. **별도 운영 검증:** 실제 데이터 분포·동시 요청·ACTIVE 배치·긴 snapshot/vacuum 영향·index 배포 비용. 현재 합성 `BASELINE_PREPARING`·수량 0 fixture와 3회 sample은 운영 대사를 대체하지 않는다.
 
 standard 결과 수집·분석은 완료했다. 확인된 Work 참조 적재와 다수 정산 비용의 개선/검증은 남아 있다. BE-009 일반 수정의 RECONCILIATION 분류·Work 생성 및 실사/보정 gate는 계속 보류한다.
+
+## 2026-10-06 후속 구현 — Work 참조 적재
+
+위 표는 `5c664962`의 측정 이력으로 보존한다. 63차에서 Work 보정의 Entity keyset 조회를 소유 scalar projection으로 바꾸고 Farm의 Mutation 검증을 참조 500건 단위의 scalar 조회로 분할했다. 저장 결과 해석은 기존 상세 응답과 공통 reader를 사용하며 외부 참조 계약·링크 판정·오류 순서·fingerprint·transaction 경계는 유지한다.
+
+PostgreSQL 회귀에서는 보정 1·499·500·501·5,000건에서 보정/Mutation Entity 적재가 각각 0인지, query count가 batch 수에만 따라가는지와 SQL bind/반환 행 상한을 검사한다. 기준 측정의 Entity 10,001개 중 이 두 종류의 10,000개 적재를 제거하는 범위다. fixture의 그룹 수·revision 분포가 원본 standard Work scenario와 동일하지 않으므로 회귀 테스트의 시간/heap을 직접 전후 benchmark로 비교하지 않는다. standard/large 재측정과 다수 정산 지연의 statement별 원인 조사는 후속으로 남긴다.
+
+실제 회귀 결과: 5,000건에서 전체 Entity 적재 1개(coverage), 보정/Mutation 적재 각각 0개, JDBC 실행 38회·소비 행 15,009개·SQL bind 최대 500개였다. 1/499/500건은 실행 20회, 501건은 22회로 batch 경계에만 증가했다. 날짜 전용 legacy 보정·누락/잘못된 출처·배치 경계의 오류 순서·fingerprint와 동시 수정 시 repeatable snapshot도 통과했다. 관련 PostgreSQL 6개 클래스·49개 고유 시험 및 일반 backend 748건·frontend/format 검증 성공을 [63차 기록](10-remediation-progress.md#63차-변경--work-보정-대사의-scalar-참조mutation-입력-분할)에 남겼다.
