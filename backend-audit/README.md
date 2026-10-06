@@ -18,7 +18,7 @@
 | [개선 이력](archive/10-remediation-progress.md) | 1~66차 구현·조사·커밋·검증 전체 기록 |
 | [index 검증](archive/11-index-plan-validation.md) | 적용된 index/조회 변경의 PostgreSQL 계획 비교 |
 | [측정 결과](archive/13-domain-performance-results.md)·[원인 조사](archive/14-performance-diagnosis.md) | 완료된 standard 전후 비교와 격리 진단 |
-| [measurements](archive/measurements/) | 위 측정의 CSV·JSON 증적 |
+| [measurements](archive/measurements/) | 성능 측정과 운영 백업 대사·제약 검증의 CSV·JSON 증적 |
 
 ## 유지 기준
 

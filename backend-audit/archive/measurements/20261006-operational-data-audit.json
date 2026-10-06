@@ -1,0 +1,967 @@
+{
+  "recordedOn": "2026-10-06",
+  "source": {
+    "backup": "temp/green-house_20261006_030001.dump.gz",
+    "sha256": "06be57e9a0998738866b040bcdb28d7d4a9acd7fe655688069d37c595622eac5",
+    "compressedBytes": 193585,
+    "dumpServerVersion": "14.24",
+    "verificationServerVersion": "14.24",
+    "flywayVersion": "34",
+    "codeRevision": "1e87a5f73025909b13ee94d03d8ec154b657c258"
+  },
+  "scope": {
+    "sourceRestore": "Read-only inspection of unchanged V34 backup restore.",
+    "releaseRestore": "Separate restore; checked-in V35-V42 SQL applied in individual transactions, followed by individual CHECK validation attempts. Flyway history unchanged; not a full Flyway deployment.",
+    "productionDatabaseModified": false,
+    "sourceBackupModified": false,
+    "dataRepairPerformed": false,
+    "startupSettlementExecuted": false,
+    "temporaryAuditContainersRemoved": true
+  },
+  "sourceMetadata": [
+    {
+      "report": "SNAPSHOT",
+      "readOnly": "on",
+      "checkedAt": "2026-10-06T02:25:20.521851+00:00",
+      "serverVersion": "14.24 (Debian 14.24-1.pgdg13+2)"
+    },
+    {
+      "report": "MIGRATION",
+      "version": "34",
+      "description": "orchid stock count audits",
+      "installedOn": "2026-10-03T10:24:46.978389"
+    },
+    {
+      "report": "COUNTS",
+      "salesSlips": 148,
+      "auctionLots": 566,
+      "settlements": 94,
+      "orchidGroups": 320,
+      "workOperations": 79,
+      "mutationEntries": 474
+    },
+    {
+      "kind": "c",
+      "count": 4,
+      "report": "CONSTRAINT_COUNTS",
+      "validated": false
+    },
+    {
+      "kind": "c",
+      "count": 32,
+      "report": "CONSTRAINT_COUNTS",
+      "validated": true
+    },
+    {
+      "kind": "f",
+      "count": 65,
+      "report": "CONSTRAINT_COUNTS",
+      "validated": true
+    },
+    {
+      "kind": "p",
+      "count": 47,
+      "report": "CONSTRAINT_COUNTS",
+      "validated": true
+    },
+    {
+      "kind": "t",
+      "count": 1,
+      "report": "CONSTRAINT_COUNTS",
+      "validated": true
+    },
+    {
+      "kind": "u",
+      "count": 31,
+      "report": "CONSTRAINT_COUNTS",
+      "validated": true
+    }
+  ],
+  "sourceConstraints": [
+    {
+      "kind": "c",
+      "table": "orchid_groups",
+      "schema": "public",
+      "status": "UNVALIDATED",
+      "present": true,
+      "sampleIds": [],
+      "validated": false,
+      "constraint": "ck_orchid_groups_quantity_nonnegative",
+      "definition": "CHECK ((quantity >= 0)) NOT VALID",
+      "expression": "(quantity >= 0)",
+      "violationCount": 0
+    },
+    {
+      "kind": "c",
+      "table": "orchid_groups",
+      "schema": "public",
+      "status": "UNVALIDATED",
+      "present": true,
+      "sampleIds": [],
+      "validated": false,
+      "constraint": "ck_orchid_groups_reserved_quantity",
+      "definition": "CHECK (((reserved_quantity >= 0) AND (reserved_quantity <= quantity))) NOT VALID",
+      "expression": "((reserved_quantity >= 0) AND (reserved_quantity <= quantity))",
+      "violationCount": 0
+    },
+    {
+      "kind": "c",
+      "table": "orchid_groups",
+      "schema": "public",
+      "status": "UNVALIDATED",
+      "present": true,
+      "sampleIds": [],
+      "validated": false,
+      "constraint": "ck_orchid_groups_state_revision",
+      "definition": "CHECK (((state_revision IS NULL) OR (state_revision >= 0))) NOT VALID",
+      "expression": "((state_revision IS NULL) OR (state_revision >= 0))",
+      "violationCount": 0
+    },
+    {
+      "kind": null,
+      "table": "sales_slip_items",
+      "schema": "public",
+      "status": "MISSING",
+      "present": false,
+      "sampleIds": [],
+      "validated": null,
+      "constraint": "ck_sales_slip_items_amount",
+      "definition": null,
+      "expression": null,
+      "violationCount": null
+    },
+    {
+      "kind": "c",
+      "table": "sales_slips",
+      "schema": "public",
+      "status": "UNVALIDATED",
+      "present": true,
+      "sampleIds": [],
+      "validated": false,
+      "constraint": "ck_sales_slips_sales_status",
+      "definition": "CHECK ((((sales_status)::text = '취소'::text) OR (sales_type IS NULL) OR (((sales_type)::text = 'DIRECT'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출고 완료'::character varying)::text]))) OR (((sales_type)::text = 'AUCTION'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출하 완료'::character varying)::text]))))) NOT VALID",
+      "expression": "(((sales_status)::text = '취소'::text) OR (sales_type IS NULL) OR (((sales_type)::text = 'DIRECT'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출고 완료'::character varying)::text]))) OR (((sales_type)::text = 'AUCTION'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출하 완료'::character varying)::text]))))",
+      "violationCount": 0
+    },
+    {
+      "kind": null,
+      "table": "sales_slips",
+      "schema": "public",
+      "status": "MISSING",
+      "present": false,
+      "sampleIds": [],
+      "validated": null,
+      "constraint": "ck_sales_slips_total_amount",
+      "definition": null,
+      "expression": null,
+      "violationCount": null
+    }
+  ],
+  "releaseSchemaRehearsal": {
+    "method": "Checked-in V35-V42 SQL applied transactionally to a second restored DB; no Flyway history edits.",
+    "scripts": [
+      {
+        "script": "V35__guard_sales_amounts.sql",
+        "exitCode": 0
+      },
+      {
+        "script": "V36__auction_command_receipts.sql",
+        "exitCode": 0
+      },
+      {
+        "script": "V37__auction_history_quantity_snapshots.sql",
+        "exitCode": 0
+      },
+      {
+        "script": "V38__sales_creation_receipts.sql",
+        "exitCode": 0
+      },
+      {
+        "script": "V39__inbound_creation_receipts.sql",
+        "exitCode": 0
+      },
+      {
+        "script": "V40__work_creation_response_snapshots.sql",
+        "exitCode": 0
+      },
+      {
+        "script": "V41__index_operational_reference_and_date_queries.sql",
+        "exitCode": 0
+      },
+      {
+        "script": "V42__index_sold_results_for_settlement_rebuild.sql",
+        "exitCode": 0
+      }
+    ]
+  },
+  "releaseConstraintValidation": [
+    {
+      "constraint": "ck_orchid_groups_quantity_nonnegative",
+      "violationsBefore": 0,
+      "exitCode": 0,
+      "sqlstate": null
+    },
+    {
+      "constraint": "ck_orchid_groups_reserved_quantity",
+      "violationsBefore": 0,
+      "exitCode": 0,
+      "sqlstate": null
+    },
+    {
+      "constraint": "ck_orchid_groups_state_revision",
+      "violationsBefore": 0,
+      "exitCode": 0,
+      "sqlstate": null
+    },
+    {
+      "constraint": "ck_sales_slip_items_amount",
+      "violationsBefore": 4,
+      "exitCode": 3,
+      "sqlstate": "23514"
+    },
+    {
+      "constraint": "ck_sales_slips_sales_status",
+      "violationsBefore": 0,
+      "exitCode": 0,
+      "sqlstate": null
+    },
+    {
+      "constraint": "ck_sales_slips_total_amount",
+      "violationsBefore": 2,
+      "exitCode": 3,
+      "sqlstate": "23514"
+    }
+  ],
+  "releaseConstraintsAfter": [
+    {
+      "kind": "c",
+      "table": "orchid_groups",
+      "schema": "public",
+      "status": "VALIDATED",
+      "present": true,
+      "sampleIds": [],
+      "validated": true,
+      "constraint": "ck_orchid_groups_quantity_nonnegative",
+      "definition": "CHECK ((quantity >= 0))",
+      "expression": "(quantity >= 0)",
+      "violationCount": 0
+    },
+    {
+      "kind": "c",
+      "table": "orchid_groups",
+      "schema": "public",
+      "status": "VALIDATED",
+      "present": true,
+      "sampleIds": [],
+      "validated": true,
+      "constraint": "ck_orchid_groups_reserved_quantity",
+      "definition": "CHECK (((reserved_quantity >= 0) AND (reserved_quantity <= quantity)))",
+      "expression": "((reserved_quantity >= 0) AND (reserved_quantity <= quantity))",
+      "violationCount": 0
+    },
+    {
+      "kind": "c",
+      "table": "orchid_groups",
+      "schema": "public",
+      "status": "VALIDATED",
+      "present": true,
+      "sampleIds": [],
+      "validated": true,
+      "constraint": "ck_orchid_groups_state_revision",
+      "definition": "CHECK (((state_revision IS NULL) OR (state_revision >= 0)))",
+      "expression": "((state_revision IS NULL) OR (state_revision >= 0))",
+      "violationCount": 0
+    },
+    {
+      "kind": "c",
+      "table": "sales_slip_items",
+      "schema": "public",
+      "status": "VIOLATIONS",
+      "present": true,
+      "sampleIds": [
+        777,
+        778,
+        809,
+        823
+      ],
+      "validated": false,
+      "constraint": "ck_sales_slip_items_amount",
+      "definition": "CHECK (((quantity > 0) AND (unit_price >= 0) AND (amount >= 0) AND ((amount)::bigint = ((quantity)::bigint * (unit_price)::bigint)))) NOT VALID",
+      "expression": "((quantity > 0) AND (unit_price >= 0) AND (amount >= 0) AND ((amount)::bigint = ((quantity)::bigint * (unit_price)::bigint)))",
+      "violationCount": 4
+    },
+    {
+      "kind": "c",
+      "table": "sales_slips",
+      "schema": "public",
+      "status": "VALIDATED",
+      "present": true,
+      "sampleIds": [],
+      "validated": true,
+      "constraint": "ck_sales_slips_sales_status",
+      "definition": "CHECK ((((sales_status)::text = '취소'::text) OR (sales_type IS NULL) OR (((sales_type)::text = 'DIRECT'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출고 완료'::character varying)::text]))) OR (((sales_type)::text = 'AUCTION'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출하 완료'::character varying)::text])))))",
+      "expression": "(((sales_status)::text = '취소'::text) OR (sales_type IS NULL) OR (((sales_type)::text = 'DIRECT'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출고 완료'::character varying)::text]))) OR (((sales_type)::text = 'AUCTION'::text) AND ((sales_status)::text = ANY (ARRAY[('작성중'::character varying)::text, ('출하 완료'::character varying)::text]))))",
+      "violationCount": 0
+    },
+    {
+      "kind": "c",
+      "table": "sales_slips",
+      "schema": "public",
+      "status": "VIOLATIONS",
+      "present": true,
+      "sampleIds": [
+        134,
+        137
+      ],
+      "validated": false,
+      "constraint": "ck_sales_slips_total_amount",
+      "definition": "CHECK ((total_amount >= 0)) NOT VALID",
+      "expression": "(total_amount >= 0)",
+      "violationCount": 2
+    }
+  ],
+  "businessSnapshot": {
+    "report": "SNAPSHOT",
+    "readOnly": "on",
+    "snapshot": "1651:1651:",
+    "checkedAt": "2026-10-06T02:25:21.203236+00:00"
+  },
+  "businessChecks": [
+    {
+      "code": "GROUP_RESERVATION_MISMATCH",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SALES_ITEM_ARITHMETIC_MISMATCH",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SALES_ITEM_NONPOSITIVE_QUANTITY",
+      "kind": "POLICY_REVIEW",
+      "count": 4,
+      "sampleIds": [
+        777,
+        778,
+        809,
+        823
+      ]
+    },
+    {
+      "code": "SALES_ITEM_NEGATIVE_PRICE_OR_AMOUNT",
+      "kind": "POLICY_REVIEW",
+      "count": 4,
+      "sampleIds": [
+        777,
+        778,
+        809,
+        823
+      ]
+    },
+    {
+      "code": "SALES_TOTAL_MISMATCH",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SALES_NEGATIVE_TOTAL",
+      "kind": "POLICY_REVIEW",
+      "count": 2,
+      "sampleIds": [
+        134,
+        137
+      ]
+    },
+    {
+      "code": "SALES_NEGATIVE_PAID_AMOUNT",
+      "kind": "POLICY_REVIEW",
+      "count": 2,
+      "sampleIds": [
+        134,
+        137
+      ]
+    },
+    {
+      "code": "SALES_REMAINING_MISMATCH",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SALES_ALLOCATED_ITEM_QUANTITY_MISMATCH",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SALES_ALLOCATION_DANGLING_GROUP",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SALES_MOVEMENT_INCOMPLETE_MUTATION_LINK",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SALES_MOVEMENT_DANGLING_MUTATION",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "AUCTION_LOT_WAITING_MISMATCH",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "AUCTION_LOT_SOLD_RESULT_MISMATCH",
+      "kind": "REVIEW",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "AUCTION_LOT_NEGATIVE_QUANTITY",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "AUCTION_LOT_EXCEEDS_SHIPMENT",
+      "kind": "REVIEW",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "AUCTION_WAITING_WITH_HISTORY",
+      "kind": "CANDIDATE",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "AUCTION_DUPLICATE_ATTEMPT_NUMBER",
+      "kind": "CANDIDATE",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "AUCTION_IDENTICAL_RESULT_ROWS",
+      "kind": "CANDIDATE",
+      "count": 32,
+      "sampleIds": [
+        121,
+        206,
+        280,
+        297,
+        298,
+        339,
+        343,
+        356,
+        378,
+        381,
+        396,
+        439,
+        471,
+        472,
+        515,
+        516,
+        534,
+        576,
+        577,
+        653,
+        707,
+        773,
+        780,
+        832,
+        843,
+        904,
+        905,
+        1011,
+        1024,
+        1046,
+        1075,
+        1080
+      ]
+    },
+    {
+      "code": "SETTLEMENT_GROSS_MISMATCH",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SETTLEMENT_EXPECTED_DEPOSIT_MISMATCH",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SETTLEMENT_REMAINING_MISMATCH",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SETTLEMENT_NEGATIVE_AMOUNTS",
+      "kind": "POLICY_REVIEW",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SETTLEMENT_DUPLICATE_HOUSE_DAY",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SETTLEMENT_DUPLICATE_RESULT_LINK",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SETTLEMENT_DANGLING_RESULT",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SETTLEMENT_SOURCE_AMOUNT_DIFF",
+      "kind": "SNAPSHOT_REVIEW",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "POSITIVE_AUCTION_RESULT_UNSETTLED",
+      "kind": "COVERAGE",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "PAYMENT_DANGLING_TARGET",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "PAYMENT_DUPLICATE_EXTERNAL_UID",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "SALES_PAID_EVENT_COVERAGE_DIFF",
+      "kind": "COVERAGE",
+      "count": 148,
+      "sampleIds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50
+      ]
+    },
+    {
+      "code": "SETTLEMENT_PAID_EVENT_COVERAGE_DIFF",
+      "kind": "COVERAGE",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "WORK_INCOMPLETE_MUTATION_LINK",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "WORK_CORRECTION_INCOMPLETE_MUTATION_LINK",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "WORK_TARGET_DANGLING_GROUP",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "WORK_EFFECT_DANGLING_GROUP",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "WORK_TIME_ORDER_REVIEW",
+      "kind": "TIME_REVIEW",
+      "count": 40,
+      "sampleIds": [
+        7,
+        11,
+        31,
+        32,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        55,
+        56,
+        61,
+        62,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        164,
+        165,
+        260,
+        310
+      ]
+    },
+    {
+      "code": "LEDGER_MUTATION_WITHOUT_ENTRY",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "LEDGER_DUPLICATE_GROUP_REVISION",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "LEDGER_CHAIN_DISCONTINUITY",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "AUDIT_DANGLING_MUTATION",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    },
+    {
+      "code": "WORK_PLANNED_DATE_ORDER",
+      "kind": "INVARIANT",
+      "count": 0,
+      "sampleIds": []
+    }
+  ],
+  "businessChecksIdenticalAfterSchemaRehearsal": true,
+  "ledgerReconciliation": {
+    "command": "./gradlew --console=plain orchidLedgerReconcile",
+    "target": "Release restore on PostgreSQL 14.24, SELECT-only reader; Flyway and startup settlement disabled.",
+    "exitCode": 0,
+    "result": {
+      "inspectedAt": 1791253550.5550566,
+      "stage": "ACTIVE",
+      "coverageStatus": "ACTIVE",
+      "orchidGroupCount": 320,
+      "revisionedGroupCount": 320,
+      "mutationCount": 377,
+      "entryCount": 474,
+      "baselineGroupCount": 114,
+      "baselineFingerprint": "8d6e173641fd5139e489a04fb9ae7daac07e4d5ef51a8d74be6d2b35d8745276",
+      "currentStateFingerprint": "a750cc95a67a616744cd1d1bd929a69173b7f482efe9ddeb5e5813c5963b6625",
+      "ready": true,
+      "issues": []
+    }
+  },
+  "dataPreservation": {
+    "tablesCompared": 47,
+    "identicalAfterFinalCli": true,
+    "method": "Ordered row-JSON hashes and counts of all original V34 columns in each original public table. Compared unchanged restore with schema-rehearsal restore after validation and ledger CLI. No row values or authentication-table hashes published.",
+    "backupSha256Unchanged": true
+  },
+  "interpretation": {
+    "legacyReturns": {
+      "negativeItems": [
+        {
+          "amount": -150000,
+          "itemId": 777,
+          "report": "NEGATIVE_ITEM_DETAIL",
+          "slipId": 127,
+          "quantity": -30,
+          "saleDate": "2026-03-25",
+          "unitPrice": 5000,
+          "amountMatchesMultiplication": true,
+          "itemHasReturnOrAdjustmentWord": true,
+          "slipHasReturnOrAdjustmentWord": false
+        },
+        {
+          "amount": -600000,
+          "itemId": 778,
+          "report": "NEGATIVE_ITEM_DETAIL",
+          "slipId": 127,
+          "quantity": -60,
+          "saleDate": "2026-03-25",
+          "unitPrice": 10000,
+          "amountMatchesMultiplication": true,
+          "itemHasReturnOrAdjustmentWord": true,
+          "slipHasReturnOrAdjustmentWord": false
+        },
+        {
+          "amount": -1200000,
+          "itemId": 809,
+          "report": "NEGATIVE_ITEM_DETAIL",
+          "slipId": 134,
+          "quantity": -80,
+          "saleDate": "2026-04-03",
+          "unitPrice": 15000,
+          "amountMatchesMultiplication": true,
+          "itemHasReturnOrAdjustmentWord": true,
+          "slipHasReturnOrAdjustmentWord": false
+        },
+        {
+          "amount": -2520000,
+          "itemId": 823,
+          "report": "NEGATIVE_ITEM_DETAIL",
+          "slipId": 137,
+          "quantity": -168,
+          "saleDate": "2026-04-07",
+          "unitPrice": 15000,
+          "amountMatchesMultiplication": true,
+          "itemHasReturnOrAdjustmentWord": true,
+          "slipHasReturnOrAdjustmentWord": false
+        }
+      ],
+      "negativeSlips": [
+        {
+          "report": "NEGATIVE_SLIP_DETAIL",
+          "slipId": 134,
+          "status": "출고 완료",
+          "saleDate": "2026-04-03",
+          "paidAmount": -1200000,
+          "totalAmount": -1200000,
+          "remainingAmount": 0
+        },
+        {
+          "report": "NEGATIVE_SLIP_DETAIL",
+          "slipId": 137,
+          "status": "출고 완료",
+          "saleDate": "2026-04-07",
+          "paidAmount": -2520000,
+          "totalAmount": -2520000,
+          "remainingAmount": 0
+        }
+      ],
+      "affectedSlipIds": [
+        127,
+        134,
+        137
+      ],
+      "allFourItemMemosContainReturnWord": true,
+      "assessment": "Amounts match quantity times unit price. Legacy signed return records conflict with V35 positivity rules; not arithmetic corruption. V35 SQL succeeds with NOT VALID; validation fails, and subsequent updates to violating rows may be rejected. Preserve originals; historical-return handling must be decided before money CHECK validation.",
+      "returnWordEvidence": [
+        {
+          "itemId": 777,
+          "report": "NEGATIVE_ITEM_REASON",
+          "hasOffsetWord": false,
+          "hasRefundWord": false,
+          "hasReturnWord": true
+        },
+        {
+          "itemId": 778,
+          "report": "NEGATIVE_ITEM_REASON",
+          "hasOffsetWord": false,
+          "hasRefundWord": false,
+          "hasReturnWord": true
+        },
+        {
+          "itemId": 809,
+          "report": "NEGATIVE_ITEM_REASON",
+          "hasOffsetWord": false,
+          "hasRefundWord": false,
+          "hasReturnWord": true
+        },
+        {
+          "itemId": 823,
+          "report": "NEGATIVE_ITEM_REASON",
+          "hasOffsetWord": false,
+          "hasRefundWord": false,
+          "hasReturnWord": true
+        }
+      ]
+    },
+    "paymentCoverage": {
+      "storedPaidSalesSlips": 148,
+      "paymentEventCount": 0,
+      "assessment": "Historical paid amounts have no event provenance in this backup. Not evidence of 148 incorrect payments. Bank/original receipts required; do not synthesize payment events."
+    },
+    "workTime": {
+      "summary": {
+        "report": "WORK_DATE_ORDER",
+        "actualEndBeforeStart": 40,
+        "plannedEndBeforeStart": 0,
+        "actualEndEarlierCalendarDay": 40
+      },
+      "assessment": "40 end dates precede recorded start. Current start(now) and completionTime(completedDate) allow registration time and retrospective work day to mix. Review semantics; no quantity or ledger corruption established and no timestamps rewritten."
+    },
+    "auctionIdenticalRows": {
+      "summary": {
+        "report": "IDENTICAL_AUCTION_RESULT_GROUPS",
+        "excessRows": 43,
+        "totalGroups": 32,
+        "zeroAmountGroups": 1,
+        "sameAttemptGroups": 32,
+        "positiveAmountGroups": 31,
+        "multipleAttemptGroups": 0
+      },
+      "assessment": "32 same-attempt groups, 43 excess identical economic rows; multiple result lines are allowed. Totals reconcile. Old request identity absent; duplicate requests not established; no deduplication."
+    }
+  },
+  "limits": [
+    "Snapshot invariants do not prove absence of all historical bugs or deleted history.",
+    "Actual primary DB validation and full Flyway rollout not performed.",
+    "External bank/payment facts, past request replay corpus and production-load assessment not supplied or performed.",
+    "V35-V42 schema rehearsal alone is not application workflow or concurrency regression verification."
+  ],
+  "reproduction": {
+    "constraintAudit": "scripts/data-audit/audit-domain-constraints.sql",
+    "constraintCatalog": "scripts/data-audit/domain-constraint-catalog.sql",
+    "individualValidation": "scripts/data-audit/validate-domain-constraint.sql",
+    "businessAuditSql": [
+      "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET LOCAL row_security=off; SET LOCAL lock_timeout='3s'; SET LOCAL statement_timeout='5min';",
+      "SELECT jsonb_build_object('report','SNAPSHOT','readOnly',current_setting('transaction_read_only'),'snapshot',pg_current_snapshot()::text,'checkedAt',transaction_timestamp());",
+      "WITH violations AS MATERIALIZED (SELECT g.id FROM orchid_groups g LEFT JOIN (SELECT a.orchid_group_id,sum(a.allocated_quantity)::numeric expected FROM sales_slip_item_allocations a JOIN sales_slip_items i ON i.id=a.sales_slip_item_id JOIN sales_slips s ON s.id=i.sales_slip_id WHERE s.sales_status='작성중' GROUP BY a.orchid_group_id) r ON r.orchid_group_id=g.id WHERE g.reserved_quantity IS DISTINCT FROM coalesce(r.expected,0)) SELECT jsonb_build_object('code','GROUP_RESERVATION_MISMATCH','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM sales_slip_items WHERE amount::numeric IS DISTINCT FROM quantity::numeric*unit_price::numeric) SELECT jsonb_build_object('code','SALES_ITEM_ARITHMETIC_MISMATCH','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM sales_slip_items WHERE quantity<=0) SELECT jsonb_build_object('code','SALES_ITEM_NONPOSITIVE_QUANTITY','kind','POLICY_REVIEW','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM sales_slip_items WHERE unit_price<0 OR amount<0) SELECT jsonb_build_object('code','SALES_ITEM_NEGATIVE_PRICE_OR_AMOUNT','kind','POLICY_REVIEW','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT s.id FROM sales_slips s LEFT JOIN (SELECT sales_slip_id,sum(amount)::numeric total FROM sales_slip_items GROUP BY sales_slip_id) i ON i.sales_slip_id=s.id WHERE s.total_amount::numeric IS DISTINCT FROM coalesce(i.total,0)) SELECT jsonb_build_object('code','SALES_TOTAL_MISMATCH','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM sales_slips WHERE total_amount<0) SELECT jsonb_build_object('code','SALES_NEGATIVE_TOTAL','kind','POLICY_REVIEW','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM sales_slips WHERE paid_amount<0) SELECT jsonb_build_object('code','SALES_NEGATIVE_PAID_AMOUNT','kind','POLICY_REVIEW','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM sales_slips WHERE coalesce(remaining_amount,0)::numeric <> greatest(0::numeric,total_amount::numeric-coalesce(paid_amount,0)::numeric)) SELECT jsonb_build_object('code','SALES_REMAINING_MISMATCH','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT i.id FROM sales_slip_items i JOIN (SELECT sales_slip_item_id,sum(allocated_quantity)::numeric total FROM sales_slip_item_allocations GROUP BY sales_slip_item_id) a ON a.sales_slip_item_id=i.id WHERE a.total IS DISTINCT FROM i.quantity::numeric) SELECT jsonb_build_object('code','SALES_ALLOCATED_ITEM_QUANTITY_MISMATCH','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT a.id FROM sales_slip_item_allocations a LEFT JOIN orchid_groups g ON g.id=a.orchid_group_id WHERE g.id IS NULL) SELECT jsonb_build_object('code','SALES_ALLOCATION_DANGLING_GROUP','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM sales_inventory_movements WHERE (mutation_id IS NULL) <> (correlation_id IS NULL)) SELECT jsonb_build_object('code','SALES_MOVEMENT_INCOMPLETE_MUTATION_LINK','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT s.id FROM sales_inventory_movements s LEFT JOIN orchid_group_mutations m ON m.id=s.mutation_id WHERE s.mutation_id IS NOT NULL AND m.id IS NULL) SELECT jsonb_build_object('code','SALES_MOVEMENT_DANGLING_MUTATION','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM auction_shipment_lots WHERE waiting_quantity <> greatest(0,shipped_quantity::numeric-sold_quantity::numeric-returned_quantity::numeric)) SELECT jsonb_build_object('code','AUCTION_LOT_WAITING_MISMATCH','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT l.id FROM auction_shipment_lots l LEFT JOIN (SELECT a.shipment_lot_id,sum(r.quantity)::numeric total FROM auction_attempts a JOIN auction_result_lines r ON r.auction_attempt_id=a.id WHERE r.amount>0 GROUP BY a.shipment_lot_id) sold ON sold.shipment_lot_id=l.id WHERE l.sold_quantity::numeric IS DISTINCT FROM coalesce(sold.total,0)) SELECT jsonb_build_object('code','AUCTION_LOT_SOLD_RESULT_MISMATCH','kind','REVIEW','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM auction_shipment_lots WHERE shipped_quantity<0 OR sold_quantity<0 OR returned_quantity<0 OR waiting_quantity<0) SELECT jsonb_build_object('code','AUCTION_LOT_NEGATIVE_QUANTITY','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM auction_shipment_lots WHERE sold_quantity::numeric+returned_quantity::numeric>shipped_quantity::numeric) SELECT jsonb_build_object('code','AUCTION_LOT_EXCEEDS_SHIPMENT','kind','REVIEW','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT l.id FROM auction_shipment_lots l WHERE l.current_status='WAITING' AND (EXISTS (SELECT 1 FROM auction_attempts a WHERE a.shipment_lot_id=l.id) OR EXISTS (SELECT 1 FROM auction_lot_status_history h WHERE h.shipment_lot_id=l.id))) SELECT jsonb_build_object('code','AUCTION_WAITING_WITH_HISTORY','kind','CANDIDATE','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT min(id) id FROM auction_attempts GROUP BY shipment_lot_id,auction_date,attempt_no HAVING count(*)>1) SELECT jsonb_build_object('code','AUCTION_DUPLICATE_ATTEMPT_NUMBER','kind','CANDIDATE','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT min(r.id) id FROM auction_result_lines r JOIN auction_attempts a ON a.id=r.auction_attempt_id GROUP BY a.shipment_lot_id,r.auction_date,r.auction_grade,r.quantity,r.unit_price,r.amount,r.inspection_status HAVING count(*)>1) SELECT jsonb_build_object('code','AUCTION_IDENTICAL_RESULT_ROWS','kind','CANDIDATE','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT s.id FROM auction_settlements s LEFT JOIN (SELECT settlement_id,sum(amount)::numeric total FROM auction_settlement_lines GROUP BY settlement_id) l ON l.settlement_id=s.id WHERE s.gross_amount::numeric IS DISTINCT FROM coalesce(l.total,0)) SELECT jsonb_build_object('code','SETTLEMENT_GROSS_MISMATCH','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM auction_settlements WHERE expected_deposit_amount::numeric <> greatest(0::numeric,gross_amount::numeric-fee_amount::numeric-deduction_amount::numeric)) SELECT jsonb_build_object('code','SETTLEMENT_EXPECTED_DEPOSIT_MISMATCH','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM auction_settlements WHERE remaining_amount::numeric <> greatest(0::numeric,expected_deposit_amount::numeric-paid_amount::numeric)) SELECT jsonb_build_object('code','SETTLEMENT_REMAINING_MISMATCH','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM auction_settlements WHERE gross_amount<0 OR fee_amount<0 OR deduction_amount<0 OR expected_deposit_amount<0 OR paid_amount<0 OR remaining_amount<0) SELECT jsonb_build_object('code','SETTLEMENT_NEGATIVE_AMOUNTS','kind','POLICY_REVIEW','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT min(id) id FROM auction_settlements GROUP BY auction_house_id,auction_date HAVING count(*)>1) SELECT jsonb_build_object('code','SETTLEMENT_DUPLICATE_HOUSE_DAY','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT min(id) id FROM auction_settlement_lines WHERE auction_result_line_id IS NOT NULL GROUP BY auction_result_line_id HAVING count(*)>1) SELECT jsonb_build_object('code','SETTLEMENT_DUPLICATE_RESULT_LINK','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT l.id FROM auction_settlement_lines l LEFT JOIN auction_result_lines r ON r.id=l.auction_result_line_id WHERE l.auction_result_line_id IS NOT NULL AND r.id IS NULL) SELECT jsonb_build_object('code','SETTLEMENT_DANGLING_RESULT','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT l.id FROM auction_settlement_lines l JOIN auction_result_lines r ON r.id=l.auction_result_line_id WHERE l.amount::numeric IS DISTINCT FROM r.amount::numeric OR l.quantity IS DISTINCT FROM r.quantity OR l.unit_price IS DISTINCT FROM r.unit_price) SELECT jsonb_build_object('code','SETTLEMENT_SOURCE_AMOUNT_DIFF','kind','SNAPSHOT_REVIEW','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT r.id FROM auction_result_lines r WHERE r.amount>0 AND NOT EXISTS (SELECT 1 FROM auction_settlement_lines l WHERE l.auction_result_line_id=r.id)) SELECT jsonb_build_object('code','POSITIVE_AUCTION_RESULT_UNSETTLED','kind','COVERAGE','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT e.id FROM partner_payment_events e LEFT JOIN sales_slips s ON e.target_type='SALES_SLIP' AND s.id=e.target_id LEFT JOIN auction_settlements a ON e.target_type='AUCTION_SETTLEMENT' AND a.id=e.target_id WHERE (e.target_type='SALES_SLIP' AND s.id IS NULL) OR (e.target_type='AUCTION_SETTLEMENT' AND a.id IS NULL)) SELECT jsonb_build_object('code','PAYMENT_DANGLING_TARGET','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT min(id) id FROM partner_payment_events WHERE external_uid IS NOT NULL GROUP BY external_uid HAVING count(*)>1) SELECT jsonb_build_object('code','PAYMENT_DUPLICATE_EXTERNAL_UID','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT s.id FROM sales_slips s LEFT JOIN (SELECT target_id,sum(amount)::numeric total FROM partner_payment_events WHERE target_type='SALES_SLIP' AND event_type='PAYMENT_RECEIVED' AND status='FULLY_APPLIED' GROUP BY target_id) e ON e.target_id=s.id WHERE coalesce(s.paid_amount,0)::numeric IS DISTINCT FROM coalesce(e.total,0)) SELECT jsonb_build_object('code','SALES_PAID_EVENT_COVERAGE_DIFF','kind','COVERAGE','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT s.id FROM auction_settlements s LEFT JOIN (SELECT target_id,sum(amount)::numeric total FROM partner_payment_events WHERE target_type='AUCTION_SETTLEMENT' AND event_type='PAYMENT_RECEIVED' AND status='FULLY_APPLIED' GROUP BY target_id) e ON e.target_id=s.id WHERE s.paid_amount::numeric IS DISTINCT FROM coalesce(e.total,0)) SELECT jsonb_build_object('code','SETTLEMENT_PAID_EVENT_COVERAGE_DIFF','kind','COVERAGE','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM work_applied_effects WHERE (mutation_id IS NULL) <> (correlation_id IS NULL)) SELECT jsonb_build_object('code','WORK_INCOMPLETE_MUTATION_LINK','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM work_operation_corrections WHERE (mutation_id IS NULL) <> (correlation_id IS NULL)) SELECT jsonb_build_object('code','WORK_CORRECTION_INCOMPLETE_MUTATION_LINK','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT t.id FROM work_operation_targets t LEFT JOIN orchid_groups g ON g.id=t.orchid_group_id WHERE t.orchid_group_id IS NOT NULL AND g.id IS NULL) SELECT jsonb_build_object('code','WORK_TARGET_DANGLING_GROUP','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT e.id FROM work_effect_orchid_groups e LEFT JOIN orchid_groups g ON g.id=e.orchid_group_id WHERE g.id IS NULL) SELECT jsonb_build_object('code','WORK_EFFECT_DANGLING_GROUP','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM work_operations WHERE actual_end_at<actual_start_at) SELECT jsonb_build_object('code','WORK_TIME_ORDER_REVIEW','kind','TIME_REVIEW','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT m.id FROM orchid_group_mutations m WHERE NOT EXISTS (SELECT 1 FROM orchid_group_mutation_entries e WHERE e.mutation_id=m.id)) SELECT jsonb_build_object('code','LEDGER_MUTATION_WITHOUT_ENTRY','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT min(id) id FROM orchid_group_mutation_entries GROUP BY orchid_group_id,state_revision_after HAVING count(*)>1) SELECT jsonb_build_object('code','LEDGER_DUPLICATE_GROUP_REVISION','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM (SELECT e.*,lag(state_revision_after) OVER chain previous_revision,lag(after_state) OVER chain previous_after,row_number() OVER chain position FROM orchid_group_mutation_entries e WINDOW chain AS (PARTITION BY orchid_group_id ORDER BY state_revision_after,id)) c WHERE (position=1 AND NOT ((entry_kind='BASELINE' AND state_revision_before IS NULL AND state_revision_after=0) OR (entry_kind='CREATE' AND state_revision_before IS NULL AND state_revision_after=1))) OR (position>1 AND (state_revision_before IS DISTINCT FROM previous_revision OR state_revision_after IS DISTINCT FROM previous_revision+1 OR before_state IS DISTINCT FROM previous_after))) SELECT jsonb_build_object('code','LEDGER_CHAIN_DISCONTINUITY','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT a.id FROM audit_events a LEFT JOIN orchid_group_mutations m ON m.id=a.mutation_id WHERE a.mutation_id IS NOT NULL AND m.id IS NULL) SELECT jsonb_build_object('code','AUDIT_DANGLING_MUTATION','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "WITH violations AS MATERIALIZED (SELECT id FROM work_operations WHERE planned_end_date<planned_start_date) SELECT jsonb_build_object('code','WORK_PLANNED_DATE_ORDER','kind','INVARIANT','count',count(*),'sampleIds',coalesce((SELECT jsonb_agg(id ORDER BY id) FROM (SELECT id FROM violations ORDER BY id LIMIT 50) s),'[]'::jsonb)) FROM violations;",
+      "COMMIT;"
+    ],
+    "targetedReviewSql": [
+      "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;",
+      "SET LOCAL row_security=off; SET LOCAL lock_timeout='3s'; SET LOCAL statement_timeout='5min';",
+      "SELECT jsonb_build_object('report','NEGATIVE_ITEM_DETAIL','itemId',i.id,'slipId',i.sales_slip_id,'saleDate',s.sale_date,'quantity',i.quantity,'unitPrice',i.unit_price,'amount',i.amount,'amountMatchesMultiplication',i.amount::numeric=i.quantity::numeric*i.unit_price::numeric,'itemHasReturnOrAdjustmentWord',coalesce(i.memo,'')~'(반품|반환|환불|상계|차감|취소|조정)','slipHasReturnOrAdjustmentWord',coalesce(s.memo,'')~'(반품|반환|환불|상계|차감|취소|조정)') FROM sales_slip_items i JOIN sales_slips s ON s.id=i.sales_slip_id WHERE i.quantity<=0 OR i.unit_price<0 OR i.amount<0 ORDER BY i.id;",
+      "SELECT jsonb_build_object('report','NEGATIVE_SLIP_DETAIL','slipId',id,'saleDate',sale_date,'totalAmount',total_amount,'paidAmount',paid_amount,'remainingAmount',remaining_amount,'status',sales_status) FROM sales_slips WHERE total_amount<0 OR paid_amount<0 ORDER BY id;",
+      "SELECT jsonb_build_object('report','SALES_TYPE_COUNTS','salesType',sales_type,'count',count(*)) FROM sales_slips GROUP BY sales_type;",
+      "SELECT jsonb_build_object('report','PAYMENT_EVENT_COUNTS','type',event_type,'status',status,'targetType',target_type,'count',count(*)) FROM partner_payment_events GROUP BY event_type,status,target_type ORDER BY event_type,status,target_type;",
+      "SELECT jsonb_build_object('report','WORK_DATE_ORDER','plannedEndBeforeStart',count(*) FILTER (WHERE planned_end_date<planned_start_date),'actualEndBeforeStart',count(*) FILTER (WHERE actual_end_at<actual_start_at),'actualEndEarlierCalendarDay',count(*) FILTER (WHERE actual_end_at::date<actual_start_at::date)) FROM work_operations;",
+      "SELECT jsonb_build_object('report','WORK_TIME_SAMPLE','workId',w.id,'workType',t.code,'status',w.status,'actualStartAt',w.actual_start_at,'actualEndAt',w.actual_end_at,'createdAt',w.created_at,'plannedStartDate',w.planned_start_date) FROM work_operations w JOIN work_types t ON t.id=w.work_type_id WHERE w.actual_end_at<w.actual_start_at ORDER BY w.id LIMIT 8;",
+      "WITH groups AS (SELECT min(r.id) first_id,count(*) rows,count(DISTINCT a.id) attempts,max(r.amount) amount FROM auction_result_lines r JOIN auction_attempts a ON a.id=r.auction_attempt_id GROUP BY a.shipment_lot_id,r.auction_date,r.auction_grade,r.quantity,r.unit_price,r.amount,r.inspection_status HAVING count(*)>1) SELECT jsonb_build_object('report','IDENTICAL_AUCTION_RESULT_GROUPS','totalGroups',count(*),'sameAttemptGroups',count(*) FILTER (WHERE attempts=1),'multipleAttemptGroups',count(*) FILTER (WHERE attempts>1),'positiveAmountGroups',count(*) FILTER (WHERE amount>0),'zeroAmountGroups',count(*) FILTER (WHERE amount=0),'excessRows',sum(rows-1)) FROM groups;",
+      "SELECT jsonb_build_object('report','CONSTRAINT_COUNTS','kind',contype,'validated',convalidated,'count',count(*)) FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname='public' GROUP BY contype,convalidated ORDER BY contype,convalidated;",
+      "COMMIT;"
+    ],
+    "localPrivateArtifacts": "temp/operational-audit/20261006T021233Z-latest-backup/postgres14"
+  },
+  "artifactSha256": {
+    "business-final.jsonl": "e469d485a400b572b358587ae476e7bce8c8c72d0b7fdabb043125947c7af37a",
+    "release-business-final.jsonl": "ee737c15e10c6de385e159b98d8e76d5961f63ab77924ef620a02516914e85dc",
+    "release-constraints-after.jsonl": "6799c758b27ee311bd2af601625ae23752c2c846c4d19f1275b94ac494a0c5f4",
+    "constraint-validation-results.json": "04989e6871a234561687f347b0765735f6f65e201ddffc9c1ab76f21706ad15b",
+    "release-ledger-report.json": "22bc1d72524266422dbcc3ed94c72f0903a02d797389c6123a44ea577b46a4ea",
+    "release-schema-rehearsal.json": "90fab22946371ff113c14103fe8f697353c30fd912504a47c842f39841d024a8"
+  }
+}
