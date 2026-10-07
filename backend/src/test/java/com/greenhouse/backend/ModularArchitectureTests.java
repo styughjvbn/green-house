@@ -24,10 +24,7 @@ class ModularArchitectureTests {
           "audit",
           "farm",
           "work",
-          "partner",
           "sales",
-          "auction",
-          "settlement",
           "dashboard",
           "print",
           "analytics",
@@ -35,17 +32,7 @@ class ModularArchitectureTests {
           "demo");
 
   private static final Set<String> LAYERED_MODULES =
-      Set.of(
-          "audit",
-          "farm",
-          "work",
-          "partner",
-          "sales",
-          "auction",
-          "settlement",
-          "dashboard",
-          "print",
-          "analytics");
+      Set.of("audit", "farm", "work", "sales", "dashboard", "print", "analytics");
 
   private static final Set<String> STANDARD_LAYERS =
       Set.of("domain", "repository", "application", "controller", "dto");
@@ -55,14 +42,10 @@ class ModularArchitectureTests {
           Map.entry("audit", Set.of("common")),
           Map.entry("farm", Set.of("common", "work", "audit")),
           Map.entry("work", Set.of("common")),
-          Map.entry("partner", Set.of("common", "audit")),
-          Map.entry("sales", Set.of("common", "audit", "auction", "farm", "partner", "settlement")),
-          Map.entry("auction", Set.of("common", "partner")),
-          Map.entry("settlement", Set.of("common", "audit", "auction", "partner")),
+          Map.entry("sales", Set.of("common", "audit", "farm")),
           Map.entry("dashboard", Set.of("common", "farm")),
           Map.entry("print", Set.of("common", "sales")),
-          Map.entry(
-              "analytics", Set.of("common", "farm", "partner", "sales", "settlement", "work")),
+          Map.entry("analytics", Set.of("common", "farm", "sales", "work")),
           Map.entry("auth", Set.of("common", "demo")),
           Map.entry("demo", Set.of("common")));
 
@@ -147,6 +130,18 @@ class ModularArchitectureTests {
         "variety",
         "material",
         "transformation");
+  }
+
+  @Test
+  void salesLayersAreGroupedByOwnership() throws IOException {
+    assertFeaturePackages(
+        "sales", "application", "document", "direct", "auction", "payment", "partner");
+    for (String layer : List.of("domain", "repository", "controller", "dto")) {
+      assertFeaturePackages("sales", layer, "document", "auction", "payment", "partner");
+    }
+    for (String oldModule : List.of("auction", "partner", "settlement")) {
+      assertThat(SOURCE_ROOT.resolve(oldModule)).doesNotExist();
+    }
   }
 
   @Test

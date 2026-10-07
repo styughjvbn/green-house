@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
+import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
+import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;

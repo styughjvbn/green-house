@@ -72,10 +72,7 @@ audit
 auth
 farm
 work
-partner
 sales
-auction
-settlement
 dashboard
 analytics
 print
@@ -184,11 +181,17 @@ application|domain|dto/
 직렬화하며, 다른 키의 동일 원본 보정은 원본 잠금으로 직렬화한다. 목록의 보정 건수는 페이지 ID 기준 일괄 집계한다.
 보정 Mutation의 출처는 감사 이벤트이며, 기술 그래프와 원장 대사에서 원본 작업과 함께 추적한다.
 
-### partner
-
-- 거래처
-
 ### sales
+
+Sales 내부는 기존 계층을 유지한 `sales/{application,domain,repository,controller,dto}/{document,direct,auction,payment,partner}`로 나눈다. Farm은 별도 모듈이다. HTTP Controller는 공개 application 계약을 조합하며 저장소와 트랜잭션을 소유하지 않는다.
+
+- Document는 공통 전표·품목·allocation·예약·출고·snapshot·생성 receipt를 소유한다. 일반/경매 allocation 합계와 Farm 예약 대사를 계속 함께 수행한다.
+- Direct는 일반 판매 회계 연결과 입금 진입 유스케이스를 맡는다. 일반 판매 조건·금액의 저장은 아직 Document의 기존 컬럼을 사용하며, 전용 저장 모델과 데이터 이전은 다음 기능 단위다.
+- Auction은 출하·lot·시도·결과·반환 추적과 임시 호환 파생 정산(`auction/settlement`)을 소유한다.
+- Payment는 실제 입금 이벤트·연결 원장·거래처 잔액을 소유한다. Partner는 거래처 기준정보·거래처별 결제 선호 설정을 소유하며 금액 원장을 직접 변경하지 않는다.
+- Document는 구체적인 Direct/Auction/Payment 서비스를 호출하지 않는다. 필요한 출하 생성·취소 보호·표시 조회는 Document 소유 `AuctionDocumentPort`, 일반 판매의 예상일·입금 이력·잔액 연결은 `DirectDocumentAccountingPort`로 요청하고 소유자 adapter가 처리한다. 기존 출하 값 계약은 port로 이동하며 복제하지 않는다.
+- Payment가 정의한 `PaymentTargetPort`를 Document와 임시 경매 정산이 구현한다. Payment는 Entity를 받지 않고, 대상 잠금·유효성 검증 뒤 원장 멱등 확인→대상 금액 반영→입금/연결 원장→잔액→감사→응답을 조율한다. 유스케이스 진입점이 트랜잭션을 열고 대상 port와 원장 writer는 기존 트랜잭션에 반드시 참여한다.
+- 저장소·Entity·QueryDSL EntityPath는 내부 소유 경계 밖으로 노출하지 않는다. application 공개 멤버의 중첩 값 계약 검사와 내부 의존 그래프 검사를 함께 실행한다. 구현 의존은 `Direct/Auction → Document/Payment/Partner`, `Document → Payment port/Partner`, `Payment → Partner`이며 역방향 구현 의존을 허용하지 않는다.
 
 - 판매 전표
 - 판매 품목
@@ -206,7 +209,7 @@ application|domain|dto/
 - 출력과 판매 화면은 Sales application의 문서·요약 값 계약을 공유한다. Print가 Sales HTTP DTO에 의존하거나 같은 문서 필드를 복제하지 않는다.
 - 출력 응답의 금액·스냅샷·현재 거래처 정보·호환 action은 Sales가 제공한다. 기존 HTTP JSON을 유지하기 위해 action 필드도 보존하며 Print에서 업무 판정을 다시 하지 않는다. 문서 종류가 늘기 전 범용 renderer/provider는 만들지 않는다.
 
-### auction
+### Sales Auction
 
 - 경매 lot
 - 경매 시도
@@ -215,14 +218,14 @@ application|domain|dto/
 - 반환 확인
 - 수량 보정
 
-### settlement
+### Sales Payment와 호환 경매 정산
 
 - 수동 입금 확인
 - 부분입금
 - 거래처 잔액
 - 입금 이벤트
-- 거래처 정산 설정
-- 경매 정산과 정산 행
+- 거래처 정산 설정은 Sales Partner에 둔다.
+- 경매 정산과 정산 행은 Sales Auction의 임시 호환 경계에 둔다. 결과 기반 입금 대상·조회 계약으로 전환한 뒤 제거하며 새 보관·재구성 모델을 추가하지 않는다.
 - 경매 정산 재구성·초기화·입금은 거래처→정산→잔액 순서를 공유한다. 초기화는 바깥 transaction을 거절하는 coordinator가 후보를 읽고 정산별 application writer를 호출한다. 각 writer는 해당 거래처를 먼저 잠근 뒤 연결 여부를 재확인하고 경매장·경매일 한 정산을 commit해 중복 기동 시 같은 결과를 재추가하지 않는다. 실패한 정산만 rollback하고 이전 정산의 commit은 남는다. 수동 재계산의 기존 스냅샷·입금액·상태 계산 정책은 유지한다.
 
 ### auth / demo

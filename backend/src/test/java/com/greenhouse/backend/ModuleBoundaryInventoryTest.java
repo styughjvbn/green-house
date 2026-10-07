@@ -22,7 +22,7 @@ class ModuleBoundaryInventoryTest {
 
   private static final String BASE_PACKAGE = "com.greenhouse.backend.";
 
-  private static final JavaClasses CLASSES =
+  static final JavaClasses CLASSES =
       new ClassFileImporter()
           .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
           .importPackages(BASE_PACKAGE);

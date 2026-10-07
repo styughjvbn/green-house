@@ -3,48 +3,49 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
-import com.greenhouse.backend.auction.application.AuctionShipmentCreator.LotDraft;
-import com.greenhouse.backend.auction.domain.AuctionAttempt;
-import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
-import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
-import com.greenhouse.backend.auction.domain.AuctionResultLine;
-import com.greenhouse.backend.auction.domain.AuctionShipment;
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
-import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.audit.repository.AuditEventRepository;
-import com.greenhouse.backend.partner.application.BusinessPartnerInfo;
-import com.greenhouse.backend.partner.application.BusinessPartnerLock;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-import com.greenhouse.backend.sales.application.SalesPaymentService;
-import com.greenhouse.backend.sales.application.SalesSlipStatusService;
+import com.greenhouse.backend.sales.application.auction.AuctionShipmentCreator;
+import com.greenhouse.backend.sales.application.auction.settlement.AuctionPaymentService;
+import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementRebuildService;
+import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementService;
+import com.greenhouse.backend.sales.application.direct.SalesPaymentService;
+import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.LotDraft;
 import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
-import com.greenhouse.backend.sales.repository.SalesSlipRepository;
-import com.greenhouse.backend.settlement.application.AuctionSettlementRebuildService;
-import com.greenhouse.backend.settlement.application.AuctionSettlementService;
-import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
-import com.greenhouse.backend.settlement.application.PartnerBalanceService;
-import com.greenhouse.backend.settlement.application.PartnerSettlementSettingsService;
-import com.greenhouse.backend.settlement.application.PaymentService;
-import com.greenhouse.backend.settlement.domain.AuctionSettlement;
-import com.greenhouse.backend.settlement.domain.PartnerBalanceSummary;
-import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
-import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
-import com.greenhouse.backend.settlement.domain.PaymentEventType;
-import com.greenhouse.backend.settlement.domain.PaymentTargetType;
-import com.greenhouse.backend.settlement.domain.SettlementUnit;
-import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
-import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsResponse;
-import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
-import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
-import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
-import com.greenhouse.backend.settlement.repository.PartnerSettlementSettingsRepository;
+import com.greenhouse.backend.sales.application.document.SalesSlipStatusService;
+import com.greenhouse.backend.sales.application.partner.BusinessPartnerInfo;
+import com.greenhouse.backend.sales.application.partner.BusinessPartnerLock;
+import com.greenhouse.backend.sales.application.partner.PartnerSettlementSettingsService;
+import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
+import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
+import com.greenhouse.backend.sales.application.payment.PaymentService;
+import com.greenhouse.backend.sales.domain.auction.AuctionAttempt;
+import com.greenhouse.backend.sales.domain.auction.AuctionAttemptStatus;
+import com.greenhouse.backend.sales.domain.auction.AuctionInspectionStatus;
+import com.greenhouse.backend.sales.domain.auction.AuctionResultLine;
+import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
+import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
+import com.greenhouse.backend.sales.domain.auction.settlement.AuctionSettlement;
+import com.greenhouse.backend.sales.domain.document.SalesSlip;
+import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
+import com.greenhouse.backend.sales.domain.document.SalesType;
+import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
+import com.greenhouse.backend.sales.domain.partner.PartnerSettlementSettings;
+import com.greenhouse.backend.sales.domain.partner.PartnerType;
+import com.greenhouse.backend.sales.domain.partner.SettlementUnit;
+import com.greenhouse.backend.sales.domain.payment.PartnerBalanceSummary;
+import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
+import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
+import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.dto.auction.settlement.AuctionSettlementResponse;
+import com.greenhouse.backend.sales.dto.document.SalesSlipStatusUpdateRequest;
+import com.greenhouse.backend.sales.dto.partner.PartnerSettlementSettingsResponse;
+import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
+import com.greenhouse.backend.sales.repository.auction.settlement.AuctionSettlementRepository;
+import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
+import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.repository.partner.PartnerSettlementSettingsRepository;
+import com.greenhouse.backend.sales.repository.payment.PartnerBalanceSummaryRepository;
+import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,6 +73,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Tag("work-e2e")
 @Timeout(60)
 class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private AuctionPaymentService auctionPayments;
 
   @Autowired AuctionSettlementRebuildService settlementRebuild;
 
@@ -289,12 +293,12 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
     concurrently(
         List.of(
-            () -> paymentService.confirmAuctionPayment(settlement.id(), first),
-            () -> paymentService.confirmAuctionPayment(settlement.id(), second)));
+            () -> auctionPayments.confirmAuctionPayment(settlement.id(), first),
+            () -> auctionPayments.confirmAuctionPayment(settlement.id(), second)));
     concurrently(
         List.of(
-            () -> paymentService.confirmAuctionPayment(settlement.id(), first),
-            () -> paymentService.confirmAuctionPayment(settlement.id(), second)));
+            () -> auctionPayments.confirmAuctionPayment(settlement.id(), first),
+            () -> auctionPayments.confirmAuctionPayment(settlement.id(), second)));
 
     assertThat(settlementService.getSettlement(settlement.id()).paidAmount()).isEqualTo(50_000L);
     assertThat(settlementService.getSettlement(settlement.id()).remainingAmount())
@@ -710,7 +714,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
     concurrently(
         List.of(
             () -> settlementService.rebuild(house.getId(), date),
-            () -> paymentService.confirmAuctionPayment(id, payment(20000L, "rebuild-payment"))));
+            () -> auctionPayments.confirmAuctionPayment(id, payment(20000L, "rebuild-payment"))));
     var result = settlementService.getSettlement(id);
     assertThat(result.paidAmount()).isEqualTo(20000);
     assertThat(result.remainingAmount()).isEqualTo(80000);

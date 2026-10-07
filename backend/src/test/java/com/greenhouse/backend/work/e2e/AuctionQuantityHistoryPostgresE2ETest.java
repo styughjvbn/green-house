@@ -3,25 +3,26 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.auction.application.AuctionTrackingService;
-import com.greenhouse.backend.auction.application.RecordAuctionResultCommand;
-import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
-import com.greenhouse.backend.auction.domain.AuctionLotStatus;
-import com.greenhouse.backend.auction.domain.AuctionResultLineInput;
-import com.greenhouse.backend.auction.domain.AuctionShipment;
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
-import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
-import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
-import com.greenhouse.backend.auction.dto.AuctionLotStatusRequest;
-import com.greenhouse.backend.auction.dto.AuctionStatusHistoryResponse;
-import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-import com.greenhouse.backend.settlement.application.AuctionSettlementService;
-import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
-import com.greenhouse.backend.settlement.application.PaymentService;
+import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
+import com.greenhouse.backend.sales.application.auction.RecordAuctionResultCommand;
+import com.greenhouse.backend.sales.application.auction.settlement.AuctionPaymentService;
+import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementService;
+import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
+import com.greenhouse.backend.sales.application.payment.PaymentService;
+import com.greenhouse.backend.sales.domain.auction.AuctionAttemptStatus;
+import com.greenhouse.backend.sales.domain.auction.AuctionLotStatus;
+import com.greenhouse.backend.sales.domain.auction.AuctionResultLineInput;
+import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
+import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
+import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
+import com.greenhouse.backend.sales.domain.partner.PartnerType;
+import com.greenhouse.backend.sales.dto.auction.AuctionLotAdjustmentRequest;
+import com.greenhouse.backend.sales.dto.auction.AuctionLotReturnRequest;
+import com.greenhouse.backend.sales.dto.auction.AuctionLotStatusRequest;
+import com.greenhouse.backend.sales.dto.auction.AuctionStatusHistoryResponse;
+import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
+import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
@@ -46,6 +47,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Tag("work-e2e")
 class AuctionQuantityHistoryPostgresE2ETest extends WorkE2ETestBase {
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private AuctionPaymentService auctionPayments;
+
   private static final LocalDate DATE = LocalDate.of(2026, 10, 4);
   @Autowired private WorkTestDataSeeder seeder;
   @Autowired private AuctionShipmentRepository shipments;
@@ -179,7 +184,7 @@ class AuctionQuantityHistoryPostgresE2ETest extends WorkE2ETestBase {
     auctions.addResult(lotId, result("sold", AuctionAttemptStatus.SOLD));
     var settlement = settlements.rebuild(partnerId, DATE);
     if (paid)
-      payments.confirmAuctionPayment(
+      auctionPayments.confirmAuctionPayment(
           settlement.id(),
           new ManualPaymentCommand(40_000L, DATE, "paid", "BANK", "입금자", "작업자", null));
     var before = snapshot();

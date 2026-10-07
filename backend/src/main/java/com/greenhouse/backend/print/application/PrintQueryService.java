@@ -1,7 +1,7 @@
 package com.greenhouse.backend.print.application;
 
 import com.greenhouse.backend.common.api.PageResponse;
-import com.greenhouse.backend.sales.application.SalesQueryService;
+import com.greenhouse.backend.sales.application.document.SalesQueryService;
 import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.application.document.SalesSlipSummary;
 import lombok.RequiredArgsConstructor;

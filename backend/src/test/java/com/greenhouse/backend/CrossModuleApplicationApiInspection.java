@@ -47,6 +47,7 @@ final class CrossModuleApplicationApiInspection {
 
   private static String module(JavaClass type) {
     if (!type.getPackageName().startsWith(ROOT)) return "";
-    return type.getPackageName().substring(ROOT.length()).split("\\.")[0];
+    String[] parts = type.getPackageName().substring(ROOT.length()).split("\\.");
+    return parts[0].equals("sales") && parts.length > 2 ? "sales." + parts[2] : parts[0];
   }
 }

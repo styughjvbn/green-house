@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.partner.application.BusinessPartnerReader;
-import com.greenhouse.backend.partner.domain.PartnerTextMatch;
-import com.greenhouse.backend.partner.domain.PartnerTextSearch;
+import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
+import com.greenhouse.backend.sales.domain.partner.PartnerTextMatch;
+import com.greenhouse.backend.sales.domain.partner.PartnerTextSearch;
 import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;

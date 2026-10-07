@@ -3,11 +3,6 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.greenhouse.backend.auction.application.AuctionTrackingService;
-import com.greenhouse.backend.auction.application.RecordAuctionResultCommand;
-import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
-import com.greenhouse.backend.auction.domain.AuctionShipment;
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.application.collection.OrchidGroupCollectionService;
 import com.greenhouse.backend.farm.application.structure.FarmQueryService;
@@ -16,8 +11,13 @@ import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionCreateReq
 import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberAddRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
+import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
+import com.greenhouse.backend.sales.application.auction.RecordAuctionResultCommand;
+import com.greenhouse.backend.sales.domain.auction.AuctionAttemptStatus;
+import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
+import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
+import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
+import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.Clock;

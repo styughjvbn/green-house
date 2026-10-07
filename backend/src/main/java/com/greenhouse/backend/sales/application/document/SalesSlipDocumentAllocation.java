@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
-import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
+import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotType;
+import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(name = "SalesSlipItemAllocationResponse")

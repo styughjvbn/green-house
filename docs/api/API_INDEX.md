@@ -34,11 +34,11 @@
 | 난 묶음 자동 그룹 | `derived-orchid-group.openapi.yaml` | `derived-orchid-group-controller` | `com.greenhouse.backend.farm` | 품종·년생·화분 크기 기준 자동 그룹 |
 | 작업 유형 | `work.openapi.yaml` | `work-type-controller` | `com.greenhouse.backend.work` | 작업 유형과 등록·실행 capability metadata |
 | 작업 실행·이력 | `work-operation.openapi.yaml` | `work-operation-controller` | `com.greenhouse.backend.work` | 작업 계획·실행·보정, 대상 스냅샷, 통합 이력 |
-| 거래처 | `partner.openapi.yaml` | `business-partner-controller`, `partner-settlement-settings-controller` | `com.greenhouse.backend.partner`, `settlement` | 거래처와 정산 설정 |
+| 거래처 | `partner.openapi.yaml` | `business-partner-controller`, `partner-settlement-settings-controller` | `com.greenhouse.backend.sales` | 거래처와 정산 설정 |
 | 판매 전표 | `sales.openapi.yaml` | `sales-controller`, `print-controller` | `com.greenhouse.backend.sales`, `print` | 판매 전표, 출력, 가능한 업무 action |
 | 분석 | `analytics.openapi.yaml` | `analytics-controller` | `com.greenhouse.backend.analytics` | 판매·거래처·작업 분석 |
-| 경매 | `auction.openapi.yaml` | `auction-tracking-controller`, `auction-settlement-controller` | `com.greenhouse.backend.auction`, `settlement` | lot, 결과, 반환, 수량 보정, 경매 정산 |
-| 입금·정산 이벤트 | `payment.openapi.yaml` | `payment-controller` | `com.greenhouse.backend.settlement` | 수동 입금, 거래처 잔액, 입금 이벤트 |
+| 경매 | `auction.openapi.yaml` | `auction-tracking-controller`, `auction-settlement-controller` | `com.greenhouse.backend.sales` | lot, 결과, 반환, 수량 보정, 경매 정산 |
+| 입금·정산 이벤트 | `payment.openapi.yaml` | `payment-controller` | `com.greenhouse.backend.sales` | 수동 입금, 거래처 잔액, 입금 이벤트 |
 
 ## 관련 정책 문서
 

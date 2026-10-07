@@ -1,11 +1,11 @@
 package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
-import com.greenhouse.backend.partner.application.BusinessPartnerInfo;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipAction;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
-import com.greenhouse.backend.sales.domain.SalesType;
+import com.greenhouse.backend.sales.application.partner.BusinessPartnerInfo;
+import com.greenhouse.backend.sales.domain.document.SalesSlip;
+import com.greenhouse.backend.sales.domain.document.SalesSlipAction;
+import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
+import com.greenhouse.backend.sales.domain.document.SalesType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.List;

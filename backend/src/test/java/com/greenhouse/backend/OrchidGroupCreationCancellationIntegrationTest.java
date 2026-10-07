@@ -6,12 +6,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
-import com.greenhouse.backend.sales.domain.SalesType;
+import com.greenhouse.backend.sales.domain.document.SalesSlip;
+import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
+import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
+import com.greenhouse.backend.sales.domain.document.SalesType;
+import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
+import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;

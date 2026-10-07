@@ -2,7 +2,7 @@ package com.greenhouse.backend.analytics.application;
 
 import com.greenhouse.backend.analytics.dto.AnalyticsInsightResponse;
 import com.greenhouse.backend.analytics.dto.AnalyticsRankedValueResponse;
-import com.greenhouse.backend.sales.domain.SalesPaymentCategory;
+import com.greenhouse.backend.sales.domain.document.SalesPaymentCategory;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;

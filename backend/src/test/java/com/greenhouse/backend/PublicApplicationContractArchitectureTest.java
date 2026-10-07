@@ -154,23 +154,24 @@ class PublicApplicationContractArchitectureTest {
         new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
             .importPackages("com.greenhouse.backend");
-    for (String module : List.of("sales", "settlement")) {
-      String helper =
-          "com.greenhouse.backend."
-              + module
-              + ".application."
-              + (module.equals("sales") ? "SalesSlipAuditSupport" : "SettlementAuditSupport");
+    for (String helper :
+        List.of(
+            "sales.application.document.SalesSlipAuditSupport",
+            "sales.application.auction.settlement.SettlementAuditSupport",
+            "sales.application.payment.PaymentAuditSupport",
+            "sales.application.partner.PartnerSettingsAuditSupport")) {
+      String owner = "com.greenhouse.backend." + helper.substring(0, helper.lastIndexOf('.'));
       noClasses()
           .that()
-          .resideOutsideOfPackage(".." + module + "..")
+          .resideOutsideOfPackage(owner + "..")
           .should()
           .dependOnClassesThat()
-          .haveFullyQualifiedName(helper)
+          .haveFullyQualifiedName("com.greenhouse.backend." + helper)
           .check(classes);
     }
   }
 
-  private void assertValueType(Type type, Set<Type> visited) {
+  static void assertValueType(Type type, Set<Type> visited) {
     if (!visited.add(type)) return;
     if (type instanceof Class<?> value) {
       assertThat(value.getPackageName())

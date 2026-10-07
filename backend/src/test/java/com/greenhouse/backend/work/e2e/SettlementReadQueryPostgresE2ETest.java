@@ -7,24 +7,25 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
-import com.greenhouse.backend.auction.application.AuctionDataReader;
-import com.greenhouse.backend.auction.domain.AuctionAttempt;
-import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
-import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
-import com.greenhouse.backend.auction.domain.AuctionResultLine;
-import com.greenhouse.backend.auction.domain.AuctionShipment;
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
-import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-import com.greenhouse.backend.settlement.application.AuctionSettlementRebuildService;
-import com.greenhouse.backend.settlement.application.AuctionSettlementResponseAssembler;
-import com.greenhouse.backend.settlement.application.AuctionSettlementService;
-import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
-import com.greenhouse.backend.settlement.application.PaymentService;
-import com.greenhouse.backend.settlement.domain.AuctionSettlement;
-import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
+import com.greenhouse.backend.sales.application.auction.AuctionDataReader;
+import com.greenhouse.backend.sales.application.auction.settlement.AuctionPaymentService;
+import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementRebuildService;
+import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementResponseAssembler;
+import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementService;
+import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
+import com.greenhouse.backend.sales.application.payment.PaymentService;
+import com.greenhouse.backend.sales.domain.auction.AuctionAttempt;
+import com.greenhouse.backend.sales.domain.auction.AuctionAttemptStatus;
+import com.greenhouse.backend.sales.domain.auction.AuctionInspectionStatus;
+import com.greenhouse.backend.sales.domain.auction.AuctionResultLine;
+import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
+import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
+import com.greenhouse.backend.sales.domain.auction.settlement.AuctionSettlement;
+import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
+import com.greenhouse.backend.sales.domain.partner.PartnerType;
+import com.greenhouse.backend.sales.dto.auction.settlement.AuctionSettlementResponse;
+import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
+import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import jakarta.persistence.EntityManagerFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,6 +51,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 @Tag("work-e2e")
 class SettlementReadQueryPostgresE2ETest extends WorkE2ETestBase {
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private AuctionPaymentService auctionPayments;
+
   private static final LocalDate DATE = LocalDate.of(2026, 10, 4);
   @Autowired AuctionSettlementRebuildService settlementRebuild;
 
@@ -105,7 +110,7 @@ class SettlementReadQueryPostgresE2ETest extends WorkE2ETestBase {
         action.equals("REBUILD") || action.equals("INITIALIZER")
             ? 0
             : settlements.rebuild(house, DATE).id();
-    if (action.equals("REPLAY")) payments.confirmAuctionPayment(id, payment());
+    if (action.equals("REPLAY")) auctionPayments.confirmAuctionPayment(id, payment());
     var stats = emf.unwrap(SessionFactory.class).getStatistics();
     stats.clear();
     AuctionSettlementResponse result;
@@ -142,7 +147,7 @@ class SettlementReadQueryPostgresE2ETest extends WorkE2ETestBase {
         .isEqualTo(action.equals("PAYMENT") || action.equals("REPLAY") ? 100 : 0);
     var before = snapshot();
     if (action.equals("REPLAY"))
-      assertThat(payments.confirmAuctionPayment(id, payment())).isEqualTo(result);
+      assertThat(auctionPayments.confirmAuctionPayment(id, payment())).isEqualTo(result);
     stats.clear();
     assertThat(settlementRebuild.rebuildExistingResults()).isZero();
     assertThat(stats.getPrepareStatementCount()).isEqualTo(1 + 2 * ((size + 499) / 500));
@@ -155,7 +160,7 @@ class SettlementReadQueryPostgresE2ETest extends WorkE2ETestBase {
   void laterChangesToSourceAndDisplayDoNotOverwriteFinancialSnapshotsOrPayments(String action) {
     source(8);
     var first = settlements.rebuild(house, DATE);
-    payments.confirmAuctionPayment(first.id(), payment());
+    auctionPayments.confirmAuctionPayment(first.id(), payment());
     jdbc.update("update auction_result_lines set quantity = 2, unit_price = 9000, amount = 18000");
     jdbc.update("update auction_shipment_lots set variety_name = '현재 품종', shipment_grade = 'B'");
     jdbc.update("update business_partners set name = '현재 경매장' where id = ?", house);
@@ -216,7 +221,7 @@ class SettlementReadQueryPostgresE2ETest extends WorkE2ETestBase {
     return switch (action) {
       case "REBUILD", "EXISTING" -> settlements.rebuild(house, DATE);
       case "DETAIL" -> settlements.getSettlement(id);
-      case "PAYMENT", "REPLAY" -> payments.confirmAuctionPayment(id, payment());
+      case "PAYMENT", "REPLAY" -> auctionPayments.confirmAuctionPayment(id, payment());
       default -> throw new IllegalArgumentException(action);
     };
   }

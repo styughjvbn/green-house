@@ -7,10 +7,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.partner.application.BusinessPartnerService;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.application.partner.BusinessPartnerService;
+import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
+import com.greenhouse.backend.sales.domain.partner.PartnerType;
+import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import org.hibernate.SessionFactory;

@@ -7,12 +7,12 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.reset;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.greenhouse.backend.auction.application.AuctionDataReader;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-import com.greenhouse.backend.settlement.application.AuctionSettlementRebuildService;
-import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
+import com.greenhouse.backend.sales.application.auction.AuctionDataReader;
+import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementRebuildService;
+import com.greenhouse.backend.sales.application.partner.ExpectedPaymentDateCalculator;
+import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
+import com.greenhouse.backend.sales.domain.partner.PartnerType;
+import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.io.IOException;
@@ -150,13 +150,14 @@ class SettlementRebuildBatchPostgresE2ETest extends WorkE2ETestBase {
     assertThat(rebuild.rebuildExistingResults()).isEqualTo(2);
     assertThat(
             stats
-                .getEntityStatistics("com.greenhouse.backend.settlement.domain.AuctionSettlement")
+                .getEntityStatistics(
+                    "com.greenhouse.backend.sales.domain.auction.settlement.AuctionSettlement")
                 .getLoadCount())
         .isEqualTo(2);
     assertThat(
             stats
                 .getEntityStatistics(
-                    "com.greenhouse.backend.settlement.domain.AuctionSettlementLine")
+                    "com.greenhouse.backend.sales.domain.auction.settlement.AuctionSettlementLine")
                 .getLoadCount())
         .isEqualTo(2);
     assertThat(jdbc.queryForObject("select count(*) from auction_settlement_lines", Integer.class))

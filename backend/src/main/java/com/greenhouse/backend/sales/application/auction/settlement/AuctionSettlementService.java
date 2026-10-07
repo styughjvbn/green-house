@@ -1,0 +1,164 @@
+package com.greenhouse.backend.sales.application.auction.settlement;
+
+import com.greenhouse.backend.common.api.PageRequests;
+import com.greenhouse.backend.common.api.PageResponse;
+import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.sales.application.auction.AuctionDataReader;
+import com.greenhouse.backend.sales.application.auction.AuctionDataReader.Result;
+import com.greenhouse.backend.sales.application.partner.BusinessPartnerLock;
+import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
+import com.greenhouse.backend.sales.application.partner.ExpectedPaymentDateCalculator;
+import com.greenhouse.backend.sales.domain.auction.settlement.AuctionSettlement;
+import com.greenhouse.backend.sales.domain.auction.settlement.AuctionSettlementLine;
+import com.greenhouse.backend.sales.domain.auction.settlement.AuctionSettlementStatus;
+import com.greenhouse.backend.sales.domain.partner.PartnerType;
+import com.greenhouse.backend.sales.dto.auction.settlement.AuctionSettlementListItemResponse;
+import com.greenhouse.backend.sales.dto.auction.settlement.AuctionSettlementResponse;
+import com.greenhouse.backend.sales.dto.auction.settlement.AuctionSettlementSummaryResponse;
+import com.greenhouse.backend.sales.repository.auction.settlement.AuctionSettlementRepository;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class AuctionSettlementService {
+
+  private static final int RESULT_BATCH_SIZE = 500;
+
+  private static final int LEGACY_LIST_LIMIT = 500;
+
+  private final AuctionSettlementRepository settlementRepository;
+
+  private final AuctionDataReader auctionDataReader;
+
+  private final BusinessPartnerReader partnerReader;
+
+  private final BusinessPartnerLock partnerLock;
+
+  private final ExpectedPaymentDateCalculator paymentDateCalculator;
+
+  private final AuctionSettlementResponseAssembler responseAssembler;
+
+  private final Clock clock;
+
+  @Transactional(readOnly = true)
+  public List<AuctionSettlementResponse> getSettlements(
+      Long auctionHouseId, LocalDate from, LocalDate to, AuctionSettlementStatus status) {
+    var ids =
+        settlementRepository
+            .search(auctionHouseId, from, to, status, PageRequest.of(0, LEGACY_LIST_LIMIT))
+            .map(AuctionSettlement::getId)
+            .getContent();
+    return ids.isEmpty()
+        ? List.of()
+        : responseAssembler.assembleAll(
+            settlementRepository.findAllByIdInOrderByAuctionDateDescIdDesc(ids));
+  }
+
+  @Transactional(readOnly = true)
+  public PageResponse<AuctionSettlementListItemResponse> getSettlementPage(
+      Long auctionHouseId,
+      LocalDate from,
+      LocalDate to,
+      AuctionSettlementStatus status,
+      int page,
+      int size) {
+    var result =
+        settlementRepository.search(
+            auctionHouseId, from, to, status, PageRequests.clamped(page, size));
+    var partners =
+        partnerReader.getAllInfo(result.map(AuctionSettlement::getAuctionHouseId).getContent());
+    return PageResponse.from(
+        result.map(
+            settlement ->
+                AuctionSettlementListItemResponse.from(
+                    settlement, partners.get(settlement.getAuctionHouseId()).name())));
+  }
+
+  @Transactional(readOnly = true)
+  public AuctionSettlementSummaryResponse getSummary(
+      Long auctionHouseId, LocalDate from, LocalDate to, AuctionSettlementStatus status) {
+    var totals = settlementRepository.summarize(auctionHouseId, from, to, status);
+    return new AuctionSettlementSummaryResponse(
+        totals.getExpectedDepositAmount(), totals.getRemainingAmount());
+  }
+
+  @Transactional(readOnly = true)
+  public AuctionSettlementResponse getSettlement(Long settlementId) {
+    return settlementRepository
+        .findWithDetailsById(settlementId)
+        .map(responseAssembler::assemble)
+        .orElseThrow(() -> new NotFoundException("경매 정산을 찾을 수 없습니다."));
+  }
+
+  public AuctionSettlementResponse rebuild(Long auctionHouseId, LocalDate auctionDate) {
+    var auctionHouse = partnerReader.getInfo(auctionHouseId);
+    if (auctionHouse.partnerType() != PartnerType.AUCTION_HOUSE) {
+      throw new IllegalArgumentException("경매장 유형 거래처만 정산할 수 있습니다.");
+    }
+    partnerLock.lockAll(List.of(auctionHouseId));
+    var settlement =
+        settlementRepository
+            .findByAuctionHouseIdAndAuctionDate(auctionHouseId, auctionDate)
+            .orElseGet(() -> new AuctionSettlement(auctionHouseId, auctionDate));
+    settlement.synchronizeLines(
+        auctionDataReader.getSoldResultLines(auctionHouseId, auctionDate).stream()
+            .map(this::snapshot)
+            .toList(),
+        TimeConfig.utcNow(clock));
+    settlement.updateExpectedPaymentDate(
+        paymentDateCalculator.calculate(auctionHouseId, auctionDate));
+    return responseAssembler.assemble(settlementRepository.save(settlement));
+  }
+
+  /** One auction-house/day is the commit unit of the startup rebuild. */
+  public boolean appendUnlinkedResults(
+      Long auctionHouseId, LocalDate auctionDate, long maximumResultId, LocalDateTime receivedAt) {
+    partnerLock.lockAll(List.of(auctionHouseId));
+    var candidates =
+        auctionDataReader.getSoldResultLinesUpTo(auctionHouseId, auctionDate, maximumResultId);
+    var linkedIds = new HashSet<Long>();
+    for (int start = 0; start < candidates.size(); start += RESULT_BATCH_SIZE) {
+      linkedIds.addAll(
+          settlementRepository.findLinkedResultIds(
+              candidates
+                  .subList(start, Math.min(start + RESULT_BATCH_SIZE, candidates.size()))
+                  .stream()
+                  .map(Result::id)
+                  .toList()));
+    }
+    var newLines = candidates.stream().filter(line -> !linkedIds.contains(line.id())).toList();
+    if (newLines.isEmpty()) return false;
+    var settlement =
+        settlementRepository
+            .findWithLinesByHouseAndDate(auctionHouseId, auctionDate)
+            .orElseGet(() -> new AuctionSettlement(auctionHouseId, auctionDate));
+    settlement.synchronizeLines(mergeResultLines(settlement, newLines), receivedAt);
+    settlement.updateExpectedPaymentDate(
+        paymentDateCalculator.calculate(auctionHouseId, auctionDate));
+    settlementRepository.save(settlement);
+    return true;
+  }
+
+  private List<AuctionSettlementLine> mergeResultLines(
+      AuctionSettlement settlement, List<Result> newLines) {
+    var lines = new ArrayList<>(settlement.getLines());
+    newLines.stream().map(this::snapshot).forEach(lines::add);
+    return lines;
+  }
+
+  private AuctionSettlementLine snapshot(Result result) {
+    return new AuctionSettlementLine(
+        result.id(), result.lotId(), result.quantity(), result.unitPrice(), result.amount());
+  }
+}
