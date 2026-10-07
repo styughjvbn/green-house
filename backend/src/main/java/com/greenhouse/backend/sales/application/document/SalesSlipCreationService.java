@@ -127,6 +127,23 @@ public class SalesSlipCreationService {
       salesSlip.updateExpectedPaymentDate(accounting.calculate(partner.id(), request.saleDate()));
     }
     var saved = salesSlipRepository.save(salesSlip);
+    if (type == SalesType.DIRECT) {
+      // The Direct foreign keys reference the stable document/item IDs from this transaction.
+      salesSlipRepository.flush();
+      accounting.storeTerms(
+          new DirectDocumentAccountingPort.Terms(
+              saved.getId(),
+              saved.getPartnerId(),
+              saved.getSaleDate(),
+              saved.getExpectedPaymentDate(),
+              saved.getPaymentMethod(),
+              saved.getItems().stream()
+                  .map(
+                      item ->
+                          new DirectDocumentAccountingPort.Price(
+                              item.getId(), item.getQuantity(), item.getUnitPrice()))
+                  .toList()));
+    }
     salesSlipInventoryService.reserve(saved);
     if (saved.isOutboundCompleted()) {
       salesSlipOutboundService.complete(saved);

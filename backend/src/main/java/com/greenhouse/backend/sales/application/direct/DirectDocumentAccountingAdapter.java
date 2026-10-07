@@ -17,6 +17,11 @@ public class DirectDocumentAccountingAdapter implements DirectDocumentAccounting
   private final PartnerBalanceService balances;
   private final PaymentEventReader events;
   private final ExpectedPaymentDateCalculator dates;
+  private final DirectSaleTermsWriter termsWriter;
+
+  public void storeTerms(Terms terms) {
+    termsWriter.store(terms);
+  }
 
   public void lockPartners(Collection<Long> ids) {
     balances.lockPartners(ids);

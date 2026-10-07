@@ -1,0 +1,39 @@
+package com.greenhouse.backend.sales.domain.direct;
+
+import java.util.Collection;
+
+/** Exact arithmetic for newly agreed direct-sale amounts; never recalculates migrated facts. */
+public final class DirectSaleAmounts {
+  private DirectSaleAmounts() {}
+
+  public static int price(Integer quantity, Integer unitPrice) {
+    if (quantity == null || quantity <= 0)
+      throw new IllegalArgumentException("판매 수량은 1 이상이어야 합니다.");
+    if (unitPrice == null || unitPrice < 0)
+      throw new IllegalArgumentException("판매 단가는 0 이상이어야 합니다.");
+    try {
+      return Math.multiplyExact(quantity, unitPrice);
+    } catch (ArithmeticException exception) {
+      throw new IllegalArgumentException("판매 품목 금액은 2,147,483,647원 이하여야 합니다.", exception);
+    }
+  }
+
+  public static int total(Collection<Integer> amounts) {
+    int total = 0;
+    for (Integer amount : amounts) {
+      if (amount == null || amount < 0)
+        throw new IllegalArgumentException("판매 품목 금액은 0 이상이어야 합니다.");
+      try {
+        total = Math.addExact(total, amount);
+      } catch (ArithmeticException exception) {
+        throw new IllegalArgumentException("판매 전표 금액은 2,147,483,647원 이하여야 합니다.", exception);
+      }
+    }
+    return total;
+  }
+
+  public static long remaining(int total, long allocated) {
+    if (allocated < 0) throw new IllegalArgumentException("유효 배분액은 0 이상이어야 합니다.");
+    return Math.max(0L, Math.subtractExact((long) total, allocated));
+  }
+}

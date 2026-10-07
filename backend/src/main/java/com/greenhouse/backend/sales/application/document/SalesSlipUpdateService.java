@@ -88,6 +88,19 @@ public class SalesSlipUpdateService {
     salesSlip.refreshAmounts();
     salesSlip.updateExpectedPaymentDate(expectedPaymentDate);
     salesSlipRepository.saveAndFlush(salesSlip);
+    accounting.storeTerms(
+        new DirectDocumentAccountingPort.Terms(
+            salesSlip.getId(),
+            salesSlip.getPartnerId(),
+            salesSlip.getSaleDate(),
+            salesSlip.getExpectedPaymentDate(),
+            salesSlip.getPaymentMethod(),
+            salesSlip.getItems().stream()
+                .map(
+                    item ->
+                        new DirectDocumentAccountingPort.Price(
+                            item.getId(), item.getQuantity(), item.getUnitPrice()))
+                .toList()));
     salesSlipInventoryService.reserveForEdit(salesSlip, editId);
     accounting.updateReceivable(
         partner.id(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);

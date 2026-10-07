@@ -186,7 +186,7 @@ application|domain|dto/
 Sales 내부는 기존 계층을 유지한 `sales/{application,domain,repository,controller,dto}/{document,direct,auction,payment,partner}`로 나눈다. Farm은 별도 모듈이다. HTTP Controller는 공개 application 계약을 조합하며 저장소와 트랜잭션을 소유하지 않는다.
 
 - Document는 공통 전표·품목·allocation·예약·출고·snapshot·생성 receipt를 소유한다. 일반/경매 allocation 합계와 Farm 예약 대사를 계속 함께 수행한다.
-- Direct는 일반 판매 회계 연결과 입금 진입 유스케이스를 맡는다. V43은 전용 금액 테이블과 기존 금액의 원문 복사·이전 시점 대사를 준비한다. 현재 실행 경로의 금액 원천은 아직 Document의 기존 컬럼이며, 새 테이블의 읽기·쓰기 전환은 다음 기능 단위다. 준비 데이터와 이전 시점 검토 근거를 현재 수납액 원천으로 사용하지 않는다.
+- Direct는 일반 판매 회계 연결과 입금 진입 유스케이스를 맡는다. V43은 전용 금액 테이블과 기존 금액의 원문 복사·이전 시점 대사를 준비한다. 신규 생성·작성중 수정은 Document와 Direct 거래/가격 모델을 같은 최상위 transaction에서 저장하며, Direct writer는 호출 transaction에 반드시 참여한다. 전표·품목 ID만 연결하고 Entity를 공유하지 않는다. 현재 조회·입금 경로의 금액 원천은 아직 Document의 기존 컬럼이며, 이 읽기·대금 경로와 기존 금액 정책의 전환은 다음 기능 단위다. 이전 시점 검토 근거를 현재 수납액 원천으로 사용하지 않는다.
 - Auction은 출하·lot·시도·결과·반환 추적과 임시 호환 파생 정산(`auction/settlement`)을 소유한다.
 - Payment는 실제 입금 이벤트·연결 원장·거래처 잔액을 소유한다. Partner는 거래처 기준정보·거래처별 결제 선호 설정을 소유하며 금액 원장을 직접 변경하지 않는다.
 - Document는 구체적인 Direct/Auction/Payment 서비스를 호출하지 않는다. 필요한 출하 생성·취소 보호·표시 조회는 Document 소유 `AuctionDocumentPort`, 일반 판매의 예상일·입금 이력·잔액 연결은 `DirectDocumentAccountingPort`로 요청하고 소유자 adapter가 처리한다. 기존 출하 값 계약은 port로 이동하며 복제하지 않는다.

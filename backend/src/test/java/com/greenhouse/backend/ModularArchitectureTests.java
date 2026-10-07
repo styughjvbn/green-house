@@ -136,7 +136,10 @@ class ModularArchitectureTests {
   void salesLayersAreGroupedByOwnership() throws IOException {
     assertFeaturePackages(
         "sales", "application", "document", "direct", "auction", "payment", "partner");
-    for (String layer : List.of("domain", "repository", "controller", "dto")) {
+    for (String layer : List.of("domain", "repository")) {
+      assertFeaturePackages("sales", layer, "document", "direct", "auction", "payment", "partner");
+    }
+    for (String layer : List.of("controller", "dto")) {
       assertFeaturePackages("sales", layer, "document", "auction", "payment", "partner");
     }
     for (String oldModule : List.of("auction", "partner", "settlement")) {

@@ -101,6 +101,83 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 
   @ParameterizedTest
   @org.junit.jupiter.params.provider.EnumSource(SalesType.class)
+  void persistsDirectTermsWithDocumentItemIdsOnlyForDirectSales(SalesType type) {
+    activate();
+    var created = creation.create(request(partner(type), type, DATE, 3, 2));
+    long count =
+        jdbc.queryForObject(
+            "select count(*) from direct_sales where sales_slip_id = ?", Long.class, created.id());
+    assertThat(count).isEqualTo(type == SalesType.DIRECT ? 1 : 0);
+    if (type == SalesType.DIRECT) {
+      assertThat(
+              jdbc.queryForObject(
+                  "select total_amount from direct_sales where sales_slip_id = ?",
+                  Integer.class,
+                  created.id()))
+          .isEqualTo(created.totalAmount());
+      assertThat(
+              jdbc.queryForList(
+                  "select sales_slip_item_id from direct_sale_prices where sales_slip_id = ? order by sales_slip_item_id",
+                  Long.class,
+                  created.id()))
+          .containsExactlyElementsOf(
+              created.items().stream().map(item -> item.id()).sorted().toList());
+      for (var item : created.items()) {
+        var price =
+            jdbc.queryForMap(
+                "select * from direct_sale_prices where sales_slip_item_id = ?", item.id());
+        assertThat(price.get("priced_quantity")).isEqualTo(item.quantity());
+        assertThat(price.get("unit_price")).isEqualTo(item.unitPrice());
+        assertThat(price.get("amount")).isEqualTo(item.amount());
+      }
+    }
+  }
+
+  @Test
+  void directTermsFailureRollsBackDocumentReceiptAndReservationAndAllowsRetry() {
+    activate();
+    var request = request(partner(SalesType.DIRECT), SalesType.DIRECT, DATE, 3, 2);
+    String key = "direct-terms-failure-" + UUID.randomUUID();
+    long beforeSlips = slips.count();
+    long beforeDirect = jdbc.queryForObject("select count(*) from direct_sales", Long.class);
+    long beforeMovements = movements.count();
+    long beforeMutations =
+        jdbc.queryForObject("select count(*) from orchid_group_mutations", Long.class);
+    jdbc.execute(
+        "ALTER TABLE direct_sales ADD CONSTRAINT test_direct_failure CHECK (total_amount < 0) NOT VALID");
+    try {
+      assertThatThrownBy(() -> creation.create(request, key))
+          .isInstanceOf(DataIntegrityViolationException.class)
+          .hasMessageContaining("test_direct_failure");
+    } finally {
+      jdbc.execute("ALTER TABLE direct_sales DROP CONSTRAINT test_direct_failure");
+    }
+    assertThat(slips.count()).isEqualTo(beforeSlips);
+    assertThat(jdbc.queryForObject("select count(*) from direct_sales", Long.class))
+        .isEqualTo(beforeDirect);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from sales_creation_receipts where request_key = ?",
+                Long.class,
+                key))
+        .isZero();
+    assertThat(movements.count()).isEqualTo(beforeMovements);
+    assertThat(jdbc.queryForObject("select count(*) from orchid_group_mutations", Long.class))
+        .isEqualTo(beforeMutations);
+    assertStock(100, 0);
+    var retried = creation.create(request, key);
+    assertThat(creation.create(request, key)).isEqualTo(retried);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from direct_sales where sales_slip_id = ?",
+                Long.class,
+                retried.id()))
+        .isEqualTo(1);
+    assertStock(100, 5);
+  }
+
+  @ParameterizedTest
+  @org.junit.jupiter.params.provider.EnumSource(SalesType.class)
   void preservesSnapshotsAndPerAllocationHistoryAcrossCompletionAndCancellation(SalesType type) {
     activate();
     var partner = partner(type);
@@ -438,6 +515,12 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
     var request = request(partner(SalesType.DIRECT), SalesType.DIRECT, DATE, 3, 2);
     var created = creation.create(request);
     var before = queries.getSalesSlip(created.id());
+    var beforeDirect =
+        jdbc.queryForList("select * from direct_sales where sales_slip_id = ?", created.id());
+    var beforePrices =
+        jdbc.queryForList(
+            "select * from direct_sale_prices where sales_slip_id = ? order by sales_slip_item_id",
+            created.id());
     long beforeMovements = movements.count();
     long beforeMutations =
         jdbc.queryForObject("select count(*) from orchid_group_mutations", Long.class);
@@ -456,6 +539,14 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
     }
     assertStock(100, 5);
     assertThat(queries.getSalesSlip(created.id())).isEqualTo(before);
+    assertThat(
+            jdbc.queryForList("select * from direct_sales where sales_slip_id = ?", created.id()))
+        .isEqualTo(beforeDirect);
+    assertThat(
+            jdbc.queryForList(
+                "select * from direct_sale_prices where sales_slip_id = ? order by sales_slip_item_id",
+                created.id()))
+        .isEqualTo(beforePrices);
     assertThat(movements.count()).isEqualTo(beforeMovements);
     assertThat(jdbc.queryForObject("select count(*) from orchid_group_mutations", Long.class))
         .isEqualTo(beforeMutations);

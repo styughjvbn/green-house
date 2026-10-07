@@ -122,7 +122,8 @@ class SalesWriteQueryPostgresE2ETest extends WorkE2ETestBase {
     assertThat(stats.getCollectionFetchCount()).isEqualTo(1);
     long queryLimit =
         switch (action) {
-          case "EDIT" -> 21;
+          // Direct adds one root lock and one price fetch regardless of item count.
+          case "EDIT" -> 23;
           case "OUTBOUND", "PAYMENT" -> 11;
           case "DRAFT_CANCEL" -> 14;
           case "OUTBOUND_CANCEL" -> 19;
@@ -278,6 +279,8 @@ class SalesWriteQueryPostgresE2ETest extends WorkE2ETestBase {
         List.of(
             "sales_slips",
             "sales_slip_items",
+            "direct_sales",
+            "direct_sale_prices",
             "sales_slip_item_allocations",
             "sales_orchid_group_snapshots",
             "sales_inventory_movements",

@@ -107,6 +107,15 @@ METHOD	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$Lot
 METHOD	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$LotDraft.shipmentGrade()
 METHOD	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$LotDraft.sourceItemId()
 METHOD	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$LotDraft.varietyName()
+METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Price.documentItemId()
+METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Price.quantity()
+METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Price.unitPrice()
+METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms.documentId()
+METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms.expectedPaymentDate()
+METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms.partnerId()
+METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms.paymentMethod()
+METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms.prices()
+METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms.saleDate()
 METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$NamedAmount.amount()
 METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$NamedAmount.name()
 METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$PartnerSales.latestSaleDate()
@@ -366,6 +375,8 @@ TYPE	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$Lot
 TYPE	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$LotDraft
 TYPE	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$Shipment
 TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort
+TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Price
+TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms
 TYPE	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget
 TYPE	com.greenhouse.backend.sales.application.document.SalesMetricsReader
 TYPE	com.greenhouse.backend.sales.application.document.SalesMetricsReader$NamedAmount

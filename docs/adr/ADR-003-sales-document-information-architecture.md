@@ -561,7 +561,7 @@ OpenAPI와 필요한 생성 TypeScript 타입을 함께 갱신한다.
 이 결정으로 판매 전체를 Sales에 묶으면서 내부 업무 의미와 쓰기 소유권을 구분한다. 공통 전표·allocation·예약 대사와
 Farm Engine을 유지해 전표 분할의 데이터 전환 비용을 줄인다. 대신 내부 경계 보호, Auction/Partner 편입·Settlement 제거·입금 책임 이동,
 자동 매칭·다중 대상 배분·정정·반환 입고의 신규 모델과 schema 확장 비용이 발생한다.
-구조 전환 1단계는 기존 계층 아래 Sales 내부 경계 배치와 Document 호출 port·Payment 대상 port·내부 architecture 검사까지 반영했다. 기존 API·식별자·업무 동작은 유지한다. 2단계의 V43은 Direct 전용 저장 테이블에 기존 금액을 그대로 복사하고 이전 시점 대사 근거를 남긴다. 읽기·쓰기와 금액 원천의 전환은 아직 완료하지 않았다. 결과 기반 입금 대상/조회 계약 전환 및 파생 정산 제거, 새 반환 흐름·실제 매칭·은행 수집은 아직 구현하지 않았다. 현재 구현 경계와 기존 경로는 `docs/04-architecture.md`와 `docs/features/sales-auction-settlement.md`를 따른다.
+구조 전환 1단계는 기존 계층 아래 Sales 내부 경계 배치와 Document 호출 port·Payment 대상 port·내부 architecture 검사까지 반영했다. 기존 API·식별자·업무 동작은 유지한다. 2단계의 V43은 Direct 전용 저장 테이블에 기존 금액을 그대로 복사하고 이전 시점 대사 근거를 남긴다. 신규 생성·작성중 수정은 Document와 Direct 거래/가격 모델을 같은 transaction에서 저장한다. 조회·입금 대상의 금액 원천 전환과 Document의 기존 금액 정책 제거는 아직 완료하지 않았다. 결과 기반 입금 대상/조회 계약 전환 및 파생 정산 제거, 새 반환 흐름·실제 매칭·은행 수집은 아직 구현하지 않았다. 현재 구현 경계와 기존 경로는 `docs/04-architecture.md`와 `docs/features/sales-auction-settlement.md`를 따른다.
 
 ## 13. 변경 영향 분석 (Change Impact Analysis)
 
