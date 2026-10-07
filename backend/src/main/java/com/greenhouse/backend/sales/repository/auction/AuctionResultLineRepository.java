@@ -11,6 +11,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface AuctionResultLineRepository extends JpaRepository<AuctionResultLine, Long> {
 
+  @Query(
+      "select line from AuctionResultLine line join fetch line.auctionAttempt attempt "
+          + "join fetch attempt.shipmentLot lot join fetch lot.shipment where line.id in :ids")
+  List<AuctionResultLine> findAllWithLotByIdIn(@Param("ids") Collection<Long> ids);
+
   String READ_ROWS =
       """
       select new com.greenhouse.backend.sales.repository.auction.AuctionResultReadRow(
