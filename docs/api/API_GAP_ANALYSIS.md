@@ -104,6 +104,11 @@
 - `GET /api/auction-lots/{id}`
 - `POST /api/auction-lots/{id}/adjust-quantity`
 - `POST /api/auction-lots/{id}/confirm-return`
+- `GET /api/auction-lots/{id}/follow-up`
+- `POST /api/auction-lots/{id}/follow-up`
+- `GET /api/auction-lots/{id}/arrivals`
+- `POST /api/auction-lots/{id}/arrivals`
+- `POST /api/auction-lots/{id}/arrivals/{arrivalId}/cancel`
 - `PATCH /api/auction-lots/{id}/status`
 - `GET /api/auction-lots/{id}/timeline`
 - `GET /api/auction-settlements`

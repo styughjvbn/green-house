@@ -2,9 +2,16 @@ package com.greenhouse.backend.sales.controller.auction;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.common.api.PageResponse;
+import com.greenhouse.backend.sales.application.auction.AuctionArrivalCommand;
+import com.greenhouse.backend.sales.application.auction.AuctionFollowUpCommand;
+import com.greenhouse.backend.sales.application.auction.AuctionFollowUpService;
 import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
+import com.greenhouse.backend.sales.application.auction.CancelAuctionArrivalCommand;
 import com.greenhouse.backend.sales.application.auction.RecordAuctionResultCommand;
 import com.greenhouse.backend.sales.domain.auction.AuctionLotStatus;
+import com.greenhouse.backend.sales.dto.auction.AuctionArrivalResponse;
+import com.greenhouse.backend.sales.dto.auction.AuctionFollowUpResponse;
+import com.greenhouse.backend.sales.dto.auction.AuctionFollowUpResult;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotAdjustmentRequest;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotResponse;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotReturnRequest;
@@ -28,6 +35,40 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuctionTrackingController {
 
   private final AuctionTrackingService trackingService;
+  private final AuctionFollowUpService followUpService;
+
+  @GetMapping("/auction-lots/{id}/follow-up")
+  public ApiResponse<AuctionFollowUpResponse> getFollowUp(@PathVariable Long id) {
+    return ApiResponse.ok(followUpService.getFollowUp(id));
+  }
+
+  @PostMapping("/auction-lots/{id}/follow-up")
+  public ApiResponse<AuctionFollowUpResult> decideFollowUp(
+      @PathVariable Long id, @Valid @RequestBody AuctionFollowUpCommand request) {
+    return ApiResponse.ok(followUpService.decide(id, request));
+  }
+
+  @GetMapping("/auction-lots/{id}/arrivals")
+  public ApiResponse<PageResponse<AuctionArrivalResponse>> getArrivals(
+      @PathVariable Long id,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return ApiResponse.ok(followUpService.getArrivals(id, page, size));
+  }
+
+  @PostMapping("/auction-lots/{id}/arrivals")
+  public ApiResponse<AuctionFollowUpResult> recordArrival(
+      @PathVariable Long id, @Valid @RequestBody AuctionArrivalCommand request) {
+    return ApiResponse.ok(followUpService.arrive(id, request));
+  }
+
+  @PostMapping("/auction-lots/{id}/arrivals/{arrivalId}/cancel")
+  public ApiResponse<AuctionFollowUpResult> cancelArrival(
+      @PathVariable Long id,
+      @PathVariable Long arrivalId,
+      @Valid @RequestBody CancelAuctionArrivalCommand request) {
+    return ApiResponse.ok(followUpService.cancelArrival(id, arrivalId, request));
+  }
 
   @GetMapping("/auction-lots")
   public ApiResponse<PageResponse<AuctionLotResponse>> getLots(

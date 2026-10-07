@@ -7,7 +7,9 @@ CONSTRUCTOR	com.greenhouse.backend.audit.application.AuditEvent$Target.<init>(ja
 CONSTRUCTOR	com.greenhouse.backend.audit.application.AuditEvent$Target.<init>(java.lang.String, java.lang.Long, java.lang.Long, java.lang.Long, java.lang.Long, java.lang.Long)
 CONSTRUCTOR	com.greenhouse.backend.common.application.RequestActorProvider.<init>(boolean, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.OrchidGroupUsage.<init>(java.lang.String, java.lang.String, long)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.CompensateCreateMutationsCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.lang.Long, com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationIssue.<init>(java.lang.String, java.lang.String, java.lang.String, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem.<init>(java.lang.Long, java.lang.Integer)
 CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
@@ -80,13 +82,19 @@ METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.varietyId
 METHOD	com.greenhouse.backend.farm.application.orchid.OrchidGroupState.varietyName()
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup.orchidGroupId()
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup.snapshot()
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails.quantity()
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.compensateCreations(com.greenhouse.backend.farm.application.orchid.mutation.CompensateCreateMutationsCommand)
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.consumeReservation(com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand)
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.create(com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand)
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.releaseReservation(com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand)
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.reserve(com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand)
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.restoreOutbound(com.greenhouse.backend.farm.application.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand)
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult$Entry.orchidGroupId()
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult.correlationId()
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult.entries()
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult.mutationId()
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult.replayed()
+METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources.auctionReturnArrival(java.lang.Long, java.lang.String)
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources.sales(java.lang.Long, java.lang.String)
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations.current(java.util.List)
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations.legacy()
@@ -357,12 +365,16 @@ TYPE	com.greenhouse.backend.farm.application.orchid.OrchidGroupReader
 TYPE	com.greenhouse.backend.farm.application.orchid.OrchidGroupState
 TYPE	com.greenhouse.backend.farm.application.orchid.OrchidGroupUsage
 TYPE	com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.CompensateCreateMutationsCommand
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationIssue
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerRehearsalInspector
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult
+TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult$Entry
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations

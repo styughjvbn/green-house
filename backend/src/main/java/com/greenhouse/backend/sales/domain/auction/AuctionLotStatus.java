@@ -17,7 +17,8 @@ public enum AuctionLotStatus {
   RETURNED,
   QUANTITY_MISMATCH,
   REVIEW_REQUIRED,
-  CANCELLED;
+  CANCELLED,
+  DISPOSED;
 
   public static List<AuctionLotStatus> returnStatuses() {
     return List.of(RETURN_INFERRED, PARTIALLY_RETURNED);

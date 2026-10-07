@@ -72,6 +72,16 @@ public class AuctionShipmentLot extends BaseEntity {
   @Column(name = "returned_quantity", nullable = false)
   private Integer returnedQuantity;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "follow_up_method")
+  private AuctionFollowUpMethod followUpMethod;
+
+  @Column(name = "disposed_quantity", nullable = false)
+  private Integer disposedQuantity = 0;
+
+  @Column(name = "inferred_return_quantity", nullable = false)
+  private Integer inferredReturnQuantity = 0;
+
   @Column(name = "return_confirmed_date")
   private LocalDate returnConfirmedDate;
 
@@ -152,6 +162,10 @@ public class AuctionShipmentLot extends BaseEntity {
       String requestedFailedReason,
       String requestedMemo,
       LocalDateTime changedAt) {
+    if (followUpMethod == AuctionFollowUpMethod.FARM_RETURN
+        || followUpMethod == AuctionFollowUpMethod.AUCTION_DISPOSAL)
+      throw new ConflictException(
+          "AUCTION_RESULT_FOLLOW_UP_LOCKED", "현재 후속 처리 결정에서는 경매 결과를 추가할 수 없습니다.");
     if (getWaitingQuantity() <= 0)
       throw new IllegalArgumentException("대기 수량이 없는 lot에는 경매 결과를 추가할 수 없습니다.");
     int waitingQuantity = getWaitingQuantity();
@@ -273,7 +287,128 @@ public class AuctionShipmentLot extends BaseEntity {
     return value == null || value.isBlank() ? null : value.trim();
   }
 
+  private boolean isQuantityBalanced() {
+    return (long) soldQuantity + waitingQuantity + returnedQuantity + disposedQuantity
+        == shippedQuantity;
+  }
+
+  public boolean isFollowUpDecisionChangeAllowed(boolean hasValidArrivals) {
+    return isQuantityBalanced()
+        && !hasValidArrivals
+        && !(returnedQuantity > 0
+            && returnConfirmedDate == null
+            && currentStatus != AuctionLotStatus.RETURN_INFERRED)
+        && !(returnConfirmedDate != null && returnedQuantity > 0)
+        && List.of(
+                AuctionLotStatus.REAUCTION_WAITING,
+                AuctionLotStatus.PARTIALLY_SOLD,
+                AuctionLotStatus.RETURN_INFERRED)
+            .contains(currentStatus)
+        && getReturnConfirmableQuantity() > 0;
+  }
+
+  public boolean isActualArrivalAllowed() {
+    return isQuantityBalanced()
+        && followUpMethod == AuctionFollowUpMethod.FARM_RETURN
+        && waitingQuantity > 0
+        && List.of(
+                AuctionLotStatus.REAUCTION_WAITING,
+                AuctionLotStatus.PARTIALLY_SOLD,
+                AuctionLotStatus.PARTIALLY_RETURNED)
+            .contains(currentStatus);
+  }
+
+  public int decideFollowUp(
+      AuctionFollowUpMethod method,
+      boolean hasValidArrivals,
+      String worker,
+      String reason,
+      LocalDateTime at) {
+    requireFollowUpDecisionChangeAllowed(hasValidArrivals);
+    if (method == null || at == null || reason == null || reason.isBlank())
+      throw new IllegalArgumentException("후속 처리 방법과 결정 사유, 시각이 필요합니다.");
+    if (!isFollowUpDecisionChangeAllowed(hasValidArrivals))
+      throw new ConflictException(
+          "AUCTION_FOLLOW_UP_NOT_AVAILABLE", "유찰 잔량을 확인한 뒤 후속 처리를 결정해야 합니다.");
+    int previousSold = soldQuantity;
+    int previousWaiting = waitingQuantity;
+    int previousReturned = returnedQuantity;
+    if (currentStatus == AuctionLotStatus.RETURN_INFERRED && returnConfirmedDate == null) {
+      inferredReturnQuantity = returnedQuantity;
+      waitingQuantity = Math.addExact(waitingQuantity, returnedQuantity);
+      returnedQuantity = 0;
+    }
+    if (waitingQuantity <= 0)
+      throw new ConflictException("AUCTION_FOLLOW_UP_NO_REMAINDER", "처리할 유찰 잔량이 없습니다.");
+    int quantity = waitingQuantity;
+    followUpMethod = method;
+    var next =
+        soldQuantity > 0 ? AuctionLotStatus.PARTIALLY_SOLD : AuctionLotStatus.REAUCTION_WAITING;
+    if (method == AuctionFollowUpMethod.AUCTION_DISPOSAL) {
+      disposedQuantity = Math.addExact(disposedQuantity, waitingQuantity);
+      waitingQuantity = 0;
+      next = AuctionLotStatus.DISPOSED;
+    }
+    recordChange(
+        next, reason.trim(), worker, null, at, previousSold, previousWaiting, previousReturned);
+    return quantity;
+  }
+
+  public void recordActualArrival(int quantity, LocalDate date, String worker, LocalDateTime at) {
+    if (!isActualArrivalAllowed())
+      throw new ConflictException("AUCTION_ARRIVAL_DECISION_REQUIRED", "농장 반환 결정을 먼저 확인해야 합니다.");
+    if (quantity < 1 || quantity > waitingQuantity || date == null || at == null)
+      throw new IllegalArgumentException("실제 도착 수량은 반환 대기 잔량 이내이며 도착일이 필요합니다.");
+    int previousWaiting = waitingQuantity;
+    int previousReturned = returnedQuantity;
+    waitingQuantity -= quantity;
+    returnedQuantity = Math.addExact(returnedQuantity, quantity);
+    returnConfirmedDate = date;
+    recordChange(
+        waitingQuantity == 0 ? AuctionLotStatus.RETURNED : AuctionLotStatus.PARTIALLY_RETURNED,
+        "실제 농장 도착",
+        worker,
+        null,
+        at,
+        soldQuantity,
+        previousWaiting,
+        previousReturned);
+  }
+
+  public void cancelActualArrival(
+      int quantity, LocalDate latestValidDate, String worker, String reason, LocalDateTime at) {
+    if (followUpMethod != AuctionFollowUpMethod.FARM_RETURN
+        || quantity < 1
+        || quantity > returnedQuantity)
+      throw new IllegalArgumentException("취소할 실제 도착 수량을 확인해야 합니다.");
+    int previousWaiting = waitingQuantity;
+    int previousReturned = returnedQuantity;
+    returnedQuantity -= quantity;
+    waitingQuantity = Math.addExact(waitingQuantity, quantity);
+    returnConfirmedDate = latestValidDate;
+    var next =
+        returnedQuantity > 0
+            ? AuctionLotStatus.PARTIALLY_RETURNED
+            : soldQuantity > 0
+                ? AuctionLotStatus.PARTIALLY_SOLD
+                : AuctionLotStatus.REAUCTION_WAITING;
+    recordChange(next, reason, worker, null, at, soldQuantity, previousWaiting, previousReturned);
+  }
+
+  public void requireFollowUpDecisionChangeAllowed() {
+    requireFollowUpDecisionChangeAllowed(false);
+  }
+
+  public void requireFollowUpDecisionChangeAllowed(boolean hasValidArrivals) {
+    if (hasValidArrivals || (returnConfirmedDate != null && returnedQuantity > 0))
+      throw new ConflictException(
+          "AUCTION_FOLLOW_UP_ARRIVAL_EXISTS", "유효한 도착 기록을 먼저 취소한 뒤 후속 처리 결정을 변경해야 합니다.");
+  }
+
   public void requireReturnConfirmable() {
+    if (followUpMethod != null)
+      throw new ConflictException(
+          "AUCTION_ACTUAL_ARRIVAL_REQUIRED", "후속 결정 이후 반환은 실제 도착·농장 배치 경로에서 확인해야 합니다.");
     if (!List.of(
             AuctionLotStatus.REAUCTION_WAITING,
             AuctionLotStatus.RETURN_INFERRED,
@@ -374,11 +509,14 @@ public class AuctionShipmentLot extends BaseEntity {
   }
 
   public boolean isQuantityAdjustmentAllowed(boolean hasRecordedAttempts) {
-    return !hasRecordedAttempts && returnConfirmedDate == null;
+    return !hasRecordedAttempts && returnConfirmedDate == null && followUpMethod == null;
   }
 
   public void changeStatus(
       AuctionLotStatus next, String reason, String worker, String memo, LocalDateTime changedAt) {
+    if (next == AuctionLotStatus.DISPOSED
+        && (followUpMethod != AuctionFollowUpMethod.AUCTION_DISPOSAL || disposedQuantity <= 0))
+      throw new ConflictException("AUCTION_DISPOSAL_DECISION_REQUIRED", "경매장 처리 결정을 먼저 기록해야 합니다.");
     recordChange(
         next, reason, worker, memo, changedAt, soldQuantity, waitingQuantity, returnedQuantity);
   }

@@ -833,6 +833,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auction-lots/{id}/follow-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getFollowUp"];
+        put?: never;
+        post: operations["decideFollowUp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auction-lots/{id}/confirm-return": {
         parameters: {
             query?: never;
@@ -843,6 +859,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["confirmReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auction-lots/{id}/arrivals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getArrivals"];
+        put?: never;
+        post: operations["recordArrival"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auction-lots/{id}/arrivals/{arrivalId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelArrival"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3233,7 +3281,7 @@ export interface components {
             /** Format: int32 */
             boxes?: number;
             /** @enum {string} */
-            currentStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            currentStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED" | "DISPOSED";
             /** Format: int32 */
             failedCount?: number;
             /** Format: int64 */
@@ -3292,7 +3340,7 @@ export interface components {
             /** Format: int32 */
             newSoldQuantity?: number | null;
             /** @enum {string} */
-            newStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            newStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED" | "DISPOSED";
             /** Format: int32 */
             newWaitingQuantity?: number | null;
             /** Format: int32 */
@@ -3300,11 +3348,69 @@ export interface components {
             /** Format: int32 */
             previousSoldQuantity?: number | null;
             /** @enum {string} */
-            previousStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            previousStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED" | "DISPOSED";
             /** Format: int32 */
             previousWaitingQuantity?: number | null;
             reason?: string;
             worker?: string;
+        };
+        AuctionFollowUpCommand: {
+            idempotencyKey: string;
+            /** @enum {string} */
+            method: "REAUCTION" | "FARM_RETURN" | "AUCTION_DISPOSAL";
+            reason: string;
+            worker?: string;
+        };
+        ApiResponseAuctionFollowUpResult: {
+            data?: components["schemas"]["AuctionFollowUpResult"];
+            message?: string;
+        };
+        AuctionArrivalResponse: {
+            /** Format: date */
+            arrivalDate?: string;
+            /** Format: date-time */
+            canceledAt?: string;
+            /** Format: int64 */
+            cancellationMutationId?: number;
+            cancellationReason?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: int64 */
+            creationMutationId?: number;
+            /** Format: int64 */
+            decisionId?: number;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            lotId?: number;
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** Format: int32 */
+            quantity?: number;
+            worker?: string;
+        };
+        AuctionFollowUpResponse: {
+            arrivalAllowed?: boolean;
+            availableMethods?: ("REAUCTION" | "FARM_RETURN" | "AUCTION_DISPOSAL")[];
+            /** Format: int32 */
+            decidedQuantity?: number;
+            decisionChangeAllowed?: boolean;
+            /** Format: int64 */
+            decisionId?: number;
+            /** Format: int32 */
+            disposedQuantity?: number;
+            /** Format: int32 */
+            inferredReturnQuantity?: number;
+            /** Format: int64 */
+            lotId?: number;
+            /** @enum {string} */
+            method?: "REAUCTION" | "FARM_RETURN" | "AUCTION_DISPOSAL";
+            /** Format: int32 */
+            pendingQuantity?: number;
+        };
+        AuctionFollowUpResult: {
+            arrival?: components["schemas"]["AuctionArrivalResponse"];
+            followUp?: components["schemas"]["AuctionFollowUpResponse"];
         };
         AuctionLotReturnRequest: {
             idempotencyKey: string;
@@ -3313,6 +3419,39 @@ export interface components {
             returnDate: string;
             /** Format: int32 */
             returnedQuantity?: number;
+            worker?: string;
+        };
+        AuctionArrivalCommand: {
+            /** Format: date */
+            arrivalDate: string;
+            /** Format: int64 */
+            bedZoneId: number;
+            details: components["schemas"]["OrchidGroupMutationDetails"];
+            idempotencyKey: string;
+            worker?: string;
+        };
+        OrchidGroupMutationDetails: {
+            /** Format: int32 */
+            ageYear?: number;
+            endPosition?: number;
+            memo?: string;
+            placementType?: string;
+            potSize?: string;
+            /** Format: int32 */
+            quantity?: number;
+            splitPlacementAllowed?: boolean;
+            startPosition?: number;
+            status?: string;
+            /** Format: int32 */
+            trayCount?: number;
+            /** Format: int64 */
+            varietyId?: number;
+        };
+        CancelAuctionArrivalCommand: {
+            /** Format: date */
+            correctionDate: string;
+            idempotencyKey: string;
+            reason: string;
             worker?: string;
         };
         AuctionLotAdjustmentRequest: {
@@ -3413,7 +3552,7 @@ export interface components {
             memo?: string;
             reason: string;
             /** @enum {string} */
-            status: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            status: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED" | "DISPOSED";
             worker?: string;
         };
         ApiResponseWorkTypeMetadataResponse: {
@@ -4717,6 +4856,25 @@ export interface components {
         };
         PageResponseAuctionLotResponse: {
             content?: components["schemas"]["AuctionLotResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        ApiResponseAuctionFollowUpResponse: {
+            data?: components["schemas"]["AuctionFollowUpResponse"];
+            message?: string;
+        };
+        ApiResponsePageResponseAuctionArrivalResponse: {
+            data?: components["schemas"]["PageResponseAuctionArrivalResponse"];
+            message?: string;
+        };
+        PageResponseAuctionArrivalResponse: {
+            content?: components["schemas"]["AuctionArrivalResponse"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -6509,6 +6667,54 @@ export interface operations {
             };
         };
     };
+    getFollowUp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionFollowUpResponse"];
+                };
+            };
+        };
+    };
+    decideFollowUp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionFollowUpCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionFollowUpResult"];
+                };
+            };
+        };
+    };
     confirmReturn: {
         parameters: {
             query?: never;
@@ -6531,6 +6737,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseAuctionLotResponse"];
+                };
+            };
+        };
+    };
+    getArrivals: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponseAuctionArrivalResponse"];
+                };
+            };
+        };
+    };
+    recordArrival: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionArrivalCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionFollowUpResult"];
+                };
+            };
+        };
+    };
+    cancelArrival: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                arrivalId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelAuctionArrivalCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionFollowUpResult"];
                 };
             };
         };
@@ -8259,7 +8543,7 @@ export interface operations {
                 market?: string;
                 variety?: string;
                 grade?: string;
-                status?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+                status?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED" | "DISPOSED";
                 reviewOnly?: boolean;
                 returnOnly?: boolean;
                 waitingOnly?: boolean;

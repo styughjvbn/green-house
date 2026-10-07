@@ -17,6 +17,7 @@ const statusLabels: Record<AuctionLotStatus, string> = {
   QUANTITY_MISMATCH: "수량불일치",
   REVIEW_REQUIRED: "확인필요",
   CANCELLED: "취소",
+  DISPOSED: "경매장 처리 완료",
 };
 
 const inspectionLabels: Record<AuctionInspectionStatus, string> = {

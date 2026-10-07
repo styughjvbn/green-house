@@ -62,6 +62,16 @@ public final class OrchidGroupMutationSources {
         "SALES_SLIP:" + salesSlipId);
   }
 
+  public static OrchidGroupMutationSource auctionReturnArrival(
+      Long arrivalId, String operationKey) {
+    return stable(
+        OrchidGroupMutationSourceDomain.SALES,
+        "AUCTION_RETURN_ARRIVAL",
+        arrivalId.toString(),
+        operationKey,
+        "AUCTION_RETURN_ARRIVAL:" + arrivalId);
+  }
+
   private static OrchidGroupMutationSource stable(
       OrchidGroupMutationSourceDomain domain,
       String sourceType,

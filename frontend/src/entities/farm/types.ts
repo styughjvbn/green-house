@@ -596,20 +596,9 @@ export type AuctionShipmentOption = {
   }>;
 };
 
-export type AuctionLotStatus =
-  | "SHIPPED"
-  | "WAITING"
-  | "IN_PROGRESS"
-  | "SOLD"
-  | "PARTIALLY_SOLD"
-  | "FAILED"
-  | "REAUCTION_WAITING"
-  | "RETURN_INFERRED"
-  | "PARTIALLY_RETURNED"
-  | "RETURNED"
-  | "QUANTITY_MISMATCH"
-  | "REVIEW_REQUIRED"
-  | "CANCELLED";
+export type AuctionLotStatus = NonNullable<
+  ApiSchemas["AuctionLotResponse"]["currentStatus"]
+>;
 
 export type AuctionInspectionStatus =
   | "NORMAL"

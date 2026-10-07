@@ -56,6 +56,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/auction-lots/{id}/follow-up:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getFollowUp
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionFollowUpResponse'
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: decideFollowUp
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionFollowUpCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionFollowUpResult'
   /api/auction-lots/{id}/confirm-return:
     post:
       tags:
@@ -81,6 +124,94 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/auction-lots/{id}/arrivals:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getArrivals
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseAuctionArrivalResponse'
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: recordArrival
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionArrivalCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionFollowUpResult'
+  /api/auction-lots/{id}/arrivals/{arrivalId}/cancel:
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: cancelArrival
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: arrivalId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelAuctionArrivalCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionFollowUpResult'
   /api/auction-lots/{id}/adjust-quantity:
     post:
       tags:
@@ -364,6 +495,7 @@ paths:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+          - DISPOSED
       - name: reviewOnly
         in: query
         required: false
@@ -445,6 +577,20 @@ paths:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
 components:
   schemas:
+    ApiResponseAuctionFollowUpResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuctionFollowUpResponse'
+        message:
+          type: string
+    ApiResponseAuctionFollowUpResult:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuctionFollowUpResult'
+        message:
+          type: string
     ApiResponseAuctionLotResponse:
       type: object
       properties:
@@ -482,6 +628,13 @@ components:
             $ref: '#/components/schemas/AuctionSettlementResponse'
         message:
           type: string
+    ApiResponsePageResponseAuctionArrivalResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponseAuctionArrivalResponse'
+        message:
+          type: string
     ApiResponsePageResponseAuctionLotResponse:
       type: object
       properties:
@@ -495,6 +648,67 @@ components:
         data:
           $ref: '#/components/schemas/PageResponseAuctionSettlementListItemResponse'
         message:
+          type: string
+    AuctionArrivalCommand:
+      type: object
+      properties:
+        arrivalDate:
+          type: string
+          format: date
+        bedZoneId:
+          type: integer
+          format: int64
+        details:
+          $ref: '#/components/schemas/OrchidGroupMutationDetails'
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - arrivalDate
+      - bedZoneId
+      - details
+      - idempotencyKey
+    AuctionArrivalResponse:
+      type: object
+      properties:
+        arrivalDate:
+          type: string
+          format: date
+        canceledAt:
+          type: string
+          format: date-time
+        cancellationMutationId:
+          type: integer
+          format: int64
+        cancellationReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        creationMutationId:
+          type: integer
+          format: int64
+        decisionId:
+          type: integer
+          format: int64
+        id:
+          type: integer
+          format: int64
+        lotId:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        worker:
           type: string
     AuctionAttemptResponse:
       type: object
@@ -523,6 +737,77 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuctionResultLineResponse'
+    AuctionFollowUpCommand:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        method:
+          type: string
+          enum:
+          - REAUCTION
+          - FARM_RETURN
+          - AUCTION_DISPOSAL
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - idempotencyKey
+      - method
+      - reason
+    AuctionFollowUpResponse:
+      type: object
+      properties:
+        arrivalAllowed:
+          type: boolean
+        availableMethods:
+          type: array
+          items:
+            type: string
+            enum:
+            - REAUCTION
+            - FARM_RETURN
+            - AUCTION_DISPOSAL
+        decidedQuantity:
+          type: integer
+          format: int32
+        decisionChangeAllowed:
+          type: boolean
+        decisionId:
+          type: integer
+          format: int64
+        disposedQuantity:
+          type: integer
+          format: int32
+        inferredReturnQuantity:
+          type: integer
+          format: int32
+        lotId:
+          type: integer
+          format: int64
+        method:
+          type: string
+          enum:
+          - REAUCTION
+          - FARM_RETURN
+          - AUCTION_DISPOSAL
+        pendingQuantity:
+          type: integer
+          format: int32
+    AuctionFollowUpResult:
+      type: object
+      properties:
+        arrival:
+          $ref: '#/components/schemas/AuctionArrivalResponse'
+        followUp:
+          $ref: '#/components/schemas/AuctionFollowUpResponse'
     AuctionLotAdjustmentRequest:
       type: object
       properties:
@@ -578,6 +863,7 @@ components:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+          - DISPOSED
         failedCount:
           type: integer
           format: int32
@@ -760,6 +1046,7 @@ components:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+          - DISPOSED
         worker:
           type: string
           maxLength: 100
@@ -974,6 +1261,7 @@ components:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+          - DISPOSED
         newWaitingQuantity:
           type:
           - integer
@@ -1005,6 +1293,7 @@ components:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+          - DISPOSED
         previousWaitingQuantity:
           type:
           - integer
@@ -1036,6 +1325,76 @@ components:
           type: integer
           format: int32
         waitingQuantity:
+          type: integer
+          format: int32
+    CancelAuctionArrivalCommand:
+      type: object
+      properties:
+        correctionDate:
+          type: string
+          format: date
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - correctionDate
+      - idempotencyKey
+      - reason
+    OrchidGroupMutationDetails:
+      type: object
+      properties:
+        ageYear:
+          type: integer
+          format: int32
+        endPosition:
+          type: number
+        memo:
+          type: string
+        placementType:
+          type: string
+        potSize:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        splitPlacementAllowed:
+          type: boolean
+        startPosition:
+          type: number
+        status:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+        varietyId:
+          type: integer
+          format: int64
+    PageResponseAuctionArrivalResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuctionArrivalResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
           type: integer
           format: int32
     PageResponseAuctionLotResponse:

@@ -770,7 +770,7 @@ public class OrchidGroupMutationEngine {
         command,
         command.mutationIds(),
         Set.of(OrchidGroupMutationType.CREATE),
-        "포트 작업의 생성 Mutation만 자동 취소할 수 있습니다.",
+        "생성 Mutation만 자동 취소할 수 있습니다.",
         Set.of());
   }
 
