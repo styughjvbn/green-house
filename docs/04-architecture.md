@@ -189,6 +189,7 @@ Sales 내부는 기존 계층을 유지한 `sales/{application,domain,repository
 - Direct는 일반 판매 회계 연결과 입금 진입 유스케이스를 맡는다. V43은 전용 금액 테이블과 기존 금액의 원문 복사·이전 시점 대사를 준비한다. 신규 생성·작성중 수정은 Document와 Direct 거래/가격 모델을 같은 최상위 transaction에서 저장하며, Direct writer는 호출 transaction에 반드시 참여한다. 전표·품목 ID만 연결하고 Entity를 공유하지 않는다. 현재 조회·입금 경로의 금액 원천은 아직 Document의 기존 컬럼이며, 이 읽기·대금 경로와 기존 금액 정책의 전환은 다음 기능 단위다. 이전 시점 검토 근거를 현재 수납액 원천으로 사용하지 않는다.
 - Auction은 출하·lot·시도·결과·반환 추적과 임시 호환 파생 정산(`auction/settlement`)을 소유한다.
 - Payment는 실제 입금 이벤트·연결 원장·거래처 잔액을 소유한다. Partner는 거래처 기준정보·거래처별 결제 선호 설정을 소유하며 금액 원장을 직접 변경하지 않는다.
+- 내부 Direct 금액 조회는 Document 소유 값 계약으로 전용 거래/가격과 Payment의 유효 배분을 조합한다. Payment Repository projection은 외부로 노출하지 않고 application 값으로 변환한다. 조회의 검토 필요 상태는 이전 대사와 현재 연결 검증을 반영하며 원장이나 저장 금액을 변경하지 않는다. HTTP 금액 조회·입금의 원천 전환은 미완료다.
 - Document는 구체적인 Direct/Auction/Payment 서비스를 호출하지 않는다. 필요한 출하 생성·취소 보호·표시 조회는 Document 소유 `AuctionDocumentPort`, 일반 판매의 예상일·입금 이력·잔액 연결은 `DirectDocumentAccountingPort`로 요청하고 소유자 adapter가 처리한다. 기존 출하 값 계약은 port로 이동하며 복제하지 않는다.
 - Payment가 정의한 `PaymentTargetPort`를 Document와 임시 경매 정산이 구현한다. Payment는 Entity를 받지 않고, 대상 잠금·유효성 검증 뒤 원장 멱등 확인→대상 금액 반영→입금/연결 원장→잔액→감사→응답을 조율한다. 유스케이스 진입점이 트랜잭션을 열고 대상 port와 원장 writer는 기존 트랜잭션에 반드시 참여한다.
 - 저장소·Entity·QueryDSL EntityPath는 내부 소유 경계 밖으로 노출하지 않는다. application 공개 멤버의 중첩 값 계약 검사와 내부 의존 그래프 검사를 함께 실행한다. 구현 의존은 `Direct/Auction → Document/Payment/Partner`, `Document → Payment port/Partner`, `Payment → Partner`이며 역방향 구현 의존을 허용하지 않는다.

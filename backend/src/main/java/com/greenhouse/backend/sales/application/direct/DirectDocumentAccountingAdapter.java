@@ -7,6 +7,7 @@ import com.greenhouse.backend.sales.application.payment.PaymentEventReader;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,11 @@ public class DirectDocumentAccountingAdapter implements DirectDocumentAccounting
   private final PaymentEventReader events;
   private final ExpectedPaymentDateCalculator dates;
   private final DirectSaleTermsWriter termsWriter;
+  private final DirectSaleFinancialReader financials;
+
+  public Map<Long, FinancialSnapshot> findFinancials(Collection<Long> documentIds) {
+    return financials.findAll(documentIds);
+  }
 
   public void storeTerms(Terms terms) {
     termsWriter.store(terms);
