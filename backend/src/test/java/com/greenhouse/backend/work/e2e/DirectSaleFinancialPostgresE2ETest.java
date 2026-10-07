@@ -90,6 +90,36 @@ class DirectSaleFinancialPostgresE2ETest extends WorkE2ETestBase {
     assertThat(jdbc.queryForList("select * from direct_sale_prices")).isEqualTo(before);
   }
 
+  @Test
+  void excludesAnotherPartnersCashFromValidAllocationsAndPreservesItsLedger() {
+    seedSale(1000, 1, 1000, 1000);
+    var other =
+        partners.saveAndFlush(
+            new BusinessPartner(
+                "다른 수납 거래처 " + UUID.randomUUID(), PartnerType.WHOLESALE, null, null, null, null));
+    var cash =
+        events.saveAndFlush(
+            PartnerPaymentEvent.received(
+                other.getId(),
+                LocalDate.of(2026, 10, 7),
+                400L,
+                PaymentTargetType.SALES_SLIP,
+                900L,
+                null,
+                null,
+                "wrong-owner",
+                null,
+                "테스트"));
+    events.saveAndFlush(PartnerPaymentEvent.manualMatch(cash));
+    var ledger = jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id");
+    var financial = reader.findAll(List.of(900L)).get(900L);
+    assertThat(financial.allocatedAmount()).isZero();
+    assertThat(financial.remainingAmount()).isEqualByComparingTo("1000");
+    assertThat(financial.reviewRequired()).isTrue();
+    assertThat(jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id"))
+        .isEqualTo(ledger);
+  }
+
   private void seedSale(int total, int quantity, int unitPrice, int amount) {
     jdbc.update(
         """

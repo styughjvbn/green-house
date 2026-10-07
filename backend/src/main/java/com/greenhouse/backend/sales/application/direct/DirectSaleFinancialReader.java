@@ -30,13 +30,16 @@ public class DirectSaleFinancialReader {
     Map<Long, FinancialSnapshot> result = new LinkedHashMap<>();
     for (int offset = 0; offset < ids.size(); offset += 500) {
       var batch = ids.subList(offset, Math.min(offset + 500, ids.size()));
-      var amounts = allocations.findAll(PaymentTargetType.SALES_SLIP, batch);
+      var ownedSales = sales.findAllWithPrices(batch);
+      Map<Long, Long> partners = new LinkedHashMap<>();
+      ownedSales.forEach(sale -> partners.put(sale.getDocumentId(), sale.getPartnerId()));
+      var amounts = allocations.findAll(PaymentTargetType.SALES_SLIP, partners);
       Set<Long> reviewed =
           reconciliations.findAll(batch).stream()
               .filter(review -> review.requiresReview())
               .map(review -> review.getDocumentId())
               .collect(Collectors.toSet());
-      for (var sale : sales.findAllWithPrices(batch)) {
+      for (var sale : ownedSales) {
         var allocation = amounts.get(sale.getDocumentId());
         var prices = new LinkedHashMap<Long, PriceSnapshot>();
         long itemSum = 0;
@@ -57,6 +60,7 @@ public class DirectSaleFinancialReader {
         BigDecimal total = BigDecimal.valueOf(sale.getTotalAmount());
         boolean review =
             reviewed.contains(sale.getDocumentId())
+                || sale.getPartnerId() == null
                 || allocation.reviewRequired()
                 || invalidPrice
                 || itemSum != sale.getTotalAmount()

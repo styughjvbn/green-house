@@ -18,17 +18,22 @@ public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaym
   @Query(
       value =
           """
-      WITH scoped AS (
+      WITH targets AS (
+          SELECT "targetId" AS target_id, "partnerId" AS partner_id
+          FROM jsonb_to_recordset(CAST(:targets AS jsonb)) AS target("targetId" bigint, "partnerId" bigint)
+      ), scoped AS (
               SELECT id, event_type, status, amount, partner_id, target_type, target_id, parent_event_id
-              FROM partner_payment_events WHERE target_type = :targetType AND target_id IN (:ids)
+              FROM partner_payment_events WHERE target_type = :targetType AND target_id IN (SELECT target_id FROM targets)
       ), eligible AS (
           SELECT matched.id, matched.target_id, matched.parent_event_id, matched.amount
           FROM scoped matched JOIN partner_payment_events received ON received.id = matched.parent_event_id
+          JOIN targets owner ON owner.target_id = matched.target_id
           WHERE matched.event_type = 'MANUAL_MATCH_CONFIRMED' AND matched.status = 'CONFIRMED'
               AND matched.amount > 0 AND received.event_type = 'PAYMENT_RECEIVED'
               AND received.status = 'FULLY_APPLIED' AND received.unapplied_amount = 0
               AND received.target_type = matched.target_type AND received.target_id = matched.target_id
               AND received.partner_id = matched.partner_id AND received.amount = matched.amount
+              AND (NOT :validateOwner OR received.partner_id = owner.partner_id)
       ), unique_links AS (
           SELECT target_id, parent_event_id, MAX(amount) AS amount, COUNT(*) AS matches
           FROM eligible GROUP BY target_id, parent_event_id
@@ -52,7 +57,9 @@ public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaym
       """,
       nativeQuery = true)
   List<PaymentAllocationTotals> findAllocationTotals(
-      @Param("targetType") String targetType, @Param("ids") List<Long> ids);
+      @Param("targetType") String targetType,
+      @Param("targets") String targets,
+      @Param("validateOwner") boolean validateOwner);
 
   boolean existsByTargetTypeAndTargetId(PaymentTargetType targetType, Long targetId);
 

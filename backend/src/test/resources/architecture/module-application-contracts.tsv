@@ -179,7 +179,7 @@ METHOD	com.greenhouse.backend.sales.application.payment.PartnerBalanceService.up
 METHOD	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader$Allocation.amount()
 METHOD	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader$Allocation.partnerId()
 METHOD	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader$Allocation.reviewRequired()
-METHOD	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader.findAll(com.greenhouse.backend.sales.domain.payment.PaymentTargetType, java.util.Collection)
+METHOD	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader.findAll(com.greenhouse.backend.sales.domain.payment.PaymentTargetType, java.util.Map)
 METHOD	com.greenhouse.backend.sales.application.payment.PaymentEventReader.existsByTarget(com.greenhouse.backend.sales.domain.payment.PaymentTargetType, java.lang.Long)
 METHOD	com.greenhouse.backend.sales.application.payment.PaymentEventReader.findExistingTargetIds(com.greenhouse.backend.sales.domain.payment.PaymentTargetType, java.util.List)
 METHOD	com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput.orchidGroupId()
