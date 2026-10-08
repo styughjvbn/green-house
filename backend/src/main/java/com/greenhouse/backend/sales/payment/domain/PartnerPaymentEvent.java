@@ -1,0 +1,402 @@
+package com.greenhouse.backend.sales.payment.domain;
+
+import com.greenhouse.backend.common.domain.BaseEntity;
+import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Table;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Entity
+@Table(
+    name = "partner_payment_events",
+    indexes = {
+      @Index(name = "idx_partner_payment_partner_date", columnList = "partner_id,event_date"),
+      @Index(name = "idx_partner_payment_target", columnList = "target_type,target_id")
+    })
+public class PartnerPaymentEvent extends BaseEntity {
+
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "partner_payment_events_id_seq")
+  @SequenceGenerator(
+      name = "partner_payment_events_id_seq",
+      sequenceName = "partner_payment_events_id_seq",
+      allocationSize = 50)
+  private Long id;
+
+  @Column(name = "partner_id", nullable = false)
+  private Long partnerId;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "event_type", nullable = false)
+  private PaymentEventType eventType;
+
+  @Column(name = "event_date", nullable = false)
+  private LocalDate eventDate;
+
+  @Column(name = "event_time")
+  private LocalTime eventTime;
+
+  @Column(nullable = false)
+  private Long amount;
+
+  @Column(name = "unapplied_amount", nullable = false)
+  private Long unappliedAmount;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "target_type")
+  private PaymentTargetType targetType;
+
+  @Column(name = "target_id")
+  private Long targetId;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "parent_event_id")
+  private PartnerPaymentEvent parentEvent;
+
+  @Column(name = "payment_method")
+  private String paymentMethod;
+
+  @Column(name = "depositor_name")
+  private String depositorName;
+
+  @Column(columnDefinition = "text")
+  private String description;
+
+  @Column(name = "external_uid", unique = true)
+  private String externalUid;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private PaymentEventStatus status;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "raw_payload", columnDefinition = "jsonb")
+  private Map<String, Object> rawPayload;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "match_payload", columnDefinition = "jsonb")
+  private Map<String, Object> matchPayload;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "allocation_payload", columnDefinition = "jsonb")
+  private Map<String, Object> allocationPayload;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "balance_snapshot_json", columnDefinition = "jsonb")
+  private Map<String, Object> balanceSnapshotJson;
+
+  @Column(columnDefinition = "text")
+  private String memo;
+
+  @Column(name = "created_by")
+  private String createdBy;
+
+  private PartnerPaymentEvent(
+      Long partnerId,
+      PaymentEventType eventType,
+      LocalDate eventDate,
+      Long amount,
+      PaymentTargetType targetType,
+      Long targetId,
+      PartnerPaymentEvent parentEvent,
+      String paymentMethod,
+      String depositorName,
+      String description,
+      String externalUid,
+      PaymentEventStatus status,
+      String memo,
+      String createdBy) {
+    this.partnerId = partnerId;
+    this.eventType = eventType;
+    this.eventDate = eventDate;
+    this.amount = amount;
+    this.unappliedAmount = 0L;
+    this.targetType = targetType;
+    this.targetId = targetId;
+    this.parentEvent = parentEvent;
+    this.paymentMethod = paymentMethod;
+    this.depositorName = depositorName;
+    this.description = description;
+    this.externalUid = externalUid;
+    this.status = status;
+    this.memo = memo;
+    this.createdBy = createdBy;
+  }
+
+  public static PartnerPaymentEvent received(
+      Long partnerId,
+      LocalDate eventDate,
+      Long amount,
+      PaymentTargetType targetType,
+      Long targetId,
+      String paymentMethod,
+      String depositorName,
+      String externalUid,
+      String memo,
+      String createdBy) {
+    return new PartnerPaymentEvent(
+        partnerId,
+        PaymentEventType.PAYMENT_RECEIVED,
+        eventDate,
+        amount,
+        targetType,
+        targetId,
+        null,
+        paymentMethod,
+        depositorName,
+        "수동 입금 확인",
+        externalUid,
+        PaymentEventStatus.FULLY_APPLIED,
+        memo,
+        createdBy);
+  }
+
+  public static PartnerPaymentEvent unassignedReceipt(
+      Long partnerId,
+      LocalDate date,
+      Long amount,
+      String method,
+      String depositor,
+      String externalUid,
+      String memo,
+      String actor) {
+    var event =
+        received(
+            partnerId,
+            date,
+            amount,
+            PaymentTargetType.NONE,
+            null,
+            method,
+            depositor,
+            externalUid,
+            memo,
+            actor);
+    event.status = PaymentEventStatus.UNAPPLIED;
+    event.unappliedAmount = amount;
+    event.description = "대상 미지정 수납";
+    return event;
+  }
+
+  public boolean isUnassignedCancellationAllowed() {
+    return isUnassignedCancellationAllowed(false);
+  }
+
+  public boolean isUnassignedCancellationAllowed(boolean reviewRequired) {
+    return !reviewRequired
+        && eventType == PaymentEventType.PAYMENT_RECEIVED
+        && targetType == PaymentTargetType.NONE
+        && targetId == null
+        && status == PaymentEventStatus.UNAPPLIED
+        && amount > 0
+        && Objects.equals(amount, unappliedAmount);
+  }
+
+  public PartnerPaymentEvent cancelUnassignedReceipt(
+      LocalDate date, String reason, String actor, String externalUid) {
+    if (!isUnassignedCancellationAllowed()) {
+      throw new ConflictException(
+          "PAYMENT_RECEIPT_CANCELLATION_BLOCKED", "배분되었거나 취소된 수납은 대상 미지정 수납 정정으로 취소할 수 없습니다.");
+    }
+    status = PaymentEventStatus.CANCELLED;
+    unappliedAmount = 0L;
+    return new PartnerPaymentEvent(
+        partnerId,
+        PaymentEventType.ADJUSTMENT,
+        date,
+        amount,
+        PaymentTargetType.NONE,
+        null,
+        this,
+        paymentMethod,
+        depositorName,
+        "대상 미지정 수납 입력 취소",
+        externalUid,
+        PaymentEventStatus.CONFIRMED,
+        reason,
+        actor);
+  }
+
+  public void validateUnassignedReplay(
+      Long amount, LocalDate date, String method, String depositor, String memo) {
+    validateReplay(amount, date);
+    if (targetType != PaymentTargetType.NONE
+        || targetId != null
+        || !Objects.equals(paymentMethod, method)
+        || !Objects.equals(depositorName, depositor)
+        || !Objects.equals(this.memo, memo)) {
+      throw new ConflictException("IDEMPOTENCY_KEY_REUSED", "같은 수납 키의 입력을 변경할 수 없습니다.");
+    }
+  }
+
+  public void validateCancellationReplay(Long receiptId, LocalDate date, String reason) {
+    if (parentEvent == null
+        || !Objects.equals(parentEvent.getId(), receiptId)
+        || !Objects.equals(eventDate, date)
+        || !Objects.equals(memo, reason)) {
+      throw new ConflictException("IDEMPOTENCY_KEY_REUSED", "같은 정정 키의 입력을 변경할 수 없습니다.");
+    }
+  }
+
+  public static PartnerPaymentEvent allocated(
+      PartnerPaymentEvent receipt,
+      PaymentTargetType type,
+      Long targetId,
+      long amount,
+      LocalDate date,
+      String actor,
+      String externalUid) {
+    requireAllocationTarget(type, targetId);
+    receipt.consumeAllocationAmount(amount);
+    return new PartnerPaymentEvent(
+        receipt.getPartnerId(),
+        PaymentEventType.PAYMENT_ALLOCATED,
+        date,
+        amount,
+        type,
+        targetId,
+        receipt,
+        receipt.getPaymentMethod(),
+        receipt.getDepositorName(),
+        "수납 배분",
+        externalUid,
+        PaymentEventStatus.CONFIRMED,
+        null,
+        actor);
+  }
+
+  public boolean isAllocation() {
+    return eventType == PaymentEventType.PAYMENT_ALLOCATED
+        || eventType == PaymentEventType.MANUAL_MATCH_CONFIRMED;
+  }
+
+  public PartnerPaymentEvent cancelAllocation(LocalDate date, String reason, String actor) {
+    if (!isAllocation()
+        || status != PaymentEventStatus.CONFIRMED
+        || parentEvent == null
+        || amount <= 0) {
+      throw new ConflictException("PAYMENT_ALLOCATION_CANCELLATION_BLOCKED", "유효한 배분만 취소할 수 있습니다.");
+    }
+    if (reason == null || reason.isBlank()) throw new IllegalArgumentException("배분 정정 사유가 필요합니다.");
+    status = PaymentEventStatus.CANCELLED;
+    parentEvent.restoreAllocatedAmount(amount);
+    return new PartnerPaymentEvent(
+        partnerId,
+        PaymentEventType.PAYMENT_UNLINKED,
+        date,
+        amount,
+        targetType,
+        targetId,
+        this,
+        paymentMethod,
+        depositorName,
+        "배분 취소",
+        "ALLOCATION_CANCEL:" + id,
+        PaymentEventStatus.CONFIRMED,
+        reason.trim(),
+        actor);
+  }
+
+  public void consumeAllocationAmount(long amount) {
+    requireLiveReceipt();
+    if (amount <= 0 || amount > unappliedAmount)
+      throw new ConflictException("PAYMENT_RECEIPT_OVERALLOCATED", "수납의 사용 가능액을 초과하여 배분할 수 없습니다.");
+    unappliedAmount -= amount;
+    refreshUsageStatus();
+  }
+
+  public void restoreAllocatedAmount(long amount) {
+    requireLiveReceipt();
+    if (amount <= 0 || amount > this.amount - unappliedAmount)
+      throw new ConflictException("PAYMENT_RECEIPT_REVIEW_REQUIRED", "수납과 배분 합계를 확인해야 합니다.");
+    unappliedAmount = Math.addExact(unappliedAmount, amount);
+    refreshUsageStatus();
+  }
+
+  public boolean isReceiptUsable(boolean reviewRequired) {
+    return !reviewRequired
+        && eventType == PaymentEventType.PAYMENT_RECEIVED
+        && amount > 0
+        && Set.of(
+                PaymentEventStatus.UNAPPLIED,
+                PaymentEventStatus.PARTIALLY_APPLIED,
+                PaymentEventStatus.FULLY_APPLIED)
+            .contains(status);
+  }
+
+  public boolean isReceiptAllocationAllowed(boolean reviewRequired) {
+    return isReceiptUsable(reviewRequired) && unappliedAmount > 0;
+  }
+
+  public boolean isReceiptCorrectionAllowed(boolean reviewRequired) {
+    return isReceiptUsable(reviewRequired) && unappliedAmount < amount;
+  }
+
+  private void requireLiveReceipt() {
+    if (!isReceiptUsable(false))
+      throw new ConflictException("PAYMENT_RECEIPT_REVIEW_REQUIRED", "유효한 수납만 배분하거나 정정할 수 있습니다.");
+  }
+
+  private void refreshUsageStatus() {
+    status =
+        unappliedAmount == 0
+            ? PaymentEventStatus.FULLY_APPLIED
+            : unappliedAmount.equals(amount)
+                ? PaymentEventStatus.UNAPPLIED
+                : PaymentEventStatus.PARTIALLY_APPLIED;
+  }
+
+  public static void requireAllocationTarget(PaymentTargetType type, Long id) {
+    if ((type != PaymentTargetType.SALES_SLIP && type != PaymentTargetType.AUCTION_PROCEEDS)
+        || id == null
+        || id <= 0) throw new IllegalArgumentException("일반 판매 전표 또는 경매 대금에만 배분할 수 있습니다.");
+  }
+
+  public static PartnerPaymentEvent manualMatch(PartnerPaymentEvent receivedEvent) {
+    return new PartnerPaymentEvent(
+        receivedEvent.partnerId,
+        PaymentEventType.MANUAL_MATCH_CONFIRMED,
+        receivedEvent.eventDate,
+        receivedEvent.amount,
+        receivedEvent.targetType,
+        receivedEvent.targetId,
+        receivedEvent,
+        receivedEvent.paymentMethod,
+        receivedEvent.depositorName,
+        "수동 입금 연결",
+        null,
+        PaymentEventStatus.CONFIRMED,
+        receivedEvent.memo,
+        receivedEvent.createdBy);
+  }
+
+  public void validateReplay(Long amount, LocalDate eventDate) {
+    if (!Objects.equals(this.amount, amount) || !Objects.equals(this.eventDate, eventDate)) {
+      throw new ConflictException(
+          "IDEMPOTENCY_KEY_REUSED", "같은 입금 멱등 키를 다른 금액 또는 입금일에 재사용할 수 없습니다.");
+    }
+  }
+}

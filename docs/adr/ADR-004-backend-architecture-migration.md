@@ -674,3 +674,10 @@ P2 마무리 검증 결과:
 - 클래스·Bean 이름·validation·Entity/DB·검색/잠금/예정일 실행 본문은 그대로다. QueryDSL 및 소비자 import·감사 helper 제한의 FQCN도 같은 이동표로 갱신한다. reviewed inventory는 해당 패키지 FQCN만 치환한다.
 
 - clean 컴파일 및 거래처·예정일·capability·공개 값·의존 그래프·단일 Writer·inventory 집중 검증 통과. 전체 검증은 P3 다섯 기능 이동 후 수행한다. DB/트랜잭션 변경이 없어 PostgreSQL E2E는 이 이동에서 실행하지 않는다.
+
+### 2026-10-08: P3 — Payment 기능 우선 배치
+
+- Payment 프로덕션 35개와 같은 패키지 테스트 2개를 `sales/payment/{application,domain,repository,web}`로 이동한다. P2의 내부 API·대상 SPI와 sales/api/payment 공개 잔액 조회는 유지한다.
+- 원장·CTE 집계·잔액·감사·단건/다중 입금·정정의 실행 본문, 트랜잭션·잠금 순서·멱등 namespace·금액 정책·JSON은 동일하다. Entity 이름·SQL·DB 제약을 변경하지 않는다. 소비자/QueryDSL/테스트·감사 helper FQCN을 갱신한다.
+
+- clean 컴파일과 입금·배분·원장 계약·단건 입금·아키텍처/inventory 집중 검증 통과. 전체 검증은 P3 전체 이동 후 수행한다. DB/트랜잭션 변경이 없어 이 단계 PostgreSQL E2E 미실행.

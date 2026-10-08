@@ -9,14 +9,14 @@ import com.greenhouse.backend.sales.application.auction.AuctionProceedsPaymentSe
 import com.greenhouse.backend.sales.application.auction.AuctionProceedsReader;
 import com.greenhouse.backend.sales.application.auction.AuctionProceedsService;
 import com.greenhouse.backend.sales.domain.auction.*;
-import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
 import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.payment.api.ManualPaymentCommand;
 import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.domain.PartnerPaymentEvent;
+import com.greenhouse.backend.sales.payment.repository.PartnerPaymentEventRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionProceedsRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
-import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
 import jakarta.persistence.EntityManagerFactory;
 import java.time.LocalDate;
 import java.util.List;

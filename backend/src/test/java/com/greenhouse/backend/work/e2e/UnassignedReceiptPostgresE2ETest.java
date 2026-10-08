@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
-import com.greenhouse.backend.sales.application.payment.UnassignedReceiptService;
-import com.greenhouse.backend.sales.dto.payment.CancelUnassignedReceiptRequest;
 import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.payment.api.ManualPaymentCommand;
+import com.greenhouse.backend.sales.payment.application.UnassignedReceiptService;
+import com.greenhouse.backend.sales.payment.web.dto.CancelUnassignedReceiptRequest;
 import java.time.LocalDate;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;

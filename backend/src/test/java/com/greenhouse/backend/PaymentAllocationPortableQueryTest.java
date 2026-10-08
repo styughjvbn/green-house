@@ -3,12 +3,12 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.sales.api.partner.PartnerType;
-import com.greenhouse.backend.sales.application.payment.PaymentAllocationReader;
-import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
 import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
-import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
+import com.greenhouse.backend.sales.payment.application.PaymentAllocationReader;
+import com.greenhouse.backend.sales.payment.domain.PartnerPaymentEvent;
+import com.greenhouse.backend.sales.payment.repository.PartnerPaymentEventRepository;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.stream.Collectors;
