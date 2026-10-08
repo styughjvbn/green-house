@@ -1,7 +1,7 @@
 package com.greenhouse.backend.dashboard.application;
 
 import com.greenhouse.backend.dashboard.dto.DashboardSummaryResponse;
-import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
+import com.greenhouse.backend.farm.api.status.FarmMetricsApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DashboardQueryService {
 
-  private final FarmMetricsReader farmMetricsReader;
+  private final FarmMetricsApi farmMetricsReader;
 
   public DashboardSummaryResponse getSummary() {
     var snapshot = farmMetricsReader.getSnapshot();

@@ -2,8 +2,8 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.farm.api.status.FarmMetricsApi.VarietyInventory;
 import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
-import com.greenhouse.backend.farm.application.status.FarmMetricsReader.VarietyInventory;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;

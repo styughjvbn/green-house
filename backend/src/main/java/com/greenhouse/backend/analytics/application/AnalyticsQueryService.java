@@ -10,7 +10,7 @@ import com.greenhouse.backend.analytics.dto.VarietyInventoryAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsResponse;
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
+import com.greenhouse.backend.farm.api.status.FarmMetricsApi;
 import com.greenhouse.backend.sales.application.document.SalesMetricsReader;
 import com.greenhouse.backend.sales.application.document.SalesMetricsReader.NamedAmount;
 import com.greenhouse.backend.sales.application.document.SalesMetricsReader.PartnerSales;
@@ -39,7 +39,7 @@ public class AnalyticsQueryService {
 
   private final SalesMetricsReader salesMetrics;
 
-  private final FarmMetricsReader farmMetricsReader;
+  private final FarmMetricsApi farmMetricsReader;
 
   private final WorkOperationMetricsApi workMetricsReader;
 

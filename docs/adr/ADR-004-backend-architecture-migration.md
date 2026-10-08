@@ -583,3 +583,17 @@ Farm 사용 여부 단계 검증 결과:
 - SPI와 group/issue class 본문은 package/import 외 동일하다. clean 집중 검증 통과: 대사·원장 우회 변경 탐지·보상/rollback·writer guard·판매 재고·공개 값·inventory·integration·단일 Writer.
 - 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과.
 - HTTP·SQL·트랜잭션 경계·DB·업무 판단 변경 없음. OpenAPI/타입 재생성과 `workE2eTest` 미실행. 운영 CLI 변경/실행 없음. 전체 검증 이후에는 이 ADR 결과만 추가했다.
+
+### 2026-10-08: 다섯 단계 진행 — 5. Farm 집계 API
+
+- Dashboard·Analytics의 `FarmMetricsReader` 직접 참조를 `farm/api/status/FarmMetricsApi`로 전환한다. 실제 외부 조회 getInventorySummary/getSnapshot과 기존 중첩 Snapshot/InventorySummary/VarietyInventory 값을 공개한다. 기존 Reader가 직접 구현하며 SQL·상태 정책·projection 변환은 내부에 유지한다. 별도 전달 Adapter·Service·Port·integration 없음.
+- readOnly 트랜잭션, 판매 가능/주의 상태 해석·집계/합계·조회 순서·collection 복사·Dashboard/Analytics 응답 조합은 동일하다. 현재 Entity에서 과거 snapshot을 복원하는 로직을 추가하지 않는다.
+- reviewed inventory는 Reader와 중첩 record의 대응 FQCN만 치환한다. 실제 Reader 테스트/spy는 유지하고 API 값의 FQCN import만 갱신한다. HTTP DTO·필드/enum·DB·수량 정책 변경 없음.
+
+5단계 검증 결과:
+
+- 집계 구현 본문은 Override/import/중첩 값 선언 이동 외 동일하다. clean 집중 검증 통과: Analytics 집계·응답 조합·조회 건수·공개 값·inventory·integration·단일 Writer.
+- 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과. OpenAPI 재생성 157 operations/132 paths/292 schemas, 생성 파일 차이 없음. 프론트 타입은 변경 없어 재생성하지 않았다.
+- 프로덕션 코드의 다른 최상위 모듈에서 Farm/Work application 직접 참조는 각각 0개다. 이동 전 명령/결과/원장 대사/domain 값/중첩 metrics 클래스의 잔존 없음. 기존 Engine과 실제 구현 테스트/spy는 유지한다.
+- HTTP·SQL·DB/트랜잭션 경계·잠금·수량·상태 정책·CLI 변경 없음. `workE2eTest` 미실행. 전체 검증 이후에는 이 ADR 결과만 추가했다.
+- 이번 다섯 단계 완료. 전체 전환은 진행 중이며 Sales 공개 계약, 기능 우선 패키지 이동, Mutation 내부 분리와 최종 CI/문서 통합은 후속 단계다. 목표 문서의 archive 이동은 최종 통합 시 수행한다.
