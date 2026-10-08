@@ -6693,7 +6693,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경 */
+            /** @description IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경. AUCTION_SETTLEMENT_TARGET_RETIRED: 입금 대상이 전환된 정산에 새 입금 시도 */
             409: {
                 headers: {
                     [name: string]: unknown;

@@ -1,10 +1,13 @@
 package com.greenhouse.backend.sales.application.auction.settlement;
 
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.application.partner.BusinessPartnerLock;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
+import com.greenhouse.backend.sales.application.payment.PaymentLedgerService;
 import com.greenhouse.backend.sales.application.payment.PaymentTargetPort;
 import com.greenhouse.backend.sales.domain.auction.settlement.AuctionSettlement;
+import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.dto.auction.settlement.AuctionSettlementResponse;
 import com.greenhouse.backend.sales.repository.auction.settlement.AuctionSettlementRepository;
 import java.time.LocalDateTime;
@@ -23,6 +26,7 @@ public class AuctionSettlementPaymentTarget
   private final AuctionSettlementRepository repository;
   private final BusinessPartnerLock partners;
   private final PartnerBalanceService balances;
+  private final PaymentLedgerService ledger;
   private final SettlementAuditSupport audit;
   private final AuctionSettlementResponseAssembler assembler;
 
@@ -45,6 +49,10 @@ public class AuctionSettlementPaymentTarget
   }
 
   public void recordPayment(Long id, Long amount, String worker, LocalDateTime now) {
+    if (ledger.isTargetMigrated(PaymentTargetType.AUCTION_SETTLEMENT, id))
+      throw new ConflictException(
+          "AUCTION_SETTLEMENT_TARGET_RETIRED",
+          "입금 대상이 전환된 정산에는 새 입금을 연결할 수 없습니다. 지급 근거가 확인된 경매 대금을 사용하세요.");
     get(id).recordPayment(amount, worker, now);
   }
 
