@@ -22,7 +22,8 @@ public record PartnerPaymentEventResponse(
     String description,
     PaymentEventStatus status,
     String memo,
-    String createdBy) {
+    String createdBy,
+    boolean unassignedCancellationAllowed) {
   public static PartnerPaymentEventResponse from(PartnerPaymentEvent event, String partnerName) {
     return new PartnerPaymentEventResponse(
         event.getId(),
@@ -40,6 +41,7 @@ public record PartnerPaymentEventResponse(
         event.getDescription(),
         event.getStatus(),
         event.getMemo(),
-        event.getCreatedBy());
+        event.getCreatedBy(),
+        event.isUnassignedCancellationAllowed());
   }
 }

@@ -84,6 +84,7 @@ export function BusinessPartnerSelect({
       </label>
       <Select<PartnerSelectOption, false>
         inputId={id}
+        instanceId={id}
         inputValue={keyword}
         isClearable
         isDisabled={disabled}

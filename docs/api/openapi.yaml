@@ -1565,6 +1565,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBusinessPartnerResponse'
+  /api/business-partners/{partnerId}/payment-receipts:
+    post:
+      tags:
+      - payment-controller
+      description: 대상 미지정 수동 수납. 유효 배분과 전표 입금액은 변경하지 않습니다.
+      operationId: receiveUnassignedPayment
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualPaymentRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePartnerPaymentEventResponse'
+  /api/business-partners/{partnerId}/payment-receipts/{receiptId}/cancel:
+    post:
+      tags:
+      - payment-controller
+      description: 미배분 수납의 오입력 취소. 실제 환불을 기록하지 않습니다.
+      operationId: cancelUnassignedPayment
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelUnassignedReceiptRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePartnerPaymentEventResponse'
   /api/auth/logout:
     post:
       tags:
@@ -6385,6 +6443,100 @@ components:
       required:
       - name
       - partnerType
+    ApiResponsePartnerPaymentEventResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PartnerPaymentEventResponse'
+        message:
+          type: string
+    PartnerPaymentEventResponse:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        createdBy:
+          type: string
+        depositorName:
+          type: string
+        description:
+          type: string
+        eventDate:
+          type: string
+          format: date
+        eventType:
+          type: string
+          enum:
+          - PAYMENT_RECEIVED
+          - PAYMENT_ALLOCATED
+          - PREPAYMENT_RECEIVED
+          - CREDIT_APPLIED
+          - CREDIT_REFUND
+          - AUTO_MATCH_CANDIDATE
+          - AUTO_MATCH_CONFIRMED
+          - MANUAL_MATCH_CONFIRMED
+          - MATCH_REJECTED
+          - PAYMENT_UNLINKED
+          - ADJUSTMENT
+        id:
+          type: integer
+          format: int64
+        memo:
+          type: string
+        parentEventId:
+          type: integer
+          format: int64
+        partnerId:
+          type: integer
+          format: int64
+        partnerName:
+          type: string
+        paymentMethod:
+          type: string
+        status:
+          type: string
+          enum:
+          - UNAPPLIED
+          - PARTIALLY_APPLIED
+          - FULLY_APPLIED
+          - CANDIDATE
+          - CONFIRMED
+          - REJECTED
+          - CANCELLED
+        targetId:
+          type: integer
+          format: int64
+        targetType:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+        unappliedAmount:
+          type: integer
+          format: int64
+        unassignedCancellationAllowed:
+          type: boolean
+    CancelUnassignedReceiptRequest:
+      type: object
+      properties:
+        correctionDate:
+          type: string
+          format: date
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - correctionDate
+      - idempotencyKey
+      - reason
     ApiResponseVoid:
       type: object
       properties:
@@ -8460,73 +8612,6 @@ components:
             $ref: '#/components/schemas/PartnerPaymentEventResponse'
         message:
           type: string
-    PartnerPaymentEventResponse:
-      type: object
-      properties:
-        amount:
-          type: integer
-          format: int64
-        createdBy:
-          type: string
-        depositorName:
-          type: string
-        description:
-          type: string
-        eventDate:
-          type: string
-          format: date
-        eventType:
-          type: string
-          enum:
-          - PAYMENT_RECEIVED
-          - PAYMENT_ALLOCATED
-          - PREPAYMENT_RECEIVED
-          - CREDIT_APPLIED
-          - CREDIT_REFUND
-          - AUTO_MATCH_CANDIDATE
-          - AUTO_MATCH_CONFIRMED
-          - MANUAL_MATCH_CONFIRMED
-          - MATCH_REJECTED
-          - PAYMENT_UNLINKED
-          - ADJUSTMENT
-        id:
-          type: integer
-          format: int64
-        memo:
-          type: string
-        parentEventId:
-          type: integer
-          format: int64
-        partnerId:
-          type: integer
-          format: int64
-        partnerName:
-          type: string
-        paymentMethod:
-          type: string
-        status:
-          type: string
-          enum:
-          - UNAPPLIED
-          - PARTIALLY_APPLIED
-          - FULLY_APPLIED
-          - CANDIDATE
-          - CONFIRMED
-          - REJECTED
-          - CANCELLED
-        targetId:
-          type: integer
-          format: int64
-        targetType:
-          type: string
-          enum:
-          - SALES_SLIP
-          - AUCTION_SETTLEMENT
-          - AUCTION_PROCEEDS
-          - NONE
-        unappliedAmount:
-          type: integer
-          format: int64
     ApiResponsePageResponsePartnerPaymentEventResponse:
       type: object
       properties:

@@ -1,8 +1,10 @@
 package com.greenhouse.backend.sales.repository.payment;
 
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
+import com.greenhouse.backend.sales.domain.payment.PaymentEventStatus;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -12,6 +14,20 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaymentEvent, Long> {
+
+  boolean existsByParentEventIdAndStatusNot(Long parentEventId, PaymentEventStatus status);
+
+  // PostgreSQL sums bigint as numeric; retain precision before checking the summary's bigint limit.
+  @Query(
+      value =
+          """
+      select coalesce(sum(cast(unapplied_amount as numeric)), 0)
+      from partner_payment_events
+      where partner_id = :partnerId and event_type = 'PAYMENT_RECEIVED'
+        and target_type = 'NONE' and status in ('UNAPPLIED', 'PARTIALLY_APPLIED')
+      """,
+      nativeQuery = true)
+  BigDecimal sumUnassignedAmount(@Param("partnerId") Long partnerId);
 
   boolean existsByTargetTypeAndTargetId(PaymentTargetType targetType, Long targetId);
 

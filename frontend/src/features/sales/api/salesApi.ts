@@ -460,3 +460,51 @@ export function getAuctionReturnVarieties(signal?: AbortSignal) {
     >
   >("/varieties/genera", { signal });
 }
+
+export function getUnassignedReceiptPage(
+  partnerId: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<
+    import("@/shared/api/page").Page<import("./types").UnassignedReceipt>
+  >(
+    `/partner-payment-events/page?partnerId=${partnerId}&targetType=NONE&page=${page}&size=10`,
+    { signal },
+  );
+}
+export function getPaymentBalance(partnerId: number, signal?: AbortSignal) {
+  return fetchApi<import("./types").PartnerPaymentBalance>(
+    `/business-partners/${partnerId}/balance-summary`,
+    { signal },
+  );
+}
+export function receiveUnassignedPayment(
+  partnerId: number,
+  payload: ManualPaymentPayload,
+) {
+  return requestJson<import("./types").UnassignedReceipt>(
+    `/business-partners/${partnerId}/payment-receipts`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "수납을 저장하지 못했습니다.",
+  );
+}
+export function cancelUnassignedPayment(
+  partnerId: number,
+  receiptId: number,
+  payload: import("./types").CancelUnassignedReceiptPayload,
+) {
+  return requestJson<import("./types").UnassignedReceipt>(
+    `/business-partners/${partnerId}/payment-receipts/${receiptId}/cancel`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "수납 입력을 취소하지 못했습니다.",
+  );
+}

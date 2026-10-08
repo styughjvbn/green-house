@@ -154,6 +154,18 @@ export function readProceedsRouteState(
   };
 }
 
+export function readReceiptRouteState(params: SearchParamReader) {
+  return {
+    partnerId: readOptionalPositiveInteger(params.get("receiptPartnerId")),
+    page: readBoundedIntegerValue(
+      params.get("receiptPage"),
+      0,
+      0,
+      2_147_483_647,
+    ),
+  };
+}
+
 export function readPaymentHistoryPage(
   params: SearchParamReader,
 ): number | null {

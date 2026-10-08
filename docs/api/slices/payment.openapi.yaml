@@ -6,6 +6,64 @@ servers:
 - url: http://localhost:8080
   description: Generated server url
 paths:
+  /api/business-partners/{partnerId}/payment-receipts:
+    post:
+      tags:
+      - payment-controller
+      description: 대상 미지정 수동 수납. 유효 배분과 전표 입금액은 변경하지 않습니다.
+      operationId: receiveUnassignedPayment
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualPaymentRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePartnerPaymentEventResponse'
+  /api/business-partners/{partnerId}/payment-receipts/{receiptId}/cancel:
+    post:
+      tags:
+      - payment-controller
+      description: 미배분 수납의 오입력 취소. 실제 환불을 기록하지 않습니다.
+      operationId: cancelUnassignedPayment
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelUnassignedReceiptRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePartnerPaymentEventResponse'
   /api/partner-payment-events:
     get:
       tags:
@@ -154,6 +212,64 @@ components:
           $ref: '#/components/schemas/PartnerBalanceSummaryResponse'
         message:
           type: string
+    ApiResponsePartnerPaymentEventResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PartnerPaymentEventResponse'
+        message:
+          type: string
+    CancelUnassignedReceiptRequest:
+      type: object
+      properties:
+        correctionDate:
+          type: string
+          format: date
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - correctionDate
+      - idempotencyKey
+      - reason
+    ManualPaymentRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        depositorName:
+          type: string
+          maxLength: 100
+          minLength: 0
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        paymentDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: string
+          maxLength: 30
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - amount
+      - idempotencyKey
+      - paymentDate
     PageResponsePartnerPaymentEventResponse:
       type: object
       properties:
@@ -257,3 +373,5 @@ components:
         unappliedAmount:
           type: integer
           format: int64
+        unassignedCancellationAllowed:
+          type: boolean

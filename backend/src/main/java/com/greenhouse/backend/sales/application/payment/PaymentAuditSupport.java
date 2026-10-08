@@ -15,6 +15,16 @@ class PaymentAuditSupport {
 
   private final AuditEventWriter auditWriter;
 
+  private Map<String, Object> auditContext(PartnerPaymentEvent event) {
+    var context = new LinkedHashMap<String, Object>();
+    context.put("partnerId", event.getPartnerId());
+    context.put("targetType", event.getTargetType());
+    if (event.getTargetId() != null) context.put("targetId", event.getTargetId());
+    if (event.getParentEvent() != null)
+      context.put("parentEventId", event.getParentEvent().getId());
+    return context;
+  }
+
   void recordManualPayment(PartnerPaymentEvent event) {
     var after = new LinkedHashMap<String, Object>();
     after.put("partnerId", event.getPartnerId());
@@ -33,12 +43,6 @@ class PaymentAuditSupport {
         event.getId(),
         Map.of(),
         after,
-        Map.of(
-            "partnerId",
-            event.getPartnerId(),
-            "targetType",
-            event.getTargetType().name(),
-            "targetId",
-            event.getTargetId()));
+        auditContext(event));
   }
 }

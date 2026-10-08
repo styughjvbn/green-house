@@ -67,6 +67,12 @@ public class PartnerBalanceSummary extends BaseEntity {
     this.receivableBalance = 0L;
   }
 
+  public void updateUnappliedPaymentAmount(long amount, PartnerPaymentEvent event) {
+    if (amount < 0) throw new IllegalArgumentException("미배분 수납액은 음수일 수 없습니다.");
+    unappliedPaymentAmount = amount;
+    lastPaymentEvent = event;
+  }
+
   public void updateReceivableBalance(
       Long receivableBalance, PartnerPaymentEvent lastPaymentEvent) {
     this.receivableBalance = Math.max(0L, receivableBalance);

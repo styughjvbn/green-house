@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.application.payment;
 
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.sales.application.partner.BusinessPartnerLock;
 import com.greenhouse.backend.sales.domain.payment.PartnerBalanceSummary;
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
@@ -58,6 +59,20 @@ public class PartnerBalanceService {
     var summary = findOrCreateForUpdate(partnerId);
     summary.updateReceivableBalance(receivableBalance, paymentEventReference(lastPaymentEventId));
     balanceRepository.save(summary);
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void refreshUnassignedAmount(Long partnerId, Long eventId) {
+    partnerLock.lockAll(List.of(partnerId));
+    eventRepository.flush();
+    var summary = findOrCreateForUpdate(partnerId);
+    try {
+      summary.updateUnappliedPaymentAmount(
+          eventRepository.sumUnassignedAmount(partnerId).longValueExact(),
+          paymentEventReference(eventId));
+    } catch (ArithmeticException overflow) {
+      throw new ConflictException("PAYMENT_BALANCE_LIMIT_EXCEEDED", "미배분 수납 잔액이 허용 범위를 초과합니다.");
+    }
   }
 
   public void recordActivity(Long partnerId, Long lastPaymentEventId) {

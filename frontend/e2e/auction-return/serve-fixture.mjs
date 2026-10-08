@@ -76,7 +76,7 @@ const bed = {
   memo: null,
   bedZones: [zone],
 };
-let summary, arrivals, calls, receipts, fail, rejectCancel;
+let summary, arrivals, calls, receipts, fail, rejectCancel, cashEvents;
 function reset() {
   summary = {
     lotId: 42,
@@ -92,6 +92,7 @@ function reset() {
   };
   arrivals = [];
   calls = [];
+  cashEvents = [];
   receipts = new Map();
   fail = false;
   rejectCancel = false;
@@ -125,6 +126,88 @@ const server = http.createServer(async (req, res) => {
     return send({ businessDate: "2026-10-08", timeZone: "Asia/Seoul" });
   if (url.pathname === "/api/auth/me")
     return send({ username: "UI 테스트", role: "ADMIN" });
+  const partner = {
+    id: 7,
+    name: "수납 테스트 거래처",
+    partnerType: "WHOLESALE",
+    active: true,
+  };
+  if (url.pathname === "/api/business-partners/options")
+    return send(pageOf([partner]));
+  if (url.pathname === "/api/business-partners/7/option") return send(partner);
+  if (url.pathname === "/api/business-partners/7/balance-summary")
+    return send({
+      partnerId: 7,
+      partnerName: partner.name,
+      creditBalance: 0,
+      receivableBalance: 0,
+      unappliedPaymentAmount: cashEvents
+        .filter(
+          (e) => e.eventType === "PAYMENT_RECEIVED" && e.status !== "CANCELLED",
+        )
+        .reduce((sum, e) => sum + e.amount, 0),
+    });
+  if (url.pathname === "/api/partner-payment-events/page")
+    return send(
+      pageOf(
+        [...cashEvents].reverse(),
+        Number(url.searchParams.get("page") ?? 0),
+      ),
+    );
+  if (
+    req.method === "POST" &&
+    url.pathname.startsWith("/api/business-partners/7/payment-receipts")
+  ) {
+    calls.push({ path: url.pathname, body });
+    if (receipts.has(body.idempotencyKey))
+      return send(receipts.get(body.idempotencyKey));
+    let result;
+    if (url.pathname.endsWith("/cancel")) {
+      const original = cashEvents.find(
+        (e) => e.id === Number(url.pathname.split("/").at(-2)),
+      );
+      original.status = "CANCELLED";
+      original.unappliedAmount = 0;
+      original.unassignedCancellationAllowed = false;
+      result = {
+        ...original,
+        id: cashEvents.length + 1,
+        eventType: "ADJUSTMENT",
+        status: "CONFIRMED",
+        parentEventId: original.id,
+        eventDate: body.correctionDate,
+        memo: body.reason,
+      };
+    } else {
+      result = {
+        id: cashEvents.length + 1,
+        partnerId: 7,
+        partnerName: partner.name,
+        eventType: "PAYMENT_RECEIVED",
+        eventDate: body.paymentDate,
+        amount: body.amount,
+        unappliedAmount: body.amount,
+        targetType: "NONE",
+        targetId: null,
+        parentEventId: null,
+        paymentMethod: body.paymentMethod,
+        depositorName: body.depositorName,
+        description: "대상 미지정 수납",
+        status: "UNAPPLIED",
+        memo: body.memo,
+        createdBy: "UI 테스트",
+        unassignedCancellationAllowed: true,
+      };
+    }
+    cashEvents.push(result);
+    receipts.set(body.idempotencyKey, structuredClone(result));
+    if (fail) {
+      fail = false;
+      req.socket.destroy();
+      return;
+    }
+    return send(result);
+  }
   if (url.pathname === "/api/auction-lots" && req.method === "GET")
     return send(pageOf([lot]));
   if (url.pathname === "/api/auction-lots/summary")

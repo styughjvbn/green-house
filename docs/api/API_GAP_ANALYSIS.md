@@ -158,6 +158,8 @@
 
 ### 입금 이벤트 명령
 
+대상 미지정 수동 수납과 미배분 원본의 오입력 취소는 Payment slice의 거래처 수납 API로 구현했다. 아래 과거 초안 endpoint와 다중 배분·예치금·은행 수집은 여전히 미구현이다.
+
 - `POST /api/partner-payment-events/import-bank-csv`
 - `POST /api/partner-payment-events/manual-payment`
 - `POST /api/partner-payment-events/prepayment`
@@ -194,6 +196,6 @@
 - 미구현 API가 필요하면 먼저 Controller/Service/DTO/테스트를 추가하고 OpenAPI를 갱신한다.
 - 과거 md 초안에 적힌 동작 규칙은 `DOMAIN_RULES.md`로 옮겨진 항목만 현재 설계 의도로 본다.
 
-경매 근거 대금의 페이지·상세·입금 API는 구현했다. 과거 실제 입금의 참조 전환과 원래 멱등키 재전송도 지원한다. 자료 parser/matcher는 보류이며, 기존 파생 정산의 조회·생성·재구성 및 테이블 제거는 아직 남아 있다.
+경매 근거 대금의 페이지·상세·입금 API는 구현했다. 과거 실제 입금의 참조 전환과 원래 멱등키 재전송도 지원한다. 자료 parser/matcher는 보류이며, 기존 파생 정산의 조회·생성·재구성과 테이블은 제거했다.
 
 파생 경매 정산 조회·생성·재계산·인쇄·입금 endpoint는 제거 대상이며 구현 예정 목록으로 취급하지 않는다. 경매 대금 조회·입금과 원본 결과 참조 계약을 사용한다. 실제 자료 수집·parser/matcher는 별도 범위다.

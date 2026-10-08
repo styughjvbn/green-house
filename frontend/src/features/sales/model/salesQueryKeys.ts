@@ -53,6 +53,12 @@ export const salesQueryKeys = {
       ["sales", "businessPartners", "option", id] as const,
   },
   payments: {
+    unassigned: (partnerId: number) =>
+      ["sales", "unassignedReceipts", partnerId] as const,
+    unassignedPage: (partnerId: number, page: number) =>
+      ["sales", "unassignedReceipts", partnerId, page, 10] as const,
+    balance: (partnerId: number) =>
+      ["sales", "paymentBalance", partnerId] as const,
     target: (targetType: PaymentTargetType, targetId: number) =>
       ["sales", "paymentEvents", targetType, targetId] as const,
     receivedPage: (

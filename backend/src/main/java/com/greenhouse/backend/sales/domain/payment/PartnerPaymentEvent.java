@@ -172,6 +172,88 @@ public class PartnerPaymentEvent extends BaseEntity {
         createdBy);
   }
 
+  public static PartnerPaymentEvent unassignedReceipt(
+      Long partnerId,
+      LocalDate date,
+      Long amount,
+      String method,
+      String depositor,
+      String externalUid,
+      String memo,
+      String actor) {
+    var event =
+        received(
+            partnerId,
+            date,
+            amount,
+            PaymentTargetType.NONE,
+            null,
+            method,
+            depositor,
+            externalUid,
+            memo,
+            actor);
+    event.status = PaymentEventStatus.UNAPPLIED;
+    event.unappliedAmount = amount;
+    event.description = "대상 미지정 수납";
+    return event;
+  }
+
+  public boolean isUnassignedCancellationAllowed() {
+    return eventType == PaymentEventType.PAYMENT_RECEIVED
+        && targetType == PaymentTargetType.NONE
+        && targetId == null
+        && status == PaymentEventStatus.UNAPPLIED
+        && amount > 0
+        && Objects.equals(amount, unappliedAmount);
+  }
+
+  public PartnerPaymentEvent cancelUnassignedReceipt(
+      LocalDate date, String reason, String actor, String externalUid) {
+    if (!isUnassignedCancellationAllowed()) {
+      throw new ConflictException(
+          "PAYMENT_RECEIPT_CANCELLATION_BLOCKED", "배분되었거나 취소된 수납은 대상 미지정 수납 정정으로 취소할 수 없습니다.");
+    }
+    status = PaymentEventStatus.CANCELLED;
+    unappliedAmount = 0L;
+    return new PartnerPaymentEvent(
+        partnerId,
+        PaymentEventType.ADJUSTMENT,
+        date,
+        amount,
+        PaymentTargetType.NONE,
+        null,
+        this,
+        paymentMethod,
+        depositorName,
+        "대상 미지정 수납 입력 취소",
+        externalUid,
+        PaymentEventStatus.CONFIRMED,
+        reason,
+        actor);
+  }
+
+  public void validateUnassignedReplay(
+      Long amount, LocalDate date, String method, String depositor, String memo) {
+    validateReplay(amount, date);
+    if (targetType != PaymentTargetType.NONE
+        || targetId != null
+        || !Objects.equals(paymentMethod, method)
+        || !Objects.equals(depositorName, depositor)
+        || !Objects.equals(this.memo, memo)) {
+      throw new ConflictException("IDEMPOTENCY_KEY_REUSED", "같은 수납 키의 입력을 변경할 수 없습니다.");
+    }
+  }
+
+  public void validateCancellationReplay(Long receiptId, LocalDate date, String reason) {
+    if (parentEvent == null
+        || !Objects.equals(parentEvent.getId(), receiptId)
+        || !Objects.equals(eventDate, date)
+        || !Objects.equals(memo, reason)) {
+      throw new ConflictException("IDEMPOTENCY_KEY_REUSED", "같은 정정 키의 입력을 변경할 수 없습니다.");
+    }
+  }
+
   public static PartnerPaymentEvent manualMatch(PartnerPaymentEvent receivedEvent) {
     return new PartnerPaymentEvent(
         receivedEvent.partnerId,

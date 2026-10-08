@@ -2,17 +2,23 @@ package com.greenhouse.backend.sales.controller.payment;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.common.api.PageResponse;
+import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
 import com.greenhouse.backend.sales.application.payment.PaymentService;
+import com.greenhouse.backend.sales.application.payment.UnassignedReceiptService;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.dto.payment.CancelUnassignedReceiptRequest;
 import com.greenhouse.backend.sales.dto.payment.PartnerBalanceSummaryResponse;
 import com.greenhouse.backend.sales.dto.payment.PartnerPaymentEventResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,6 +29,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class PaymentController {
 
   private final PaymentService paymentService;
+  private final UnassignedReceiptService unassignedReceiptService;
+
+  @PostMapping("/business-partners/{partnerId}/payment-receipts")
+  @Operation(
+      description = "대상 미지정 수동 수납. 유효 배분과 전표 입금액은 변경하지 않습니다.",
+      operationId = "receiveUnassignedPayment")
+  public ApiResponse<PartnerPaymentEventResponse> receiveUnassigned(
+      @PathVariable Long partnerId, @Valid @RequestBody ManualPaymentCommand request) {
+    return ApiResponse.ok(unassignedReceiptService.receive(partnerId, request));
+  }
+
+  @PostMapping("/business-partners/{partnerId}/payment-receipts/{receiptId}/cancel")
+  @Operation(
+      description = "미배분 수납의 오입력 취소. 실제 환불을 기록하지 않습니다.",
+      operationId = "cancelUnassignedPayment")
+  public ApiResponse<PartnerPaymentEventResponse> cancelUnassigned(
+      @PathVariable Long partnerId,
+      @PathVariable Long receiptId,
+      @Valid @RequestBody CancelUnassignedReceiptRequest request) {
+    return ApiResponse.ok(unassignedReceiptService.cancel(partnerId, receiptId, request));
+  }
 
   private final PartnerBalanceService partnerBalanceService;
 

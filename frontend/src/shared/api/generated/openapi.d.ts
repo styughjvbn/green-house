@@ -756,6 +756,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/business-partners/{partnerId}/payment-receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 대상 미지정 수동 수납. 유효 배분과 전표 입금액은 변경하지 않습니다. */
+        post: operations["receiveUnassignedPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-receipts/{receiptId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 미배분 수납의 오입력 취소. 실제 환불을 기록하지 않습니다. */
+        post: operations["cancelUnassignedPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/logout": {
         parameters: {
             query?: never;
@@ -3116,6 +3150,45 @@ export interface components {
             partnerType: "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
             phone?: string;
         };
+        ApiResponsePartnerPaymentEventResponse: {
+            data?: components["schemas"]["PartnerPaymentEventResponse"];
+            message?: string;
+        };
+        PartnerPaymentEventResponse: {
+            /** Format: int64 */
+            amount?: number;
+            createdBy?: string;
+            depositorName?: string;
+            description?: string;
+            /** Format: date */
+            eventDate?: string;
+            /** @enum {string} */
+            eventType?: "PAYMENT_RECEIVED" | "PAYMENT_ALLOCATED" | "PREPAYMENT_RECEIVED" | "CREDIT_APPLIED" | "CREDIT_REFUND" | "AUTO_MATCH_CANDIDATE" | "AUTO_MATCH_CONFIRMED" | "MANUAL_MATCH_CONFIRMED" | "MATCH_REJECTED" | "PAYMENT_UNLINKED" | "ADJUSTMENT";
+            /** Format: int64 */
+            id?: number;
+            memo?: string;
+            /** Format: int64 */
+            parentEventId?: number;
+            /** Format: int64 */
+            partnerId?: number;
+            partnerName?: string;
+            paymentMethod?: string;
+            /** @enum {string} */
+            status?: "UNAPPLIED" | "PARTIALLY_APPLIED" | "FULLY_APPLIED" | "CANDIDATE" | "CONFIRMED" | "REJECTED" | "CANCELLED";
+            /** Format: int64 */
+            targetId?: number;
+            /** @enum {string} */
+            targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
+            /** Format: int64 */
+            unappliedAmount?: number;
+            unassignedCancellationAllowed?: boolean;
+        };
+        CancelUnassignedReceiptRequest: {
+            /** Format: date */
+            correctionDate: string;
+            idempotencyKey: string;
+            reason: string;
+        };
         ApiResponseVoid: {
             data?: unknown;
             message?: string;
@@ -4059,34 +4132,6 @@ export interface components {
         ApiResponseListPartnerPaymentEventResponse: {
             data?: components["schemas"]["PartnerPaymentEventResponse"][];
             message?: string;
-        };
-        PartnerPaymentEventResponse: {
-            /** Format: int64 */
-            amount?: number;
-            createdBy?: string;
-            depositorName?: string;
-            description?: string;
-            /** Format: date */
-            eventDate?: string;
-            /** @enum {string} */
-            eventType?: "PAYMENT_RECEIVED" | "PAYMENT_ALLOCATED" | "PREPAYMENT_RECEIVED" | "CREDIT_APPLIED" | "CREDIT_REFUND" | "AUTO_MATCH_CANDIDATE" | "AUTO_MATCH_CONFIRMED" | "MANUAL_MATCH_CONFIRMED" | "MATCH_REJECTED" | "PAYMENT_UNLINKED" | "ADJUSTMENT";
-            /** Format: int64 */
-            id?: number;
-            memo?: string;
-            /** Format: int64 */
-            parentEventId?: number;
-            /** Format: int64 */
-            partnerId?: number;
-            partnerName?: string;
-            paymentMethod?: string;
-            /** @enum {string} */
-            status?: "UNAPPLIED" | "PARTIALLY_APPLIED" | "FULLY_APPLIED" | "CANDIDATE" | "CONFIRMED" | "REJECTED" | "CANCELLED";
-            /** Format: int64 */
-            targetId?: number;
-            /** @enum {string} */
-            targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
-            /** Format: int64 */
-            unappliedAmount?: number;
         };
         ApiResponsePageResponsePartnerPaymentEventResponse: {
             data?: components["schemas"]["PageResponsePartnerPaymentEventResponse"];
@@ -6463,6 +6508,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseBusinessPartnerResponse"];
+                };
+            };
+        };
+    };
+    receiveUnassignedPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualPaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePartnerPaymentEventResponse"];
+                };
+            };
+        };
+    };
+    cancelUnassignedPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+                receiptId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelUnassignedReceiptRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePartnerPaymentEventResponse"];
                 };
             };
         };

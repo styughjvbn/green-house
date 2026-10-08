@@ -126,3 +126,12 @@ export type AuctionFollowUpResult = {
   followUp: AuctionFollowUp;
   arrival: AuctionArrival | null;
 };
+
+export type UnassignedReceipt = Required<
+  components["schemas"]["PartnerPaymentEventResponse"]
+>;
+export type CancelUnassignedReceiptPayload =
+  components["schemas"]["CancelUnassignedReceiptRequest"];
+export type PartnerPaymentBalance = Required<
+  components["schemas"]["PartnerBalanceSummaryResponse"]
+>;
