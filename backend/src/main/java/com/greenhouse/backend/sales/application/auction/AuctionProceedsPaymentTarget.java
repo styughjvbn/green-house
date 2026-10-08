@@ -6,12 +6,12 @@ import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
-import com.greenhouse.backend.sales.application.payment.PaymentAllocationTargetPort;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
-import com.greenhouse.backend.sales.dto.auction.AuctionProceedsResponse;
-import com.greenhouse.backend.sales.dto.payment.PaymentAllocationTargetOption;
+import com.greenhouse.backend.sales.auction.api.AuctionProceedsResponse;
 import com.greenhouse.backend.sales.partner.api.BusinessPartnerLockApi;
+import com.greenhouse.backend.sales.payment.api.PartnerBalanceOperationsApi;
+import com.greenhouse.backend.sales.payment.api.PaymentAllocationTargetOption;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.spi.PaymentAllocationTargetPort;
 import com.greenhouse.backend.sales.repository.auction.AuctionProceedsRepository;
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -31,7 +31,7 @@ public class AuctionProceedsPaymentTarget
     implements PaymentAllocationTargetPort<AuctionProceedsResponse> {
   private final AuctionProceedsRepository repository;
   private final BusinessPartnerLockApi partners;
-  private final PartnerBalanceService balances;
+  private final PartnerBalanceOperationsApi balances;
   private final AuctionProceedsReader reader;
   private final AuditEventWriter audit;
 

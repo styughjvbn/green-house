@@ -1,10 +1,10 @@
 package com.greenhouse.backend.sales.application.direct;
 
-import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
-import com.greenhouse.backend.sales.application.payment.PaymentEventReader;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.partner.api.ExpectedPaymentDateApi;
+import com.greenhouse.backend.sales.payment.api.PartnerBalanceOperationsApi;
+import com.greenhouse.backend.sales.payment.api.PaymentEventQueryApi;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class DirectDocumentAccountingAdapter implements DirectDocumentAccountingPort {
-  private final PartnerBalanceService balances;
-  private final PaymentEventReader events;
+  private final PartnerBalanceOperationsApi balances;
+  private final PaymentEventQueryApi events;
   private final ExpectedPaymentDateApi dates;
   private final DirectSaleTermsWriter termsWriter;
   private final DirectSaleFinancialReader financials;

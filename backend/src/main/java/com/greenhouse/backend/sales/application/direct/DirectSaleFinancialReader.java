@@ -1,10 +1,10 @@
 package com.greenhouse.backend.sales.application.direct;
 
-import com.greenhouse.backend.sales.application.payment.PaymentAllocationReader;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort.FinancialSnapshot;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort.PriceSnapshot;
 import com.greenhouse.backend.sales.domain.direct.DirectSaleAmounts;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.api.PaymentAllocationQueryApi;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import com.greenhouse.backend.sales.repository.direct.DirectSaleAmountReconciliationRepository;
 import com.greenhouse.backend.sales.repository.direct.DirectSaleRepository;
 import java.math.BigDecimal;
@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DirectSaleFinancialReader {
   private final DirectSaleRepository sales;
   private final DirectSaleAmountReconciliationRepository reconciliations;
-  private final PaymentAllocationReader allocations;
+  private final PaymentAllocationQueryApi allocations;
 
   public Map<Long, FinancialSnapshot> findAll(Collection<Long> documentIds) {
     List<Long> ids = documentIds.stream().distinct().sorted().toList();

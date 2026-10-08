@@ -2,6 +2,7 @@ package com.greenhouse.backend.sales.domain.payment;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
 import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

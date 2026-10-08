@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.application.payment;
+package com.greenhouse.backend.sales.payment.spi;
 
 import java.time.LocalDateTime;
 import java.util.Map;

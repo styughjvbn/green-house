@@ -2,14 +2,12 @@ package com.greenhouse.backend.sales.controller.payment;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.common.api.PageResponse;
-import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
 import com.greenhouse.backend.sales.application.payment.PaymentAllocationService;
 import com.greenhouse.backend.sales.application.payment.PaymentReceiptReader;
 import com.greenhouse.backend.sales.application.payment.PaymentService;
 import com.greenhouse.backend.sales.application.payment.UnassignedReceiptService;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.dto.payment.CancelUnassignedReceiptRequest;
 import com.greenhouse.backend.sales.dto.payment.PartnerBalanceSummaryResponse;
 import com.greenhouse.backend.sales.dto.payment.PartnerPaymentEventResponse;
@@ -18,8 +16,10 @@ import com.greenhouse.backend.sales.dto.payment.PaymentAllocationCorrectionReque
 import com.greenhouse.backend.sales.dto.payment.PaymentAllocationMetadata;
 import com.greenhouse.backend.sales.dto.payment.PaymentAllocationRequest;
 import com.greenhouse.backend.sales.dto.payment.PaymentAllocationResponse;
-import com.greenhouse.backend.sales.dto.payment.PaymentAllocationTargetOption;
 import com.greenhouse.backend.sales.dto.payment.PaymentReceiptResponse;
+import com.greenhouse.backend.sales.payment.api.ManualPaymentCommand;
+import com.greenhouse.backend.sales.payment.api.PaymentAllocationTargetOption;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.util.List;

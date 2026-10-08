@@ -1,14 +1,13 @@
 package com.greenhouse.backend.sales.application.auction;
 
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
+import com.greenhouse.backend.sales.auction.api.AuctionResultReference;
 import com.greenhouse.backend.sales.document.spi.AuctionDocumentPort.Lot;
 import com.greenhouse.backend.sales.document.spi.AuctionDocumentPort.Shipment;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
 import com.greenhouse.backend.sales.repository.auction.AuctionResultLineRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionResultReadRow;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
-import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -81,57 +80,32 @@ public class AuctionDataReader {
         .toList();
   }
 
-  public Map<Long, Result> getResults(Collection<Long> resultIds) {
+  public Map<Long, AuctionResultReference> getResults(Collection<Long> resultIds) {
     if (resultIds.isEmpty()) {
       return Map.of();
     }
     var ids = resultIds.stream().distinct().toList();
-    var results = new HashMap<Long, Result>();
+    var results = new HashMap<Long, AuctionResultReference>();
     for (int start = 0; start < ids.size(); start += RESULT_BATCH_SIZE) {
       var batch = ids.subList(start, Math.min(start + RESULT_BATCH_SIZE, ids.size()));
       resultLineRepository
           .findReadRowsByIdIn(batch)
-          .forEach(row -> results.put(row.id(), Result.from(row)));
+          .forEach(row -> results.put(row.id(), resultFrom(row)));
     }
     return results;
   }
 
-  @io.swagger.v3.oas.annotations.media.Schema(name = "AuctionProceedsResultReference")
-  public record Result(
-      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-          Long id,
-      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-          Long lotId,
-      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-          Long auctionHouseId,
-      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-          LocalDate auctionDate,
-      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-          LocalDate shipmentDate,
-      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-          String varietyName,
-      @io.swagger.v3.oas.annotations.media.Schema(
-              nullable = true,
-              requiredMode = Schema.RequiredMode.REQUIRED)
-          String shipmentGrade,
-      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-          Integer quantity,
-      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-          Integer unitPrice,
-      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-          Long amount) {
-    static Result from(AuctionResultReadRow row) {
-      return new Result(
-          row.id(),
-          row.lotId(),
-          row.auctionHouseId(),
-          row.auctionDate(),
-          row.shipmentDate(),
-          row.varietyName(),
-          row.shipmentGrade(),
-          row.quantity(),
-          row.unitPrice(),
-          row.amount().longValue());
-    }
+  private static AuctionResultReference resultFrom(AuctionResultReadRow row) {
+    return new AuctionResultReference(
+        row.id(),
+        row.lotId(),
+        row.auctionHouseId(),
+        row.auctionDate(),
+        row.shipmentDate(),
+        row.varietyName(),
+        row.shipmentGrade(),
+        row.quantity(),
+        row.unitPrice(),
+        row.amount().longValue());
   }
 }

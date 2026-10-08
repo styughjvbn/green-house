@@ -5,17 +5,17 @@ import com.greenhouse.backend.common.api.ErrorResponse;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.api.document.SalesSlipSummary;
-import com.greenhouse.backend.sales.application.direct.SalesPaymentService;
 import com.greenhouse.backend.sales.application.document.SalesOrchidGroupQueryService;
 import com.greenhouse.backend.sales.application.document.SalesQueryService;
 import com.greenhouse.backend.sales.application.document.SalesSlipCreationService;
 import com.greenhouse.backend.sales.application.document.SalesSlipStatusService;
 import com.greenhouse.backend.sales.application.document.SalesSlipUpdateService;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipCommand;
-import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
+import com.greenhouse.backend.sales.direct.api.SalesPaymentApi;
 import com.greenhouse.backend.sales.dto.document.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.document.SalesOrchidGroupSearchResponse;
 import com.greenhouse.backend.sales.dto.document.SalesSlipStatusUpdateRequest;
+import com.greenhouse.backend.sales.payment.api.ManualPaymentCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -48,7 +48,7 @@ public class SalesController {
 
   private final SalesSlipUpdateService salesSlipUpdateService;
 
-  private final SalesPaymentService salesPaymentService;
+  private final SalesPaymentApi salesPaymentService;
 
   private final SalesSlipStatusService salesSlipStatusService;
 

@@ -133,8 +133,8 @@ class SalesArchitectureTest {
   void paymentTargetAdaptersMustJoinTheUseCaseTransaction() throws ClassNotFoundException {
     for (JavaClass type : CLASSES) {
       if (type.isInterface()
-          || !type.isAssignableTo(
-              "com.greenhouse.backend.sales.application.payment.PaymentTargetPort")) continue;
+          || !type.isAssignableTo("com.greenhouse.backend.sales.payment.spi.PaymentTargetPort"))
+        continue;
       var annotation = Class.forName(type.getName()).getAnnotation(Transactional.class);
       assertThat(annotation)
           .as("Payment target requires the caller transaction: %s", type.getName())

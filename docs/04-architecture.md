@@ -194,7 +194,7 @@ Sales 내부는 기존 계층을 유지한 `sales/{application,domain,repository
 - Payment의 유효 배분 조회는 대상 ID·소유 거래처를 bound parameter로 전달하는 CTE 집계로 수납 원문을 중복 합산하지 않는다. 동일한 조회를 H2와 PostgreSQL에서 검증하며, 같은 transaction의 아직 flush되지 않은 원장 기록도 반영한다. 대상은 500개씩 처리하고 다른 내부 경계의 테이블을 읽지 않는다.
 - Direct의 이전 시점 대사 검토는 Direct가 판정한다. Document는 내부 port의 검토 결과로 수정·수납 경로를 차단하고 서버 업무 capability와 상세 상태를 조립한다. 대사 근거는 변경하지 않으며 성공한 원래 입금 재전송은 먼저 확인한다. 검토 조회는 대상 ID를 모아 일괄 처리하므로 품목 수에 비례하는 조회를 추가하지 않는다.
 - Document는 구체적인 Direct/Auction/Payment 서비스를 호출하지 않는다. 필요한 출하 생성·취소 보호·표시 조회는 `sales/document/spi`의 Document 소유 `AuctionDocumentPort`, 일반 판매의 예상일·입금 이력·잔액 연결은 `sales/document/spi`의 `DirectDocumentAccountingPort`로 요청하고 소유자 adapter가 처리한다. 기존 출하 값 계약은 port로 이동하며 복제하지 않는다.
-- Payment가 정의한 단건 대상 port와 배분 대상 port를 Direct·Auction adapter가 구현한다. Direct adapter는 Document 소유 application 계약으로 전표를 처리한다. Payment는 Entity를 받지 않고, 대상 잠금·유효성 검증 뒤 원장 멱등 확인→대상 금액 반영→입금/연결 원장→잔액→감사→응답을 조율한다. 유스케이스 진입점이 트랜잭션을 열고 대상 port와 원장 writer는 기존 트랜잭션에 반드시 참여한다.
+- `sales/payment/spi`의 Payment 소유 단건 대상 port와 배분 대상 port를 Direct·Auction adapter가 구현한다. Direct adapter는 `sales/document/api`의 Document 소유 계약으로 전표를 처리한다. Payment는 Entity를 받지 않고, 대상 잠금·유효성 검증 뒤 원장 멱등 확인→대상 금액 반영→입금/연결 원장→잔액→감사→응답을 조율한다. 유스케이스 진입점이 트랜잭션을 열고 대상 port와 원장 writer는 기존 트랜잭션에 반드시 참여한다.
 - Auction 후속 결정·실제 도착은 lot 선잠금과 receipt 확인 후 Farm 생성/생성 보상을 최상위 application transaction에서 조율한다. 결정과 실제 도착 이력은 분리하며, 도착은 새 묶음·생성/보상 Mutation ID만 연결한다. Farm에는 안정적인 `AUCTION_RETURN_ARRIVAL` 출처를 사용하고 기존 InboundRecord와 Work 포트 흐름을 거치지 않는다.
 - 저장소·Entity·QueryDSL EntityPath는 내부 소유 경계 밖으로 노출하지 않는다. application 공개 멤버의 중첩 값 계약 검사와 내부 의존 그래프 검사를 함께 실행한다. 구현 의존은 `Direct/Auction → Document/Payment/Partner`, `Document → Partner`, `Payment → Partner`이며 역방향 구현 의존을 허용하지 않는다.
 
@@ -301,6 +301,8 @@ Persistence 조회 규칙:
 Farm에서 필요한 구조 변경 참조·과거 수량 수지 조회와 보정 검증은 `work/api/correction`의 공개 API를 직접 호출한다. Work 저장소를 사용하는 구현은 application에 남아 API를 직접 구현하며, Farm은 구현 클래스에 의존하지 않는다. 보정 기능의 활성화 여부 조회는 Work 내부에서 유지하고 외부에는 실제 필요한 활성화 검증만 공개한다.
 
 판매 집계는 `sales/api/document`의 API·중첩 결과 값·집계 분류 enum을 통해 Analytics에 제공한다. 기존 readOnly Reader가 QueryDSL·저장 상태 분류·집계/정렬/상한을 유지하며 Repository projection과 Entity를 외부에 제공하지 않는다.
+
+거래처 잔액 집계는 `sales/api/payment`의 공개 조회 계약으로 Analytics에 제공한다. 잔액 변경·입금 이력·유효 배분·단건 입금 조율은 `sales/payment/api`의 내부 기능 계약으로 연결하며 기존 구현이 직접 수행한다. 대상 확장 SPI는 Payment가 소유하고 Direct·Auction이 구현한다. 대상 옵션과 경매 대금/결과 참조는 순수 값이며 HTTP DTO와 Repository projection을 노출하지 않는다. Entity·projection 변환은 내부에 유지한다.
 
 농장 집계는 `farm/api/status`의 조회 API·중첩 값 계약으로 공개한다. Dashboard·Analytics가 직접 호출하며 기존 readOnly Reader가 집계 쿼리·상태 정책·projection 변환을 소유한다. 저장소 projection을 공개 계약에 노출하지 않는다.
 

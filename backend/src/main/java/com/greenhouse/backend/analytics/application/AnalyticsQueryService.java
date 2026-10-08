@@ -17,8 +17,8 @@ import com.greenhouse.backend.sales.api.document.SalesMetricsApi.PartnerSales;
 import com.greenhouse.backend.sales.api.document.SalesMetricsApi.SlipSummary;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi.Identity;
-import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
-import com.greenhouse.backend.sales.application.payment.PartnerBalanceService.Balance;
+import com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi;
+import com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi.Balance;
 import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -45,7 +45,7 @@ public class AnalyticsQueryService {
 
   private final BusinessPartnerQueryApi partnerReader;
 
-  private final PartnerBalanceService balanceService;
+  private final PartnerBalanceQueryApi balanceService;
 
   private final Clock clock;
 

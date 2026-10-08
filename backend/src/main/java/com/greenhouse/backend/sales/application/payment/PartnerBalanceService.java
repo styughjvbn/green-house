@@ -1,10 +1,13 @@
 package com.greenhouse.backend.sales.application.payment;
 
 import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi;
+import com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi.Balance;
 import com.greenhouse.backend.sales.domain.payment.PartnerBalanceSummary;
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
 import com.greenhouse.backend.sales.dto.payment.PartnerBalanceSummaryResponse;
 import com.greenhouse.backend.sales.partner.api.BusinessPartnerLockApi;
+import com.greenhouse.backend.sales.payment.api.PartnerBalanceOperationsApi;
 import com.greenhouse.backend.sales.repository.payment.PartnerBalanceSummaryRepository;
 import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
 import java.util.Collection;
@@ -19,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class PartnerBalanceService {
+public class PartnerBalanceService implements PartnerBalanceOperationsApi, PartnerBalanceQueryApi {
 
   private final PartnerBalanceSummaryRepository balanceRepository;
 
@@ -38,15 +41,6 @@ public class PartnerBalanceService {
                         row.getReceivableBalance(),
                         row.getCreditBalance(),
                         row.getUnappliedPaymentAmount())));
-  }
-
-  public record Balance(long receivableBalance, long creditBalance, long unappliedPaymentAmount) {
-
-    public static final Balance ZERO = new Balance(0, 0, 0);
-
-    public boolean hasPositiveBalance() {
-      return receivableBalance > 0 || creditBalance > 0 || unappliedPaymentAmount > 0;
-    }
   }
 
   @Transactional(propagation = Propagation.MANDATORY)

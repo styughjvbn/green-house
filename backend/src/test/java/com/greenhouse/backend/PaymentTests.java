@@ -28,7 +28,7 @@ import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;

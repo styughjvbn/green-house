@@ -12,6 +12,8 @@ import com.greenhouse.backend.sales.domain.document.*;
 import com.greenhouse.backend.sales.domain.partner.*;
 import com.greenhouse.backend.sales.domain.payment.*;
 import com.greenhouse.backend.sales.dto.payment.*;
+import com.greenhouse.backend.sales.payment.api.ManualPaymentCommand;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;

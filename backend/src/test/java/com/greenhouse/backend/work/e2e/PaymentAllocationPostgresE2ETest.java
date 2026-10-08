@@ -7,7 +7,7 @@ import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.payment.PaymentAllocationReader;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
 import jakarta.persistence.EntityManagerFactory;

@@ -7,6 +7,8 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.domain.payment.*;
 import com.greenhouse.backend.sales.dto.payment.*;
 import com.greenhouse.backend.sales.partner.api.BusinessPartnerLockApi;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.spi.PaymentAllocationTargetPort;
 import com.greenhouse.backend.sales.repository.payment.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

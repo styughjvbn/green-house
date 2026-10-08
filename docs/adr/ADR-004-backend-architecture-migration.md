@@ -655,3 +655,15 @@ Sales 5단계 검증 결과:
 - OpenAPI 재생성 157 operations/132 paths/292 schemas, 생성 파일 diff 없음. 타입 재생성 불필요. SPI 본문은 package 외 동일하고 다른 Java 변경은 import뿐이다. 두 SPI의 이전 FQCN 참조는 코드·리소스·스크립트에 남아 있지 않다.
 - SQL·DB/트랜잭션 경계·잠금·수량/금액 정책·HTTP 변경 없음. `workE2eTest` 미실행. 전체 검증 이후에는 이 ADR 결과만 추가했다.
 - 이번 다섯 단계 완료. 다른 최상위 모듈에서 Sales application을 직접 사용하는 프로덕션 코드는 Analytics의 PartnerBalanceService/Balance 참조 두 import가 남는다. 다음 단계는 Payment 잔액 공개 조회 및 내부 대상/배분 계약 정리다. 전체 전환·최종 문서 통합은 진행 중이므로 목표 문서의 archive 이동은 아직 하지 않는다.
+
+### 2026-10-08: P2 마무리 — Payment 계약과 HTTP 값 분리
+
+- Analytics 잔액 조회는 `sales/api/payment`로 공개한다. 내부 잔액 변경·입금 이력·유효 배분·단건 입금 조율은 Payment 내부 API를 기존 서비스가 직접 구현한다. Direct 단건 입금과 Document 입금 대상 계약도 실제 소비 범위만 기능 API로 제공한다. 새 전달 Adapter 없음.
+- Payment 대상 SPI와 입력/옵션 값을 `sales/payment/{spi,api}`로 이동한다. 기존 Direct/Auction 대상 구현은 실제 의존성 역전이므로 유지한다. Auction 대금과 결과 참조 값을 `sales/auction/api`로 옮기고 Repository row 변환은 Reader 내부에 유지한다. JSON·Schema 이름/필드·validation은 동일하다.
+- 잠금/트랜잭션·원장·멱등 처리·입금/배분/정정·잔액 갱신·오류/capability·Mutation 단일 Writer 변경 없음. reviewed inventory는 실제 호출별 API 소유권을 재지정하며 새로 추적되는 기존 값 접근만 개별 검토한다.
+
+P2 마무리 검증 결과:
+
+- 집중 검증의 업무 테스트 통과. 기존 HTTP 옵션이 순수 값으로 이동하면서 새로 추적되는 생성자·옵션 TYPE·대상 enum TYPE 세 항목만 reviewed inventory에 추가했다. 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 프론트 `npm run check` 통과.
+- OpenAPI 재생성 157 operations/132 paths/292 schemas, 생성 diff 없음. 타입 재생성 불필요. Farm·Work·Sales의 application 구현을 다른 최상위 모듈에서 참조하는 프로덕션 코드는 0개다. Sales 기능 간 implementation 직접 참조도 API로 전환했다.
+- DB·SQL·트랜잭션·업무 동작 변경이 없어 `workE2eTest` 미실행. 전체 검증 이후에는 이 ADR 결과만 추가했다. P2 완료, 다음은 P3 기능별 패키지 이동이다.

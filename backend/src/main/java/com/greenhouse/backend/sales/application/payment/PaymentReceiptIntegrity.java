@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.application.payment;
 
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.spi.PaymentAllocationTargetPort;
 import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
 import com.greenhouse.backend.sales.repository.payment.PaymentReceiptQueryRepository;
 import java.util.*;

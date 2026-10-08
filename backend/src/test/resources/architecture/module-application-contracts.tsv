@@ -23,6 +23,7 @@ CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$Shipme
 CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$FinancialSnapshot.<init>(java.lang.Long, java.lang.Long, java.lang.Integer, java.time.LocalDate, java.lang.String, java.math.BigDecimal, java.math.BigDecimal, boolean, java.lang.String, boolean, boolean, java.util.Map)
 CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$PriceSnapshot.<init>(java.lang.Integer, java.lang.Integer, java.lang.Integer)
 CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$QuotedPrices.<init>(java.lang.Integer, java.util.List)
+CONSTRUCTOR	com.greenhouse.backend.sales.payment.api.PaymentAllocationTargetOption.<init>(java.lang.Long, com.greenhouse.backend.sales.payment.api.PaymentTargetType, java.lang.String, java.lang.Long, java.math.BigDecimal, java.math.BigDecimal, boolean, boolean, boolean)
 CONSTRUCTOR	com.greenhouse.backend.work.api.effect.InboundPottingCommand.<init>(java.lang.String, java.lang.Long, java.time.LocalDate, java.util.List, java.lang.String, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.work.api.effect.InboundPottingResultInput.<init>(java.lang.Long, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.Boolean, java.math.BigDecimal, java.math.BigDecimal, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.work.api.effect.LegacyRepotCommand$Result.<init>(java.lang.Long, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.Boolean, java.math.BigDecimal, java.math.BigDecimal, java.lang.String)
@@ -152,40 +153,30 @@ METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi.getActiv
 METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi.getAllInfo(java.util.Collection)
 METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi.getIdentities(java.util.Collection)
 METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi.getInfo(java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.direct.SalesPaymentService.confirmPayment(java.lang.Long, com.greenhouse.backend.sales.application.payment.ManualPaymentCommand)
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget$PaymentOption.allocationAllowed()
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget$PaymentOption.availableAmount()
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget$PaymentOption.correctionAllowed()
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget$PaymentOption.id()
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget$PaymentOption.paidAmount()
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget$PaymentOption.receivableAmount()
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget$PaymentOption.reviewRequired()
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget$PaymentOption.sourceReference()
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.allocationOptions(java.lang.Long, java.lang.String, int, int)
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.auditPayment(java.lang.Long, java.util.Map)
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.findPaymentOwners(java.util.Collection)
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.lockAllocationAmounts(java.util.Collection)
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.lockAllocationTarget(java.lang.Long, java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.lockAndValidate(java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.paymentSnapshot(java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.recordPayment(java.lang.Long, java.lang.Long, java.lang.String, java.time.LocalDateTime)
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.response(java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.updateBalance(java.lang.Long, java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.payment.ManualPaymentService.confirm(java.lang.Long, com.greenhouse.backend.sales.domain.payment.PaymentTargetType, com.greenhouse.backend.sales.application.payment.ManualPaymentCommand, com.greenhouse.backend.sales.application.payment.PaymentTargetPort)
-METHOD	com.greenhouse.backend.sales.application.payment.PartnerBalanceService$Balance.creditBalance()
-METHOD	com.greenhouse.backend.sales.application.payment.PartnerBalanceService$Balance.hasPositiveBalance()
-METHOD	com.greenhouse.backend.sales.application.payment.PartnerBalanceService$Balance.receivableBalance()
-METHOD	com.greenhouse.backend.sales.application.payment.PartnerBalanceService$Balance.unappliedPaymentAmount()
-METHOD	com.greenhouse.backend.sales.application.payment.PartnerBalanceService.getNonzeroBalances()
-METHOD	com.greenhouse.backend.sales.application.payment.PartnerBalanceService.lockPartners(java.util.Collection)
-METHOD	com.greenhouse.backend.sales.application.payment.PartnerBalanceService.recordActivity(java.lang.Long, java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.payment.PartnerBalanceService.updateReceivable(java.lang.Long, java.lang.Long, java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader$Allocation.amount()
-METHOD	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader$Allocation.partnerId()
-METHOD	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader$Allocation.reviewRequired()
-METHOD	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader.findAll(com.greenhouse.backend.sales.domain.payment.PaymentTargetType, java.util.Map)
-METHOD	com.greenhouse.backend.sales.application.payment.PaymentEventReader.existsByTarget(com.greenhouse.backend.sales.domain.payment.PaymentTargetType, java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.payment.PaymentEventReader.findExistingTargetIds(com.greenhouse.backend.sales.domain.payment.PaymentTargetType, java.util.List)
+METHOD	com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi$Balance.creditBalance()
+METHOD	com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi$Balance.hasPositiveBalance()
+METHOD	com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi$Balance.receivableBalance()
+METHOD	com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi$Balance.unappliedPaymentAmount()
+METHOD	com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi.getNonzeroBalances()
+METHOD	com.greenhouse.backend.sales.direct.api.SalesPaymentApi.confirmPayment(java.lang.Long, com.greenhouse.backend.sales.payment.api.ManualPaymentCommand)
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi$PaymentOption.allocationAllowed()
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi$PaymentOption.availableAmount()
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi$PaymentOption.correctionAllowed()
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi$PaymentOption.id()
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi$PaymentOption.paidAmount()
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi$PaymentOption.receivableAmount()
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi$PaymentOption.reviewRequired()
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi$PaymentOption.sourceReference()
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.allocationOptions(java.lang.Long, java.lang.String, int, int)
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.auditPayment(java.lang.Long, java.util.Map)
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.findPaymentOwners(java.util.Collection)
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.lockAllocationAmounts(java.util.Collection)
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.lockAllocationTarget(java.lang.Long, java.lang.Long)
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.lockAndValidate(java.lang.Long)
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.paymentSnapshot(java.lang.Long)
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.recordPayment(java.lang.Long, java.lang.Long, java.lang.String, java.time.LocalDateTime)
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.response(java.lang.Long)
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.updateBalance(java.lang.Long, java.lang.Long)
 METHOD	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$LotDraft.itemName()
 METHOD	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$LotDraft.quantity()
 METHOD	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$LotDraft.shipmentGrade()
@@ -207,6 +198,16 @@ METHOD	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$Te
 METHOD	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$Terms.unpaidPaymentLabel()
 METHOD	com.greenhouse.backend.sales.partner.api.BusinessPartnerLockApi.lockAll(java.util.Collection)
 METHOD	com.greenhouse.backend.sales.partner.api.ExpectedPaymentDateApi.calculate(java.lang.Long, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.payment.api.ManualPaymentApi.confirm(java.lang.Long, com.greenhouse.backend.sales.payment.api.PaymentTargetType, com.greenhouse.backend.sales.payment.api.ManualPaymentCommand, com.greenhouse.backend.sales.payment.spi.PaymentTargetPort)
+METHOD	com.greenhouse.backend.sales.payment.api.PartnerBalanceOperationsApi.lockPartners(java.util.Collection)
+METHOD	com.greenhouse.backend.sales.payment.api.PartnerBalanceOperationsApi.recordActivity(java.lang.Long, java.lang.Long)
+METHOD	com.greenhouse.backend.sales.payment.api.PartnerBalanceOperationsApi.updateReceivable(java.lang.Long, java.lang.Long, java.lang.Long)
+METHOD	com.greenhouse.backend.sales.payment.api.PaymentAllocationQueryApi$Allocation.amount()
+METHOD	com.greenhouse.backend.sales.payment.api.PaymentAllocationQueryApi$Allocation.partnerId()
+METHOD	com.greenhouse.backend.sales.payment.api.PaymentAllocationQueryApi$Allocation.reviewRequired()
+METHOD	com.greenhouse.backend.sales.payment.api.PaymentAllocationQueryApi.findAll(com.greenhouse.backend.sales.payment.api.PaymentTargetType, java.util.Map)
+METHOD	com.greenhouse.backend.sales.payment.api.PaymentEventQueryApi.existsByTarget(com.greenhouse.backend.sales.payment.api.PaymentTargetType, java.lang.Long)
+METHOD	com.greenhouse.backend.sales.payment.api.PaymentEventQueryApi.findExistingTargetIds(com.greenhouse.backend.sales.payment.api.PaymentTargetType, java.util.List)
 METHOD	com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput.orchidGroupId()
 METHOD	com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput.quantity()
 METHOD	com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput.status()
@@ -429,17 +430,11 @@ TYPE	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi$Identity
 TYPE	com.greenhouse.backend.sales.api.partner.PartnerTextMatch
 TYPE	com.greenhouse.backend.sales.api.partner.PartnerTextSearch
 TYPE	com.greenhouse.backend.sales.api.partner.PartnerType
-TYPE	com.greenhouse.backend.sales.application.direct.SalesPaymentService
-TYPE	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget
-TYPE	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget$PaymentOption
-TYPE	com.greenhouse.backend.sales.application.payment.ManualPaymentCommand
-TYPE	com.greenhouse.backend.sales.application.payment.ManualPaymentService
-TYPE	com.greenhouse.backend.sales.application.payment.PartnerBalanceService
-TYPE	com.greenhouse.backend.sales.application.payment.PartnerBalanceService$Balance
-TYPE	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader
-TYPE	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader$Allocation
-TYPE	com.greenhouse.backend.sales.application.payment.PaymentAllocationTargetPort
-TYPE	com.greenhouse.backend.sales.application.payment.PaymentEventReader
+TYPE	com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi
+TYPE	com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi$Balance
+TYPE	com.greenhouse.backend.sales.direct.api.SalesPaymentApi
+TYPE	com.greenhouse.backend.sales.document.api.DocumentPaymentApi
+TYPE	com.greenhouse.backend.sales.document.api.DocumentPaymentApi$PaymentOption
 TYPE	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort
 TYPE	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$CreatedShipment
 TYPE	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$Lot
@@ -453,6 +448,15 @@ TYPE	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$Quot
 TYPE	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$Terms
 TYPE	com.greenhouse.backend.sales.partner.api.BusinessPartnerLockApi
 TYPE	com.greenhouse.backend.sales.partner.api.ExpectedPaymentDateApi
+TYPE	com.greenhouse.backend.sales.payment.api.ManualPaymentApi
+TYPE	com.greenhouse.backend.sales.payment.api.ManualPaymentCommand
+TYPE	com.greenhouse.backend.sales.payment.api.PartnerBalanceOperationsApi
+TYPE	com.greenhouse.backend.sales.payment.api.PaymentAllocationQueryApi
+TYPE	com.greenhouse.backend.sales.payment.api.PaymentAllocationQueryApi$Allocation
+TYPE	com.greenhouse.backend.sales.payment.api.PaymentAllocationTargetOption
+TYPE	com.greenhouse.backend.sales.payment.api.PaymentEventQueryApi
+TYPE	com.greenhouse.backend.sales.payment.api.PaymentTargetType
+TYPE	com.greenhouse.backend.sales.payment.spi.PaymentAllocationTargetPort
 TYPE	com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput
 TYPE	com.greenhouse.backend.work.api.correction.StructureChangeMutationReferences
 TYPE	com.greenhouse.backend.work.api.correction.StructureChangeReferenceApi

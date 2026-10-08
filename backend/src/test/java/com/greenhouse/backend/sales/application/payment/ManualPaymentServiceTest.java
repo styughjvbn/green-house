@@ -11,7 +11,9 @@ import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.api.ManualPaymentCommand;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.spi.PaymentTargetPort;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;

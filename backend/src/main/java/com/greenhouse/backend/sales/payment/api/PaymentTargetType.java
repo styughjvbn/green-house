@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.domain.payment;
+package com.greenhouse.backend.sales.payment.api;
 
 public enum PaymentTargetType {
   SALES_SLIP,

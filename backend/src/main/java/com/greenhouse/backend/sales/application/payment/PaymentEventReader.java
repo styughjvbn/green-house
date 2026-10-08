@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.application.payment;
 
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.api.PaymentEventQueryApi;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
 import java.util.List;
 import java.util.Set;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class PaymentEventReader {
+public class PaymentEventReader implements PaymentEventQueryApi {
 
   private final PartnerPaymentEventRepository partnerPaymentEventRepository;
 

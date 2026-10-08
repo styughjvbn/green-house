@@ -1,6 +1,8 @@
 package com.greenhouse.backend.sales.application.payment;
 
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.api.PaymentAllocationQueryApi;
+import com.greenhouse.backend.sales.payment.api.PaymentAllocationQueryApi.Allocation;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import com.greenhouse.backend.sales.repository.payment.PaymentAllocationQueryRepository;
 import java.math.BigDecimal;
 import java.util.Collection;
@@ -14,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class PaymentAllocationReader {
+public class PaymentAllocationReader implements PaymentAllocationQueryApi {
   private final PaymentAllocationQueryRepository repository;
 
   public Map<Long, Allocation> findAll(PaymentTargetType type, Collection<Long> targetIds) {
@@ -48,6 +50,4 @@ public class PaymentAllocationReader {
     }
     return Map.copyOf(result);
   }
-
-  public record Allocation(BigDecimal amount, Long partnerId, boolean reviewRequired) {}
 }

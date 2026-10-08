@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.domain.payment;
 
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import lombok.AccessLevel;

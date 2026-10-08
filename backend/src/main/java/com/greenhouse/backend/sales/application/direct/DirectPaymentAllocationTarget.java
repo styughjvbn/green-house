@@ -2,10 +2,10 @@ package com.greenhouse.backend.sales.application.direct;
 
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
-import com.greenhouse.backend.sales.application.document.DocumentPaymentTarget;
-import com.greenhouse.backend.sales.application.payment.PaymentAllocationTargetPort;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
-import com.greenhouse.backend.sales.dto.payment.PaymentAllocationTargetOption;
+import com.greenhouse.backend.sales.document.api.DocumentPaymentApi;
+import com.greenhouse.backend.sales.payment.api.PaymentAllocationTargetOption;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.spi.PaymentAllocationTargetPort;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Map;
@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(propagation = Propagation.MANDATORY)
 public class DirectPaymentAllocationTarget
     implements PaymentAllocationTargetPort<SalesSlipDocument> {
-  private final DocumentPaymentTarget document;
+  private final DocumentPaymentApi document;
 
   public PaymentTargetType targetType() {
     return PaymentTargetType.SALES_SLIP;

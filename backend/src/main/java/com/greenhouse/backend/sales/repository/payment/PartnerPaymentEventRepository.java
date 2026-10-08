@@ -3,7 +3,7 @@ package com.greenhouse.backend.sales.repository.payment;
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventStatus;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.util.Collection;

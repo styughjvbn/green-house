@@ -1,8 +1,8 @@
-package com.greenhouse.backend.sales.application.payment;
+package com.greenhouse.backend.sales.payment.spi;
 
 import com.greenhouse.backend.common.api.PageResponse;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
-import com.greenhouse.backend.sales.dto.payment.PaymentAllocationTargetOption;
+import com.greenhouse.backend.sales.payment.api.PaymentAllocationTargetOption;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import java.util.Collection;
 import java.util.Map;
 

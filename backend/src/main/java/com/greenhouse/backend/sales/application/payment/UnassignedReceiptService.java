@@ -7,6 +7,7 @@ import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
 import com.greenhouse.backend.sales.dto.payment.CancelUnassignedReceiptRequest;
 import com.greenhouse.backend.sales.dto.payment.PartnerPaymentEventResponse;
 import com.greenhouse.backend.sales.partner.api.BusinessPartnerLockApi;
+import com.greenhouse.backend.sales.payment.api.ManualPaymentCommand;
 import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

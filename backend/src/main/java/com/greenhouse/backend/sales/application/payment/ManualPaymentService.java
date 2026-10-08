@@ -2,7 +2,10 @@ package com.greenhouse.backend.sales.application.payment;
 
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.api.ManualPaymentApi;
+import com.greenhouse.backend.sales.payment.api.ManualPaymentCommand;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.spi.PaymentTargetPort;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(propagation = Propagation.MANDATORY)
-public class ManualPaymentService {
+public class ManualPaymentService implements ManualPaymentApi {
   private final PaymentLedgerService ledger;
   private final RequestActorProvider actors;
   private final Clock clock;

@@ -1,9 +1,9 @@
 package com.greenhouse.backend.sales.application.auction;
 
-import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
-import com.greenhouse.backend.sales.application.payment.ManualPaymentService;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
-import com.greenhouse.backend.sales.dto.auction.AuctionProceedsResponse;
+import com.greenhouse.backend.sales.auction.api.AuctionProceedsResponse;
+import com.greenhouse.backend.sales.payment.api.ManualPaymentApi;
+import com.greenhouse.backend.sales.payment.api.ManualPaymentCommand;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AuctionProceedsPaymentService {
-  private final ManualPaymentService payments;
+  private final ManualPaymentApi payments;
   private final AuctionProceedsPaymentTarget target;
 
   @Transactional

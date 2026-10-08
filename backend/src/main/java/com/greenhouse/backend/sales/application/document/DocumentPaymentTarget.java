@@ -5,9 +5,10 @@ import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.document.api.DocumentPaymentApi;
+import com.greenhouse.backend.sales.document.api.DocumentPaymentApi.PaymentOption;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -24,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @RequiredArgsConstructor
 @Transactional(propagation = Propagation.MANDATORY)
-public class DocumentPaymentTarget {
+public class DocumentPaymentTarget implements DocumentPaymentApi {
   private final SalesSlipAggregateLoader loader;
   private final SalesSlipRepository repository;
   private final DirectDocumentAccountingPort accounting;
@@ -72,16 +73,6 @@ public class DocumentPaymentTarget {
                   value == null || value.reviewRequired());
             }));
   }
-
-  public record PaymentOption(
-      Long id,
-      String sourceReference,
-      Long receivableAmount,
-      BigDecimal paidAmount,
-      BigDecimal availableAmount,
-      boolean allocationAllowed,
-      boolean correctionAllowed,
-      boolean reviewRequired) {}
 
   public Long lockAndValidate(Long id) {
     var slip = loader.getForUpdate(id);

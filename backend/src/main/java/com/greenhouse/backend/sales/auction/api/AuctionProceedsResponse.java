@@ -1,6 +1,5 @@
-package com.greenhouse.backend.sales.dto.auction;
+package com.greenhouse.backend.sales.auction.api;
 
-import com.greenhouse.backend.sales.application.auction.AuctionDataReader;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.List;
@@ -19,4 +18,4 @@ public record AuctionProceedsResponse(
     boolean reviewRequired,
     boolean paymentAllowed,
     List<Long> resultIds,
-    List<AuctionDataReader.Result> resultDetails) {}
+    List<AuctionResultReference> resultDetails) {}

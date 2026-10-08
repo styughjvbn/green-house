@@ -1,6 +1,5 @@
-package com.greenhouse.backend.sales.dto.payment;
+package com.greenhouse.backend.sales.payment.api;
 
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import java.math.BigDecimal;
 
 public record PaymentAllocationTargetOption(

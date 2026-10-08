@@ -3,7 +3,7 @@ package com.greenhouse.backend.sales.dto.payment;
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventStatus;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
-import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import java.time.LocalDate;
 
 public record PartnerPaymentEventResponse(
