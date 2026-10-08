@@ -13,6 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "node ../scripts/check-frontend.js",
+    "e2e:auction-return": "playwright test --config e2e/auction-return/playwright.config.ts",
     "e2e:map:install": "playwright install chromium",
     "e2e:map:prepare": "bash ../scripts/e2e/prepare-map-performance-data",
     "e2e:map:baseline": "bash ../scripts/e2e/run-map-performance-baseline",

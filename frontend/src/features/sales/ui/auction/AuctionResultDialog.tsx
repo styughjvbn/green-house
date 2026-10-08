@@ -182,7 +182,6 @@ export function AuctionResultDialog({
                 <option value="SOLD">낙찰</option>
                 <option value="PARTIALLY_SOLD">부분 낙찰</option>
                 <option value="FAILED">유찰</option>
-                <option value="RETURN_INFERRED">반환 추정</option>
               </select>
             </label>
             <div className="text-xs font-semibold text-[#5b675f]">

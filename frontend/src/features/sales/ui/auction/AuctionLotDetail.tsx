@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { Plus, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Plus, SlidersHorizontal } from "lucide-react";
 import type { AuctionLot } from "@/entities/farm/types";
 import type { AuctionResultFormPayload } from "../../api/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
@@ -13,29 +13,24 @@ import {
 } from "@/shared/ui/DetailCard";
 import { AuctionLotStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
 import { AuctionQuantityAdjustDialog } from "./AuctionQuantityAdjustDialog";
+import { AuctionFollowUpPanel } from "./AuctionFollowUpPanel";
 import { AuctionResultDialog } from "./AuctionResultDialog";
 
 export function AuctionLotDetail({
   lot,
   loading,
   onAddResult,
-  onConfirmReturn,
+  arrivalPage,
   onAdjust,
 }: {
   lot: AuctionLot | null;
   loading: boolean;
   onAddResult: (payload: AuctionResultFormPayload) => Promise<void>;
-  onConfirmReturn: (
-    returnedQuantity: number,
-    returnDate: string,
-  ) => Promise<void>;
+  arrivalPage: number;
   onAdjust: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const [showResultForm, setShowResultForm] = useState(false);
-  const [showReturnConfirmation, setShowReturnConfirmation] = useState(false);
   const [showQuantityAdjustment, setShowQuantityAdjustment] = useState(false);
-  const [returnQuantity, setReturnQuantity] = useState(1);
-  const [returnDate, setReturnDate] = useState("");
 
   if (!lot) {
     return <DetailEmpty>조회할 lot를 선택하세요.</DetailEmpty>;
@@ -108,97 +103,11 @@ export function AuctionLotDetail({
               >
                 수량 보정
               </DetailActionButton>
-              {currentLot.currentStatus === "REAUCTION_WAITING" ||
-              currentLot.currentStatus === "RETURN_INFERRED" ||
-              currentLot.currentStatus === "PARTIALLY_RETURNED" ? (
-                <DetailActionButton
-                  disabled={
-                    loading || currentLot.returnConfirmableQuantity === 0
-                  }
-                  icon={RotateCcw}
-                  onClick={() => {
-                    setReturnQuantity(currentLot.returnConfirmableQuantity);
-                    setReturnDate(
-                      [...currentLot.attempts]
-                        .reverse()
-                        .find(
-                          (attempt) =>
-                            attempt.attemptStatus === "RETURN_INFERRED",
-                        )?.auctionDate ??
-                        currentLot.latestAuctionDate ??
-                        currentLot.shipmentDate,
-                    );
-                    setShowReturnConfirmation((current) => !current);
-                  }}
-                >
-                  {currentLot.currentStatus === "REAUCTION_WAITING"
-                    ? "반환 처리"
-                    : "반환 확인"}
-                </DetailActionButton>
-              ) : null}
             </>
           }
         />
 
-        {showReturnConfirmation ? (
-          <form
-            className="flex flex-wrap items-end gap-3 border-b border-[#e7ebe5] bg-[#fff9ed] px-4 py-3"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              await onConfirmReturn(returnQuantity, returnDate);
-              setShowReturnConfirmation(false);
-            }}
-          >
-            <label className="text-xs font-semibold text-[#5a4932]">
-              반환 확인 수량
-              <input
-                className="mt-1 block h-9 w-36 rounded-md border border-[#d8c7a8] bg-white px-3 text-right text-sm"
-                type="number"
-                min={1}
-                max={currentLot.returnConfirmableQuantity}
-                required
-                value={returnQuantity}
-                onChange={(event) =>
-                  setReturnQuantity(Number(event.target.value))
-                }
-              />
-            </label>
-            <label className="text-xs font-semibold text-[#5a4932]">
-              반환 날짜
-              <input
-                className="mt-1 block h-9 w-40 rounded-md border border-[#d8c7a8] bg-white px-3 text-sm"
-                type="date"
-                required
-                value={returnDate}
-                onChange={(event) => setReturnDate(event.target.value)}
-              />
-            </label>
-            <div className="min-w-40 text-xs text-[#6b5b44]">
-              <p>
-                확인 가능{" "}
-                {currentLot.returnConfirmableQuantity.toLocaleString()}분
-              </p>
-              <p className="mt-1 font-bold">
-                변경 상태:{" "}
-                {returnQuantity === currentLot.returnConfirmableQuantity
-                  ? "반환완료"
-                  : "부분반환"}
-              </p>
-            </div>
-            <button
-              className="h-9 rounded-md bg-[#159447] px-4 text-sm font-bold text-white disabled:opacity-50"
-              type="submit"
-              disabled={
-                loading ||
-                returnQuantity < 1 ||
-                returnQuantity > currentLot.returnConfirmableQuantity ||
-                !returnDate
-              }
-            >
-              반환 확인 저장
-            </button>
-          </form>
-        ) : null}
+        <AuctionFollowUpPanel lot={currentLot} arrivalPage={arrivalPage} />
 
         <div className="grid gap-3 p-4">
           <div>

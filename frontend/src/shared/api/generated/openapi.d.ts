@@ -3309,10 +3309,11 @@ export interface components {
             /** Format: date */
             arrivalDate?: string;
             /** Format: date-time */
-            canceledAt?: string;
+            canceledAt?: string | null;
+            cancellationAllowed: boolean;
             /** Format: int64 */
-            cancellationMutationId?: number;
-            cancellationReason?: string;
+            cancellationMutationId?: number | null;
+            cancellationReason?: string | null;
             /** Format: date-time */
             createdAt?: string;
             /** Format: int64 */
@@ -3333,18 +3334,18 @@ export interface components {
             arrivalAllowed?: boolean;
             availableMethods?: ("REAUCTION" | "FARM_RETURN" | "AUCTION_DISPOSAL")[];
             /** Format: int32 */
-            decidedQuantity?: number;
+            decidedQuantity?: number | null;
             decisionChangeAllowed?: boolean;
             /** Format: int64 */
-            decisionId?: number;
+            decisionId?: number | null;
             /** Format: int32 */
             disposedQuantity?: number;
             /** Format: int32 */
             inferredReturnQuantity?: number;
             /** Format: int64 */
             lotId?: number;
-            /** @enum {string} */
-            method?: "REAUCTION" | "FARM_RETURN" | "AUCTION_DISPOSAL";
+            /** @enum {string|null} */
+            method?: "REAUCTION" | "FARM_RETURN" | "AUCTION_DISPOSAL" | null;
             /** Format: int32 */
             pendingQuantity?: number;
         };

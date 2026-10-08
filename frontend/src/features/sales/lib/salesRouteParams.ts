@@ -19,6 +19,11 @@ export type SalesSlipsRouteState = SalesRouteState<SalesFilterState> & {
   selectedSlipId: number | null;
 };
 
+export type AuctionRouteState = SalesRouteState<AuctionFilterState> & {
+  selectedLotId: number | null;
+  arrivalPage: number;
+};
+
 export type ProceedsRouteState = {
   page: number;
   size: number;
@@ -104,8 +109,15 @@ export function readBusinessPartnerRouteState(
 
 export function readAuctionRouteState(
   params: SearchParamReader,
-): SalesRouteState<AuctionFilterState> {
+): AuctionRouteState {
   return {
+    selectedLotId: readOptionalPositiveInteger(params.get("lotId")),
+    arrivalPage: readBoundedIntegerValue(
+      params.get("arrivalPage"),
+      0,
+      0,
+      2_147_483_647,
+    ),
     filters: {
       from: params.get("from") ?? "",
       to: params.get("to") ?? "",

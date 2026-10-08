@@ -1,16 +1,17 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AuctionLot, AuctionTrackingSummary } from "@/entities/farm/types";
 import { createEmptyPage } from "@/shared/api/page";
 import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
+import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import { createUuid } from "@/shared/lib/id";
 import { createAuctionRequestKeys } from "../lib/auctionRequestKeys";
 import {
   adjustAuctionQuantity,
-  confirmAuctionReturn,
+  getAuctionLot,
   createAuctionResult,
 } from "../api/salesApi";
-import type { SalesRouteState } from "../lib/salesRouteParams";
+import type { AuctionRouteState } from "../lib/salesRouteParams";
 import {
   AUCTION_FILTER_KEYS,
   createInitialAuctionFilters,
@@ -21,18 +22,16 @@ import {
   auctionSummaryQueryOptions,
 } from "./salesQueryOptions";
 import { salesQueryKeys } from "./salesQueryKeys";
-import type { AuctionFilterState } from "./types";
 import type {
   AuctionQuantityAdjustmentPayload,
   AuctionResultFormPayload,
-  AuctionReturnPayload,
   CreateAuctionResultPayload,
 } from "../api/types";
 
 export function useAuctionTracking({
   routeState,
 }: {
-  routeState: SalesRouteState<AuctionFilterState>;
+  routeState: AuctionRouteState;
 }) {
   const queryClient = useQueryClient();
   const lotsQuery = useQuery(auctionLotPageQueryOptions(routeState));
@@ -41,9 +40,15 @@ export function useAuctionTracking({
     emptyFilters: createInitialAuctionFilters,
     filterKeys: AUCTION_FILTER_KEYS,
     routeFilters: routeState.filters,
+    resetParamKeys: ["lotId", "arrivalPage"],
     writeFilterParams: writeAuctionFilterParams,
   });
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const writeUrlParams = useUrlSearchParamsWriter();
+  const setSelectedId = (id: number) =>
+    writeUrlParams((params) => {
+      params.set("lotId", String(id));
+      params.delete("arrivalPage");
+    }, "push");
   const [requestKeys] = useState(() =>
     createAuctionRequestKeys(createUuid, () => window.sessionStorage),
   );
@@ -51,13 +56,14 @@ export function useAuctionTracking({
     lotsQuery.data ??
     createEmptyPage<AuctionLot>(routeState.size, routeState.page);
   const summary = summaryQuery.data ?? createEmptyAuctionSummary();
-  const selectedLot = useMemo(
-    () =>
-      pageResult.content.find((lot) => lot.id === selectedId) ??
-      pageResult.content[0] ??
-      null,
-    [pageResult.content, selectedId],
-  );
+  const selectedId =
+    routeState.selectedLotId ?? pageResult.content[0]?.id ?? null;
+  const detailQuery = useQuery({
+    queryKey: salesQueryKeys.auction.lot(selectedId ?? 0),
+    queryFn: ({ signal }) => getAuctionLot(selectedId!, signal),
+    enabled: selectedId != null,
+  });
+  const selectedLot = detailQuery.data ?? null;
 
   async function invalidateAuctionTracking(changed: AuctionLot) {
     setSelectedId(changed.id);
@@ -80,20 +86,6 @@ export function useAuctionTracking({
     },
     onSuccess: invalidateAuctionTracking,
   });
-  const confirmReturnMutation = useMutation({
-    mutationFn: async ({
-      lotId,
-      payload,
-    }: {
-      lotId: number;
-      payload: AuctionReturnPayload;
-    }) => {
-      const response = await confirmAuctionReturn(lotId, payload);
-      requestKeys.complete(lotId, "RETURN", payload.idempotencyKey);
-      return response;
-    },
-    onSuccess: invalidateAuctionTracking,
-  });
   const adjustQuantityMutation = useMutation({
     mutationFn: ({
       lotId,
@@ -104,30 +96,6 @@ export function useAuctionTracking({
     }) => adjustAuctionQuantity(lotId, payload),
     onSuccess: invalidateAuctionTracking,
   });
-
-  async function confirmReturn(returnedQuantity: number, returnDate: string) {
-    if (!selectedLot) return;
-    const result =
-      returnedQuantity === selectedLot.returnConfirmableQuantity
-        ? "반환완료"
-        : "부분반환";
-    if (
-      !window.confirm(
-        `반환 수량 ${returnedQuantity.toLocaleString()}분, 반환 날짜 ${returnDate}가 맞습니까?\n확인하면 ${result} 상태로 변경됩니다.`,
-      )
-    )
-      return;
-    await confirmReturnMutation.mutateAsync({
-      lotId: selectedLot.id,
-      payload: {
-        idempotencyKey: requestKeys.get(selectedLot.id, "RETURN"),
-        returnedQuantity,
-        returnDate,
-        worker: null,
-        memo: "판매 관리 화면에서 반환 확인",
-      },
-    });
-  }
 
   async function adjustQuantity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -162,14 +130,12 @@ export function useAuctionTracking({
   }
 
   const mutationPending =
-    createResultMutation.isPending ||
-    confirmReturnMutation.isPending ||
-    adjustQuantityMutation.isPending;
+    createResultMutation.isPending || adjustQuantityMutation.isPending;
   const error =
+    detailQuery.error ??
     lotsQuery.error ??
     summaryQuery.error ??
     createResultMutation.error ??
-    confirmReturnMutation.error ??
     adjustQuantityMutation.error;
 
   return {
@@ -190,7 +156,6 @@ export function useAuctionTracking({
     setPage: listState.changePage,
     setPageSize: listState.changePageSize,
     setSelectedId,
-    confirmReturn,
     adjustQuantity,
     addResult,
   };

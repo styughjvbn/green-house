@@ -134,6 +134,8 @@ test("partner and auction route state reject unsupported enum values", () => {
     size: 100,
   });
   assert.deepEqual(readAuctionRouteState(params), {
+    selectedLotId: null,
+    arrivalPage: 0,
     filters: {
       from: "",
       to: "",
@@ -156,5 +158,24 @@ test("legacy settlement identifiers do not select a proceeds target", () => {
     readProceedsRouteState(new URLSearchParams("settlementId=123"))
       .selectedProceedsId,
     null,
+  );
+});
+
+test("auction selection and arrival history survive URL reload and reject invalid identifiers", () => {
+  const state = readAuctionRouteState(
+    new URLSearchParams("lotId=42&arrivalPage=2"),
+  );
+  assert.equal(state.selectedLotId, 42);
+  assert.equal(state.arrivalPage, 2);
+  for (const value of ["0", "-1", "NaN", "1.5", "9007199254740992"]) {
+    assert.equal(
+      readAuctionRouteState(new URLSearchParams({ lotId: value }))
+        .selectedLotId,
+      null,
+    );
+  }
+  assert.equal(
+    readAuctionRouteState(new URLSearchParams("arrivalPage=-1")).arrivalPage,
+    0,
   );
 });

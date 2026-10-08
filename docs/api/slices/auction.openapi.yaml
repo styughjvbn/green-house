@@ -548,13 +548,21 @@ components:
           type: string
           format: date
         canceledAt:
-          type: string
+          type:
+          - string
+          - 'null'
           format: date-time
+        cancellationAllowed:
+          type: boolean
         cancellationMutationId:
-          type: integer
+          type:
+          - integer
+          - 'null'
           format: int64
         cancellationReason:
-          type: string
+          type:
+          - string
+          - 'null'
         createdAt:
           type: string
           format: date-time
@@ -578,6 +586,8 @@ components:
           format: int32
         worker:
           type: string
+      required:
+      - cancellationAllowed
     AuctionAttemptResponse:
       type: object
       properties:
@@ -644,12 +654,16 @@ components:
             - FARM_RETURN
             - AUCTION_DISPOSAL
         decidedQuantity:
-          type: integer
+          type:
+          - integer
+          - 'null'
           format: int32
         decisionChangeAllowed:
           type: boolean
         decisionId:
-          type: integer
+          type:
+          - integer
+          - 'null'
           format: int64
         disposedQuantity:
           type: integer
@@ -661,7 +675,9 @@ components:
           type: integer
           format: int64
         method:
-          type: string
+          type:
+          - string
+          - 'null'
           enum:
           - REAUCTION
           - FARM_RETURN
@@ -673,6 +689,7 @@ components:
       type: object
       properties:
         arrival:
+          type: 'null'
           $ref: '#/components/schemas/AuctionArrivalResponse'
         followUp:
           $ref: '#/components/schemas/AuctionFollowUpResponse'

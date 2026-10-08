@@ -75,6 +75,10 @@ public class AuctionReturnArrival {
     this.creationMutationId = mutationId;
   }
 
+  public boolean isCancellationAllowed() {
+    return canceledAt == null && creationMutationId != null && orchidGroupId != null;
+  }
+
   public void cancel(Long mutationId, String reason, LocalDateTime at) {
     if (canceledAt != null)
       throw new ConflictException("AUCTION_ARRIVAL_ALREADY_CANCELED", "이미 취소한 도착 기록입니다.");

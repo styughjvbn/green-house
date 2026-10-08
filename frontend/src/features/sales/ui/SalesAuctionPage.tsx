@@ -46,7 +46,7 @@ export function SalesAuctionPage() {
               lot={tracking.selectedLot}
               loading={tracking.loading}
               onAddResult={tracking.addResult}
-              onConfirmReturn={tracking.confirmReturn}
+              arrivalPage={routeState.arrivalPage}
               onAdjust={tracking.adjustQuantity}
             />
           </TabSplit>

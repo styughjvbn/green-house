@@ -379,3 +379,84 @@ export function changeSalesSlipStatus(
     "판매 상태를 변경하지 못했습니다.",
   );
 }
+
+export function getAuctionLot(lotId: number, signal?: AbortSignal) {
+  return fetchApi<AuctionLot>(`/auction-lots/${lotId}`, { signal });
+}
+
+export function getAuctionFollowUp(lotId: number, signal?: AbortSignal) {
+  return fetchApi<import("./types").AuctionFollowUp>(
+    `/auction-lots/${lotId}/follow-up`,
+    { signal },
+  );
+}
+
+export function getAuctionArrivals(
+  lotId: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<
+    import("@/shared/api/page").Page<import("./types").AuctionArrival>
+  >(`/auction-lots/${lotId}/arrivals?page=${page}&size=10`, { signal });
+}
+
+export function decideAuctionFollowUp(
+  lotId: number,
+  payload: import("./types").AuctionFollowUpPayload,
+) {
+  return requestJson<import("./types").AuctionFollowUpResult>(
+    `/auction-lots/${lotId}/follow-up`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "후속 처리를 저장하지 못했습니다.",
+  );
+}
+
+export function recordAuctionArrival(
+  lotId: number,
+  payload: import("./types").AuctionArrivalPayload,
+) {
+  return requestJson<import("./types").AuctionFollowUpResult>(
+    `/auction-lots/${lotId}/arrivals`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "실제 도착을 저장하지 못했습니다.",
+  );
+}
+
+export function cancelAuctionArrival(
+  lotId: number,
+  arrivalId: number,
+  payload: import("./types").AuctionArrivalCancellationPayload,
+) {
+  return requestJson<import("./types").AuctionFollowUpResult>(
+    `/auction-lots/${lotId}/arrivals/${arrivalId}/cancel`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "도착 기록을 취소하지 못했습니다.",
+  );
+}
+
+export function getAuctionReturnHouses(signal?: AbortSignal) {
+  return fetchApi<import("@/entities/farm/types").House[]>("/houses", {
+    signal,
+  });
+}
+
+export function getAuctionReturnVarieties(signal?: AbortSignal) {
+  return fetchApi<
+    Required<
+      import("@/shared/api/generated/openapi").components["schemas"]["VarietyGeneraResponse"]
+    >
+  >("/varieties/genera", { signal });
+}

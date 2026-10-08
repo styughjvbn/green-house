@@ -69,3 +69,12 @@ export function auctionStatusTone(status: AuctionLotStatus) {
     return "orange";
   return "blue";
 }
+
+export const followUpLabels: Record<
+  import("../api/types").AuctionFollowUpMethod,
+  string
+> = {
+  REAUCTION: "재경매",
+  FARM_RETURN: "농장으로 가져오기",
+  AUCTION_DISPOSAL: "경매장 폐기·처리",
+};

@@ -108,3 +108,21 @@ export type PartnerSettlementSettingsPayload = Omit<
   PartnerSettlementSettings,
   "id" | "partnerId" | "capabilities"
 >;
+
+export type AuctionFollowUp = Required<
+  components["schemas"]["AuctionFollowUpResponse"]
+>;
+export type AuctionArrival = Required<
+  components["schemas"]["AuctionArrivalResponse"]
+>;
+export type AuctionFollowUpMethod = NonNullable<AuctionFollowUp["method"]>;
+export type AuctionFollowUpPayload =
+  components["schemas"]["AuctionFollowUpCommand"];
+export type AuctionArrivalPayload =
+  components["schemas"]["AuctionArrivalCommand"];
+export type AuctionArrivalCancellationPayload =
+  components["schemas"]["CancelAuctionArrivalCommand"];
+export type AuctionFollowUpResult = {
+  followUp: AuctionFollowUp;
+  arrival: AuctionArrival | null;
+};

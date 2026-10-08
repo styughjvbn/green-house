@@ -115,6 +115,8 @@ class AuctionFollowUpPostgresE2ETest extends WorkE2ETestBase {
             lotId,
             arrived.arrival().id(),
             new CancelAuctionArrivalCommand(DATE, "cancel", "작업자", "도착 입력 정정"));
+    assertThat(arrived.arrival().cancellationAllowed()).isTrue();
+    assertThat(corrected.arrival().cancellationAllowed()).isFalse();
     assertThat(corrected.followUp().pendingQuantity()).isEqualTo(30);
     assertThat(corrected.followUp().decisionChangeAllowed()).isTrue();
     assertThat(corrected.arrival().creationMutationId())
