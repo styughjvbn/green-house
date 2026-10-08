@@ -23,10 +23,10 @@ import com.greenhouse.backend.sales.application.document.command.SalesSlipAlloca
 import com.greenhouse.backend.sales.application.document.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
-import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.dto.document.SalesSlipStatusUpdateRequest;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
-import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;

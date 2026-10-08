@@ -26,9 +26,9 @@ import com.greenhouse.backend.sales.application.document.command.SalesSlipAlloca
 import com.greenhouse.backend.sales.application.document.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
-import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.dto.document.SalesSlipStatusUpdateRequest;
-import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.api.target.WorkTargetSelection;

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.e2e;
 
-import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import java.time.LocalDate;
 import java.util.UUID;

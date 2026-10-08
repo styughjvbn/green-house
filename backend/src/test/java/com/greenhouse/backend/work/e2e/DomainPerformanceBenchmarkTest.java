@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationReport;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.support.BenchmarkRuntimeMeasurement;
 import com.greenhouse.backend.support.JdbcMeasurement;
 import com.greenhouse.backend.support.JdbcTransactionMeasurement;

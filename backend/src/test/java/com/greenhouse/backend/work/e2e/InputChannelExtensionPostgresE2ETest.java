@@ -16,7 +16,7 @@ import com.greenhouse.backend.sales.domain.auction.AuctionAttemptStatus;
 import com.greenhouse.backend.sales.domain.auction.AuctionResultLineInput;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
-import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.List;

@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.api.partner.PartnerTextMatch;
 import com.greenhouse.backend.sales.api.partner.PartnerTextSearch;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
+import com.greenhouse.backend.sales.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;

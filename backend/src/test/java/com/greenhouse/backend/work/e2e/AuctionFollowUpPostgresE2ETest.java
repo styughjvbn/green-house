@@ -15,9 +15,9 @@ import com.greenhouse.backend.sales.application.document.command.SalesSlipComman
 import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.domain.auction.*;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
-import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
-import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import java.math.BigDecimal;
 import java.sql.Timestamp;

@@ -17,8 +17,8 @@ import com.greenhouse.backend.sales.application.document.SalesSlipCreationServic
 import com.greenhouse.backend.sales.application.document.command.SalesSlipAllocationInput;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
-import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
-import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Stream;

@@ -11,7 +11,7 @@ import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
-import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import com.greenhouse.backend.support.DirectSaleFixtures;
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;

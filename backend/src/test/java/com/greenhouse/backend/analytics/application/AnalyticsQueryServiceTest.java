@@ -6,8 +6,8 @@ import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
 import com.greenhouse.backend.sales.application.document.SalesMetricsReader;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
+import com.greenhouse.backend.sales.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi;
 import java.time.Clock;
 import java.time.Instant;

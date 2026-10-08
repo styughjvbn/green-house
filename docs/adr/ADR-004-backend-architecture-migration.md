@@ -667,3 +667,10 @@ P2 마무리 검증 결과:
 - 집중 검증의 업무 테스트 통과. 기존 HTTP 옵션이 순수 값으로 이동하면서 새로 추적되는 생성자·옵션 TYPE·대상 enum TYPE 세 항목만 reviewed inventory에 추가했다. 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 프론트 `npm run check` 통과.
 - OpenAPI 재생성 157 operations/132 paths/292 schemas, 생성 diff 없음. 타입 재생성 불필요. Farm·Work·Sales의 application 구현을 다른 최상위 모듈에서 참조하는 프로덕션 코드는 0개다. Sales 기능 간 implementation 직접 참조도 API로 전환했다.
 - DB·SQL·트랜잭션·업무 동작 변경이 없어 `workE2eTest` 미실행. 전체 검증 이후에는 이 ADR 결과만 추가했다. P2 완료, 다음은 P3 기능별 패키지 이동이다.
+
+### 2026-10-08: P3 — Partner 기능 우선 배치
+
+- Partner 프로덕션 26개와 같은 패키지 테스트 2개를 `sales/partner/{application,domain,repository,web}`로 이동한다. HTTP DTO는 web/dto, 외부 공개 조회는 기존 sales/api/partner, 내부 잠금/예정일 API는 sales/partner/api를 유지한다.
+- 클래스·Bean 이름·validation·Entity/DB·검색/잠금/예정일 실행 본문은 그대로다. QueryDSL 및 소비자 import·감사 helper 제한의 FQCN도 같은 이동표로 갱신한다. reviewed inventory는 해당 패키지 FQCN만 치환한다.
+
+- clean 컴파일 및 거래처·예정일·capability·공개 값·의존 그래프·단일 Writer·inventory 집중 검증 통과. 전체 검증은 P3 다섯 기능 이동 후 수행한다. DB/트랜잭션 변경이 없어 PostgreSQL E2E는 이 이동에서 실행하지 않는다.
