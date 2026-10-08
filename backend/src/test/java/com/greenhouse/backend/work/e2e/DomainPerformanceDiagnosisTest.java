@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationReport;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationFingerprint;
-import com.greenhouse.backend.sales.application.auction.AuctionDataReader;
+import com.greenhouse.backend.sales.auction.application.AuctionDataReader;
 import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.support.BenchmarkRuntimeMeasurement;
 import com.greenhouse.backend.support.JdbcMeasurement;

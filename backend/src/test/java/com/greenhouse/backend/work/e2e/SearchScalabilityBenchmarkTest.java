@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.sales.api.document.SalesSlipSummary;
-import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
+import com.greenhouse.backend.sales.auction.application.AuctionTrackingService;
+import com.greenhouse.backend.sales.auction.web.dto.AuctionLotResponse;
 import com.greenhouse.backend.sales.document.application.SalesQueryService;
-import com.greenhouse.backend.sales.dto.auction.AuctionLotResponse;
 import com.greenhouse.backend.support.JdbcMeasurement;
 import com.sun.management.ThreadMXBean;
 import jakarta.persistence.EntityManagerFactory;

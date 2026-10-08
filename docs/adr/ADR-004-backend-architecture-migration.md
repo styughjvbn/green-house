@@ -695,3 +695,10 @@ P2 마무리 검증 결과:
 - 금액 원천·가격·검토 차단·projection·입금·호출자 트랜잭션 참여·잠금/원장 의미는 동일하다. Entity/Repository는 Direct 내부에 유지하고 소비자/QueryDSL/테스트의 FQCN만 갱신한다.
 
 - Direct 프로덕션 13개·테스트 2개 이동. clean 컴파일과 가격/금액 정책·판매·입금/배분·값/그래프/inventory/단일 Writer 집중 검증 통과. 전체 검증은 P3 전체 이동 후 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E는 미실행.
+
+### 2026-10-08: P3 — Auction 기능 우선 배치
+
+- Auction 출하·lot·시도·원본 결과·후속 결정·반환 도착·대금 연결을 `sales/auction/{application,domain,repository,web}`로 이동한다. 순수 대금/결과 값은 auction/api에 유지하며 Document/Payment SPI의 기존 구현이 연결한다.
+- 생성/반환 Mutation 단일 Writer·snapshot·receipt·결정과 도착의 구분·lot 선잠금·대금/배분/정정·취소 보호·readOnly/최상위 트랜잭션을 유지한다. 소비자/QueryDSL/테스트의 FQCN과 reviewed inventory만 같은 이동표로 갱신한다.
+
+- Auction 프로덕션 56개·테스트 4개 이동. clean 컴파일과 경매 추적·수량/결과/반환 정책·대금·판매/배분·아키텍처/inventory 집중 검증 통과. 전체 검증은 Sales 완료 경계 검사와 함께 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E는 미실행.

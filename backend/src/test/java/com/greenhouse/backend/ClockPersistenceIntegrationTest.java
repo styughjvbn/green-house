@@ -12,11 +12,11 @@ import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberAdd
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
-import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
-import com.greenhouse.backend.sales.application.auction.RecordAuctionResultCommand;
-import com.greenhouse.backend.sales.domain.auction.AuctionAttemptStatus;
-import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
-import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
+import com.greenhouse.backend.sales.auction.application.AuctionTrackingService;
+import com.greenhouse.backend.sales.auction.application.RecordAuctionResultCommand;
+import com.greenhouse.backend.sales.auction.domain.AuctionAttemptStatus;
+import com.greenhouse.backend.sales.auction.domain.AuctionShipment;
+import com.greenhouse.backend.sales.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
