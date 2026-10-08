@@ -190,6 +190,7 @@ Sales 내부는 기존 계층을 유지한 `sales/{application,domain,repository
 - Auction은 출하·lot·시도·결과·반환 추적과 임시 호환 파생 정산(`auction/settlement`)을 소유한다.
 - Payment는 실제 입금 이벤트·연결 원장·거래처 잔액을 소유한다. Partner는 거래처 기준정보·거래처별 결제 선호 설정을 소유하며 금액 원장을 직접 변경하지 않는다.
 - 내부 Direct 금액 조회는 Document 소유 값 계약으로 전용 거래/가격과 Payment의 유효 배분을 조합한다. Payment Repository projection은 외부로 노출하지 않고 application 값으로 변환한다. 조회의 검토 필요 상태는 이전 대사와 현재 연결 검증을 반영하며 원장이나 저장 금액을 변경하지 않는다. HTTP 금액 조회·입금의 원천 전환은 미완료다.
+- Payment의 유효 배분 조회는 대상 ID·소유 거래처를 bound parameter로 전달하는 CTE 집계로 수납 원문을 중복 합산하지 않는다. 동일한 조회를 H2와 PostgreSQL에서 검증하며, 같은 transaction의 아직 flush되지 않은 원장 기록도 반영한다. 대상은 500개씩 처리하고 다른 내부 경계의 테이블을 읽지 않는다.
 - Direct의 이전 시점 대사 검토는 Direct가 판정한다. Document는 내부 port의 검토 결과로 수정·수납 경로를 차단하고 서버 업무 capability와 상세 상태를 조립한다. 대사 근거는 변경하지 않으며 성공한 원래 입금 재전송은 먼저 확인한다. 검토 조회는 대상 ID를 모아 일괄 처리하므로 품목 수에 비례하는 조회를 추가하지 않는다.
 - Document는 구체적인 Direct/Auction/Payment 서비스를 호출하지 않는다. 필요한 출하 생성·취소 보호·표시 조회는 Document 소유 `AuctionDocumentPort`, 일반 판매의 예상일·입금 이력·잔액 연결은 `DirectDocumentAccountingPort`로 요청하고 소유자 adapter가 처리한다. 기존 출하 값 계약은 port로 이동하며 복제하지 않는다.
 - Payment가 정의한 `PaymentTargetPort`를 Document와 임시 경매 정산이 구현한다. Payment는 Entity를 받지 않고, 대상 잠금·유효성 검증 뒤 원장 멱등 확인→대상 금액 반영→입금/연결 원장→잔액→감사→응답을 조율한다. 유스케이스 진입점이 트랜잭션을 열고 대상 port와 원장 writer는 기존 트랜잭션에 반드시 참여한다.
@@ -582,7 +583,7 @@ cd backend
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
 - `FarmQueryPostgresE2ETest`는 다이 1·10·50개와 다이별 복수 구역에서 전체 구조·맵 SQL 3회, 다이·구역 목록 SQL 2회와 맵의 난 묶음·품종 Entity 로딩 0건을 검증한다. Work 정형 상세는 보정 0·1·10·50건에서 SQL 4회로 고정한다.
 - 거래처 검색 경계를 거치는 판매 검색은 1·10·50행에서 SQL 4회, 품종과 경매장 이름에 걸친 경매 문구 검색은 6회 이내다. 기존 3회·5회에 scalar 검색이 추가되며 경매의 다중 검색은 일괄 처리해 행별 반복 조회를 피한다. 검색 없는 경매 페이지의 기존 5회 상한은 유지한다.
-- `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 5회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
+- `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 6회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
 - 사용자 그룹 목록은 1·10·50개에서 SQL 3회, 난 묶음별 소속 그룹 조회는 5회 이내인지 검증한다. 보관·탈퇴 제외와 소속 순서도 함께 확인한다.
 - CI의 기본 job은 `check`와 `bootJar`, `backend-postgres` job은 Docker 확인 후 `workE2eTest`와 `workBenchmark -PworkBenchmarkEnforce=true`를 각각 실행한다. Docker가 없으면 PostgreSQL 검사는 실패하며 조용히 건너뛰지 않는다. 검사별 결과는 Actions Summary에 기록하고 테스트·벤치마크 보고서는 14일간 artifact로 보관한다. 기본 architecture 검사도 테스트 비활성화와 모듈 내부·직접 시간 조회 예외의 재도입을 막는다.
 - Java의 최종 포맷 기준은 Spotless의 [Google Java Format](https://github.com/diffplug/spotless/blob/main/plugin-gradle/README.md#google-java-format)이다. `backend`에서 `./gradlew format`으로 적용하고 `./gradlew spotlessCheck`로 검사한다. CI의 `check`에도 `spotlessCheck`가 연결되며 검사 중 소스를 수정하지 않는다. Spring Java Format, Eclipse formatter XML, `formatAll`은 사용하지 않는다.

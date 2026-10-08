@@ -1,9 +1,7 @@
 package com.greenhouse.backend.sales.application.payment;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
-import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
+import com.greenhouse.backend.sales.repository.payment.PaymentAllocationQueryRepository;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -17,8 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PaymentAllocationReader {
-  private static final JsonMapper TARGET_MAPPER = JsonMapper.builder().build();
-  private final PartnerPaymentEventRepository repository;
+  private final PaymentAllocationQueryRepository repository;
 
   public Map<Long, Allocation> findAll(PaymentTargetType type, Collection<Long> targetIds) {
     Map<Long, Long> targets = new LinkedHashMap<>();
@@ -38,9 +35,10 @@ public class PaymentAllocationReader {
     ids.forEach(id -> result.put(id, new Allocation(BigDecimal.ZERO, null, false)));
     for (int offset = 0; offset < ids.size(); offset += 500) {
       for (var row :
-          repository.findAllocationTotals(
+          repository.find(
               type.name(),
-              ownerJson(ids.subList(offset, Math.min(offset + 500, ids.size())), owners),
+              ids.subList(offset, Math.min(offset + 500, ids.size())),
+              owners,
               validateOwner)) {
         result.put(
             row.getTargetId(),
@@ -50,17 +48,6 @@ public class PaymentAllocationReader {
     }
     return Map.copyOf(result);
   }
-
-  private String ownerJson(List<Long> ids, Map<Long, Long> owners) {
-    try {
-      return TARGET_MAPPER.writeValueAsString(
-          ids.stream().map(id -> new TargetOwner(id, owners.get(id))).toList());
-    } catch (JsonProcessingException failure) {
-      throw new IllegalStateException("배분 대상 식별자 직렬화에 실패했습니다.", failure);
-    }
-  }
-
-  private record TargetOwner(Long targetId, Long partnerId) {}
 
   public record Allocation(BigDecimal amount, Long partnerId, boolean reviewRequired) {}
 }
