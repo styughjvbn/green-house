@@ -8,9 +8,9 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
-import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
-import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordCreateCommand;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordService;
+import com.greenhouse.backend.farm.inbound.domain.InboundType;
 import com.greenhouse.backend.farm.variety.domain.Variety;
 import com.greenhouse.backend.farm.variety.repository.VarietyRepository;
 import com.greenhouse.backend.work.api.effect.InboundPottingCommand;

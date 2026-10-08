@@ -1,8 +1,8 @@
 package com.greenhouse.backend.farm.inbound.integration;
 
 import com.greenhouse.backend.audit.domain.AuditAction;
-import com.greenhouse.backend.farm.application.inbound.InboundRecordAuditSupport;
-import com.greenhouse.backend.farm.application.inbound.InboundRecordFinder;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordAuditSupport;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordFinder;
 import com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi;
 import com.greenhouse.backend.work.spi.operation.InboundPottingVoidPort;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.orchid.application;
 
-import com.greenhouse.backend.farm.application.transformation.StructureChangeExecutor;
+import com.greenhouse.backend.farm.transformation.application.StructureChangeExecutor;
 import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.api.effect.WorkEffectContext;

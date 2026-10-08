@@ -1,9 +1,9 @@
 package com.greenhouse.backend;
 
+import com.greenhouse.backend.farm.inbound.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.material.repository.MaterialRepository;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.structure.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.structure.repository.HouseRepository;
 import com.greenhouse.backend.farm.structure.repository.PhysicalBedRepository;

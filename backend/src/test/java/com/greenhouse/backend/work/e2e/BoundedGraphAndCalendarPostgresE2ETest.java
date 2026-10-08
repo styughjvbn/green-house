@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelation;
-import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineage;
+import com.greenhouse.backend.farm.transformation.domain.OrchidGroupLineage;
 import com.greenhouse.backend.work.correction.domain.WorkOperationCorrection;
 import com.greenhouse.backend.work.effect.domain.WorkAppliedEffect;
 import com.greenhouse.backend.work.operation.application.WorkOperationGraphQueryService;

@@ -10,9 +10,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
-import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
-import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.inbound.domain.InboundRecord;
+import com.greenhouse.backend.farm.inbound.domain.InboundStatus;
+import com.greenhouse.backend.farm.inbound.domain.InboundType;
 import com.greenhouse.backend.farm.structure.domain.BedZone;
 import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
 import com.greenhouse.backend.farm.structure.domain.House;

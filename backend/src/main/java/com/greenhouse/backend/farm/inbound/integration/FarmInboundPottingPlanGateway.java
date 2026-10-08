@@ -1,9 +1,9 @@
 package com.greenhouse.backend.farm.inbound.integration;
 
-import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
-import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
-import com.greenhouse.backend.farm.domain.inbound.InboundType;
-import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
+import com.greenhouse.backend.farm.inbound.domain.InboundRecord;
+import com.greenhouse.backend.farm.inbound.domain.InboundStatus;
+import com.greenhouse.backend.farm.inbound.domain.InboundType;
+import com.greenhouse.backend.farm.inbound.repository.InboundRecordRepository;
 import com.greenhouse.backend.work.spi.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.spi.target.InboundPottingPlanTarget;
 import java.util.List;

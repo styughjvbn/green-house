@@ -740,3 +740,11 @@ P3 완료 검증 결과:
 - 현재 값/과거 snapshot·조회 배치·collection 소속/활성·현황/집계·순수 policy·쓰기를 포함한 유스케이스/잠금/트랜잭션은 그대로다. 새 전달 Adapter/Port/API 없음. 기존 integration의 참조만 새 소유 패키지로 갱신한다.
 
 - Orchid/Collection/Status 프로덕션 82개·같은 패키지 테스트 10개 이동. clean 컴파일과 난 묶음 조회/생성/변경/취소/소속/사용 여부·현황/집계·일괄 조회·단일 Writer·공개 값/inventory 집중 검증 통과. Mutation 패키지·Gradle CLI mainClass는 이동하지 않았다. 전체 검증은 P4 전체 이동 후 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E 미실행.
+
+### 2026-10-08: P4 — Farm 입고·구조 변경
+
+- 입고와 분갈이/분주/합식/자리 이동 구현·Entity·Repository·HTTP DTO를 inbound/transformation 기능 우선 배치로 이동한다. 기존 inbound/integration·transformation/integration의 실제 Work SPI 구현과 보정 책임은 유지하며 참조만 갱신한다.
+- Work API 직접 호출과 Work 소유 SPI의 Farm 구현을 유지한다. 계획/취소/선잠금·품종 재사용·입고-Work 연결·구조 변경 실행기/Strategy·순수 수량 배분·snapshot/Mutation 연결·완료 책임·최상위/호출자 트랜잭션·오류·감사 순서는 동일하다.
+- 경로 이동을 이유로 새 interface/Port/Gateway/Adapter/integration을 추가하지 않는다. Mutation Engine은 기존 위치의 단일 Writer이며 운영 CLI·저장 지문/Receipt는 변경하지 않는다.
+
+- Inbound/Transformation 프로덕션 54개·같은 패키지 테스트 3개 이동. clean 컴파일과 입고/포트·구조 변경·이동/수량 배분·선잠금 Adapter·공개 값/의존 방향/inventory/단일 Writer 집중 검증 통과. 새 integration/계약 계층 없음. 전체 검증은 P4 완료 경계 검사와 함께 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E 미실행.

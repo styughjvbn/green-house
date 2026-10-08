@@ -9,9 +9,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.audit.repository.AuditEventRepository;
-import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
-import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
-import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.inbound.domain.InboundRecord;
+import com.greenhouse.backend.farm.inbound.domain.InboundStatus;
+import com.greenhouse.backend.farm.inbound.domain.InboundType;
 import com.greenhouse.backend.farm.variety.domain.Variety;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;

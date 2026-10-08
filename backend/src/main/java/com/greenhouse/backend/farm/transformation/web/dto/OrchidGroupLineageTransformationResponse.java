@@ -1,0 +1,17 @@
+package com.greenhouse.backend.farm.transformation.web.dto;
+
+import com.greenhouse.backend.farm.transformation.domain.OrchidGroupLineageRelationType;
+import java.time.LocalDateTime;
+import java.util.List;
+
+public record OrchidGroupLineageTransformationResponse(
+    Long id,
+    OrchidGroupLineageRelationType relationType,
+    Long workOperationId,
+    Integer totalInputQuantity,
+    Integer totalResultQuantity,
+    Integer lossQuantity,
+    Integer increaseQuantity,
+    LocalDateTime createdAt,
+    List<OrchidGroupLineageNodeResponse> sources,
+    List<OrchidGroupLineageNodeResponse> results) {}

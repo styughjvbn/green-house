@@ -6,7 +6,7 @@ import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.reset;
 
-import com.greenhouse.backend.farm.application.transformation.StructureChangeExecutor;
+import com.greenhouse.backend.farm.transformation.application.StructureChangeExecutor;
 import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.operation.domain.WorkType;

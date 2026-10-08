@@ -1,11 +1,11 @@
 package com.greenhouse.backend.farm.variety.application;
 
+import com.greenhouse.backend.farm.inbound.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupSummaryRepository;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupVarietyReference;
 import com.greenhouse.backend.farm.orchid.repository.VarietyInventorySummary;
-import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.variety.domain.Variety;
 import com.greenhouse.backend.farm.variety.web.dto.VarietyConnectedOrchidGroupResponse;
 import com.greenhouse.backend.farm.variety.web.dto.VarietyResponse;

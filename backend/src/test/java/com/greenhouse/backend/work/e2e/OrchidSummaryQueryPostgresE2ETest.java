@@ -3,9 +3,9 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
-import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
-import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.inbound.domain.InboundRecord;
+import com.greenhouse.backend.farm.inbound.domain.InboundStatus;
+import com.greenhouse.backend.farm.inbound.domain.InboundType;
 import com.greenhouse.backend.farm.orchid.application.DerivedOrchidGroupService;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.orchid.domain.PotSizeCode;

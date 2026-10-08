@@ -129,21 +129,9 @@ demo
 - Entity 직접 상태 변경·생성자·Repository 쓰기는 Engine으로 한정하고 architecture test로 검사한다. 신규 업무 변경은 typed Engine command에 편입한다.
 - 과거 Work·Sales·Lineage 데이터와 기존 Flyway 이력은 보존한다. 실행 코드 제거와 복구 도구·데이터 보존 정책은 `features/orchid-group-mutation-transition.md`를 따른다.
 
-Farm 기준정보·구조·난 묶음·그룹·현황은 `farm/{variety,material,structure,orchid,collection,status}/{application,domain,repository,web}`로 이동했다. 입고·구조 변경은 순차 전환하며 Mutation 내부는 P5에서 분리한다. HTTP DTO는 web/dto에 둔다. 저장소·Entity의 기존 Farm 내부 조회와 연관관계는 그대로 유지한다.
+Farm은 `farm/{structure,status,orchid,collection,inbound,variety,material,transformation}/{application,domain,repository,web}`의 기능 우선 구조를 사용한다. 실제 책임이 있는 계층만 두며 HTTP 전용 DTO는 web/dto에 둔다. 모듈 외부 계약은 farm/api·farm/spi, 필요한 Work SPI 구현은 해당 기능의 선택적 integration 패키지에 둔다. 기존 Farm 내부의 기준정보·위치·재고 조회와 Entity 연관관계는 유지한다.
 
-```text
-application|domain|repository|controller|dto/
- ├─ structure/       동·물리 배드·논리 구역·배치 용량
- ├─ status/          농장 현황·확대 단계 조회
- ├─ orchid/          난 묶음 조회·명령·이동
- ├─ collection/      사용자 난 묶음 그룹
- ├─ inbound/         입고·포트 실행
- ├─ variety/         품종 기준 정보
- ├─ material/        자재 기준 정보
- └─ transformation/  분갈이·분주·합식·계보
-```
-
-저장소가 없는 현황 기능처럼 계층에 구현이 필요하지 않은 경우 해당 하위 패키지는 생략한다.
+Mutation 내부는 P5 전환 전까지 `farm/{application,domain,repository}/orchid/mutation`에 유지한다. Engine·원장·지문/replay·대사/기동 검증 CLI의 분리는 P5에서 한정하며, 다른 Farm 구현은 이전 계층 우선 경로에 두지 않는다.
 
 ### work
 
@@ -286,7 +274,7 @@ Persistence 조회 규칙:
 
 ### 4.1 백엔드 구현 기준
 
-[ADR-004](adr/ADR-004-backend-architecture-migration.md)에 따라 기존 소유권과 허용 의존 방향을 유지하며 공개 API·SPI 정리부터 점진적으로 전환한다. Sales는 기능 우선 배치로 전환했고 Farm·Work 구현은 아직 계층 우선 배치를 중심으로 유지한다. 작업 상세 참조·Mutation 그래프의 공개 확장 계약은 `work/spi/{target,operation}`, Farm 구현은 `farm/orchid/integration`으로 전환했다. Work가 SPI를 소유하고 Farm이 구현하므로 기존 `Farm → Work` 컴파일 의존과 Work에서 Farm 구현을 호출하는 런타임 흐름은 유지한다. 아키텍처 검사는 이행 중 기능 우선 배치도 동일한 소유권·계층 규칙으로 검사한다. 새 Farm/Work/Sales의 `api`·`spi`는 모든 public 값 계약에서 Entity·저장소 projection·HTTP 타입 누출을 금지하고, 기능 내부 API·SPI의 최상위 모듈 외 접근을 차단한다. 기존 application 계약은 검토된 타입·메서드 inventory로 계속 추적한다. Sales의 최상위 공개 API/SPI도 기능 소유권을 식별해 기존 기능 의존 그래프를 검사하며, 최상위 모듈 공개 여부와 기능 소유권을 별도로 판단한다.
+[ADR-004](adr/ADR-004-backend-architecture-migration.md)에 따라 기존 소유권과 허용 의존 방향을 유지하며 공개 API·SPI 정리부터 점진적으로 전환한다. Sales·Farm·Work 구현은 기능 우선 배치로 전환했다. Mutation 내부의 이전 경로는 P5까지 한정적으로 유지한다. 작업 상세 참조·Mutation 그래프의 공개 확장 계약은 `work/spi/{target,operation}`, Farm 구현은 `farm/orchid/integration`으로 전환했다. Work가 SPI를 소유하고 Farm이 구현하므로 기존 `Farm → Work` 컴파일 의존과 Work에서 Farm 구현을 호출하는 런타임 흐름은 유지한다. 아키텍처 검사는 이행 중 기능 우선 배치도 동일한 소유권·계층 규칙으로 검사한다. 새 Farm/Work/Sales의 `api`·`spi`는 모든 public 값 계약에서 Entity·저장소 projection·HTTP 타입 누출을 금지하고, 기능 내부 API·SPI의 최상위 모듈 외 접근을 차단한다. 기존 application 계약은 검토된 타입·메서드 inventory로 계속 추적한다. Sales의 최상위 공개 API/SPI도 기능 소유권을 식별해 기존 기능 의존 그래프를 검사하며, 최상위 모듈 공개 여부와 기능 소유권을 별도로 판단한다.
 
 입고 대상 계획·포트 취소·구조 변경 취소·구조 변경 선잠금의 확장 계약도 `work/spi/{target,operation}`에서 Work가 소유한다. Farm 구현은 `farm/inbound/integration`과 `farm/transformation/integration`에 두며, 기존 application 유스케이스와 같은 트랜잭션에서 처리한다. 구조 변경·포트 취소의 보상 Mutation과 이력·접수 소유권, 잠금 순서는 유지한다.
 

@@ -3,11 +3,11 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
-import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
-import com.greenhouse.backend.farm.domain.inbound.InboundType;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordCancelRequest;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordCreateCommand;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordService;
+import com.greenhouse.backend.farm.inbound.domain.InboundType;
+import com.greenhouse.backend.farm.inbound.web.dto.InboundRecordCancelRequest;
+import com.greenhouse.backend.farm.inbound.web.dto.InboundRecordUpdateRequest;
 import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.api.effect.InboundPottingResultInput;
 import com.greenhouse.backend.work.effect.web.dto.InboundPottingPlanCreateRequest;

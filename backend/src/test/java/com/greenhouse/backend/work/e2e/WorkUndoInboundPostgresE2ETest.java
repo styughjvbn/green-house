@@ -5,13 +5,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
-import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.collection.application.OrchidGroupCollectionService;
 import com.greenhouse.backend.farm.collection.web.dto.OrchidGroupCollectionCreateRequest;
 import com.greenhouse.backend.farm.collection.web.dto.OrchidGroupCollectionMemberAddRequest;
 import com.greenhouse.backend.farm.collection.web.dto.OrchidGroupCollectionMemberResponse;
-import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordCreateCommand;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordService;
+import com.greenhouse.backend.farm.inbound.domain.InboundType;
 import com.greenhouse.backend.farm.orchid.application.OrchidGroupCommandService;
 import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.api.effect.InboundPottingResultInput;

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.orchid.repository;
 
-import static com.greenhouse.backend.farm.domain.inbound.QInboundRecord.inboundRecord;
+import static com.greenhouse.backend.farm.inbound.domain.QInboundRecord.inboundRecord;
 import static com.greenhouse.backend.farm.orchid.domain.QOrchidGroup.orchidGroup;
 import static com.greenhouse.backend.farm.structure.domain.QBedZone.bedZone;
 import static com.greenhouse.backend.farm.structure.domain.QHouse.house;
