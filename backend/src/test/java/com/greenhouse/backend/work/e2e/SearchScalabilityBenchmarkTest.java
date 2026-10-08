@@ -65,6 +65,14 @@ class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
 							SELECT id, 'SCALE-' || id, DATE '2045-01-02', 'DIRECT', id, '미입금', '작성중', 0, 0, 0, now(), now()
 							FROM business_partners
 							""");
+      // Direct owns the current monetary facts; a DIRECT document alone is incomplete.
+      jdbc.update(
+          """
+          INSERT INTO direct_sales (sales_slip_id, partner_id, sale_date, total_amount, version,
+              created_at, updated_at)
+          SELECT id, partner_id, sale_date, total_amount, 0, created_at, updated_at
+          FROM sales_slips
+          """);
       jdbc.update(
           """
 					INSERT INTO auction_shipments (id, shipment_date, auction_house_id, status, created_at, updated_at)
@@ -100,7 +108,9 @@ class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
       long salesParameters = QueryShapeCapture.maxParameters(capture.stop());
       assertThat(page.totalElements()).isEqualTo(count);
       assertThat(page.content()).hasSize(1);
-      assertThat(salesQueries).isEqualTo(count / 500 + 4);
+      // Partner search batches + document/count/partner lookup + Direct prices,
+      // confirmed payment allocations and reconciliation evidence for this one-row page.
+      assertThat(salesQueries).isEqualTo(count / 500 + 7);
       assertThat(salesParameters).isLessThanOrEqualTo(500);
       for (int spaces : List.of(1, 20)) {
         String words = "word ".repeat(spaces - 1);
