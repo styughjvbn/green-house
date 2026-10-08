@@ -1,6 +1,5 @@
-package com.greenhouse.backend.farm.application.orchid.mutation;
+package com.greenhouse.backend.farm.api.orchid;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
 import java.time.LocalDate;
 
 /** A new mutation command must declare its canonical fingerprint at compile time. */

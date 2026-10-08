@@ -547,3 +547,15 @@ Farm 사용 여부 단계 검증 결과:
 - Mutation 저장 JSON·snapshot canonical·기존 fingerprint·실행/조회/판매 재고·공개 값·단일 Writer 집중 검증 통과. inventory 검토 반영 후 재검증 통과. 초기 factory import/메서드 참조 오류는 수정 완료.
 - 전체 `clean test spotlessCheck` 777개 통과, 실패·오류·skip 0개. 임시 테스트 heap 2 GiB 사용. 프론트 `npm run check` 통과. OpenAPI 재생성 157 operations/132 paths/292 schemas, diff 없음. HTTP 타입 재생성 불필요.
 - DB schema·저장 JSON·트랜잭션/잠금·수량 계산 변경이 없어 `workE2eTest` 미실행. 전체 검증 후 변경은 이 ADR 결과 기록뿐이다.
+
+### 2026-10-08: 다섯 단계 진행 — 2. sealed Mutation 명령·정규화
+
+- sealed 명령과 모든 permits 하위 record, 항목/상세/관련 Mutation 값·출처 생성 helper를 `farm/api/orchid`로 이동한다. Java unnamed module의 sealed same-package 조건을 지키고, 두 명령 전용 normalizer는 같은 패키지의 package-private 구현으로 유지한다. 디렉터리용 Port/Interface/전달 Adapter를 추가하지 않는다.
+- 명령 생성자의 필수값·중복·수량 검증, ID 정렬·결과 순서·text/position 정규화·source UUID/operation key 생성 본문은 동일하다. 상세의 화분/생성 취소 정책은 Farm 기존 domain 정책을 호출하며 외부 공개 시그니처에 정책 타입을 노출하거나 규칙을 복제하지 않는다.
+- fingerprint projection·Normalizer 결과·영구 JSON 필드·Receipt/replay·잠금·트랜잭션·Writer 동작은 동일하다. 저장 schema fixture는 record Java FQCN 키만 치환하고 기대 필드/JSON/지문을 유지한다. reviewed inventory는 대응 FQCN만 치환하며 새 업무 호출을 일괄 승인하지 않는다.
+
+2단계 검증 결과:
+
+- 29개 명령/명령 전용 helper/출처 생성 class 본문은 package/import를 제외하면 동일하다. 출처 helper를 포함한 최종 상태에서 `clean` 집중 검증 통과: 지문·영구 필드/JSON·Mutation·입고·판매 재고·보상·공개 값·inventory·Writer.
+- 전체 `test spotlessCheck` 777개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과.
+- 초기 검증 중 source helper의 이동을 추가해 발생한 import 순서/inventory 불일치는 최종 clean build로 해결했다. Controller·HTTP DTO·schema 변경 없음. DB/트랜잭션·수량 정책 변경이 없어 OpenAPI/타입 재생성 및 `workE2eTest` 미실행. 전체 검증 후에는 이 ADR 결과만 추가했다.

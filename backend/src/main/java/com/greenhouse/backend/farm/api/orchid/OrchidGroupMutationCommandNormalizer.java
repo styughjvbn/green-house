@@ -1,4 +1,4 @@
-package com.greenhouse.backend.farm.application.orchid.mutation;
+package com.greenhouse.backend.farm.api.orchid;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

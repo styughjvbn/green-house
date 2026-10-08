@@ -1,4 +1,4 @@
-package com.greenhouse.backend.farm.application.orchid.mutation;
+package com.greenhouse.backend.farm.api.orchid;
 
 public record TransformOrchidGroupMutationResult(
     Long bedZoneId, OrchidGroupMutationDetails details) {

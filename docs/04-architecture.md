@@ -312,7 +312,7 @@ Farm의 즉시 작업 이력 생성과 작업 단건 조회는 Work 공개 API�
 
 Farm의 취소·보정 사용 여부 확장 계약은 `farm/spi/orchid`, 차단 결과 값은 `farm/api/orchid`에 둔다. Sales가 기존 구현으로 이 SPI를 직접 구현하며, 입고·판매·작업 검사 순서와 제외 대상 의미를 유지한다.
 
-Mutation 출처·결과·Entry enum과 과거 상태 snapshot 값은 `farm/api/orchid`에 둔다. Entity에서 결과·snapshot을 생성하는 factory는 Farm 내부에 유지하고, snapshot의 canonical 계산과 기존 저장 JSON·replay 의미를 보존한다.
+Mutation 출처·결과·Entry enum과 과거 상태 snapshot 값은 `farm/api/orchid`에 둔다. sealed Mutation 명령·명령 항목·출처 생성은 같은 공개 값 패키지에 두고 명령 전용 정규화 helper는 package-private으로 유지한다. 필수값·중복/수량 검증과 정렬·문자/위치 정규화는 기존 명령이 한 곳에서 수행한다. Entity에서 결과·snapshot을 생성하는 factory는 Farm 내부에 유지하고, snapshot의 canonical 계산과 기존 저장 JSON·replay 의미를 보존한다.
 
 Farm 원장 대사는 Work 공개 조회 API와 결과 값을 직접 사용한다. 진행 상태·효과 연결·보정 참조의 저장소 조회와 JSON 해석은 Work 내부 구현이 담당하며, Farm 대사의 기존 readOnly·REPEATABLE_READ 트랜잭션에 참여한다. 모듈 간 대사는 상태를 자동 보정하지 않는다.
 

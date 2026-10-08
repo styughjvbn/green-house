@@ -1,6 +1,6 @@
-package com.greenhouse.backend.farm.application.orchid.mutation;
+package com.greenhouse.backend.farm.api.orchid;
 
-import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationCommandNormalizer.requireText;
+import static com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationCommandNormalizer.requireText;
 
 public record CorrectOrchidGroupMutationItem(
     Long orchidGroupId, Integer correctedQuantity, String correctedStatus) {

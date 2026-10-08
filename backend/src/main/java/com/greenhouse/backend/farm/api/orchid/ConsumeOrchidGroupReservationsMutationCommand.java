@@ -1,9 +1,8 @@
-package com.greenhouse.backend.farm.application.orchid.mutation;
+package com.greenhouse.backend.farm.api.orchid;
 
-import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationCommandNormalizer.normalizeText;
-import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationCommandNormalizer.normalizeItems;
+import static com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationCommandNormalizer.normalizeText;
+import static com.greenhouse.backend.farm.api.orchid.OrchidGroupQuantityMutationCommandNormalizer.normalizeItems;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
 import java.time.LocalDate;
 import java.util.List;
 
