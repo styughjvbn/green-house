@@ -101,37 +101,30 @@ class ModularArchitectureTests {
 
   @Test
   void workLayersAreGroupedByFeature() throws IOException {
-    assertFeaturePackages("work", "application", "operation", "target", "effect", "correction");
-    assertFeaturePackages("work", "domain", "operation", "target", "effect", "correction");
-    assertFeaturePackages("work", "dto", "operation", "target", "effect", "correction");
+    for (String role : List.of("application", "domain", "repository", "controller", "dto")) {
+      assertThat(SOURCE_ROOT.resolve("work").resolve(role))
+          .as("Work no longer accepts the legacy role-first layout: %s", role)
+          .doesNotExist();
+    }
   }
 
   @Test
   void farmLayersAreGroupedByFeature() throws IOException {
-    String[] allFeatures = {
-      "structure",
-      "status",
-      "orchid",
-      "collection",
-      "inbound",
-      "variety",
-      "material",
-      "transformation"
-    };
-    assertFeaturePackages("farm", "application", allFeatures);
-    assertFeaturePackages("farm", "domain", allFeatures);
-    assertFeaturePackages("farm", "controller", allFeatures);
-    assertFeaturePackages("farm", "dto", allFeatures);
-    assertFeaturePackages(
-        "farm",
-        "repository",
-        "structure",
-        "orchid",
-        "collection",
-        "inbound",
-        "variety",
-        "material",
-        "transformation");
+    for (String role : List.of("application", "domain", "repository", "controller", "dto")) {
+      Path legacyRoot = SOURCE_ROOT.resolve("farm").resolve(role);
+      if (List.of("controller", "dto").contains(role)) {
+        assertThat(legacyRoot).doesNotExist();
+        continue;
+      }
+      for (Path source : javaSources(legacyRoot)) {
+        Path relative = legacyRoot.relativize(source);
+        assertThat(relative.getNameCount()).isGreaterThanOrEqualTo(3);
+        assertThat(relative.getName(0).toString()).isEqualTo("orchid");
+        assertThat(relative.getName(1).toString())
+            .as("Only the P5 Mutation subsystem remains in the legacy Farm layout: %s", source)
+            .isEqualTo("mutation");
+      }
+    }
   }
 
   @Test
@@ -220,17 +213,6 @@ class ModularArchitectureTests {
           assertThat(matches).as("Forbidden %s dependency: %s", forbidden, dependency).isFalse();
         }
       }
-    }
-  }
-
-  private void assertFeaturePackages(String module, String layer, String... expectedPackages)
-      throws IOException {
-    Path layerRoot = SOURCE_ROOT.resolve(module).resolve(layer);
-    if (!Files.isDirectory(layerRoot)) return;
-    try (Stream<Path> entries = Files.list(layerRoot)) {
-      assertThat(entries.map(path -> path.getFileName().toString()).toList())
-          .as("Unexpected legacy package in %s/%s", module, layer)
-          .isSubsetOf(expectedPackages);
     }
   }
 

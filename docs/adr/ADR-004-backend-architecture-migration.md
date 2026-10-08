@@ -3,7 +3,7 @@
 - 상태: 승인 — 기존 소유권·의존 방향 유지, 단계적 전환 진행 중
 - 작성일: 2026-10-08, Asia/Seoul
 - 범위: 백엔드 패키지 배치, 공개 계약, 아키텍처 테스트 및 문서 전환
-- 진행: P2 공개 계약·P3 Sales 기능 우선 배치 완료. P4 Farm/Work·P5 Mutation·P6 최종 통합은 후속 작업.
+- 진행: P2 공개 계약·P3 Sales·P4 Farm/Work 기능 우선 배치 완료. P5 Mutation·P6 최종 통합은 후속 작업.
 - 관련 문서: [목표 설계](../green-house-backend-architecture-final.md), [현행 아키텍처](../04-architecture.md), [Sales 소유권 결정](ADR-003-sales-document-information-architecture.md)
 
 실제 소스와 아키텍처 테스트를 기준으로 전환 방향과 이유를 기록한다. 구현 완료를 의미하지 않는다.
@@ -748,3 +748,16 @@ P3 완료 검증 결과:
 - 경로 이동을 이유로 새 interface/Port/Gateway/Adapter/integration을 추가하지 않는다. Mutation Engine은 기존 위치의 단일 Writer이며 운영 CLI·저장 지문/Receipt는 변경하지 않는다.
 
 - Inbound/Transformation 프로덕션 54개·같은 패키지 테스트 3개 이동. clean 컴파일과 입고/포트·구조 변경·이동/수량 배분·선잠금 Adapter·공개 값/의존 방향/inventory/단일 Writer 집중 검증 통과. 새 integration/계약 계층 없음. 전체 검증은 P4 완료 경계 검사와 함께 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E 미실행.
+
+### 2026-10-08: P4 완료 경계 검사
+
+- Work의 기존 role-first 루트를 차단하고 Farm의 이전 루트에는 P5 Mutation 하위만 허용하도록 기존 경로 검사를 강화한다. Farm 기존 기능 간 조회와 연관관계는 동일하며 Entity/Repository의 다른 최상위 모듈 유출·Work의 Farm 의존·단일 Writer·integration SPI 구현·공개 값 검사를 유지한다.
+- P4 전체 프로덕션 316개(Farm 189, Work 127)·소유 기능 테스트 44개를 이동했다. P4 시작 커밋과 대조해 실행 본문은 package/import/JPQL의 클래스 FQCN 외 동일하고 v1 필드 목록도 동일함을 확인했다. 명시적 Mutation 하위 제외로 Engine/원장/CLI 내부는 이동하지 않았다. 전체 검증 및 생성 명세 확인 후 완료로 기록한다.
+
+P4 완료 검증 결과:
+
+- 강화된 기능 우선 경로 검사 및 공개 값·모듈 방향·저장소 소유권·integration SPI·단일 Writer·소유권 parser·정확한 inventory 집중 검증 통과. 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과.
+- OpenAPI 재생성 157 operations/132 paths/292 schemas, 생성 diff 없음. 타입 재생성 불필요. reviewed inventory는 생성 보고서와 정확히 일치하며 패키지 변경 외 신규 승인 항목은 없다.
+- Work의 이전 계층 소스 0개. Farm 이전 계층 소스는 명시적 P5 Mutation 33개뿐이다. 이 범위 밖의 이전 class artifact는 0개다. Farm/Work/Sales application 구현의 다른 최상위 모듈 참조 각각 0개. Mutation 단일 Writer·CLI mainClass는 동일하다.
+- P4 시작 커밋과 대조해 Farm 189·Work 127 파일의 실행 본문은 package/import/JPQL 클래스 FQCN 외 동일하며, 모든 v1 필드 목록도 그대로다. 구조 변경 정책·수량/금액·입고/실행/취소·잠금·트랜잭션·SQL·DB 제약 변경 없음. `workE2eTest` 미실행. PostgreSQL 핵심 회귀는 P6 최종 검증 범위다.
+- 전체 검증 이후 변경은 이 ADR 결과와 문서 소스 링크뿐이다. P4 완료. 다음은 P5 Mutation 내부 재배치이며 최종 문서 통합/archive 이동은 P6에서 수행한다.
