@@ -242,13 +242,20 @@ V41은 `CREATE INDEX CONCURRENTLY`가 아닌 일반 index 생성 17개를 **하�
 
 실패·timeout이면 V41의 index 생성 전체가 rollback된다. 충돌·용량 원인을 해소하고 같은 release의 Flyway로 재시도한다. 기존 migration 파일을 수정하거나 일부 index를 수동으로 생성하여 실패를 우회하지 않는다. 성공 후 catalog의 정의·유효성을 확인하고 쓰기를 재개한다. 신규 index의 크기·WAL·수량 갱신의 HOT 비율도 관찰한다. quantity predicate를 사용하는 활성 배치 partial은 양수 수량 변경에도 HOT update에 영향을 줄 수 있다. 상세 비교와 미측정 범위는 [BE-035 실행 계획 검증](../backend-audit/archive/11-index-plan-validation.md)을 따른다.
 
-### 정산 초기화의 처리 단위와 재시작
+### Sales 금액 원천 전환과 파생 정산 제거
 
-`app.settlement.rebuild-on-startup`의 기본 활성 정책은 유지한다. 시작 시 양수 결과의 최대 ID를 고정하고 후보를 500건씩 확인하며 경매장·경매일 정산 한 건마다 별도 transaction으로 commit한다. 전체 미연결 결과·모든 거래처 잠금·넓은 날짜 구간의 정산을 한 transaction에 모으지 않는다. 한 정산 자체의 line이 아주 많은 경우는 여전히 큰 commit 단위이므로 대량 과거 자료는 복제 DB에서 먼저 실행 시간·heap/GC·잠금 대기를 측정한다.
+V43–V49는 Direct 전용 거래·가격, 유효 배분 조회, 경매 대금, 후속 결정과 실제 반환 도착을 준비·전환한다.
+V43의 기존 금액 원문·대사와 V49의 전환 직전 불일치 근거를 보존하며 검토 대상은 새 입금·금액 변경이 차단된다.
+원장이나 Farm 수량으로 불일치를 자동 보정하지 않는다. 원천 거래가 누락되면 migration을 중단한다.
 
-후속 정산에서 실패하면 해당 정산만 rollback되고 이미 commit한 정산은 유지된다. 해당 인스턴스의 startup 실패를 전체 초기화 rollback으로 취급하지 않는다. 오류 원인을 해결하고 같은 release로 다시 시작하면 연결된 결과를 건너뛰어 남은 정산을 처리한다. 기존 line의 금융 snapshot·입금·접수를 삭제하거나 초기화하지 않는다. 실행 후 추가된 ID와 스캔 뒤 늦게 commit한 과거 ID는 다음 실행에서 확인한다. 실행 전체에 대해 동일 DB snapshot이나 전역 날짜 순서를 보장하지 않는다.
+V47·V50은 기존 실제 경매 입금의 대상 참조를 경매 대금으로 바꾸고 입금 ID·금액·날짜·부모 연결·멱등키를 유지한다.
+제공 지급액이나 매칭 확인을 추정하지 않으며 기존 확인된 대금을 변경하지 않는다.
+누락된 대상·별칭이나 결과 소유권 충돌은 배포 전에 대사해야 하며 migration 실패 시 해당 migration이 rollback된다.
 
-여러 인스턴스는 거래처 선잠금 후 연결을 다시 확인한다. 초기화 전체의 완성된 화면이 필요한 운영 전환은 다른 writer/인스턴스를 중지한 상태에서 적용·확인한다. V42는 일반 index 생성으로 적용되며 `lock_timeout=5s`, 각 SQL `statement_timeout=5min`과 실패 시 rollback·재시도 원칙은 위 V41 절차와 같다. index가 쓰기/WAL 비용을 없애거나 무중단 생성을 보장하지 않는다.
+V50은 파생 정산 테이블을 제거한다. 쓰기를 중지하고 복제본에서 대사·migration을 검증한 뒤
+새 백엔드와 대금 API를 사용하는 프론트를 함께 배포한다. 기존 정산 API·재계산·시작 초기화는 제공하지 않는다.
+`app.settlement.rebuild-on-startup`은 현재 실행 효과가 없는 과거 옵션이다.
+V50 적용 뒤 구버전 정산 writer로 단순 rollback하지 않는다. 되돌리려면 검증된 배포 전 백업과 해당 릴리스를 함께 복원한다.
 
 ### 저장 지문·스냅샷 형식 변경 기준
 
@@ -322,7 +329,7 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 ```
 
 명령은 Flyway를 비활성화하고 Hibernate schema validation과 read-only DB connection을
-강제한다. 점검 계정은 대상 table과 sequence의 SELECT 권한이 필요하다. sequence 조회 권한이 없으면 Hibernate metadata에서 sequence가 보이지 않아 schema 누락으로 보고될 수 있다. 시작 시 정산 재구축도 실행하지 않는다. 다음 종료 코드를 사용한다.
+강제한다. 점검 계정은 대상 table과 sequence의 SELECT 권한이 필요하다. sequence 조회 권한이 없으면 Hibernate metadata에서 sequence가 보이지 않아 schema 누락으로 보고될 수 있다. 파생 정산 시작 재구축은 제거되었다. 다음 종료 코드를 사용한다.
 
 - `0`: 현재 단계의 모든 대사 통과
 - `1`: 연결·schema·실행 오류
@@ -472,7 +479,7 @@ WHERE (mutation_id IS NULL) <> (correlation_id IS NULL);
 
 ### 운영 백업 복원 후 기동 검증
 
-복원본의 read-only 대사가 `ACTIVE`, `ready=true`, `issues=[]`인지 확인한 뒤 동일 배포 후보로 HTTP 없는 기동 검증을 수행한다. 이 검증은 Flyway와 정산 초기화를 실행하지 않고 Hibernate schema validation과 원장 startup guard를 확인한다.
+복원본의 read-only 대사가 `ACTIVE`, `ready=true`, `issues=[]`인지 확인한 뒤 동일 배포 후보로 HTTP 없는 기동 검증을 수행한다. 이 검증은 Flyway를 실행하지 않고 Hibernate schema validation과 원장 startup guard를 확인한다.
 
 ```bash
 cd backend
@@ -509,7 +516,7 @@ blue/green rename과 자동 rollback을 수행하는 별도 systemd timer 절차
 - [ ] 작업 이력 등록/조회 확인
 - [ ] 판매 전표 생성/출력 확인
 - [ ] 경매 lot 조회/상태 변경 확인
-- [ ] 경매 정산 생성/입금 확인 확인
+- [ ] 경매 대금 조회·입금 가능 여부·기존 입금 이력 확인
 - [ ] 거래처 잔액 조회 확인
 - [ ] 주요 변경 후 `audit_events`의 요청·사용자·변경 필드 기록 확인
 - [ ] 백업 파일 생성 확인
@@ -616,7 +623,7 @@ Playwright 실행을 순서대로 수행한다. 결과는
 않는다. Chromium headed 모드와 Playwright Inspector를 사용하며, 축소된 반복 횟수로
 디버깅한다.
 
-### 정산·원장 대량 처리 측정
+### 원장 대량 처리 측정
 
 Docker와 JDK 21, Python 3가 있는 환경에서 프로젝트 루트의 다음 명령을 실행한다.
 
@@ -627,6 +634,7 @@ python3 scripts/performance/run-domain-benchmark.py --profile standard
 실행마다 Testcontainers의 격리 PostgreSQL에 합성 자료를 만들고
 `backend/build/domain-benchmark/<실행 ID>/result.json`에 환경·처리 시간·메모리/GC·JDBC·transaction/잠금 관측을 저장한다.
 결과 파일을 전달해 분석을 이어갈 수 있다. 먼저 환경 확인만 하려면 `--profile smoke --warmup 0 --samples 1 --heap 1g`를 사용한다.
+파생 정산 측정 시나리오는 제거되었으며 현재 원장 대사를 측정한다.
 profile별 데이터 크기, 실패/중단 결과와 관측 한계는
 [정산·원장 측정 가이드](../backend-audit/12-domain-performance-measurement.md)를 따른다.
 이 대량 측정은 기본 CI에 추가하지 않으며 실제 운영 DB 대사·validation을 대체하지 않는다.

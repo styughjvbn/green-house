@@ -67,7 +67,11 @@ public class AuctionProceedsPaymentTarget implements PaymentTargetPort<AuctionPr
         id,
         before,
         paymentSnapshot(id),
-        Map.of("targetType", "AUCTION_PROCEEDS"));
+        Map.of(
+            "targetType",
+            "AUCTION_PROCEEDS",
+            "partnerId",
+            repository.findById(id).orElseThrow().getAuctionHouseId()));
   }
 
   public AuctionProceedsResponse response(Long id) {

@@ -14,7 +14,7 @@ final class PersistencePlanFixtures {
 
   List<Long> seed(int roots) {
     jdbc.execute(
-        "TRUNCATE business_partners, varieties, orchid_groups, inbound_records, sales_slips, auction_shipments, auction_settlements, partner_payment_events, orchid_group_mutations, orchid_group_lineage CONTINUE IDENTITY CASCADE");
+        "TRUNCATE business_partners, varieties, orchid_groups, inbound_records, sales_slips, auction_shipments, auction_proceeds, partner_payment_events, orchid_group_mutations, orchid_group_lineage CONTINUE IDENTITY CASCADE");
     var zones = jdbc.queryForList("select id from bed_zones order by id limit 20", Long.class);
     if (zones.size() != 20) throw new IllegalStateException("20 fixture zones required");
     jdbc.update(
@@ -101,17 +101,15 @@ final class PersistencePlanFixtures {
         """);
     jdbc.update(
         """
-        insert into auction_settlements (id, created_at, updated_at, auction_date, auction_house_id,
-          deduction_amount, fee_amount, gross_amount, expected_deposit_amount, paid_amount, remaining_amount, status, version)
-        select 90000000+n, now(), now(), date '2040-01-01'+n/100, 90000001+n%100,
-          0, 0, 20, 20, 0, 20, 'PAYMENT_WAITING', 0 from generate_series(1,?) n
+        insert into auction_proceeds (id, created_at, updated_at, auction_house_id,
+          source_reference, reported_gross_amount, receivable_amount, matching_confirmed, confirmed_at, confirmed_by, version)
+        select 90000000+n, now(), now(), 90000001+n%100,'제공 지급 자료',20,20,true,now(),'확인자',0 from generate_series(1,?) n
         """,
         roots);
     jdbc.update(
         """
-        insert into auction_settlement_lines (id, created_at, updated_at, amount, quantity, unit_price,
-          status, auction_result_line_id, auction_shipment_lot_id, settlement_id)
-        select id, now(), now(), 10, 1, 10, 'UNPAID', id, id, sales_slip_id from sales_slip_items
+        insert into auction_proceeds_results (auction_result_line_id, auction_proceeds_id)
+        select id,sales_slip_id from sales_slip_items
         """);
     jdbc.update(
         """
@@ -173,8 +171,8 @@ final class PersistencePlanFixtures {
             "auction_shipment_lots",
             "auction_attempts",
             "auction_result_lines",
-            "auction_settlements",
-            "auction_settlement_lines",
+            "auction_proceeds",
+            "auction_proceeds_results",
             "partner_payment_events",
             "business_partners",
             "work_operations",

@@ -23,10 +23,6 @@ public class PaymentLedgerService {
 
   private final PaymentAuditSupport auditSupport;
 
-  public boolean isTargetMigrated(PaymentTargetType type, Long id) {
-    return eventRepository.isTargetMigrated(type.name(), id);
-  }
-
   public Long recordManualPayment(
       Long partnerId, PaymentTargetType targetType, Long targetId, ManualPaymentCommand request) {
     var received =

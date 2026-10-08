@@ -4,10 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.sales.application.auction.AuctionProceedsPaymentService;
+import com.greenhouse.backend.sales.application.auction.AuctionProceedsReader;
+import com.greenhouse.backend.sales.application.auction.AuctionProceedsService;
 import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
 import com.greenhouse.backend.sales.application.auction.RecordAuctionResultCommand;
-import com.greenhouse.backend.sales.application.auction.settlement.AuctionPaymentService;
-import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementService;
 import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
 import com.greenhouse.backend.sales.application.payment.PaymentService;
 import com.greenhouse.backend.sales.domain.auction.AuctionAttemptStatus;
@@ -49,14 +50,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 class AuctionQuantityHistoryPostgresE2ETest extends WorkE2ETestBase {
 
   @org.springframework.beans.factory.annotation.Autowired
-  private AuctionPaymentService auctionPayments;
+  private AuctionProceedsPaymentService auctionPayments;
 
   private static final LocalDate DATE = LocalDate.of(2026, 10, 4);
   @Autowired private WorkTestDataSeeder seeder;
   @Autowired private AuctionShipmentRepository shipments;
   @Autowired private BusinessPartnerRepository partners;
   @Autowired private AuctionTrackingService auctions;
-  @Autowired private AuctionSettlementService settlements;
+  @Autowired private AuctionProceedsReader settlements;
+  @Autowired private AuctionProceedsService proceedsService;
   @Autowired private PaymentService payments;
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private EntityManager entityManager;
@@ -182,19 +184,26 @@ class AuctionQuantityHistoryPostgresE2ETest extends WorkE2ETestBase {
   @ValueSource(booleans = {false, true})
   void settlementAndPaymentSnapshotsSurviveRejectedQuantityCorrection(boolean paid) {
     auctions.addResult(lotId, result("sold", AuctionAttemptStatus.SOLD));
-    var settlement = settlements.rebuild(partnerId, DATE);
+    var resultIds =
+        jdbc.queryForList(
+            "select line.id from auction_result_lines line join auction_attempts attempt on attempt.id=line.auction_attempt_id where attempt.shipment_lot_id=?",
+            Long.class,
+            lotId);
+    Long id = proceedsService.record(partnerId, "제공 지급 자료", 40000L, 40000L, resultIds);
+    proceedsService.confirm(id, "확인자");
+    var settlement = settlements.get(id);
     if (paid)
-      auctionPayments.confirmAuctionPayment(
+      auctionPayments.confirm(
           settlement.id(),
           new ManualPaymentCommand(40_000L, DATE, "paid", "BANK", "입금자", "작업자", null));
     var before = snapshot();
     assertThatThrownBy(() -> auctions.adjust(lotId, adjustment(30, 10, 0)))
         .isInstanceOf(ConflictException.class);
     assertThat(snapshot()).isEqualTo(before);
-    var rebuilt = settlements.rebuild(partnerId, DATE);
-    assertThat(rebuilt.grossAmount()).isEqualTo(40_000);
-    assertThat(rebuilt.lines()).isEqualTo(settlement.lines());
-    assertThat(rebuilt.paidAmount()).isEqualTo(paid ? 40_000L : 0L);
+    var rebuilt = settlements.get(settlement.id());
+    assertThat(rebuilt.reportedGrossAmount()).isEqualTo(40_000);
+    assertThat(rebuilt.resultIds()).isEqualTo(settlement.resultIds());
+    assertThat(rebuilt.paidAmount()).isEqualByComparingTo(paid ? "40000" : "0");
   }
 
   @Test
@@ -374,8 +383,8 @@ class AuctionQuantityHistoryPostgresE2ETest extends WorkE2ETestBase {
             "auction_result_lines",
             "auction_lot_status_history",
             "auction_command_receipts",
-            "auction_settlements",
-            "auction_settlement_lines",
+            "auction_proceeds",
+            "auction_proceeds_results",
             "partner_payment_events",
             "partner_balance_summaries",
             "audit_events"))

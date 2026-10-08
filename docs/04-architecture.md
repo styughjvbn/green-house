@@ -29,7 +29,7 @@ green-house/
 - 선택 이력은 동·다이·구역·난 묶음 범위별 페이지 API로 조회한다. 요약은 첫 20건만 사용하고 난 묶음 상세는 10건 단위로 조회한다. 선택 키·상세 페이지별 메모리 캐시와 진행 요청 공유·취소를 적용하고, 캐러셀 이동 상태는 선택 상태와 분리해 단순 스와이프가 이력 조회를 유발하지 않게 한다.
 - 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
 - 판매와 inventory의 서버 페이지 목록은 TanStack Query로 관리한다. 두 기능 모두 URL을 조회 조건의 단일 기준으로 사용하고 서버와 클라이언트가 같은 파서와 query option을 공유한다. 판매 전표의 상세 선택도 `slipId` URL 상태로 관리해 deep link와 브라우저 탐색을 지원하며 상세 서버 상태를 local state에 복제하지 않는다. 서버 컴포넌트는 현재 URL 조건을 prefetch해 hydration하며, 공통 URL 페이지 훅은 검색 초안과 URL 변경만 담당한다.
-- 경매 정산은 페이지·전체 합계·선택 상세를 각각 Query cache로 관리한다. 페이지와 상세 선택은 URL에 유지하고, 입금·재계산 후 응답으로 상세 cache를 갱신하며 관련 페이지·합계만 무효화한다. 전체 배열을 클라이언트에서 자르거나 합산하지 않는다.
+- 경매 대금은 페이지·선택 상세를 각각 Query cache로 관리한다. 페이지와 상세 선택은 URL에 유지하고, 입금 후 응답으로 상세 cache를 갱신하며 관련 페이지를 무효화한다. 전체 배열을 클라이언트에서 자르거나 합산하지 않는다.
 - 판매 전표·정산 상세의 입금 이력도 대상·유형·페이지별 Query cache를 사용한다. 이력의 열림·페이지는 URL에 두고 대상 선택이 바뀌면 초기화한다. 입금 성공 후 서버가 반환한 잔액을 다음 입력 기본값으로 사용하고 해당 대상의 이력을 갱신한다. 이력 조회 실패는 입금 결과와 구분해 재조회할 수 있게 한다.
 - 작업 관리는 URL을 조회 범위·보기 방식·필터·페이지의 단일 기준으로 사용한다. 서버 진입 컴포넌트인 `WorkRecordRoutePage`는 현재 목록 또는 캘린더 query만 prefetch해 hydration하고, 작업 유형과 농장 전체 배치 정보는 등록 또는 실행 다이얼로그를 열 때 조회한다. 클라이언트 `WorkRecordPage`는 보기 전환과 등록 다이얼로그의 열림 상태만 관리하고, 등록 다이얼로그가 자체 참조 데이터의 로딩과 오류를 처리한다. 목록과 캘린더는 공통 작업 동작 훅과 상세 패널을 사용한다. 캘린더는 전용 기간 API를 한 번 호출하고, 작업 등록·실행 후 관련 작업 및 농장 query를 무효화한다.
 - 작업 관리는 조회·상태 변경을 `model/operation`, 등록 상태와 대상 계산을 `model/registration`, 작업 유형별 표현 구성을 `model/work-types`로 구분한다. 화면은 `ui/list`, `ui/calendar`, `ui/detail`, `ui/registration`, `ui/work-types`에서 기능별로 구성한다. 대상 출처, 등록 가능 모드, 실행 workflow는 백엔드 capability를 사용하고 `workTypeDefinition.ts`에는 안내 문구 같은 표현 규칙만 둔다.
@@ -187,13 +187,13 @@ Sales 내부는 기존 계층을 유지한 `sales/{application,domain,repository
 
 - Document는 공통 전표·품목·allocation·예약·출고·snapshot·생성 receipt를 소유한다. 일반/경매 allocation 합계와 Farm 예약 대사를 계속 함께 수행한다.
 - Direct는 일반 판매 회계 연결과 입금 진입 유스케이스를 맡는다. V43은 전용 금액 테이블과 기존 금액의 원문 복사·이전 시점 대사를 준비한다. 신규 생성·작성중 수정은 Document와 Direct 거래/가격 모델을 같은 최상위 transaction에서 저장하며, Direct writer는 호출 transaction에 반드시 참여한다. 전표·품목 ID만 연결하고 Entity를 공유하지 않는다. 현재 입금 허용 금액은 Direct 거래와 Payment 유효 배분을 기준으로 검증한다. 입금 후 공통 전표의 금액 요약은 이 값으로 갱신하는 조회 projection이며, 상세·목록·출력 조회도 이 계약으로 일반 판매의 거래/품목 금액·예상일·지급 방식·유효 수납·잔액을 조립한다. 생성·수정의 가격과 합계도 Direct가 먼저 계산하고 Document는 그 결과를 표시 projection으로 저장한다. 검색·분석의 호환 조회는 이 projection을 사용하며 별도 금액 원천으로 취급하지 않는다. V49는 과거 projection을 Direct 거래/가격과 유효 배분으로 갱신하며, 전환 직전 불일치 원문을 기존 대사 근거와 구분해 보존한다. 이전 시점 검토 근거를 현재 수납액 원천으로 사용하지 않는다.
-- Auction은 출하·lot·시도·결과·반환 추적과 임시 호환 파생 정산(`auction/settlement`)을 소유한다.
+- Auction은 출하·lot·시도·원본 결과·후속 결정·실제 반환 도착·제공 대금과 결과 연결을 소유한다. 파생 정산 구현은 제거한다.
 - Payment는 실제 입금 이벤트·연결 원장·거래처 잔액을 소유한다. Partner는 거래처 기준정보·거래처별 결제 선호 설정을 소유하며 금액 원장을 직접 변경하지 않는다.
 - 내부 Direct 금액 조회는 Document 소유 값 계약으로 전용 거래/가격과 Payment의 유효 배분을 조합한다. Payment Repository projection은 외부로 노출하지 않고 application 값으로 변환한다. 조회의 검토 필요 상태는 이전 대사와 현재 연결 검증을 반영하며 원장이나 저장 금액을 변경하지 않는다. 수동 입금의 대상 정책은 이 계약을 사용하며 현재 입금 후 감사·조회 projection도 이 값으로 갱신한다. 전표 상세·목록·출력은 이 값 계약을 사용하며 조회 때문에 전표 요약이나 원장을 수정하지 않는다. 일반 판매 금액 자료가 없는 경우 기존 요약으로 대체하지 않는다. 기존 자유 입금 문구도 Direct가 소유하며 V48에서 원문을 보존한다. 배분 전의 표시 문구와 실제 수납/입금 capability를 구분한다. 원래 생성 receipt와 과거 snapshot은 저장된 응답을 그대로 보존한다.
 - Payment의 유효 배분 조회는 대상 ID·소유 거래처를 bound parameter로 전달하는 CTE 집계로 수납 원문을 중복 합산하지 않는다. 동일한 조회를 H2와 PostgreSQL에서 검증하며, 같은 transaction의 아직 flush되지 않은 원장 기록도 반영한다. 대상은 500개씩 처리하고 다른 내부 경계의 테이블을 읽지 않는다.
 - Direct의 이전 시점 대사 검토는 Direct가 판정한다. Document는 내부 port의 검토 결과로 수정·수납 경로를 차단하고 서버 업무 capability와 상세 상태를 조립한다. 대사 근거는 변경하지 않으며 성공한 원래 입금 재전송은 먼저 확인한다. 검토 조회는 대상 ID를 모아 일괄 처리하므로 품목 수에 비례하는 조회를 추가하지 않는다.
 - Document는 구체적인 Direct/Auction/Payment 서비스를 호출하지 않는다. 필요한 출하 생성·취소 보호·표시 조회는 Document 소유 `AuctionDocumentPort`, 일반 판매의 예상일·입금 이력·잔액 연결은 `DirectDocumentAccountingPort`로 요청하고 소유자 adapter가 처리한다. 기존 출하 값 계약은 port로 이동하며 복제하지 않는다.
-- Payment가 정의한 `PaymentTargetPort`를 Document와 임시 경매 정산이 구현한다. Payment는 Entity를 받지 않고, 대상 잠금·유효성 검증 뒤 원장 멱등 확인→대상 금액 반영→입금/연결 원장→잔액→감사→응답을 조율한다. 유스케이스 진입점이 트랜잭션을 열고 대상 port와 원장 writer는 기존 트랜잭션에 반드시 참여한다.
+- Payment가 정의한 `PaymentTargetPort`를 Document와 경매 대금이 구현한다. Payment는 Entity를 받지 않고, 대상 잠금·유효성 검증 뒤 원장 멱등 확인→대상 금액 반영→입금/연결 원장→잔액→감사→응답을 조율한다. 유스케이스 진입점이 트랜잭션을 열고 대상 port와 원장 writer는 기존 트랜잭션에 반드시 참여한다.
 - Auction 후속 결정·실제 도착은 lot 선잠금과 receipt 확인 후 Farm 생성/생성 보상을 최상위 application transaction에서 조율한다. 결정과 실제 도착 이력은 분리하며, 도착은 새 묶음·생성/보상 Mutation ID만 연결한다. Farm에는 안정적인 `AUCTION_RETURN_ARRIVAL` 출처를 사용하고 기존 InboundRecord와 Work 포트 흐름을 거치지 않는다.
 - 저장소·Entity·QueryDSL EntityPath는 내부 소유 경계 밖으로 노출하지 않는다. application 공개 멤버의 중첩 값 계약 검사와 내부 의존 그래프 검사를 함께 실행한다. 구현 의존은 `Direct/Auction → Document/Payment/Partner`, `Document → Payment port/Partner`, `Payment → Partner`이며 역방향 구현 의존을 허용하지 않는다.
 
@@ -222,15 +222,15 @@ Sales 내부는 기존 계층을 유지한 `sales/{application,domain,repository
 - 반환 확인
 - 수량 보정
 
-### Sales Payment와 호환 경매 정산
+### Sales Payment와 경매 대금
 
 - 수동 입금 확인
 - 부분입금
 - 거래처 잔액
 - 입금 이벤트
 - 거래처 정산 설정은 Sales Partner에 둔다.
-- 경매 정산과 정산 행은 Sales Auction의 임시 호환 경계에 둔다. 결과 기반 입금 대상·조회 계약으로 전환한 뒤 제거하며 새 보관·재구성 모델을 추가하지 않는다.
-- 경매 정산 재구성·초기화·입금은 거래처→정산→잔액 순서를 공유한다. 초기화는 바깥 transaction을 거절하는 coordinator가 후보를 읽고 정산별 application writer를 호출한다. 각 writer는 해당 거래처를 먼저 잠근 뒤 연결 여부를 재확인하고 경매장·경매일 한 정산을 commit해 중복 기동 시 같은 결과를 재추가하지 않는다. 실패한 정산만 rollback하고 이전 정산의 commit은 남는다. 수동 재계산의 기존 스냅샷·입금액·상태 계산 정책은 유지한다.
+- 경매 대금은 제공 근거와 원본 결과 연결로 수납 대상이 된다. 파생 정산 테이블과 생성·시작 초기화·재계산·조회/입금 경로를 제거하며 새 보관·재구성 모델을 추가하지 않는다.
+- 경매 대금 입금은 거래처→대금 root→잔액 순서를 사용한다. 같은 대상의 동시 입금과 재전송은 잠금 아래 유효 배분과 원래 성공 기록으로 검증한다.
 
 ### auth / demo
 
@@ -296,13 +296,13 @@ Persistence 조회 규칙:
 - Entity, Repository, DB table은 각각 하나의 업무 모듈이 소유한다. 소유 모듈 밖에서는 해당 Repository나 internal 구현을 직접 참조하지 않는다.
 - 다른 모듈의 기능이 필요하면 제공 모듈의 application API를 호출한다. 호출 측의 도메인 흐름에 필요한 조회 계약은 호출 측에 port를 두고 소유 모듈이 구현할 수 있다.
 - 모듈 간 계약은 필요한 값만 전달한다. 외부 모듈 Entity를 장기간 보관하거나 응답 조립 편의를 위해 aggregate 전체를 넘기지 않는다.
-- Partner 조회는 현재 기준 정보의 application 값을 반환한다. Sales·Auction·Settlement는 거래처 ID로 연결하며 기존 DB 외래키를 유지한다. Entity를 반환하는 호환 조회는 제거했다. 판매 응답의 연락처를 포함한 현재 거래처 정보와 경매장 이름은 ID를 모아 일괄 조회한다.
+- Partner 조회는 현재 기준 정보의 application 값을 반환한다. Document·Direct·Auction·Payment는 거래처 ID로 연결하며 기존 DB 외래키를 유지한다. Entity를 반환하는 호환 조회는 제거했다. 판매 응답의 연락처를 포함한 현재 거래처 정보와 경매장 이름은 ID를 모아 일괄 조회한다.
 - Sales는 난 묶음 Entity 대신 ID와 Farm application의 현재 상태 값을 사용한다. 배분·재고 이동의 기존 DB 외래키는 유지하며, 상세 응답은 Sales의 배분·보존 스냅샷과 Farm의 상태 값을 따로 일괄 조회해 조립한다. 현재 상태 조회는 500개 ID씩 처리한다.
 - Farm의 외부 난 묶음 조회 계약은 상태 값·판매 선택·호출 트랜잭션 내 잠금으로 제한한다. Entity가 필요한 Farm 내부 유스케이스는 소유 Repository를 사용한다. 공개 Reader의 반환값·입력과 중첩 collection/record에 Entity를 추가하면 architecture 검증이 실패한다.
 - 기존 판매 전표의 수정·상태 전환·입금은 root를 먼저 잠그고 소유 품목·배분·역사 스냅샷을 일괄 로딩한다. 배분과 스냅샷 collection은 별도 쿼리로 초기화해 다중 collection fetch join과 대상별 lazy 조회를 피한다. 수정의 flush 후에도 같은 managed aggregate로 재예약·감사·최종 응답을 처리한다. Farm의 재잠금과 예약 전·해제 후·출고 직전 snapshot, 최종 현재 상태 조회는 각각의 시점 계약으로 유지한다.
 - 경매 변경은 lot root만 잠근 뒤 기존 시도의 결과 행을 일괄 로딩해 cascade flush·응답 mapper의 시도별 조회를 피한다. 완료 접수 replay는 이 로딩보다 먼저 처리한다. 쓰기 응답은 lot의 collection 순서와 새 시도의 append 위치를 유지하고 결과 행은 생성 ID 순으로 읽으며, 결과·반환의 최초 응답은 자식 ID가 확정된 뒤 같은 트랜잭션의 접수 snapshot에 보존한다. 조회용 정렬을 쓰기 응답에 적용하거나 shipment fetch로 부모 잠금을 추가하지 않는다.
-- 전표의 입금 상태 감사 스냅샷은 Sales가, 경매 정산 상태와 입금 이벤트의 감사 스냅샷은 Settlement가 소유하며 공통 Audit 값 계약으로 기록한다. 모듈별 감사 helper는 내부 전용이고 Sales의 입금은 Settlement의 원장·잔액 application API만 사용한다. 입금 이벤트 생성과 대상의 상태 변경은 서로 다른 감사 사실로 유지하며 최상위 입금 트랜잭션에 함께 참여한다. Sales 소유 전표 입금 감사도 기존 조회와의 호환을 위해 `SETTLEMENT_MANAGEMENT` 출처를 보존한다. 감사 출처를 코드의 소유 모듈명에 맞춰 임의 변경하지 않는다.
-- 정산이 사용하는 경매 결과 값은 Auction 소유 scalar projection에서 application 값으로 변환한다. 결과·시도·lot·출하 Entity 그래프를 적재하거나 Repository projection을 모듈 밖에 전달하지 않는다. ID를 받는 참조 조회는 중복을 제거해 500개씩 처리한다. 정산 금융 snapshot 입력과 응답의 현재 표시 참조는 각 단계에서 조회하며 같은 값으로 합치지 않는다. 분할 조회의 표시 정보 전체가 하나의 DB snapshot이라는 보장은 추가하지 않는다.
+- 대상 금융 감사는 Document/Direct 또는 Auction이, 실제 입금 감사는 Payment가 소유한다. 값 계약으로 기록하고 같은 최상위 transaction에 참여한다. 기존 원장·전표 입금의 `SETTLEMENT_MANAGEMENT` 출처는 호환을 위해 유지하며 새 대금 대상 감사는 `SALES_MANAGEMENT`를 사용한다.
+- 경매 대금의 원본 결과 표시는 Auction 소유 scalar projection을 application 값으로 변환한다. 참조 ID는 중복을 제거해 500개씩 처리하고 페이지 root 조회에 collection fetch join을 사용하지 않는다.
 - Work 효과 handler는 Work가 만든 application 실행 값을 받으며 Work Entity에 접근하지 않는다. 효과 저장과 대상·작업 상태 전이는 Work가 기존 유스케이스 트랜잭션 안에서 처리한다. 대상 위치는 저장된 스냅샷의 값을 복사해 전달한다. 재실행 시 기존 효과를 먼저 조회하고, 새 완료 기록은 대상마다 중복 조회를 추가하지 않는다.
 - Farm의 품종 기반 즉시 작업은 기존 원본 조회/잠금 시점의 품종명 값을 Work 실행 API에 전달한다. 자동 이력 제목 생성은 Work 안에서 처리하며 다른 모듈은 Work의 시각·주체·제목 조립 helper에 의존하지 않는다. 자동 제목과 요청 원문 제목은 별개이며 기존 명령 payload·접수 지문·actor 정규화를 유지한다. 내부 helper의 외부 참조는 컴파일된 dependency architecture 검증으로 차단한다.
 - 입고의 포트 취소는 Work의 포트 업무 API로 요청한다. Work가 접수 namespace·사유 정규화·지문과 기존 작업 처리의 membership 의미를 선택하며, 다른 모듈은 Receipt helper·지문 계산기나 저장 callback에 의존하지 않는다. Farm은 Work 소유 업무 port로 입고 검증·보상·입고 감사를 처리한다. 업무 API와 Farm adapter는 호출자 트랜잭션을 필수로 요구하며 최상위 입고 트랜잭션에서 접수와 모든 변경을 함께 확정/rollback한다. 완료 접수는 현재 입고 검증 전에 replay하고, 기존 저장 키·지문 필드·작업 ID 목록을 보존한다. 입고 응답은 기존처럼 현재 참조로 조립하며 생성 응답 snapshot 계약으로 바꾸지 않는다.
@@ -368,7 +368,7 @@ Persistence 조회 규칙:
 - 정산 설정의 최초 조회도 기본값 생성이 가능한 쓰기 유스케이스다. 거래처를 먼저 잠그고 설정을 다시 조회해 동시 최초 조회의 중복 생성을 막는다. 설정 변경도 같은 거래처 잠금 안에서 변경 전후 감사 값을 저장한다.
 - 수동 입금 원장 API는 거래처 ID와 application 명령을 받고 입금 이벤트 식별자만 반환한다. 원장·잔액 Entity는 Settlement 안에서 관리한다. 원장 처리는 호출 트랜잭션을 필수로 요구해 대상 입금 상태·입금/연결 이벤트·잔액·감사가 함께 반영되거나 rollback되게 한다.
 - 일반 판매의 입금 대상 조건은 전표 도메인이 소유하며 실제 입금과 `CONFIRM_PAYMENT` 판단이 이를 공유한다. application은 대상 검증 후 기존 입금 키를 확인하고 새 입금에만 잔액 검사를 적용해 완납 후 재요청도 재처리 없이 응답한다.
-- 경매 정산 행은 결과·lot ID와 최초 반영 시점의 수량·단가·금액을 보관한다. Auction application의 결과 값을 받아 생성하며, 이미 반영한 결과의 금액은 재구성이나 응답 조립 때 원본 값으로 덮어쓰지 않는다. 예상 입금일의 달력일·영업일 계산은 정산 설정 Entity가 소유하고 application은 설정의 단건·일괄 조회만 조율한다.
+- 대금 모델은 제공 금액과 원본 결과 연결을 보존한다. 원본 결과의 표시를 위해 결과 application 값을 조회하되 제공 지급 금액을 결과 합계로 덮어쓰지 않는다. 일반 판매 예상일 계산은 거래처 설정 정책을 사용한다.
 
 #### API 계약과 프론트엔드 경계
 
@@ -394,14 +394,13 @@ Persistence 조회 규칙:
 - 출하 선택지는 Auction이 최신 후보 ID를 페이지로 제공하고 Sales가 자기 전표에 연결된 ID를 제외한다. 미사용 200건을 채우거나 후보가 끝날 때까지 확인한 뒤 선택된 출하·lot만 일괄 조회한다. 다른 모듈의 Entity를 JPQL 하위 쿼리에 직접 넣지 않는다.
 - Farm 구조 조회는 동·다이·구역을 읽은 뒤 다이 ID로 난 묶음과 참조를 일괄 조회해 조립한다. 맵은 필요한 값만 JPQL projection으로 읽고 전체 난 묶음 상세 DTO나 Entity graph를 만들지 않는다. 저장소 projection은 Farm application 안에서 응답으로 변환하며 외부 계약으로 노출하지 않는다.
 - DTO mapper가 lazy association을 순회하지 않게 조회 범위를 명시한다. mapper 호출 전 필요한 연관 데이터가 이미 로딩됐는지 확인한다.
-- 경매 정산 페이지는 정산 root와 Partner application API의 일괄 이름 조회만 사용한다. 정산 행과 Auction 결과는 상세 조회에서만 조립한다. 같은 조회 조건의 전체 금액은 DB 집계로 구하고 페이지 크기나 호환 목록 상한을 적용하지 않는다. 호환 목록은 최신 500개의 root를 선택한 뒤 상세를 일괄 조회한다.
-- 입금 이벤트의 거래처 이름도 Partner application API로 일괄 조회한다. 정산 상세 행의 출하일·품종·등급은 Auction application의 결과 값으로 일괄 조립한다. 거래처 이름은 현재 기준 정보이며, 원장의 금액·입금자·날짜나 기존 정산 행의 보존된 값은 다시 계산하지 않는다.
+- 경매 대금은 root 페이지를 먼저 읽고 결과 참조·원본 결과 표시·거래처 이름·유효 배분을 일괄 조회한다. 미확인 지급 금액을 결과 합계로 보충하지 않는다. 원본 결과 표시는 Auction application 값 계약을 사용하며 외부 Entity 그래프를 전달하지 않는다.
+- 입금 이벤트의 거래처 이름도 Partner application API로 일괄 조회한다. 현재 표시 이름과 원래 원장의 금액·입금자·날짜는 구분하며 조회로 원장 사실을 다시 쓰지 않는다.
 - 입금 이벤트는 유형 필터를 적용한 뒤 서버 페이지로 조회한다. 원본 입금의 식별자만 필요한 연결 이벤트 응답에서는 원본 Entity 전체를 fetch하지 않는다. 호환 전체 목록은 모든 유형을 포함해 최신 500개 이벤트로 제한한다.
-- 정산 초기 재구성은 시작 시 Auction 양수 결과의 최대 ID를 고정하고 500개씩 자기 연결 ID와 대조한다. 후보의 scalar 값에서 정산 key를 찾은 뒤 각 writer가 같은 상한 안의 경매장·경매일 결과를 잠금 아래 다시 읽는다. 기존 정산은 정확히 해당 key의 line만 적재하며 광범위한 날짜 구간을 읽지 않는다. 전체 결과/aggregate를 한 persistence context에 누적하지 않는다. 처리할 새 결과가 없으면 aggregate를 읽거나 수정하지 않으며, 상한 조회 1회와 후보 ID/link 대조만 수행한다. 한 정산의 line 전체와 영향 key 중복 제거는 유지한다. 모듈 간 역방향 의존이나 별도 동기화 상태 테이블은 추가하지 않는다.
 - 목록·옵션·분석 조회에는 pagination, 날짜 범위 또는 명시적 최대 건수 중 하나를 둔다. 장기 누적 테이블의 무제한 `findAll`을 API 경로에 사용하지 않는다.
 - 거래처 관리 목록과 선택지는 같은 검색 조건·정렬·페이지 조회를 사용하되 선택지 응답에는 식별자·이름·활성 여부만 전달한다. 현재 선택은 검색 결과와 별도로 단건 조회해 페이지 밖이나 비활성 거래처도 표시한다. 호환 활성 목록은 이름 검색과 기존 응답을 유지하고 500건으로 제한한다.
 - 작업·재고 분석은 Work·Farm의 기존 읽기 application API가 집계 값과 제한된 최근 기록을 제공한다. Analytics는 기간 검증과 HTTP 응답 조립을 담당하며 두 모듈의 Q 타입이나 Repository projection을 참조하지 않는다. 작업의 완료 조건과 재고의 판매 가능·주의 상태는 소유 모듈에서 적용한다.
-- 판매 분석도 Sales의 완료 전표 집계와 최근·미수 전표 값만 소비한다. Partner는 현재 이름·유형을 500개 ID씩 scalar 조회하고, Settlement는 0이 아닌 현재 잔액을 읽기 전용 값으로 제공한다. Analytics는 전표·품목·거래처 Entity를 적재하거나 타 모듈 테이블을 직접 join하지 않는다.
+- 판매 분석도 Sales의 완료 전표 집계와 최근·미수 전표 값만 소비한다. Partner는 현재 이름·유형을 500개 ID씩 scalar 조회하고, Payment는 0이 아닌 현재 잔액을 읽기 전용 값으로 제공한다. Analytics는 전표·품목·거래처 Entity를 적재하거나 타 모듈 테이블을 직접 join하지 않는다.
 - 분석의 최상위 application 트랜잭션은 읽기 전용 `REPEATABLE_READ`를 사용한다. 여러 소유 모듈을 조회하는 동안 매출·현재 이름·잔액이 서로 다른 시점으로 섞이지 않게 한다. 쓰기 유스케이스의 트랜잭션·잠금 순서는 바꾸지 않는다.
 - 입금 상태별 판매 분석은 Sales가 저장된 자유 문자열의 호환 분류를 소유하고 분류별 합계만 제공한다. Analytics는 원문 상태를 해석하거나 실제 입금액으로 분류를 다시 만들지 않는다. 이 분류는 기존 보고서의 호환 값이며 입금 가능 여부·원장 상태 판단에 사용하지 않는다. 저장 상태의 표준화는 기존 데이터와 지표 변경을 함께 검토할 별도 정책 작업이다.
 - 조회 종료월과 직전 월 비교 범위는 기존 분석 기간 값에서 계산한다. 직전 월에 없는 일자는 양 끝을 각각 말일로 보정한다. 6개월 차트의 표시 순서·빈 값, 입금 분류의 표시 이름, 미수 안내 문구·색상·링크는 조회 의존성이 없는 응답 assembler가 담당한다. 별도 Spring service나 중간 조회 DTO를 추가하지 않는다.
@@ -422,7 +421,7 @@ Persistence 조회 규칙:
 
 - DB 시점은 UTC로 저장하고 농장 업무일 계산은 `Asia/Seoul` 기준 `TimeConfig`와 주입된 `Clock`을 사용한다. 공통 Entity 생성·수정 시각은 같은 Clock을 읽는 Spring Data JPA auditing provider가 기록한다. 상태 이력과 그룹 가입·탈퇴 시각은 application이 UTC 값을 domain에 전달한다.
 - 난 묶음 응답의 나이 계산은 application에서 한 번 구한 업무일을 전달받는다. 목록 조립 도중 날짜가 바뀌거나 DTO가 시스템 시계를 직접 읽지 않게 한다.
-- 경매 정산의 결과 수신·입금 확인 시각은 application service가 `Clock`에서 UTC 값으로 정해 domain에 전달한다. 일괄 재구성은 같은 처리 시각을 사용하고, 정산에 이미 연결된 결과는 다시 재구성하지 않는다.
+- 경매 대금 연결 확인과 후속 결정·반환 도착의 시각은 application service가 주입된 Clock으로 UTC 값을 정해 domain에 전달한다.
 - Flyway migration은 `nullable 추가 → backfill → 제약 적용`처럼 기존 운영 데이터가 통과할 수 있는 순서를 사용한다. 대용량 table 변경은 lock 범위와 운영 적용 시간을 별도로 검토한다.
 - `NOT VALID` CHECK의 신규/갱신 행 보호와 기존 행 검증 완료를 구분한다. 설치된 CHECK 식·DB 검증 상태·기존 위반을 같은 read-only snapshot에서 확인하고, 이력을 보존한 복구·재대사 후 제약별 validation을 수행한다. 운영 절차는 [배포 문서](07-deployment.md#기존-데이터의-check-제약-대사와-검증)를 따른다. 위반 0건이나 Flyway 성공을 원장·예약·금액의 모든 교차 불변식 검증으로 취급하지 않는다.
 - 수량·금액·정산·migration 변경은 정상 흐름뿐 아니라 rollback과 중복 요청을 검증한다. 동시성 보강은 병렬 실행 테스트, N+1 보강은 query count 상한 테스트를 둔다.

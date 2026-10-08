@@ -111,16 +111,10 @@
 - `POST /api/auction-lots/{id}/arrivals/{arrivalId}/cancel`
 - `PATCH /api/auction-lots/{id}/status`
 - `GET /api/auction-lots/{id}/timeline`
-- `GET /api/auction-settlements`
-- `GET /api/auction-settlements/page`
-- `GET /api/auction-settlements/summary`
-- `POST /api/auction-settlements/rebuild`
-- `GET /api/auction-settlements/{settlementId}`
 - `GET /api/auction-tracking/summary`
 
 ### 입금/정산 이벤트
 
-- `POST /api/auction-settlements/{settlementId}/confirm-payment`
 - `GET /api/business-partners/{partnerId}/balance-summary`
 - `GET /api/partner-payment-events`
 - `GET /api/partner-payment-events/page`
@@ -140,11 +134,9 @@
 
 ### 경매 정산 생성
 
-- `POST /api/auction-settlements`
 
 ### 경매 정산 출력
 
-- `GET /api/auction-settlements/{settlementId}/print`
 
 ### 경매 출하 조회
 
@@ -174,8 +166,6 @@
 
 ### 자동 매칭/연결 해제/예치금
 
-- `POST /api/auction-settlements/{settlementId}/run-auto-match`
-- `POST /api/auction-settlements/{settlementId}/unlink-payment`
 - `POST /api/sales-slips/{salesSlipId}/apply-credit`
 - `POST /api/sales-slips/{salesSlipId}/run-auto-match`
 - `POST /api/sales-slips/{salesSlipId}/unlink-payment`
@@ -205,3 +195,5 @@
 - 과거 md 초안에 적힌 동작 규칙은 `DOMAIN_RULES.md`로 옮겨진 항목만 현재 설계 의도로 본다.
 
 경매 근거 대금의 페이지·상세·입금 API는 구현했다. 과거 실제 입금의 참조 전환과 원래 멱등키 재전송도 지원한다. 자료 parser/matcher는 보류이며, 기존 파생 정산의 조회·생성·재구성 및 테이블 제거는 아직 남아 있다.
+
+파생 경매 정산 조회·생성·재계산·인쇄·입금 endpoint는 제거 대상이며 구현 예정 목록으로 취급하지 않는다. 경매 대금 조회·입금과 원본 결과 참조 계약을 사용한다. 실제 자료 수집·parser/matcher는 별도 범위다.

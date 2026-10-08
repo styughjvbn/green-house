@@ -788,39 +788,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auction-settlements/{settlementId}/confirm-payment": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description 대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은 409 IDEMPOTENCY_KEY_REUSED입니다. */
-        post: operations["confirmAuctionPayment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auction-settlements/rebuild": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["rebuild"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/auction-proceeds/{id}/confirm-payment": {
         parameters: {
             query?: never;
@@ -1901,76 +1868,6 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getSummary_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auction-settlements": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * @deprecated
-         * @description 호환용 목록. 최신 500건만 반환합니다. 운영 목록은 /page, 전체 합계는 /summary를 사용합니다.
-         */
-        get: operations["getSettlements"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auction-settlements/{settlementId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getSettlement"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auction-settlements/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description 조회 조건에 해당하는 전체 정산의 합계. 페이지 크기와 무관하게 집계합니다. */
-        get: operations["getAuctionSettlementSummary"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auction-settlements/page": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description 정산 요약의 서버 페이지 목록. page는 0 이상, size는 1~100으로 보정합니다. 상세 행은 단건 API에서 조회합니다. */
-        get: operations["getAuctionSettlementPage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3236,62 +3133,6 @@ export interface components {
             role?: "ADMIN" | "WORKER" | "DEMO";
             username?: string;
         };
-        ApiResponseAuctionSettlementResponse: {
-            data?: components["schemas"]["AuctionSettlementResponse"];
-            message?: string;
-        };
-        AuctionSettlementLineResponse: {
-            /** Format: int64 */
-            amount?: number;
-            /** Format: int64 */
-            auctionResultLineId?: number;
-            /** Format: int64 */
-            auctionShipmentLotId?: number;
-            /** Format: int64 */
-            id?: number;
-            /** Format: int32 */
-            quantity?: number;
-            /** Format: date */
-            shipmentDate?: string;
-            shipmentGrade?: string;
-            /** @enum {string} */
-            status?: "UNPAID" | "PAID" | "PARTIALLY_PAID" | "EXCLUDED" | "REVIEW_REQUIRED";
-            /** Format: int32 */
-            unitPrice?: number;
-            varietyName?: string;
-        };
-        AuctionSettlementResponse: {
-            /** Format: date */
-            auctionDate?: string;
-            /** Format: int64 */
-            auctionHouseId?: number;
-            auctionHouseName?: string;
-            /** Format: date-time */
-            confirmedAt?: string;
-            confirmedBy?: string;
-            /** Format: int64 */
-            deductionAmount?: number;
-            /** Format: int64 */
-            expectedDepositAmount?: number;
-            /** Format: date */
-            expectedPaymentDate?: string;
-            /** Format: int64 */
-            feeAmount?: number;
-            /** Format: int64 */
-            grossAmount?: number;
-            /** Format: int64 */
-            id?: number;
-            lines?: components["schemas"]["AuctionSettlementLineResponse"][];
-            memo?: string;
-            /** Format: int64 */
-            paidAmount?: number;
-            /** Format: int64 */
-            remainingAmount?: number;
-            /** Format: date-time */
-            resultReceivedAt?: string;
-            /** @enum {string} */
-            status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-        };
         ApiResponseAuctionProceedsResponse: {
             data?: components["schemas"]["AuctionProceedsResponse"];
             message?: string;
@@ -3306,13 +3147,34 @@ export interface components {
             paidAmount?: number;
             paymentAllowed?: boolean;
             /** Format: int64 */
-            receivableAmount?: number;
-            remainingAmount?: number;
+            receivableAmount?: number | null;
+            remainingAmount?: number | null;
             /** Format: int64 */
-            reportedGrossAmount?: number;
+            reportedGrossAmount?: number | null;
+            resultDetails?: components["schemas"]["AuctionProceedsResultReference"][];
             resultIds?: number[];
             reviewRequired?: boolean;
-            sourceReference?: string;
+            sourceReference?: string | null;
+        };
+        AuctionProceedsResultReference: {
+            /** Format: int64 */
+            amount: number;
+            /** Format: date */
+            auctionDate: string;
+            /** Format: int64 */
+            auctionHouseId: number;
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            lotId: number;
+            /** Format: int32 */
+            quantity: number;
+            /** Format: date */
+            shipmentDate: string;
+            shipmentGrade: string | null;
+            /** Format: int32 */
+            unitPrice: number;
+            varietyName: string;
         };
         AuctionLotResultLineRequest: {
             auctionGrade?: string;
@@ -4881,52 +4743,6 @@ export interface components {
             totalAmount?: number;
             /** Format: int32 */
             waitingQuantity?: number;
-        };
-        ApiResponseListAuctionSettlementResponse: {
-            data?: components["schemas"]["AuctionSettlementResponse"][];
-            message?: string;
-        };
-        ApiResponseAuctionSettlementSummaryResponse: {
-            data?: components["schemas"]["AuctionSettlementSummaryResponse"];
-            message?: string;
-        };
-        AuctionSettlementSummaryResponse: {
-            /** Format: int64 */
-            expectedDepositAmount?: number;
-            /** Format: int64 */
-            remainingAmount?: number;
-        };
-        ApiResponsePageResponseAuctionSettlementListItemResponse: {
-            data?: components["schemas"]["PageResponseAuctionSettlementListItemResponse"];
-            message?: string;
-        };
-        AuctionSettlementListItemResponse: {
-            /** Format: date */
-            auctionDate?: string;
-            /** Format: int64 */
-            auctionHouseId?: number;
-            auctionHouseName?: string;
-            /** Format: int64 */
-            expectedDepositAmount?: number;
-            /** Format: int64 */
-            grossAmount?: number;
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            remainingAmount?: number;
-            /** @enum {string} */
-            status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-        };
-        PageResponseAuctionSettlementListItemResponse: {
-            content?: components["schemas"]["AuctionSettlementListItemResponse"][];
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-            /** Format: int64 */
-            totalElements?: number;
-            /** Format: int32 */
-            totalPages?: number;
         };
         ApiResponsePageResponseAuctionProceedsResponse: {
             data?: components["schemas"]["PageResponseAuctionProceedsResponse"];
@@ -6690,73 +6506,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseAuthenticatedUserResponse"];
-                };
-            };
-        };
-    };
-    confirmAuctionPayment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                settlementId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ManualPaymentRequest"];
-            };
-        };
-        responses: {
-            /** @description 입금 확인 또는 재요청 결과 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseAuctionSettlementResponse"];
-                };
-            };
-            /** @description VALIDATION_ERROR: 입력 오류 또는 초과입금 등 기존 업무 검증 실패 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경. AUCTION_SETTLEMENT_TARGET_RETIRED: 입금 대상이 전환된 정산에 새 입금 시도 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    rebuild: {
-        parameters: {
-            query: {
-                auctionHouseId: number;
-                auctionDate: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseAuctionSettlementResponse"];
                 };
             };
         };
@@ -8587,105 +8336,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseAuctionTrackingSummaryResponse"];
-                };
-            };
-        };
-    };
-    getSettlements: {
-        parameters: {
-            query?: {
-                auctionHouseId?: number;
-                from?: string;
-                to?: string;
-                status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseListAuctionSettlementResponse"];
-                };
-            };
-        };
-    };
-    getSettlement: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                settlementId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseAuctionSettlementResponse"];
-                };
-            };
-        };
-    };
-    getAuctionSettlementSummary: {
-        parameters: {
-            query?: {
-                auctionHouseId?: number;
-                from?: string;
-                to?: string;
-                status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseAuctionSettlementSummaryResponse"];
-                };
-            };
-        };
-    };
-    getAuctionSettlementPage: {
-        parameters: {
-            query?: {
-                auctionHouseId?: number;
-                from?: string;
-                to?: string;
-                status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponsePageResponseAuctionSettlementListItemResponse"];
                 };
             };
         };

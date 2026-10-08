@@ -561,7 +561,7 @@ OpenAPI와 필요한 생성 TypeScript 타입을 함께 갱신한다.
 이 결정으로 판매 전체를 Sales에 묶으면서 내부 업무 의미와 쓰기 소유권을 구분한다. 공통 전표·allocation·예약 대사와
 Farm Engine을 유지해 전표 분할의 데이터 전환 비용을 줄인다. 대신 내부 경계 보호, Auction/Partner 편입·Settlement 제거·입금 책임 이동,
 자동 매칭·다중 대상 배분·정정·반환 입고의 신규 모델과 schema 확장 비용이 발생한다.
-구조 전환 1단계는 기존 계층 아래 Sales 내부 경계 배치와 Document 호출 port·Payment 대상 port·내부 architecture 검사까지 반영했다. 기존 API·식별자·업무 동작은 유지한다. 2단계의 V43은 Direct 전용 저장 테이블에 기존 금액을 그대로 복사하고 이전 시점 대사 근거를 남긴다. 신규 생성·작성중 수정은 Document와 Direct 거래/가격 모델을 같은 transaction에서 저장한다. 조회·입금 대상의 금액 원천 전환과 Document의 기존 금액 정책 제거는 아직 완료하지 않았다. 경매 근거 대금의 저장·연결 확인과 유찰 잔량의 직접 후속 처리·실제 도착/Farm 생성·도착 취소는 구현했다. 결과 기반 계약으로 기존 입금 대상 참조를 전환하고 파생 정산을 제거하는 작업, 실제 매칭·은행 수집은 아직 완료하지 않았다. 현재 구현 경계와 기존 경로는 `docs/04-architecture.md`와 `docs/features/sales-auction-settlement.md`를 따른다.
+구조 전환 1단계의 Sales 내부 경계·Document 호출 port·Payment 대상 port·architecture 검사를 유지한다. 2단계는 Direct 전용 거래/가격과 유효 배분을 일반 판매 금액 원천으로 전환했으며, Document는 표시·검색·분석 projection을 저장한다. V43 원문·대사와 V49 전환 시점 불일치 근거를 보존하고 검토 전 새 입금·금액 변경을 차단한다. 3단계는 경매 대금·원본 결과·유효 배분의 조회/입금 계약과 기존 실제 입금 참조 전환, 파생 정산 서비스·API·테이블 제거를 반영한다. 5단계의 직접 후속 결정·실제 도착/Farm 생성·도착 취소도 구현했다. 4단계의 실제 자료 수집·parser/matcher는 보류하며 은행 수집·다중 배분·예치금·환불·Direct 반품과 새 메뉴 흐름은 후속 범위다. 현재 구현 경계는 `docs/04-architecture.md`와 `docs/features/sales-auction-settlement.md`를 따른다.
 
 ## 13. 변경 영향 분석 (Change Impact Analysis)
 

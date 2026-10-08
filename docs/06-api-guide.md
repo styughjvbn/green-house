@@ -46,7 +46,7 @@ npm run api:types
 | `partner.openapi.yaml` | 거래처, 정산 설정 |
 | `sales.openapi.yaml` | 판매 전표, 경매 판매 전표 |
 | `analytics.openapi.yaml` | 판매·거래처·작업 분석 |
-| `auction.openapi.yaml` | 경매 lot, 결과 입력, 상태 변경, 반환 확인, 수량 보정, 정산 |
+| `auction.openapi.yaml` | 경매 lot, 결과 입력, 상태 변경, 후속 처리·반환 도착, 수량 보정, 경매 대금 |
 | `payment.openapi.yaml` | 입금 확인, 거래처 잔액, 입금 이벤트 |
 
 ## 3. 판매/경매 API 규칙
@@ -93,11 +93,11 @@ npm run api:types
 
 수동 입금 확인:
 
-- 일반 판매 전표와 경매 정산 입금 요청은 대상별 `idempotencyKey`가 필수다.
+- 일반 판매 전표와 경매 대금 입금 요청은 대상별 `idempotencyKey`가 필수다.
 - 같은 키·금액·입금일 재요청은 중복 입금으로 처리하지 않는다.
 - 같은 대상·키를 다른 금액 또는 입금일에 재사용하면 `409 / IDEMPOTENCY_KEY_REUSED`를 반환한다. 기존 `400 / VALIDATION_ERROR`에서 변경된 계약이다. 외부 소비자는 status/code 분기를 함께 갱신한다. 키 충돌을 받으면 기존 입금 결과를 확인하고 실제 추가 입금에만 새 키를 사용한다.
 
-경매 정산 조회는 `/api/auction-settlements/page`로 요약 목록을, `/api/auction-settlements/summary`로 같은 조건의 전체 금액 합계를 요청한다. 정산 결과 행은 단건 조회에서 받는다. 기존 `/api/auction-settlements`는 최신 500건으로 제한된 호환 경로이므로 전체 합계 계산에 사용하지 않는다.
+경매 대금 조회는 `/api/auction-proceeds/page`와 단건 경로를 사용한다. 제공 금액과 미확인 잔액의 null을 유지하고 입금 가능 여부는 서버 capability로 판단한다. 원본 결과 참조·실제 입금은 대금 계약을 따르며 기존 정산 ID를 새 대금 ID로 사용하지 않는다. 파생 정산 조회·재계산·입금 경로는 제거했다.
 
 입금 이력은 `/api/partner-payment-events/page`를 사용한다. 입금만 표시할 때는 이벤트 유형을 서버 필터로 지정해야 페이지 총건수와 내용이 일치한다. 유형을 생략하면 연결 이벤트를 포함한 전체 원장을 조회한다. 기존 `/api/partner-payment-events`는 최신 500개 이벤트로 제한된 호환 경로다.
 

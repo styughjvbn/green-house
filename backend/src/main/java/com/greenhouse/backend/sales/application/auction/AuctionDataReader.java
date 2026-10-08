@@ -6,9 +6,8 @@ import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
 import com.greenhouse.backend.sales.repository.auction.AuctionResultLineRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionResultReadRow;
-import com.greenhouse.backend.sales.repository.auction.AuctionShipmentLotRepository;
-import com.greenhouse.backend.sales.repository.auction.AuctionShipmentLotRepository.LotShipmentIdRow;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
@@ -32,8 +31,6 @@ public class AuctionDataReader {
   private final AuctionShipmentRepository shipmentRepository;
 
   private final AuctionResultLineRepository resultLineRepository;
-
-  private final AuctionShipmentLotRepository lotRepository;
 
   public Map<Long, String> getMarketNames(Collection<Long> shipmentIds) {
     if (shipmentIds.isEmpty()) {
@@ -84,30 +81,6 @@ public class AuctionDataReader {
         .toList();
   }
 
-  public List<Result> getSoldResultLines(Long auctionHouseId, LocalDate auctionDate) {
-    return resultLineRepository.findSoldReadRows(auctionHouseId, auctionDate).stream()
-        .map(Result::from)
-        .toList();
-  }
-
-  public long getMaximumSoldResultId() {
-    return resultLineRepository.findMaximumSoldId();
-  }
-
-  public List<Long> getSoldResultIdsBetween(long afterId, long maximumId, int size) {
-    return resultLineRepository.findSoldIdsBetween(
-        afterId, maximumId, PageRequest.of(0, Math.min(Math.max(size, 1), RESULT_BATCH_SIZE)));
-  }
-
-  public List<Result> getSoldResultLinesUpTo(
-      Long auctionHouseId, LocalDate auctionDate, long maximumId) {
-    return resultLineRepository
-        .findSoldReadRowsUpTo(auctionHouseId, auctionDate, maximumId)
-        .stream()
-        .map(Result::from)
-        .toList();
-  }
-
   public Map<Long, Result> getResults(Collection<Long> resultIds) {
     if (resultIds.isEmpty()) {
       return Map.of();
@@ -123,25 +96,30 @@ public class AuctionDataReader {
     return results;
   }
 
-  public Map<Long, Long> getLotShipmentIds(Collection<Long> shipmentIds) {
-    if (shipmentIds.isEmpty()) {
-      return Map.of();
-    }
-    return lotRepository.findLotShipmentIds(shipmentIds).stream()
-        .collect(Collectors.toMap(LotShipmentIdRow::getLotId, LotShipmentIdRow::getShipmentId));
-  }
-
+  @io.swagger.v3.oas.annotations.media.Schema(name = "AuctionProceedsResultReference")
   public record Result(
-      Long id,
-      Long lotId,
-      Long auctionHouseId,
-      LocalDate auctionDate,
-      LocalDate shipmentDate,
-      String varietyName,
-      String shipmentGrade,
-      Integer quantity,
-      Integer unitPrice,
-      Long amount) {
+      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+          Long id,
+      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+          Long lotId,
+      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+          Long auctionHouseId,
+      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+          LocalDate auctionDate,
+      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+          LocalDate shipmentDate,
+      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+          String varietyName,
+      @io.swagger.v3.oas.annotations.media.Schema(
+              nullable = true,
+              requiredMode = Schema.RequiredMode.REQUIRED)
+          String shipmentGrade,
+      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+          Integer quantity,
+      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+          Integer unitPrice,
+      @io.swagger.v3.oas.annotations.media.Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+          Long amount) {
     static Result from(AuctionResultReadRow row) {
       return new Result(
           row.id(),

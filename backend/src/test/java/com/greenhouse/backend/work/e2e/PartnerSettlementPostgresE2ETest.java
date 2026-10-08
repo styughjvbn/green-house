@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.audit.repository.AuditEventRepository;
+import com.greenhouse.backend.sales.application.auction.AuctionProceedsPaymentService;
+import com.greenhouse.backend.sales.application.auction.AuctionProceedsReader;
+import com.greenhouse.backend.sales.application.auction.AuctionProceedsService;
 import com.greenhouse.backend.sales.application.auction.AuctionShipmentCreator;
-import com.greenhouse.backend.sales.application.auction.settlement.AuctionPaymentService;
-import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementRebuildService;
-import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementService;
 import com.greenhouse.backend.sales.application.direct.SalesPaymentService;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.LotDraft;
 import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
@@ -21,10 +21,10 @@ import com.greenhouse.backend.sales.application.payment.PaymentService;
 import com.greenhouse.backend.sales.domain.auction.AuctionAttempt;
 import com.greenhouse.backend.sales.domain.auction.AuctionAttemptStatus;
 import com.greenhouse.backend.sales.domain.auction.AuctionInspectionStatus;
+import com.greenhouse.backend.sales.domain.auction.AuctionProceeds;
 import com.greenhouse.backend.sales.domain.auction.AuctionResultLine;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
-import com.greenhouse.backend.sales.domain.auction.settlement.AuctionSettlement;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesType;
@@ -36,11 +36,11 @@ import com.greenhouse.backend.sales.domain.payment.PartnerBalanceSummary;
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
-import com.greenhouse.backend.sales.dto.auction.settlement.AuctionSettlementResponse;
+import com.greenhouse.backend.sales.dto.auction.AuctionProceedsResponse;
 import com.greenhouse.backend.sales.dto.document.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.dto.partner.PartnerSettlementSettingsResponse;
+import com.greenhouse.backend.sales.repository.auction.AuctionProceedsRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
-import com.greenhouse.backend.sales.repository.auction.settlement.AuctionSettlementRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.repository.partner.PartnerSettlementSettingsRepository;
@@ -76,9 +76,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
   @org.springframework.beans.factory.annotation.Autowired
-  private AuctionPaymentService auctionPayments;
-
-  @Autowired AuctionSettlementRebuildService settlementRebuild;
+  private AuctionProceedsPaymentService auctionPayments;
 
   @Autowired BusinessPartnerRepository partnerRepository;
 
@@ -104,9 +102,10 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired AuctionShipmentRepository shipmentRepository;
 
-  @Autowired AuctionSettlementRepository settlementRepository;
+  @Autowired AuctionProceedsRepository settlementRepository;
 
-  @Autowired AuctionSettlementService settlementService;
+  @Autowired AuctionProceedsReader settlementService;
+  @Autowired AuctionProceedsService proceedsService;
 
   @Autowired PaymentService paymentService;
 
@@ -288,40 +287,36 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
         partnerRepository.saveAndFlush(
             new BusinessPartner("동시 경매 입금", PartnerType.AUCTION_HOUSE, null, null, null, null));
     var date = LocalDate.of(2040, 1, 3);
-    var settlement = createAuctionSettlement(house, date);
+    var settlement = createAuctionProceeds(house, date);
     var first = payment(20_000L, "auction-first");
     var second = payment(30_000L, "auction-second");
 
     concurrently(
         List.of(
-            () -> auctionPayments.confirmAuctionPayment(settlement.id(), first),
-            () -> auctionPayments.confirmAuctionPayment(settlement.id(), second)));
+            () -> auctionPayments.confirm(settlement.id(), first),
+            () -> auctionPayments.confirm(settlement.id(), second)));
     concurrently(
         List.of(
-            () -> auctionPayments.confirmAuctionPayment(settlement.id(), first),
-            () -> auctionPayments.confirmAuctionPayment(settlement.id(), second)));
+            () -> auctionPayments.confirm(settlement.id(), first),
+            () -> auctionPayments.confirm(settlement.id(), second)));
 
-    assertThat(settlementService.getSettlement(settlement.id()).paidAmount()).isEqualTo(50_000L);
-    assertThat(settlementService.getSettlement(settlement.id()).remainingAmount())
-        .isEqualTo(50_000L);
-    var page = settlementService.getSettlementPage(house.getId(), date, date, null, 0, 1);
+    assertThat(settlementService.get(settlement.id()).paidAmount()).isEqualByComparingTo("50000");
+    assertThat(settlementService.get(settlement.id()).remainingAmount())
+        .isEqualByComparingTo("50000");
+    var page = settlementService.page(house.getId(), 0, 1);
     assertThat(page.totalElements()).isEqualTo(1);
     assertThat(page.content())
         .singleElement()
         .satisfies(
             row -> {
               assertThat(row.id()).isEqualTo(settlement.id());
-              assertThat(row.remainingAmount()).isEqualTo(50_000L);
+              assertThat(row.remainingAmount()).isEqualByComparingTo("50000");
             });
-    var totals = settlementService.getSummary(house.getId(), date, date, null);
-    assertThat(totals.expectedDepositAmount()).isEqualTo(100_000L);
-    assertThat(totals.remainingAmount()).isEqualTo(50_000L);
-    assertThat(settlementService.getSummary(-1L, null, null, null).remainingAmount()).isZero();
     assertThat(
             eventRepository
                 .search(
                     house.getId(),
-                    PaymentTargetType.AUCTION_SETTLEMENT,
+                    PaymentTargetType.AUCTION_PROCEEDS,
                     settlement.id(),
                     null,
                     PageRequest.of(0, 100))
@@ -330,7 +325,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
     var history =
         paymentService.getEventPage(
             house.getId(),
-            PaymentTargetType.AUCTION_SETTLEMENT,
+            PaymentTargetType.AUCTION_PROCEEDS,
             settlement.id(),
             PaymentEventType.PAYMENT_RECEIVED,
             0,
@@ -439,7 +434,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
   @ParameterizedTest
   @CsvSource({
     "SALES_SLIP, false", "SALES_SLIP, true",
-    "AUCTION_SETTLEMENT, false", "AUCTION_SETTLEMENT, true"
+    "AUCTION_PROCEEDS, false", "AUCTION_PROCEEDS, true"
   })
   void changedAmountOrDateReturnsAConflictWithoutChangingTheFullyPaidTarget(
       PaymentTargetType targetType, boolean changeDate) throws Exception {
@@ -486,7 +481,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
   @ParameterizedTest
   @EnumSource(
       value = PaymentTargetType.class,
-      names = {"SALES_SLIP", "AUCTION_SETTLEMENT"})
+      names = {"SALES_SLIP", "AUCTION_PROCEEDS"})
   void concurrentDifferentAmountsWithTheSameKeyCommitOnePaymentAndReturnOneConflict(
       PaymentTargetType targetType) throws Exception {
     var target = createPaymentTarget(targetType);
@@ -519,8 +514,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
   private record PaymentTarget(Long partnerId, Long id, PaymentTargetType type) {
     String path() {
-      String collection =
-          type == PaymentTargetType.SALES_SLIP ? "sales-slips" : "auction-settlements";
+      String collection = type == PaymentTargetType.SALES_SLIP ? "sales-slips" : "auction-proceeds";
       return "/api/" + collection + "/" + id + "/confirm-payment";
     }
   }
@@ -535,10 +529,10 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
         partnerRepository.saveAndFlush(
             new BusinessPartner("입금 충돌 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
     var date = LocalDate.of(2040, 1, 3);
-    return new PaymentTarget(house.getId(), createAuctionSettlement(house, date).id(), type);
+    return new PaymentTarget(house.getId(), createAuctionProceeds(house, date).id(), type);
   }
 
-  private AuctionSettlementResponse createAuctionSettlement(BusinessPartner house, LocalDate date) {
+  private AuctionProceedsResponse createAuctionProceeds(BusinessPartner house, LocalDate date) {
     var shipment = new AuctionShipment(date.minusDays(1), house.getId(), house.getPartnerType());
     var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
     var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
@@ -548,7 +542,15 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
     lot.addAttempt(attempt);
     shipment.addLot(lot);
     shipmentRepository.saveAndFlush(shipment);
-    return settlementService.rebuild(house.getId(), date);
+    Long id =
+        proceedsService.record(
+            house.getId(),
+            "제공 지급 자료",
+            100000L,
+            100000L,
+            List.of(attempt.getResultLines().getFirst().getId()));
+    proceedsService.confirm(id, "확인자");
+    return settlementService.get(id);
   }
 
   private Map<String, Object> paymentState(Long partnerId, Long slipId) {
@@ -556,7 +558,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
   }
 
   private Map<String, Object> paymentState(Long partnerId, Long targetId, PaymentTargetType type) {
-    String table = type == PaymentTargetType.SALES_SLIP ? "sales_slips" : "auction_settlements";
+    String table = type == PaymentTargetType.SALES_SLIP ? "sales_slips" : "auction_proceeds";
     return Map.of(
         "target",
             jdbcTemplate.queryForList(
@@ -612,9 +614,9 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
     assertThatThrownBy(
             () ->
                 settlementRepository.saveAndFlush(
-                    new AuctionSettlement(-1L, LocalDate.of(2040, 1, 2))))
+                    new AuctionProceeds(-1L, "외래키", 1000L, 1000L, List.of(1L))))
         .isInstanceOf(DataIntegrityViolationException.class)
-        .hasMessageContaining("auction_settlements_auction_house_id_fkey");
+        .hasMessageContaining("auction_proceeds_auction_house_id_fkey");
     assertThatThrownBy(
             () ->
                 shipmentRepository.saveAndFlush(
@@ -690,72 +692,6 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
     assertThat(canceled.items().getFirst().auctionShipmentLotId()).isNull();
     assertThat(shipmentRepository.count()).isEqualTo(before);
     assertThat(salesSlipRepository.findById(slipId).orElseThrow().isCanceled()).isTrue();
-  }
-
-  @Test
-  void concurrentRebuildsAndPaymentKeepOneSettlementAndPreservedPayment() throws Exception {
-    var house =
-        partnerRepository.saveAndFlush(
-            new BusinessPartner("재구성 경합", PartnerType.AUCTION_HOUSE, null, null, null, null));
-    var date = LocalDate.of(2041, 2, 3);
-    var shipment = new AuctionShipment(date, house.getId(), house.getPartnerType());
-    var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
-    var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
-    attempt.addResultLine(
-        new AuctionResultLine(date, "A", 10, 10000, 100000, null, AuctionInspectionStatus.NORMAL));
-    lot.addAttempt(attempt);
-    shipment.addLot(lot);
-    shipmentRepository.saveAndFlush(shipment);
-    List<AuctionSettlementResponse> created =
-        concurrently(
-            List.of(
-                () -> settlementService.rebuild(house.getId(), date),
-                () -> settlementService.rebuild(house.getId(), date)));
-    assertThat(created).extracting(value -> value.id()).containsOnly(created.getFirst().id());
-    Long id = created.getFirst().id();
-    concurrently(
-        List.of(
-            () -> settlementService.rebuild(house.getId(), date),
-            () -> auctionPayments.confirmAuctionPayment(id, payment(20000L, "rebuild-payment"))));
-    var result = settlementService.getSettlement(id);
-    assertThat(result.paidAmount()).isEqualTo(20000);
-    assertThat(result.remainingAmount()).isEqualTo(80000);
-    assertThat(result.lines()).hasSize(1);
-    assertThat(
-            paymentService
-                .getEventPage(
-                    house.getId(),
-                    PaymentTargetType.AUCTION_SETTLEMENT,
-                    id,
-                    PaymentEventType.PAYMENT_RECEIVED,
-                    0,
-                    100)
-                .totalElements())
-        .isEqualTo(1);
-  }
-
-  @Test
-  void concurrentInitializersLinkEachResultOnlyOnce() throws Exception {
-    var house =
-        partnerRepository.saveAndFlush(
-            new BusinessPartner("초기 정산 경합", PartnerType.AUCTION_HOUSE, null, null, null, null));
-    var date = LocalDate.of(2041, 3, 4);
-    var shipment = new AuctionShipment(date, house.getId(), house.getPartnerType());
-    var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
-    var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
-    attempt.addResultLine(
-        new AuctionResultLine(date, "A", 10, 10000, 100000, null, AuctionInspectionStatus.NORMAL));
-    lot.addAttempt(attempt);
-    shipment.addLot(lot);
-    shipmentRepository.saveAndFlush(shipment);
-    concurrently(
-        List.of(
-            settlementRebuild::rebuildExistingResults, settlementRebuild::rebuildExistingResults));
-    var settlement =
-        settlementRepository.findByAuctionHouseIdAndAuctionDate(house.getId(), date).orElseThrow();
-    assertThat(settlementService.getSettlement(settlement.getId()).lines()).hasSize(1);
-    assertThat(settlement.getGrossAmount()).isEqualTo(100000);
-    assertThat(settlementRebuild.rebuildExistingResults()).isZero();
   }
 
   private BusinessPartner createPartner(String name) {

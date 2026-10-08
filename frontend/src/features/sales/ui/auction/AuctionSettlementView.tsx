@@ -4,7 +4,11 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useSearchParams } from "next/navigation";
-import type { AuctionProceeds } from "@/entities/farm/types";
+import type {
+  AuctionProceeds,
+  AuctionProceedsResult,
+} from "@/entities/farm/types";
+import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import {
   DetailCard,
@@ -58,6 +62,43 @@ const columns: ColumnDef<AuctionProceeds, unknown>[] = [
     accessorKey: "remainingAmount",
     header: "잔액",
     cell: ({ row }) => money(row.original.remainingAmount),
+    meta: { align: "right" },
+  },
+];
+
+const resultColumns: ColumnDef<AuctionProceedsResult, unknown>[] = [
+  {
+    accessorKey: "auctionDate",
+    header: "경매일",
+    cell: ({ row }) => formatShortDate(row.original.auctionDate),
+  },
+  {
+    accessorKey: "shipmentDate",
+    header: "출하일",
+    cell: ({ row }) => formatShortDate(row.original.shipmentDate),
+  },
+  {
+    accessorKey: "varietyName",
+    header: "품종·등급",
+    cell: ({ row }) =>
+      `${row.original.varietyName} · ${row.original.shipmentGrade || "-"}`,
+  },
+  {
+    accessorKey: "quantity",
+    header: "수량",
+    cell: ({ row }) => `${row.original.quantity.toLocaleString()}분`,
+    meta: { align: "right" },
+  },
+  {
+    accessorKey: "unitPrice",
+    header: "단가",
+    cell: ({ row }) => money(row.original.unitPrice),
+    meta: { align: "right" },
+  },
+  {
+    accessorKey: "amount",
+    header: "결과 금액",
+    cell: ({ row }) => money(row.original.amount),
     meta: { align: "right" },
   },
 ];
@@ -168,6 +209,16 @@ export function AuctionSettlementView() {
               {!selected.matchingConfirmed ? (
                 <p>대금 자료와 경매 결과 연결 확인을 기다립니다.</p>
               ) : null}
+            </div>
+            <div className="px-4 py-3">
+              <DataTable
+                columns={resultColumns}
+                data={selected.resultDetails}
+                getRowId={(row) => String(row.id)}
+                title="연결된 경매 결과"
+                emptyMessage="연결된 경매 결과가 없습니다."
+                settingsKey="sales.proceeds.results"
+              />
             </div>
             <ManualPaymentPanel
               key={selected.id}

@@ -1,27 +1,18 @@
 package com.greenhouse.backend.sales.controller.payment;
 
 import com.greenhouse.backend.common.api.ApiResponse;
-import com.greenhouse.backend.common.api.ErrorResponse;
 import com.greenhouse.backend.common.api.PageResponse;
-import com.greenhouse.backend.sales.application.auction.settlement.AuctionPaymentService;
-import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
 import com.greenhouse.backend.sales.application.payment.PaymentService;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
-import com.greenhouse.backend.sales.dto.auction.settlement.AuctionSettlementResponse;
 import com.greenhouse.backend.sales.dto.payment.PartnerBalanceSummaryResponse;
 import com.greenhouse.backend.sales.dto.payment.PartnerPaymentEventResponse;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,33 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class PaymentController {
 
   private final PaymentService paymentService;
-  private final AuctionPaymentService auctionPayments;
 
   private final PartnerBalanceService partnerBalanceService;
-
-  @PostMapping("/auction-settlements/{settlementId}/confirm-payment")
-  @Operation(
-      description =
-          "대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은 409 IDEMPOTENCY_KEY_REUSED입니다.",
-      responses = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200",
-            description = "입금 확인 또는 재요청 결과",
-            useReturnTypeSchema = true),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "400",
-            description = "VALIDATION_ERROR: 입력 오류 또는 초과입금 등 기존 업무 검증 실패",
-            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "409",
-            description =
-                "IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경. AUCTION_SETTLEMENT_TARGET_RETIRED: 입금 대상이 전환된 정산에 새 입금 시도",
-            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-      })
-  public ApiResponse<AuctionSettlementResponse> confirmAuctionPayment(
-      @PathVariable Long settlementId, @Valid @RequestBody ManualPaymentCommand request) {
-    return ApiResponse.ok(auctionPayments.confirmAuctionPayment(settlementId, request));
-  }
 
   @GetMapping("/partner-payment-events")
   @Operation(

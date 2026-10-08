@@ -104,6 +104,92 @@ class AuctionPaymentTargetMigrationPostgresE2ETest {
         .isEqualTo(1);
   }
 
+  @Test
+  void retirementConvertsLateActualCashAndPreservesAlreadyConfirmedProceeds() {
+    var source = database();
+    var jdbc = new JdbcTemplate(source);
+    seed(jdbc);
+    Flyway.configure().dataSource(source).target("49").load().migrate();
+    Long existingId =
+        jdbc.queryForObject(
+            "select target_id from payment_target_aliases where original_target_id=906",
+            Long.class);
+    jdbc.update(
+        "update auction_proceeds set source_reference='확인된 지급 자료', reported_gross_amount=1000,receivable_amount=930,matching_confirmed=true,confirmed_at=timestamp '2026-10-07 00:00:00',confirmed_by='확인자' where id=?",
+        existingId);
+    var confirmed = jdbc.queryForMap("select * from auction_proceeds where id=?", existingId);
+    jdbc.update(
+        "update partner_payment_events set target_type='AUCTION_SETTLEMENT',target_id=906 where id=909");
+    jdbc.execute(
+        "insert into auction_attempts(id,shipment_lot_id,auction_date,attempt_no,attempt_status,created_at,updated_at) values(914,903,date '2026-10-08',2,'SOLD',current_timestamp,current_timestamp)");
+    jdbc.execute(
+        "insert into auction_result_lines(id,auction_attempt_id,auction_date,quantity,unit_price,amount,inspection_status,created_at,updated_at) values(915,914,date '2026-10-08',10,50,500,'NORMAL',current_timestamp,current_timestamp)");
+    jdbc.execute(
+        "insert into auction_settlement_lines(id,settlement_id,auction_result_line_id,auction_shipment_lot_id,quantity,unit_price,amount,status,created_at,updated_at) values(918,907,915,903,10,50,500,'UNPAID',current_timestamp,current_timestamp)");
+    jdbc.execute(
+        "insert into partner_payment_events(id,partner_id,event_type,event_date,amount,unapplied_amount,target_type,target_id,status,external_uid,created_at,updated_at) values(916,901,'PAYMENT_RECEIVED',date '2026-10-08',100,0,'AUCTION_SETTLEMENT',907,'FULLY_APPLIED','MANUAL:AUCTION_SETTLEMENT:907:late',current_timestamp,current_timestamp)");
+    jdbc.execute(
+        "insert into partner_payment_events(id,partner_id,event_type,event_date,amount,unapplied_amount,target_type,target_id,status,parent_event_id,created_at,updated_at) values(917,901,'MANUAL_MATCH_CONFIRMED',date '2026-10-08',100,0,'AUCTION_SETTLEMENT',907,'CONFIRMED',916,current_timestamp,current_timestamp)");
+    var cash =
+        jdbc.queryForList(
+            "select to_jsonb(event)-'target_type'-'target_id' as fact from partner_payment_events event order by id");
+    var results = jdbc.queryForList("select * from auction_result_lines order by id");
+    var migration = Flyway.configure().dataSource(source).target("50").load();
+    assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
+    assertThat(jdbc.queryForMap("select * from auction_proceeds where id=?", existingId))
+        .isEqualTo(confirmed);
+    assertThat(
+            jdbc.queryForList(
+                "select to_jsonb(event)-'target_type'-'target_id' as fact from partner_payment_events event order by id"))
+        .isEqualTo(cash);
+    assertThat(jdbc.queryForList("select * from auction_result_lines order by id"))
+        .isEqualTo(results);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from partner_payment_events where target_type='AUCTION_SETTLEMENT'",
+                Long.class))
+        .isZero();
+    Long lateId =
+        jdbc.queryForObject(
+            "select target_id from payment_target_aliases where original_target_id=907",
+            Long.class);
+    var late = jdbc.queryForMap("select * from auction_proceeds where id=?", lateId);
+    assertThat(late.get("source_reference")).isNull();
+    assertThat(late.get("reported_gross_amount")).isNull();
+    assertThat(late.get("receivable_amount")).isNull();
+    assertThat(late.get("matching_confirmed")).isEqualTo(false);
+    assertThat(
+            jdbc.queryForObject(
+                "select auction_result_line_id from auction_proceeds_results where auction_proceeds_id=?",
+                Long.class,
+                lateId))
+        .isEqualTo(915);
+    assertThat(jdbc.queryForObject("select to_regclass('auction_settlements')::text", String.class))
+        .isNull();
+    assertThat(
+            jdbc.queryForObject(
+                "select to_regclass('auction_settlement_lines')::text", String.class))
+        .isNull();
+    assertThat(migration.migrate().migrationsExecuted).isZero();
+  }
+
+  @Test
+  void retirementAbortsMissingLateTargetsAndKeepsDerivedTablesAndCashIntact() {
+    var source = database();
+    var jdbc = new JdbcTemplate(source);
+    seed(jdbc);
+    Flyway.configure().dataSource(source).target("49").load().migrate();
+    jdbc.update(
+        "update partner_payment_events set target_type='AUCTION_SETTLEMENT',target_id=99999 where id=908");
+    var cash = jdbc.queryForList("select * from partner_payment_events order by id");
+    assertThatThrownBy(() -> Flyway.configure().dataSource(source).target("50").load().migrate())
+        .hasStackTraceContaining("Auction payment target is missing");
+    assertThat(jdbc.queryForList("select * from partner_payment_events order by id"))
+        .isEqualTo(cash);
+    assertThat(jdbc.queryForObject("select count(*) from auction_settlements", Long.class))
+        .isEqualTo(2);
+  }
+
   private DriverManagerDataSource database() {
     var admin =
         new JdbcTemplate(

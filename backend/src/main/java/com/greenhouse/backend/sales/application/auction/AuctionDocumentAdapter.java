@@ -1,6 +1,5 @@
 package com.greenhouse.backend.sales.application.auction;
 
-import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementReader;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort;
 import java.time.LocalDate;
 import java.util.Collection;
@@ -17,14 +16,14 @@ public class AuctionDocumentAdapter implements AuctionDocumentPort {
   private final AuctionShipmentCreator creator;
   private final AuctionShipmentLifecycleService lifecycle;
   private final AuctionDataReader reader;
-  private final AuctionSettlementReader settlements;
+  private final AuctionProceedsReader proceeds;
 
   public CreatedShipment create(LocalDate date, Long partnerId, List<LotDraft> drafts) {
     return creator.create(date, partnerId, drafts);
   }
 
   public boolean existsByAuctionShipmentId(Long id) {
-    return settlements.existsByAuctionShipmentId(id);
+    return id != null && !proceeds.findReferencedShipmentIds(List.of(id)).isEmpty();
   }
 
   public void deleteDraftShipment(Long id) {
@@ -32,7 +31,7 @@ public class AuctionDocumentAdapter implements AuctionDocumentPort {
   }
 
   public Set<Long> findNonCancelableShipmentIds(Collection<Long> ids) {
-    var blocked = new HashSet<>(settlements.findSettledAuctionShipmentIds(ids));
+    var blocked = new HashSet<>(proceeds.findReferencedShipmentIds(ids));
     blocked.addAll(lifecycle.findNonCancelableShipmentIds(ids));
     return Set.copyOf(blocked);
   }

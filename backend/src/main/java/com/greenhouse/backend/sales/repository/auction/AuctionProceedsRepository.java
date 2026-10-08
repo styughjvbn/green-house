@@ -2,6 +2,7 @@ package com.greenhouse.backend.sales.repository.auction;
 
 import com.greenhouse.backend.sales.domain.auction.AuctionProceeds;
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -20,6 +21,10 @@ public interface AuctionProceedsRepository extends JpaRepository<AuctionProceeds
   @Query(
       "select r.proceeds.id as proceedsId, r.resultLineId as resultLineId from AuctionProceedsResult r where r.proceeds.id in :ids order by r.resultLineId")
   List<ResultReference> findResultReferences(List<Long> ids);
+
+  @Query(
+      "select distinct lot.shipment.id from AuctionProceedsResult reference, AuctionResultLine line join line.auctionAttempt attempt join attempt.shipmentLot lot where reference.resultLineId = line.id and lot.shipment.id in :shipmentIds")
+  List<Long> findReferencedShipmentIds(Collection<Long> shipmentIds);
 
   interface ResultReference {
     Long getProceedsId();

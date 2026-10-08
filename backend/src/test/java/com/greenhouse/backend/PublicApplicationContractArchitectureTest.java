@@ -157,7 +157,6 @@ class PublicApplicationContractArchitectureTest {
     for (String helper :
         List.of(
             "sales.application.document.SalesSlipAuditSupport",
-            "sales.application.auction.settlement.SettlementAuditSupport",
             "sales.application.payment.PaymentAuditSupport",
             "sales.application.partner.PartnerSettingsAuditSupport")) {
       String owner = "com.greenhouse.backend." + helper.substring(0, helper.lastIndexOf('.'));

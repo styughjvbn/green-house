@@ -1,7 +1,5 @@
 package com.greenhouse.backend.work.e2e;
 
-import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import java.time.LocalDate;
@@ -31,43 +29,7 @@ final class DomainPerformanceFixture {
   void reset() {
     seeder.resetKeepingSequences();
     jdbc.execute(
-        "TRUNCATE auction_shipments, auction_settlements, partner_payment_events, partner_balance_summaries, partner_settlement_settings CONTINUE IDENTITY CASCADE");
-  }
-
-  void settlement(int keys, int resultsPerKey) {
-    reset();
-    long house =
-        partners
-            .saveAndFlush(
-                new BusinessPartner("측정 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null))
-            .getId();
-    int count = Math.multiplyExact(keys, resultsPerKey);
-    jdbc.update(
-        """
-        insert into auction_shipments (id, auction_house_id, shipment_date, status, created_at, updated_at)
-        select ?+n, ?, date '2045-01-01' + ((n-1)/?), 'SHIPPED', now(), now()
-        from generate_series(1,?) n
-        """,
-        GROUP_BASE,
-        house,
-        resultsPerKey,
-        count);
-    jdbc.execute(
-        """
-        insert into auction_shipment_lots (id,shipment_id,variety_name,item_name,shipped_quantity,sold_quantity,waiting_quantity,returned_quantity,current_status,version,created_at,updated_at)
-        select id,id,'측정 품종','난',1,1,0,0,'SOLD',0,now(),now() from auction_shipments
-        """);
-    jdbc.execute(
-        """
-        insert into auction_attempts (id,shipment_lot_id,attempt_no,attempt_status,auction_date,created_at,updated_at)
-        select id,id,1,'SOLD',shipment_date,now(),now() from auction_shipments
-        """);
-    jdbc.execute(
-        """
-        insert into auction_result_lines (id,auction_attempt_id,auction_date,quantity,unit_price,amount,inspection_status,created_at,updated_at)
-        select id,id,auction_date,1,1000,1000,'NORMAL',now(),now() from auction_attempts
-        """);
-    jdbc.execute("ANALYZE auction_result_lines");
+        "TRUNCATE auction_shipments, auction_proceeds, partner_payment_events, partner_balance_summaries, partner_settlement_settings CONTINUE IDENTITY CASCADE");
   }
 
   void ledger(int count, int revisions, boolean workReferences, boolean errors) {

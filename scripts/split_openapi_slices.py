@@ -34,7 +34,7 @@ DOMAIN_MAP = dict(
         ("partner", ["business-partner-controller", "partner-settlement-settings-controller"]),
         ("sales", ["sales-controller", "print-controller"]),
         ("analytics", ["analytics-controller"]),
-        ("auction", ["auction-tracking-controller", "auction-settlement-controller", "auction-proceeds-controller"]),
+        ("auction", ["auction-tracking-controller", "auction-proceeds-controller"]),
         ("payment", ["payment-controller"]),
     ]
 )

@@ -111,7 +111,6 @@ METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$VarietyI
 METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$VarietyInventory.warningGroupCount()
 METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader.getInventorySummary()
 METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader.getSnapshot()
-METHOD	com.greenhouse.backend.sales.application.auction.settlement.AuctionPaymentService.confirmAuctionPayment(java.lang.Long, com.greenhouse.backend.sales.application.payment.ManualPaymentCommand)
 METHOD	com.greenhouse.backend.sales.application.direct.SalesPaymentService.confirmPayment(java.lang.Long, com.greenhouse.backend.sales.application.payment.ManualPaymentCommand)
 METHOD	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$LotDraft.itemName()
 METHOD	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$LotDraft.quantity()
@@ -188,7 +187,6 @@ METHOD	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader$
 METHOD	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader.findAll(com.greenhouse.backend.sales.domain.payment.PaymentTargetType, java.util.Map)
 METHOD	com.greenhouse.backend.sales.application.payment.PaymentEventReader.existsByTarget(com.greenhouse.backend.sales.domain.payment.PaymentTargetType, java.lang.Long)
 METHOD	com.greenhouse.backend.sales.application.payment.PaymentEventReader.findExistingTargetIds(com.greenhouse.backend.sales.domain.payment.PaymentTargetType, java.util.List)
-METHOD	com.greenhouse.backend.sales.application.payment.PaymentLedgerService.isTargetMigrated(com.greenhouse.backend.sales.domain.payment.PaymentTargetType, java.lang.Long)
 METHOD	com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput.orchidGroupId()
 METHOD	com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput.quantity()
 METHOD	com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput.status()
@@ -392,7 +390,6 @@ TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader
 TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader$InventorySummary
 TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader$Snapshot
 TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader$VarietyInventory
-TYPE	com.greenhouse.backend.sales.application.auction.settlement.AuctionPaymentService
 TYPE	com.greenhouse.backend.sales.application.direct.SalesPaymentService
 TYPE	com.greenhouse.backend.sales.application.document.AuctionDocumentPort
 TYPE	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$CreatedShipment
@@ -425,7 +422,6 @@ TYPE	com.greenhouse.backend.sales.application.payment.PartnerBalanceService$Bala
 TYPE	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader
 TYPE	com.greenhouse.backend.sales.application.payment.PaymentAllocationReader$Allocation
 TYPE	com.greenhouse.backend.sales.application.payment.PaymentEventReader
-TYPE	com.greenhouse.backend.sales.application.payment.PaymentLedgerService
 TYPE	com.greenhouse.backend.sales.application.payment.PaymentTargetPort
 TYPE	com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput
 TYPE	com.greenhouse.backend.work.application.correction.StructureChangeMutationReferences

@@ -32,10 +32,8 @@ class SettlementCapabilitiesTest {
     assertThat(response.settlementUnit()).isEqualTo(SettlementUnit.MONTHLY_BATCH);
     assertThat(response.autoSettleEnabled()).isTrue();
     assertThat(response.capabilities().executableUnits())
-        .containsExactly(
-            type == PartnerType.AUCTION_HOUSE
-                ? SettlementUnit.AUCTION_DATE
-                : SettlementUnit.SALES_SLIP);
+        .containsExactlyElementsOf(
+            type == PartnerType.AUCTION_HOUSE ? List.of() : List.of(SettlementUnit.SALES_SLIP));
     assertThat(response.capabilities().autoMatching()).isFalse();
     assertThat(response.capabilities().autoSettlement()).isFalse();
     assertThat(response.capabilities().prepayment()).isFalse();

@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
 import com.greenhouse.backend.sales.application.auction.RecordAuctionResultCommand;
-import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementService;
 import com.greenhouse.backend.sales.application.document.SalesSlipCreationService;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipAllocationInput;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipCommand;
@@ -62,7 +61,6 @@ class AuctionCommandIdempotencyPostgresE2ETest extends WorkE2ETestBase {
   @Autowired private AuctionTrackingService auctions;
   @Autowired private OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired private JdbcTemplate jdbc;
-  @Autowired private AuctionSettlementService settlements;
   @Autowired private AuctionShipmentRepository shipments;
   @Autowired private PlatformTransactionManager transactionManager;
   @Autowired private EntityManager entityManager;
@@ -188,9 +186,9 @@ class AuctionCommandIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     assertThat(first.status()).isEqualTo(200);
     assertThat(post(resultsPath(), resultBody("second", "PARTIALLY_SOLD", 10)).status())
         .isEqualTo(200);
-    var settlement = settlements.rebuild(auctionHouseId, DATE);
-    assertThat(settlement.grossAmount()).isEqualTo(20_000);
-    assertThat(settlement.lines()).hasSize(2);
+    String amountSql =
+        "select sum(line.amount) from auction_result_lines line join auction_attempts attempt on attempt.id=line.auction_attempt_id where attempt.shipment_lot_id=?";
+    assertThat(jdbc.queryForObject(amountSql, Long.class, lotId)).isEqualTo(20000);
     var before = snapshot();
     var retry = post(resultsPath(), body);
     assertThat(retry.status()).isEqualTo(200);
@@ -200,7 +198,7 @@ class AuctionCommandIdempotencyPostgresE2ETest extends WorkE2ETestBase {
         .extracting(attempt -> attempt.attemptNo())
         .containsExactly(1, 2);
     assertThat(snapshot()).isEqualTo(before);
-    assertThat(settlements.rebuild(auctionHouseId, DATE).grossAmount()).isEqualTo(20_000);
+    assertThat(jdbc.queryForObject(amountSql, Long.class, lotId)).isEqualTo(20000);
   }
 
   @Test
@@ -510,8 +508,8 @@ class AuctionCommandIdempotencyPostgresE2ETest extends WorkE2ETestBase {
             "auction_result_lines",
             "auction_lot_status_history",
             "auction_command_receipts",
-            "auction_settlements",
-            "auction_settlement_lines",
+            "auction_proceeds",
+            "auction_proceeds_results",
             "orchid_groups",
             "orchid_group_mutations",
             "orchid_group_mutation_entries",

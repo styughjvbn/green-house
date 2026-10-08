@@ -26,12 +26,6 @@ public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaym
 
   @Query(
       value =
-          "select exists(select 1 from payment_target_aliases where original_target_type=:targetType and original_target_id=:targetId)",
-      nativeQuery = true)
-  boolean isTargetMigrated(String targetType, Long targetId);
-
-  @Query(
-      value =
           "select original_target_type as targetType, original_target_id as targetId from payment_target_aliases where target_type = :targetType and target_id = :targetId",
       nativeQuery = true)
   Optional<TargetAlias> findOriginalTarget(String targetType, Long targetId);

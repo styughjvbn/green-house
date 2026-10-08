@@ -15,6 +15,18 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 class SalesArchitectureTest {
+  @Test
+  void derivedSettlementRuntimeRemainsRetired() {
+    assertThat(
+            CLASSES.stream()
+                .filter(
+                    type ->
+                        type.getName().startsWith(ROOT)
+                            && type.getName().contains(".auction.settlement."))
+                .toList())
+        .isEmpty();
+  }
+
   private static final String ROOT = "com.greenhouse.backend.sales.";
   private static final JavaClasses CLASSES = ModuleBoundaryInventoryTest.CLASSES;
   private static final Map<String, Set<String>> GRAPH =

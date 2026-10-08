@@ -9,20 +9,16 @@ import com.greenhouse.backend.sales.application.auction.AuctionProceedsReader;
 import com.greenhouse.backend.sales.application.auction.AuctionProceedsService;
 import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
 import com.greenhouse.backend.sales.domain.auction.*;
-import com.greenhouse.backend.sales.domain.auction.settlement.AuctionSettlement;
-import com.greenhouse.backend.sales.domain.auction.settlement.AuctionSettlementLine;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.repository.auction.AuctionProceedsRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
-import com.greenhouse.backend.sales.repository.auction.settlement.AuctionSettlementRepository;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
 import jakarta.persistence.EntityManagerFactory;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -46,7 +42,6 @@ class AuctionProceedsPostgresE2ETest extends WorkE2ETestBase {
   @Autowired JdbcTemplate jdbc;
   @Autowired EntityManagerFactory emf;
   @Autowired AuctionProceedsRepository proceeds;
-  @Autowired AuctionSettlementRepository legacySettlements;
   @Autowired AuctionShipmentRepository shipments;
   @Autowired BusinessPartnerRepository partners;
 
@@ -204,7 +199,13 @@ class AuctionProceedsPostgresE2ETest extends WorkE2ETestBase {
       var eight = reader.page(null, 0, 8);
       assertThat(eight.content()).hasSize(8);
       assertThat(eight.content()).allSatisfy(value -> assertThat(value.resultIds()).hasSize(1));
-      assertThat(statistics.getPrepareStatementCount()).isEqualTo(oneCount).isLessThanOrEqualTo(5);
+      assertThat(eight.content())
+          .allSatisfy(
+              value ->
+                  assertThat(value.resultDetails())
+                      .singleElement()
+                      .satisfies(result -> assertThat(result.amount()).isEqualTo(1000)));
+      assertThat(statistics.getPrepareStatementCount()).isEqualTo(oneCount).isLessThanOrEqualTo(6);
     } finally {
       statistics.setStatisticsEnabled(false);
     }
@@ -285,58 +286,6 @@ class AuctionProceedsPostgresE2ETest extends WorkE2ETestBase {
         .isEqualTo(before);
     assertThat(events.findById(received.getId()).orElseThrow().getExternalUid())
         .isEqualTo("MANUAL:AUCTION_SETTLEMENT:999901:original");
-  }
-
-  @Test
-  void migratedLegacyEndpointPreservesSuccessfulReplayAndRejectsNewCash() throws Exception {
-    var fixture = seed(AuctionInspectionStatus.NORMAL);
-    var legacy = new AuctionSettlement(fixture.houseId(), LocalDate.of(2026, 10, 7));
-    legacy.synchronizeLines(
-        List.of(new AuctionSettlementLine(fixture.resultId(), fixture.lotId(), 1, 1000, 1000L)),
-        LocalDateTime.of(2026, 10, 7, 0, 0));
-    legacy.recordPayment(400L, "기존 담당자", LocalDateTime.of(2026, 10, 7, 0, 0));
-    Long oldId = legacySettlements.saveAndFlush(legacy).getId();
-    Long id = service.record(fixture.houseId(), null, null, null, List.of(fixture.resultId()));
-    jdbc.update(
-        "insert into payment_target_aliases values ('AUCTION_SETTLEMENT', ?, 'AUCTION_PROCEEDS', ?)",
-        oldId,
-        id);
-    var received =
-        events.saveAndFlush(
-            PartnerPaymentEvent.received(
-                fixture.houseId(),
-                LocalDate.of(2026, 10, 7),
-                400L,
-                PaymentTargetType.AUCTION_PROCEEDS,
-                id,
-                "현금",
-                null,
-                "MANUAL:AUCTION_SETTLEMENT:" + oldId + ":old-success",
-                null,
-                "기존 담당자"));
-    events.saveAndFlush(PartnerPaymentEvent.manualMatch(received));
-    var before =
-        jdbc.queryForList(
-            "select * from partner_payment_events where target_type='AUCTION_PROCEEDS' and target_id=? order by id",
-            id);
-    String path = "/api/auction-settlements/" + oldId + "/confirm-payment";
-    var replay = post(path, objectMapper.writeValueAsString(command("old-success", 400)));
-    assertThat(replay.status()).isEqualTo(200);
-    assertThat(replay.data().path("paidAmount").asLong()).isEqualTo(400);
-    var changed = post(path, objectMapper.writeValueAsString(command("old-success", 401)));
-    assertThat(changed.status()).isEqualTo(409);
-    assertThat(changed.body().path("error").path("code").asText())
-        .isEqualTo("IDEMPOTENCY_KEY_REUSED");
-    var rejected = post(path, objectMapper.writeValueAsString(command("new", 1)));
-    assertThat(rejected.status()).isEqualTo(409);
-    assertThat(rejected.body().path("error").path("code").asText())
-        .isEqualTo("AUCTION_SETTLEMENT_TARGET_RETIRED");
-    assertThat(
-            jdbc.queryForList(
-                "select * from partner_payment_events where target_type='AUCTION_PROCEEDS' and target_id=? order by id",
-                id))
-        .isEqualTo(before);
-    assertThat(legacySettlements.findById(oldId).orElseThrow().getPaidAmount()).isEqualTo(400);
   }
 
   private ManualPaymentCommand command(String key, long amount) {

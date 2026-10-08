@@ -15,10 +15,12 @@ public record SettlementCapabilities(
   }
 
   public static SettlementCapabilities forPartnerType(PartnerType partnerType) {
-    var unit =
-        partnerType == PartnerType.AUCTION_HOUSE
-            ? SettlementUnit.AUCTION_DATE
-            : SettlementUnit.SALES_SLIP;
-    return new SettlementCapabilities(List.of(unit), false, false, false, false, false);
+    return new SettlementCapabilities(
+        partnerType == PartnerType.AUCTION_HOUSE ? List.of() : List.of(SettlementUnit.SALES_SLIP),
+        false,
+        false,
+        false,
+        false,
+        false);
   }
 }

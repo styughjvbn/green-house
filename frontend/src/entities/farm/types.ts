@@ -693,18 +693,10 @@ export type AuctionTrackingSummary = {
   totalAmount: number;
 };
 
-export type AuctionProceeds = Omit<
-  Required<ApiSchemas["AuctionProceedsResponse"]>,
-  | "sourceReference"
-  | "reportedGrossAmount"
-  | "receivableAmount"
-  | "remainingAmount"
-> & {
-  sourceReference: string | null;
-  reportedGrossAmount: number | null;
-  receivableAmount: number | null;
-  remainingAmount: number | null;
-};
+export type AuctionProceeds = Required<ApiSchemas["AuctionProceedsResponse"]>;
+export type AuctionProceedsResult = Required<
+  ApiSchemas["AuctionProceedsResultReference"]
+>;
 export type AuctionProceedsPage = Page<AuctionProceeds>;
 
 export type PaymentTargetType = NonNullable<

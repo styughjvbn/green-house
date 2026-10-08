@@ -8,8 +8,8 @@ import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.sales.domain.document.SalesInventoryMovementType;
+import com.greenhouse.backend.sales.repository.auction.AuctionProceedsRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
-import com.greenhouse.backend.sales.repository.auction.settlement.AuctionSettlementRepository;
 import com.greenhouse.backend.sales.repository.document.SalesInventoryMovementRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipItemAllocationRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
@@ -46,7 +46,7 @@ class PersistenceIndexPlanPostgresE2ETest extends WorkE2ETestBase {
   @Autowired SalesSlipRepository sales;
   @Autowired SalesSlipItemAllocationRepository allocations;
   @Autowired SalesInventoryMovementRepository movements;
-  @Autowired AuctionSettlementRepository settlements;
+  @Autowired AuctionProceedsRepository proceeds;
   @Autowired PartnerPaymentEventRepository payments;
   @Autowired AuctionShipmentRepository shipments;
   @Autowired OrchidGroupLineageRepository lineage;
@@ -61,11 +61,11 @@ class PersistenceIndexPlanPostgresE2ETest extends WorkE2ETestBase {
             "select indexname, indexdef, pg_relation_size((quote_ident(schemaname)||'.'||quote_ident(indexname))::regclass) as index_bytes from pg_indexes where schemaname='public' and indexname in ("
                 + "'idx_orchid_groups_zone_sort','idx_orchid_groups_active_zone','idx_orchid_groups_inbound',"
                 + "'idx_sales_items_slip','idx_sales_allocations_item','idx_sales_allocations_group',"
-                + "'idx_sales_movements_slip_type','idx_sales_movements_group','idx_settlement_lines_parent',"
-                + "'idx_settlement_lines_lot','idx_sales_slips_date','idx_sales_slips_partner_date',"
-                + "'idx_settlements_date','idx_inbound_records_date','idx_payment_events_date',"
+                + "'idx_sales_movements_slip_type','idx_sales_movements_group',"
+                + "'idx_sales_slips_date','idx_sales_slips_partner_date',"
+                + "'idx_inbound_records_date','idx_payment_events_date',"
                 + "'idx_auction_shipments_date_id','idx_lineage_mutation_result') order by indexname");
-    assertThat(definitions).hasSize(17);
+    assertThat(definitions).hasSize(14);
     // Validate the operator inventory on actual PostgreSQL, outside any write transaction.
     jdbc.execute(Files.readString(Path.of("../scripts/performance/inspect-backend-indexes.sql")));
     var scenarios = scenarios(zones);
@@ -162,12 +162,7 @@ class PersistenceIndexPlanPostgresE2ETest extends WorkE2ETestBase {
             "movement-by-group",
             () -> movements.countByOrchidGroupIdIn(List.of(BASE + 10)),
             BASE + 10));
-    cases.add(
-        repository(
-            "settlement-detail", () -> settlements.findWithDetailsById(BASE + 10), BASE + 10));
-    cases.add(
-        repository(
-            "settled-lot", () -> settlements.findSettledLotIds(List.of(BASE + 20)), BASE + 20));
+    cases.add(repository("proceeds-detail", () -> proceeds.findById(BASE + 10), BASE + 10));
     cases.add(
         repository(
             "sales-page-all",
@@ -184,19 +179,6 @@ class PersistenceIndexPlanPostgresE2ETest extends WorkE2ETestBase {
                     BASE + 1, null, null, null, null, null, List.of(), PageRequest.of(0, 20)),
             BASE + 1,
             0,
-            20));
-    cases.add(
-        repository(
-            "settlement-page-all",
-            () -> settlements.search(null, null, null, null, PageRequest.of(0, 20)),
-            nil(Types.BIGINT),
-            nil(Types.BIGINT),
-            nil(Types.DATE),
-            nil(Types.DATE),
-            nil(Types.DATE),
-            nil(Types.DATE),
-            nil(Types.VARCHAR),
-            nil(Types.VARCHAR),
             20));
     cases.add(
         repository(
@@ -361,11 +343,8 @@ class PersistenceIndexPlanPostgresE2ETest extends WorkE2ETestBase {
             "reservation-sum",
             "movement-by-slip",
             "movement-by-group",
-            "settlement-detail",
-            "settled-lot",
             "sales-page-all",
             "sales-page-partner",
-            "settlement-page-all",
             "inbound-page-all",
             "payment-page-all",
             "shipment-page-all")) {

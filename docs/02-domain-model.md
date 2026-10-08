@@ -270,8 +270,8 @@ AuctionShipmentLot
  │   └─ AuctionResultLine
  └─ AuctionLotStatusHistory
 
-AuctionSettlement
- └─ AuctionSettlementLine
+AuctionProceeds
+ └─ 원본 AuctionResultLine 연결
 ```
 
 ### AuctionShipmentLot
@@ -310,13 +310,9 @@ AuctionSettlement
 - 출하, 유찰, 재경매 대기, 판매, 반환, 수량 보정 등을 기록한다.
 - 추정/수동확인 여부를 남긴다.
 
-### AuctionSettlement
+### AuctionProceeds
 
-경매장 정산 묶음이다.
-
-- 경매장과 정산 기간을 기준으로 생성한다.
-- lot 또는 결과 행을 연결한다.
-- 정산 금액, 입금 상태, 예상 입금일을 가진다.
+경매장이 제공한 대금 자료와 원본 경매 결과 연결을 소유한다. 제공 낙찰액과 받을 금액은 미확인 상태를 유지할 수 있으며 자료 연결·금액 확인이 완료된 경우에만 새 입금을 허용한다. 실제 입금액은 Payment 유효 배분 합계다. 파생 정산 모델은 제거하며 원래 지급액·수수료를 추정하거나 파생 요약을 지급 근거로 복사하지 않는다.
 
 ## 5. 입금·잔액 도메인
 
@@ -341,7 +337,7 @@ PartnerBalanceSummary
 
 입금 이벤트다.
 
-- 현재 공개 API는 일반 판매 전표 입금과 경매 정산 입금을 지원한다.
+- 현재 공개 API는 일반 판매 전표 입금과 경매 대금 입금을 지원한다.
 - 부분입금은 지원하고 잔액 초과 입금은 거부한다.
 - 수동 입금 요청 키는 `externalUid`에 대상과 함께 저장해 같은 요청의 중복 반영을 막는다.
 - 대상 미지정 입금과 초과입금 예치금은 데이터 모델 확장 여지는 있으나 현재 API에는 없다.

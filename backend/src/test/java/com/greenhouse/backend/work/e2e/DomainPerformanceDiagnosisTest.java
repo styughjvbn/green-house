@@ -10,7 +10,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedger
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationFingerprint;
 import com.greenhouse.backend.sales.application.auction.AuctionDataReader;
-import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementRebuildService;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.support.BenchmarkRuntimeMeasurement;
 import com.greenhouse.backend.support.JdbcMeasurement;
@@ -20,14 +19,11 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.LongStream;
 import javax.sql.DataSource;
 import jdk.jfr.Recording;
 import jdk.jfr.consumer.RecordingFile;
@@ -85,7 +81,6 @@ class DomainPerformanceDiagnosisTest {
   @Autowired DataSource source;
   @Autowired BusinessPartnerRepository partners;
   @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
-  @Autowired AuctionSettlementRebuildService rebuild;
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
   @Autowired JdbcMeasurement counters;
   @Autowired AuctionDataReader auctionReader;
@@ -112,7 +107,7 @@ class DomainPerformanceDiagnosisTest {
     report.put("javaVersion", System.getProperty("java.version"));
     report.put("availableProcessors", Runtime.getRuntime().availableProcessors());
     String scope = System.getProperty("diagnosis.scope", "all");
-    assertThat(scope).isIn("all", "ledger", "work", "stats", "plans");
+    assertThat(scope).isIn("all", "ledger", "work");
     report.put("scope", scope);
     report.put("samples", samples);
     report.put("measuredSqlLogging", "WARN");
@@ -129,72 +124,6 @@ class DomainPerformanceDiagnosisTest {
     }
     var fixture = new DomainPerformanceFixture(jdbc, seeder, partners, ledgerFixture);
     try {
-      for (String mode :
-          scope.equals("ledger") || scope.equals("work")
-              ? List.<String>of()
-              : scope.equals("stats") || scope.equals("plans")
-                  ? List.of("stale-house-statistics", "stale-house-refreshed")
-                  : List.of(
-                      "stale-house-statistics",
-                      "stale-house-refreshed",
-                      "standard-prefix",
-                      "all-analyzed",
-                      "force-custom")) {
-        setting("plan_cache_mode", mode.equals("force-custom") ? "force_custom_plan" : "auto");
-        setting("jit", "on");
-        if (mode.equals("standard-prefix")) {
-          for (int[] previous :
-              List.of(
-                  new int[] {1, 100},
-                  new int[] {1, 1000},
-                  new int[] {1, 10000},
-                  new int[] {50, 20})) {
-            for (int pass = 0; pass < 4; pass++) {
-              fixture.settlement(previous[0], previous[1]);
-              rebuild.rebuildExistingResults();
-              rebuild.rebuildExistingResults();
-            }
-          }
-        }
-        for (int index = 0; index < 2; index++) {
-          if (mode.startsWith("stale-house")) {
-            fixture.settlement(1, 10000);
-            analyzeSettlementTables();
-          }
-          fixture.settlement(501, 20);
-          if (mode.equals("all-analyzed") || mode.equals("stale-house-refreshed"))
-            analyzeSettlementTables();
-          var preflight = preflightPlans();
-          var sample = begin("settlement-" + mode, index);
-          sample.put("preflightPlans", preflight);
-          if (scope.equals("plans")) {
-            write();
-            break;
-          }
-          counters.start();
-          var runtime = new BenchmarkRuntimeMeasurement();
-          long start = System.nanoTime();
-          int changed;
-          try {
-            changed = rebuild.rebuildExistingResults();
-          } finally {
-            sample.put("elapsedNanos", System.nanoTime() - start);
-            sample.put("runtime", runtime.stop());
-            sample.put("jdbc", counters.stop());
-          }
-          assertThat(changed).isEqualTo(501);
-          assertThat(
-                  jdbc.queryForObject("select count(*) from auction_settlement_lines", Long.class))
-              .isEqualTo(10020);
-          sample.put("sql", sql());
-          sample.put("cachedPlans", cachedPlans());
-          write();
-        }
-      }
-      if (scope.equals("stats") || scope.equals("plans")) {
-        report.put("status", "PASSED");
-        return;
-      }
       setting("jit", "on");
       setting("plan_cache_mode", "auto");
       boolean work = scope.equals("work");
@@ -283,144 +212,6 @@ class DomainPerformanceDiagnosisTest {
         from pg_stat_statements where query not like '%pg_stat_statements%'
         order by total_exec_time desc limit 60
         """);
-  }
-
-  private void analyzeSettlementTables() {
-    for (String table :
-        List.of(
-            "auction_shipments",
-            "auction_shipment_lots",
-            "auction_attempts",
-            "auction_result_lines",
-            "auction_settlements",
-            "auction_settlement_lines",
-            "business_partners",
-            "partner_settlement_settings")) jdbc.execute("analyze " + table);
-  }
-
-  private Map<String, Object> preflightPlans() throws Exception {
-    long house =
-        jdbc.queryForObject(
-            "select max(id) from business_partners where partner_type='AUCTION_HOUSE'", Long.class);
-    long maximum = jdbc.queryForObject("select max(id) from auction_result_lines", Long.class);
-    shapes.start();
-    assertThat(auctionReader.getSoldResultLinesUpTo(house, LocalDate.of(2045, 1, 1), maximum))
-        .hasSize(20);
-    var captured = shapes.stop();
-    String sql =
-        captured.stream()
-            .filter(
-                row -> row.contains("from auction_result_lines") && row.contains("auction_date"))
-            .findFirst()
-            .orElseThrow();
-    assertThat(QueryShapeCapture.maxParameters(List.of(sql))).isEqualTo(3);
-    var parts = sql.split("\\?", -1);
-    var prepared = new StringBuilder(parts[0]);
-    for (int i = 1; i < parts.length; i++) prepared.append('$').append(i).append(parts[i]);
-    var result = new LinkedHashMap<String, Object>();
-    result.put("sourceSql", sql);
-    result.put(
-        "relationStats",
-        jdbc.queryForList(
-            "select relname,reltuples::bigint,relpages from pg_class where relname in ('auction_shipments','auction_shipment_lots','auction_attempts','auction_result_lines') order by relname"));
-    try (var connection = source.getConnection();
-        var statement = connection.createStatement()) {
-      String original;
-      try (var rows = statement.executeQuery("show plan_cache_mode")) {
-        rows.next();
-        original = rows.getString(1);
-      }
-      statement.execute("prepare diagnosis_source(date,bigint,bigint) as " + prepared);
-      try {
-        for (String planMode : List.of("force_custom_plan", "force_generic_plan")) {
-          statement.execute("set plan_cache_mode=" + planMode);
-          try (var rows =
-              statement.executeQuery(
-                  "explain (analyze,buffers,format json) execute diagnosis_source('2045-01-01',"
-                      + house
-                      + ","
-                      + maximum
-                      + ")")) {
-            rows.next();
-            result.put(planMode, objectMapper.readTree(rows.getString(1)));
-          }
-        }
-      } finally {
-        statement.execute("deallocate diagnosis_source");
-        statement.execute("set plan_cache_mode=" + original);
-      }
-    }
-    return result;
-  }
-
-  private List<Map<String, Object>> cachedPlans() throws Exception {
-    var result = new ArrayList<Map<String, Object>>();
-    try (var connection = source.getConnection();
-        var statement = connection.createStatement()) {
-      var rows = new ArrayList<Map<String, Object>>();
-      try (var cursor =
-          statement.executeQuery(
-              "select name,statement,parameter_types::text,generic_plans,custom_plans from pg_prepared_statements where statement like '%from auction_result_lines%' or statement like '%from auction_settlement_lines%'")) {
-        while (cursor.next()) {
-          var row = new LinkedHashMap<String, Object>();
-          row.put("name", cursor.getString(1));
-          row.put("sql", cursor.getString(2));
-          row.put("parameterTypes", cursor.getString(3));
-          row.put("genericPlans", cursor.getLong(4));
-          row.put("customPlans", cursor.getLong(5));
-          rows.add(row);
-        }
-      }
-      long house =
-          jdbc.queryForObject(
-              "select max(id) from business_partners where partner_type='AUCTION_HOUSE'",
-              Long.class);
-      long maximum = jdbc.queryForObject("select max(id) from auction_result_lines", Long.class);
-      for (var row : rows) {
-        String types = (String) row.get("parameterTypes");
-        String sql = (String) row.get("sql");
-        String args = null;
-        if (types.equals("{date,bigint,bigint}") && sql.contains("auction_date")) {
-          args = "'2045-01-01'," + house + "," + maximum;
-        } else if (sql.contains("from auction_settlement_lines")
-            && sql.contains("auction_result_line_id in")
-            && types.matches("\\{bigint(?:,bigint)*\\}")) {
-          int size = types.substring(1, types.length() - 1).split(",").length;
-          if (size <= 500)
-            args =
-                LongStream.range(97000001, 97000001 + size)
-                    .mapToObj(Long::toString)
-                    .collect(Collectors.joining(","));
-        }
-        if (args != null) {
-          String name = '"' + ((String) row.get("name")).replace("\"", "\"\"") + '"';
-          String explain =
-              "explain (analyze,buffers,format json) execute " + name + "(" + args + ")";
-          try (var plan = statement.executeQuery(explain)) {
-            plan.next();
-            row.put("observedPlan", objectMapper.readTree(plan.getString(1)));
-          }
-          if (sql.contains("from auction_settlement_lines")) {
-            String original;
-            try (var value = statement.executeQuery("show plan_cache_mode")) {
-              value.next();
-              original = value.getString(1);
-            }
-            try {
-              statement.execute("set plan_cache_mode=force_custom_plan");
-              try (var plan = statement.executeQuery(explain)) {
-                plan.next();
-                row.put("forcedCustomPlan", objectMapper.readTree(plan.getString(1)));
-              }
-            } finally {
-              statement.execute("set plan_cache_mode=" + original);
-            }
-          }
-        }
-        result.add(row);
-      }
-    }
-    return result;
   }
 
   private void setting(String name, String value) throws Exception {

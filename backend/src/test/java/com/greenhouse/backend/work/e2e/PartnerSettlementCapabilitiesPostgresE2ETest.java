@@ -26,9 +26,9 @@ class PartnerSettlementCapabilitiesPostgresE2ETest extends WorkE2ETestBase {
     String path = "/api/business-partners/%d/settlement-settings".formatted(partner.getId());
     var initial = get(path);
     assertThat(initial.status()).isEqualTo(200);
-    String expectedUnit = type == PartnerType.AUCTION_HOUSE ? "AUCTION_DATE" : "SALES_SLIP";
-    assertThat(initial.data().path("capabilities").path("executableUnits").get(0).asText())
-        .isEqualTo(expectedUnit);
+    var executable = initial.data().path("capabilities").path("executableUnits");
+    if (type == PartnerType.AUCTION_HOUSE) assertThat(executable).isEmpty();
+    else assertThat(executable.get(0).asText()).isEqualTo("SALES_SLIP");
     var financialCounts = financialCounts();
     long audits = jdbc.queryForObject("select count(*) from audit_events", Long.class);
     var saved =
@@ -66,7 +66,7 @@ class PartnerSettlementCapabilitiesPostgresE2ETest extends WorkE2ETestBase {
 
   private List<Long> financialCounts() {
     return List.of(
-            "auction_settlements",
+            "auction_proceeds",
             "partner_payment_events",
             "sales_slips",
             "partner_balance_summaries")

@@ -13,7 +13,8 @@ import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditEventEntity;
 import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.audit.repository.AuditEventRepository;
-import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementService;
+import com.greenhouse.backend.sales.application.auction.AuctionProceedsReader;
+import com.greenhouse.backend.sales.application.auction.AuctionProceedsService;
 import com.greenhouse.backend.sales.domain.auction.AuctionAttempt;
 import com.greenhouse.backend.sales.domain.auction.AuctionAttemptStatus;
 import com.greenhouse.backend.sales.domain.auction.AuctionInspectionStatus;
@@ -68,7 +69,8 @@ class PaymentTests {
 
   @Autowired AuctionShipmentRepository shipmentRepository;
 
-  @Autowired AuctionSettlementService settlementService;
+  @Autowired AuctionProceedsService proceedsService;
+  @Autowired AuctionProceedsReader proceedsReader;
 
   @Autowired PartnerPaymentEventRepository eventRepository;
 
@@ -87,7 +89,7 @@ class PaymentTests {
       payload.put(field, invalidValue);
     }
     String json = JsonMapper.builder().build().writeValueAsString(payload);
-    for (String target : List.of("sales-slips", "auction-settlements")) {
+    for (String target : List.of("sales-slips", "auction-proceeds")) {
       mockMvc
           .perform(
               post("/api/{target}/-1/confirm-payment", target)
@@ -116,7 +118,7 @@ class PaymentTests {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"sales-slips", "auction-settlements"})
+  @ValueSource(strings = {"sales-slips", "auction-proceeds"})
   void acceptsFieldLengthLimitsAndAbsentOptionalPaymentFields(String target) throws Exception {
     var payload =
         new LinkedHashMap<String, Object>(
@@ -363,21 +365,29 @@ class PaymentTests {
     lot.addAttempt(attempt);
     shipment.addLot(lot);
     shipmentRepository.saveAndFlush(shipment);
-    var settlement = settlementService.rebuild(auctionHouse.getId(), auctionDate);
+    Long id =
+        proceedsService.record(
+            auctionHouse.getId(),
+            "제공 지급 자료",
+            100000L,
+            100000L,
+            List.of(attempt.getResultLines().getFirst().getId()));
+    proceedsService.confirm(id, "확인자");
+    var settlement = proceedsReader.get(id);
 
     mockMvc
         .perform(
-            post("/api/auction-settlements/{id}/confirm-payment", settlement.id())
+            post("/api/auction-proceeds/{id}/confirm-payment", settlement.id())
                 .contentType("application/json")
                 .content(paymentJson(40_000)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.paidAmount").value(40_000))
         .andExpect(jsonPath("$.data.remainingAmount").value(60_000))
-        .andExpect(jsonPath("$.data.status").value("PARTIALLY_PAID"));
+        .andExpect(jsonPath("$.data.paymentAllowed").value(true));
 
     mockMvc
         .perform(
-            post("/api/auction-settlements/{id}/confirm-payment", settlement.id())
+            post("/api/auction-proceeds/{id}/confirm-payment", settlement.id())
                 .contentType("application/json")
                 .content(paymentJson(40_000)))
         .andExpect(status().isOk())
@@ -388,7 +398,7 @@ class PaymentTests {
             paymentJson(40_000).replace("2026-07-06", "2026-07-07"))) {
       mockMvc
           .perform(
-              post("/api/auction-settlements/{id}/confirm-payment", settlement.id())
+              post("/api/auction-proceeds/{id}/confirm-payment", settlement.id())
                   .contentType("application/json")
                   .content(changed))
           .andExpect(status().isConflict())
@@ -398,7 +408,7 @@ class PaymentTests {
 
     mockMvc
         .perform(
-            post("/api/auction-settlements/{id}/confirm-payment", settlement.id())
+            post("/api/auction-proceeds/{id}/confirm-payment", settlement.id())
                 .contentType("application/json")
                 .content(paymentJson(70_000)))
         .andExpect(status().isBadRequest())
@@ -407,20 +417,23 @@ class PaymentTests {
 
     var audits =
         auditEventRepository.findAll().stream()
-            .filter(event -> event.getSource() == AuditSource.SETTLEMENT_MANAGEMENT)
+            .filter(
+                event ->
+                    "AUCTION_PROCEEDS".equals(event.getEntityType())
+                        || "PAYMENT_EVENT".equals(event.getEntityType()))
             .toList();
     assertThat(audits).hasSize(2);
     assertThat(audits)
         .extracting(event -> event.getEntityType())
-        .containsExactly("PAYMENT_EVENT", "AUCTION_SETTLEMENT");
+        .containsExactly("PAYMENT_EVENT", "AUCTION_PROCEEDS");
     assertThat(audits.getLast().getChangedFields())
-        .containsExactly("paidAmount", "remainingAmount", "paymentStatus");
+        .containsExactly("paidAmount", "remainingAmount");
     assertPaymentAudit(
         audits.getLast(),
         auctionHouse.getId(),
-        "AUCTION_SETTLEMENT",
-        "{\"paidAmount\":0,\"remainingAmount\":100000,\"paymentStatus\":\"PAYMENT_WAITING\"}",
-        "{\"paidAmount\":40000,\"remainingAmount\":60000,\"paymentStatus\":\"PARTIALLY_PAID\"}");
+        "AUCTION_PROCEEDS",
+        "{\"paidAmount\":0,\"remainingAmount\":100000}",
+        "{\"paidAmount\":40000,\"remainingAmount\":60000}");
     assertThat(audits.getLast().getEntityId()).isEqualTo(settlement.id());
   }
 
@@ -431,10 +444,17 @@ class PaymentTests {
       String beforeJson,
       String afterJson) {
     var mapper = JsonMapper.builder().build();
-    assertThat(event.getSource()).isEqualTo(AuditSource.SETTLEMENT_MANAGEMENT);
+    assertThat(event.getSource())
+        .isEqualTo(
+            targetType.equals("AUCTION_PROCEEDS")
+                ? AuditSource.SALES_MANAGEMENT
+                : AuditSource.SETTLEMENT_MANAGEMENT);
     assertThat(event.getAction()).isEqualTo(AuditAction.UPDATED);
     assertThat(event.getChangedFields())
-        .containsExactly("paidAmount", "remainingAmount", "paymentStatus");
+        .containsExactlyElementsOf(
+            targetType.equals("AUCTION_PROCEEDS")
+                ? List.of("paidAmount", "remainingAmount")
+                : List.of("paidAmount", "remainingAmount", "paymentStatus"));
     assertThat(mapper.readTree(mapper.writeValueAsString(event.getBeforeData())))
         .isEqualTo(mapper.readTree(beforeJson));
     assertThat(mapper.readTree(mapper.writeValueAsString(event.getAfterData())))

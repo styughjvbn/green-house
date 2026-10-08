@@ -9,7 +9,9 @@ import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.dto.auction.AuctionProceedsResponse;
 import com.greenhouse.backend.sales.repository.auction.AuctionProceedsRepository;
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +26,12 @@ public class AuctionProceedsReader {
   private final AuctionProceedsRepository repository;
   private final BusinessPartnerReader partners;
   private final PaymentAllocationReader allocations;
+  private final AuctionDataReader results;
+
+  public Set<Long> findReferencedShipmentIds(Collection<Long> ids) {
+    if (ids.isEmpty()) return Set.of();
+    return Set.copyOf(repository.findReferencedShipmentIds(ids));
+  }
 
   public AuctionProceedsResponse get(Long id) {
     var root =
@@ -58,6 +66,7 @@ public class AuctionProceedsReader {
                     Collectors.mapping(
                         AuctionProceedsRepository.ResultReference::getResultLineId,
                         Collectors.toList())));
+    var details = results.getResults(references.values().stream().flatMap(List::stream).toList());
     var identities =
         partners.getIdentities(roots.stream().map(AuctionProceeds::getAuctionHouseId).toList());
     var owners =
@@ -87,7 +96,10 @@ public class AuctionProceedsReader {
                   remaining,
                   review,
                   root.isAllocationAllowed(paid.amount(), review),
-                  List.copyOf(references.getOrDefault(root.getId(), List.of())));
+                  List.copyOf(references.getOrDefault(root.getId(), List.of())),
+                  references.getOrDefault(root.getId(), List.of()).stream()
+                      .map(details::get)
+                      .toList());
             })
         .toList();
   }

@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationReport;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.sales.application.auction.settlement.AuctionSettlementRebuildService;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.support.BenchmarkRuntimeMeasurement;
 import com.greenhouse.backend.support.JdbcMeasurement;
@@ -48,7 +47,6 @@ class DomainPerformanceBenchmarkTest extends WorkE2ETestBase {
   @Autowired BusinessPartnerRepository partners;
   @Autowired OrchidGroupRepository groups;
   @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
-  @Autowired AuctionSettlementRebuildService rebuild;
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
   @Autowired EntityManagerFactory emf;
   @Autowired JdbcMeasurement jdbcMeasurement;
@@ -60,9 +58,9 @@ class DomainPerformanceBenchmarkTest extends WorkE2ETestBase {
       Path.of(System.getProperty("domainBenchmark.outputDir", "build/domain-benchmark/direct"));
 
   @Test
-  void measuresSettlementAndLedgerWithFreshFixturesAndExportsResults() throws Exception {
+  void measuresLedgerWithFreshFixturesAndExportsResults() throws Exception {
     String profile = choice("profile", "standard", List.of("smoke", "standard", "large"));
-    String selection = choice("scenario", "all", List.of("all", "settlement", "ledger"));
+    String selection = choice("scenario", "all", List.of("all", "ledger"));
     int warmup = integer("warmup", 1, 0, 20);
     int samples = integer("samples", 3, 1, 30);
     report.put("schemaVersion", 1);
@@ -96,40 +94,19 @@ class DomainPerformanceBenchmarkTest extends WorkE2ETestBase {
               index < warmup ? "warmup" : "sample",
               index < warmup ? index + 1 : index - warmup + 1,
               index < warmup ? warmup : samples);
-          if (scenario.family().equals("settlement")) {
-            fixture.settlement(scenario.keys(), scenario.resultsPerKey());
-            if (index < warmup) {
-              verifySettlement(scenario, rebuild.rebuildExistingResults(), false);
-              verifySettlement(scenario, rebuild.rebuildExistingResults(), true);
-            } else {
-              measure(
-                  measurements,
-                  "initialize",
-                  index - warmup,
-                  rebuild::rebuildExistingResults,
-                  count -> verifySettlement(scenario, count, false));
-              measure(
-                  measurements,
-                  "replay",
-                  index - warmup,
-                  rebuild::rebuildExistingResults,
-                  count -> verifySettlement(scenario, count, true));
-            }
-          } else {
-            fixture.ledger(
-                scenario.groups(),
-                scenario.revisions(),
-                scenario.workReferences(),
-                scenario.errors());
-            if (index < warmup) verifyLedger(scenario, reconciliation.reconcile());
-            else
-              measure(
-                  measurements,
-                  "reconcile",
-                  index - warmup,
-                  reconciliation::reconcile,
-                  state -> verifyLedger(scenario, state));
-          }
+          fixture.ledger(
+              scenario.groups(),
+              scenario.revisions(),
+              scenario.workReferences(),
+              scenario.errors());
+          if (index < warmup) verifyLedger(scenario, reconciliation.reconcile());
+          else
+            measure(
+                measurements,
+                "reconcile",
+                index - warmup,
+                reconciliation::reconcile,
+                state -> verifyLedger(scenario, state));
         }
         result.put("status", "PASSED");
         writeReport();
@@ -193,20 +170,6 @@ class DomainPerformanceBenchmarkTest extends WorkE2ETestBase {
     } finally {
       writeReport();
     }
-  }
-
-  private Map<String, Object> verifySettlement(Case scenario, int changed, boolean replay) {
-    long expected = (long) scenario.keys() * scenario.resultsPerKey();
-    assertThat(changed).isEqualTo(replay ? 0 : scenario.keys());
-    long roots = jdbc.queryForObject("select count(*) from auction_settlements", Long.class);
-    long lines = jdbc.queryForObject("select count(*) from auction_settlement_lines", Long.class);
-    long amount =
-        jdbc.queryForObject("select sum(gross_amount) from auction_settlements", Long.class);
-    assertThat(roots).isEqualTo(scenario.keys());
-    assertThat(lines).isEqualTo(expected);
-    assertThat(amount).isEqualTo(expected * 1000);
-    return Map.of(
-        "changedSettlements", changed, "settlements", roots, "lines", lines, "grossAmount", amount);
   }
 
   private Map<String, Object> verifyLedger(
@@ -319,11 +282,6 @@ class DomainPerformanceBenchmarkTest extends WorkE2ETestBase {
       int revisions,
       boolean workReferences,
       boolean errors) {
-    static Case settlement(int keys, int lines) {
-      return new Case(
-          "settlement-" + keys + "x" + lines, "settlement", keys, lines, 0, 0, false, false);
-    }
-
     static Case ledger(int groups, int revisions, boolean references, boolean errors) {
       return new Case(
           "ledger-"
@@ -346,18 +304,11 @@ class DomainPerformanceBenchmarkTest extends WorkE2ETestBase {
     return switch (profile) {
       case "smoke" ->
           List.of(
-              Case.settlement(1, 8),
-              Case.settlement(3, 3),
               Case.ledger(3, 2, false, false),
               Case.ledger(3, 2, true, false),
               Case.ledger(3, 2, false, true));
       case "standard" ->
           List.of(
-              Case.settlement(1, 100),
-              Case.settlement(1, 1000),
-              Case.settlement(1, 10000),
-              Case.settlement(50, 20),
-              Case.settlement(501, 20),
               Case.ledger(500, 1, false, false),
               Case.ledger(5000, 10, false, false),
               Case.ledger(1, 50001, false, false),
@@ -365,8 +316,6 @@ class DomainPerformanceBenchmarkTest extends WorkE2ETestBase {
               Case.ledger(5000, 1, false, true));
       case "large" ->
           List.of(
-              Case.settlement(1, 100000),
-              Case.settlement(501, 100),
               Case.ledger(20000, 20, false, false),
               Case.ledger(1, 500001, false, false),
               Case.ledger(5000, 20, true, false),
