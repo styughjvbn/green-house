@@ -329,7 +329,7 @@ Farm 원장 대사는 Work 공개 조회 API와 결과 값을 직접 사용한�
 - 모듈 간 계약은 필요한 값만 전달한다. 외부 모듈 Entity를 장기간 보관하거나 응답 조립 편의를 위해 aggregate 전체를 넘기지 않는다.
 - Partner 조회는 현재 기준 정보의 application 값을 반환한다. Document·Direct·Auction·Payment는 거래처 ID로 연결하며 기존 DB 외래키를 유지한다. Entity를 반환하는 호환 조회는 제거했다. 판매 응답의 연락처를 포함한 현재 거래처 정보와 경매장 이름은 ID를 모아 일괄 조회한다.
 - Sales는 난 묶음 Entity 대신 ID와 Farm application의 현재 상태 값을 사용한다. 배분·재고 이동의 기존 DB 외래키는 유지하며, 상세 응답은 Sales의 배분·보존 스냅샷과 Farm의 상태 값을 따로 일괄 조회해 조립한다. 현재 상태 조회는 500개 ID씩 처리한다.
-- Farm의 외부 난 묶음 조회 계약은 상태 값·판매 선택·호출 트랜잭션 내 잠금으로 제한한다. Entity가 필요한 Farm 내부 유스케이스는 소유 Repository를 사용한다. 공개 Reader의 반환값·입력과 중첩 collection/record에 Entity를 추가하면 architecture 검증이 실패한다.
+- Farm의 외부 난 묶음 조회는 `farm/api/orchid`의 공개 API와 상태 값을 사용한다. 기존 Reader가 API를 직접 구현하며 Entity → 상태 값 factory는 application 내부에 둔다. 조회 계약은 상태 값·판매 선택·호출 트랜잭션 내 잠금으로 제한한다. Entity가 필요한 Farm 내부 유스케이스는 소유 Repository를 사용한다. 공개 Reader의 반환값·입력과 중첩 collection/record에 Entity를 추가하면 architecture 검증이 실패한다.
 - 기존 판매 전표의 수정·상태 전환·입금은 root를 먼저 잠그고 소유 품목·배분·역사 스냅샷을 일괄 로딩한다. 배분과 스냅샷 collection은 별도 쿼리로 초기화해 다중 collection fetch join과 대상별 lazy 조회를 피한다. 수정의 flush 후에도 같은 managed aggregate로 재예약·감사·최종 응답을 처리한다. Farm의 재잠금과 예약 전·해제 후·출고 직전 snapshot, 최종 현재 상태 조회는 각각의 시점 계약으로 유지한다.
 - 경매 변경은 lot root만 잠근 뒤 기존 시도의 결과 행을 일괄 로딩해 cascade flush·응답 mapper의 시도별 조회를 피한다. 완료 접수 replay는 이 로딩보다 먼저 처리한다. 쓰기 응답은 lot의 collection 순서와 새 시도의 append 위치를 유지하고 결과 행은 생성 ID 순으로 읽으며, 결과·반환의 최초 응답은 자식 ID가 확정된 뒤 같은 트랜잭션의 접수 snapshot에 보존한다. 조회용 정렬을 쓰기 응답에 적용하거나 shipment fetch로 부모 잠금을 추가하지 않는다.
 - 대상 금융 감사는 Document/Direct 또는 Auction이, 실제 입금 감사는 Payment가 소유한다. 값 계약으로 기록하고 같은 최상위 transaction에 참여한다. 기존 원장·전표 입금의 `SETTLEMENT_MANAGEMENT` 출처는 호환을 위해 유지하며 새 대금 대상 감사는 `SALES_MANAGEMENT`를 사용한다.

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.dto.document;
 
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
 
 public record SalesOrchidGroupSearchResponse(
     Long id,

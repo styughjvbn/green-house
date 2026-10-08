@@ -6,8 +6,8 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.CreatedShipment;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.LotDraft;
 import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotType;

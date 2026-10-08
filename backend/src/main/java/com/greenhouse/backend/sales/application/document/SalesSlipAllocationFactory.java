@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipAllocationInput;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotType;
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SalesSlipAllocationFactory {
 
-  private final OrchidGroupReader orchidGroupReader;
+  private final OrchidGroupQueryApi orchidGroupReader;
 
   private final Clock clock;
 

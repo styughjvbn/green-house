@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;

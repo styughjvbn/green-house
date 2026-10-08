@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.application.document;
 
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.domain.document.SalesOrchidGroupSnapshot;
 import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotSource;
 import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotType;

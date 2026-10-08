@@ -1,29 +1,11 @@
 package com.greenhouse.backend.farm.application.orchid;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import java.math.BigDecimal;
 
-/** Current values captured together; no managed entities cross the Farm boundary. */
-public record OrchidGroupState(
-    Long id,
-    Long varietyId,
-    String varietyName,
-    String genus,
-    Integer ageYear,
-    String potSizeCode,
-    String potSize,
-    Integer quantity,
-    Integer reservedQuantity,
-    Integer availableQuantity,
-    String status,
-    Long houseId,
-    Integer houseNumber,
-    Long physicalBedId,
-    Integer physicalBedNumber,
-    Long bedZoneId,
-    String bedZoneName,
-    BigDecimal startPosition,
-    BigDecimal endPosition) {
+final class OrchidGroupStateFactory {
+
+  private OrchidGroupStateFactory() {}
 
   static OrchidGroupState from(OrchidGroup group) {
     var zone = group.getBedZone();

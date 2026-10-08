@@ -1,7 +1,7 @@
 package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi;
 import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
@@ -26,7 +26,7 @@ public class SalesSlipDocumentAssembler {
 
   private final DirectDocumentAccountingPort accounting;
 
-  private final OrchidGroupReader orchidGroupReader;
+  private final OrchidGroupQueryApi orchidGroupReader;
 
   public Page<SalesSlipSummary> assemblePage(Page<SalesSlip> page) {
     var partners = partnerReader.getAllInfo(page.map(SalesSlip::getPartnerId).getContent());

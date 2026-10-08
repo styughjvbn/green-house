@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.application.document;
 
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi;
 import com.greenhouse.backend.sales.dto.document.SalesOrchidGroupSearchResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SalesOrchidGroupQueryService {
 
-  private final OrchidGroupReader orchidGroupReader;
+  private final OrchidGroupQueryApi orchidGroupReader;
 
   public List<SalesOrchidGroupSearchResponse> search(
       String keyword, Long varietyId, String status) {

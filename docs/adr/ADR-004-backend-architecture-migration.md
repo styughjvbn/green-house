@@ -497,3 +497,21 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - 프로덕션 다른 최상위 모듈의 Work application 참조와 inventory의 Work application 항목은 0개다. Work 내부 구현 및 구현을 검증하는 테스트 참조는 유지한다.
 - HTTP Controller·DTO·schema와 SQL·DB/트랜잭션 경계·상태/수량 판단 변경 없음. OpenAPI/프론트 타입 재생성과 `workE2eTest`는 실행하지 않았다. 운영 CLI 진입점은 동일하고 운영 DB 명령은 실행하지 않았다. inventory의 설명 주석 순서는 유지했다. 전체 검증 이후에는 이 ADR의 결과 기록만 추가했다.
 - 이번 두 단계 완료. 전체 이행은 진행 중이며 후속 P2 대상은 Farm Reader/Writer·Mutation 값과 Sales 공개 계약이다.
+
+### 2026-10-08: 두 단계 진행 — Farm 조회·사용 여부의 1단계
+
+| 책임 | 변경 전 | 변경 후 | 이유 |
+|---|---|---|---|
+| Sales 난 묶음 상태·판매 선택·선잠금 | Farm application Reader 직접 참조 | `farm/api/orchid/OrchidGroupQueryApi` | 저장소·배치 로딩 구현은 기존 Reader에 유지, 외부 사용 네 메서드만 공개 |
+| 현재 상태 값 | Farm application `OrchidGroupState` | `farm/api/orchid/OrchidGroupState` | 순수 값만 공개하고 Entity 변환은 내부 factory로 이동 |
+
+- Sales가 허용된 Farm API를 직접 호출하며 Reader가 직접 구현한다. 전달 Service·Adapter·Port·integration을 추가하지 않는다. 조회 500개 배치·ID 정렬/중복 제거·누락 예외·판매 가능 정책과 동일 시점의 상태 값은 유지한다.
+- Reader의 readOnly와 잠금 메서드의 `MANDATORY`, root/배분/난 묶음 선잠금 순서·예약·출고 snapshot·Mutation Writer는 동일하다. Entity 변환 본문은 그대로 내부 factory로 옮긴다. SQL·수량 정책·HTTP DTO·Receipt 지문 변경 없음.
+- reviewed inventory는 기존 Reader와 상태 값의 TYPE/METHOD FQCN만 치환한다. 실제 Reader를 검증하는 기존 테스트·spy는 유지한다.
+- Writer는 sealed 명령·정규화·결과/원장 snapshot의 공개 값 분리가 함께 필요하므로 후속 독립 작업으로 유지한다. 이번 두 번째 단계는 이미 Sales가 구현하는 Farm 사용 여부 SPI와 값 계약을 정리한다.
+
+Farm 조회 단계 검증 결과:
+
+- Reader 잠금·배치 건수 회귀, Sales allocation·출고·snapshot·Mutation 계약·공개 값·inventory·integration 집중 검증 통과. 상태 변환 본문은 이동 전과 동일하다.
+- 전체 `test spotlessCheck` 통과: 777개, 실패·오류·skip 0개. 임시 init script로 heap 2 GiB 적용. 프론트 `npm run check` 통과.
+- Controller·요청/응답 DTO 필드·schema와 SQL·트랜잭션/잠금·수량 처리 변경 없음. OpenAPI/프론트 타입 재생성과 `workE2eTest`는 실행하지 않았다. 전체 검증 이후 변경은 이 ADR의 결과 기록뿐이다.

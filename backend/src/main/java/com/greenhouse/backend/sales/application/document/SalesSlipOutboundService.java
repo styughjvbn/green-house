@@ -1,7 +1,7 @@
 package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.LotDraft;
 import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
@@ -18,7 +18,7 @@ public class SalesSlipOutboundService {
 
   private final AuctionDocumentPort shipmentCreator;
 
-  private final OrchidGroupReader orchidGroupReader;
+  private final OrchidGroupQueryApi orchidGroupReader;
 
   private final Clock clock;
 

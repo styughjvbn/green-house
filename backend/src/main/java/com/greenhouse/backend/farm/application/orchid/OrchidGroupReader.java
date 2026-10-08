@@ -1,6 +1,8 @@
 package com.greenhouse.backend.farm.application.orchid;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import java.util.Collection;
@@ -15,19 +17,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-public class OrchidGroupReader {
+public class OrchidGroupReader implements OrchidGroupQueryApi {
 
   private static final int ID_BATCH_SIZE = 500;
 
   private final OrchidGroupRepository orchidGroupRepository;
 
   @Transactional(propagation = Propagation.MANDATORY)
+  @Override
   public Map<Long, OrchidGroupState> lockStates(Collection<Long> orchidGroupIds) {
     return loadStates(orchidGroupIds, true);
   }
 
   /** Lock the complete use-case ID set without loading state/association snapshots. */
   @Transactional(propagation = Propagation.MANDATORY)
+  @Override
   public void lockGroups(Collection<Long> orchidGroupIds) {
     var ids = orchidGroupIds.stream().distinct().sorted().toList();
     for (int start = 0; start < ids.size(); start += ID_BATCH_SIZE) {
@@ -35,6 +39,7 @@ public class OrchidGroupReader {
     }
   }
 
+  @Override
   public Map<Long, OrchidGroupState> getStates(Collection<Long> orchidGroupIds) {
     return loadStates(orchidGroupIds, false);
   }
@@ -46,7 +51,7 @@ public class OrchidGroupReader {
       var batch = ids.subList(start, Math.min(start + ID_BATCH_SIZE, ids.size()));
       if (lock) lockBatch(batch);
       for (var group : orchidGroupRepository.findDetailsByIds(batch)) {
-        states.put(group.getId(), OrchidGroupState.from(group));
+        states.put(group.getId(), OrchidGroupStateFactory.from(group));
       }
     }
     if (states.size() != ids.size()) {
@@ -61,12 +66,13 @@ public class OrchidGroupReader {
     }
   }
 
+  @Override
   public List<OrchidGroupState> searchSellable(String keyword, Long varietyId, String status) {
     return orchidGroupRepository
         .searchSellable(
             keyword, varietyId, status, OrchidGroupStatusPolicy.unavailableForSaleStatuses())
         .stream()
-        .map(OrchidGroupState::from)
+        .map(OrchidGroupStateFactory::from)
         .toList();
   }
 }
