@@ -1,6 +1,6 @@
 package com.greenhouse.backend.analytics.dto;
 
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import java.time.LocalDate;
 
 public record PartnerAnalyticsStatResponse(

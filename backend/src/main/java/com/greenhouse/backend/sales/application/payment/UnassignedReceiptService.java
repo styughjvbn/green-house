@@ -3,10 +3,10 @@ package com.greenhouse.backend.sales.application.payment;
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerLock;
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
 import com.greenhouse.backend.sales.dto.payment.CancelUnassignedReceiptRequest;
 import com.greenhouse.backend.sales.dto.payment.PartnerPaymentEventResponse;
+import com.greenhouse.backend.sales.partner.api.BusinessPartnerLockApi;
 import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class UnassignedReceiptService {
   private final PartnerPaymentEventRepository events;
-  private final BusinessPartnerLock partners;
+  private final BusinessPartnerLockApi partners;
   private final PartnerBalanceService balances;
   private final RequestActorProvider actors;
   private final PaymentAuditSupport audit;

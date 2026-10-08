@@ -2,10 +2,10 @@ package com.greenhouse.backend.sales.repository.partner;
 
 import static com.greenhouse.backend.sales.domain.partner.QBusinessPartner.businessPartner;
 
+import com.greenhouse.backend.sales.api.partner.PartnerTextMatch;
+import com.greenhouse.backend.sales.api.partner.PartnerTextSearch;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
-import com.greenhouse.backend.sales.domain.partner.PartnerTextMatch;
-import com.greenhouse.backend.sales.domain.partner.PartnerTextSearch;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.dsl.BooleanExpression;

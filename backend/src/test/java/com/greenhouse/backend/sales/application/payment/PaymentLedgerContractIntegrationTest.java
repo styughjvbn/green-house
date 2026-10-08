@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.audit.repository.AuditEventRepository;
 import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;

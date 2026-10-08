@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.application.partner;
 
 import com.greenhouse.backend.sales.domain.partner.PartnerSettlementSettings;
+import com.greenhouse.backend.sales.partner.api.ExpectedPaymentDateApi;
 import com.greenhouse.backend.sales.repository.partner.PartnerSettlementSettingsRepository;
 import java.time.LocalDate;
 import java.util.Collection;
@@ -12,15 +13,17 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class ExpectedPaymentDateCalculator {
+public class ExpectedPaymentDateCalculator implements ExpectedPaymentDateApi {
 
   private final PartnerSettlementSettingsRepository settingsRepository;
 
+  @Override
   public LocalDate calculate(Long partnerId, LocalDate baseDate) {
     var settings = settingsRepository.findByPartnerId(partnerId).orElse(null);
     return calculate(baseDate, settings);
   }
 
+  @Override
   public Map<PaymentDateTarget, LocalDate> calculateAll(Collection<PaymentDateTarget> targets) {
     if (targets.isEmpty()) {
       return Map.of();
@@ -43,6 +46,4 @@ public class ExpectedPaymentDateCalculator {
   private LocalDate calculate(LocalDate baseDate, PartnerSettlementSettings settings) {
     return settings == null ? baseDate : settings.calculateExpectedPaymentDate(baseDate);
   }
-
-  public record PaymentDateTarget(Long partnerId, LocalDate baseDate) {}
 }

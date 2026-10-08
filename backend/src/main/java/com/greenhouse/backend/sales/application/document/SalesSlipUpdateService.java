@@ -1,14 +1,14 @@
 package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipCommand;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipInputPolicy;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.document.SalesType;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +28,7 @@ public class SalesSlipUpdateService {
 
   private final SalesSlipAggregateLoader aggregateLoader;
 
-  private final BusinessPartnerReader businessPartnerReader;
+  private final BusinessPartnerQueryApi businessPartnerReader;
 
   private final SalesSlipAllocationFactory salesSlipAllocationFactory;
 

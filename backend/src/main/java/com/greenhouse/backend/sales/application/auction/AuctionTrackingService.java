@@ -9,14 +9,14 @@ import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
+import com.greenhouse.backend.sales.api.partner.PartnerTextMatch;
+import com.greenhouse.backend.sales.api.partner.PartnerTextSearch;
 import com.greenhouse.backend.sales.domain.auction.AuctionAttempt;
 import com.greenhouse.backend.sales.domain.auction.AuctionCommandReceipt;
 import com.greenhouse.backend.sales.domain.auction.AuctionLotSearchCriteria;
 import com.greenhouse.backend.sales.domain.auction.AuctionLotStatus;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
-import com.greenhouse.backend.sales.domain.partner.PartnerTextMatch;
-import com.greenhouse.backend.sales.domain.partner.PartnerTextSearch;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotAdjustmentRequest;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotResponse;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotReturnRequest;
@@ -58,7 +58,7 @@ public class AuctionTrackingService {
 
   private final Clock clock;
 
-  private final BusinessPartnerReader partnerReader;
+  private final BusinessPartnerQueryApi partnerReader;
 
   private final AuctionShipmentLotRepository lotRepository;
 

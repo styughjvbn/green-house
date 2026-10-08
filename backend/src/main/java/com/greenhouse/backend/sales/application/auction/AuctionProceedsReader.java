@@ -2,7 +2,7 @@ package com.greenhouse.backend.sales.application.auction;
 
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.application.payment.PaymentAllocationReader;
 import com.greenhouse.backend.sales.domain.auction.AuctionProceeds;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AuctionProceedsReader {
   private final AuctionProceedsRepository repository;
-  private final BusinessPartnerReader partners;
+  private final BusinessPartnerQueryApi partners;
   private final PaymentAllocationReader allocations;
   private final AuctionDataReader results;
 

@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
 import com.greenhouse.backend.sales.application.auction.RecordAuctionResultCommand;
 import com.greenhouse.backend.sales.domain.auction.AuctionAttempt;
@@ -22,7 +23,6 @@ import com.greenhouse.backend.sales.domain.auction.AuctionResultLineInput;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotAdjustmentRequest;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotReturnRequest;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentLotRepository;

@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.dto.partner;
 
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerInfo;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 
 public record BusinessPartnerResponse(
     Long id,

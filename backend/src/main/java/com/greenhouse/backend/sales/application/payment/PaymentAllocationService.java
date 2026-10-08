@@ -4,9 +4,9 @@ import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerLock;
 import com.greenhouse.backend.sales.domain.payment.*;
 import com.greenhouse.backend.sales.dto.payment.*;
+import com.greenhouse.backend.sales.partner.api.BusinessPartnerLockApi;
 import com.greenhouse.backend.sales.repository.payment.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -26,7 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 @Transactional
 public class PaymentAllocationService {
-  private final BusinessPartnerLock partners;
+  private final BusinessPartnerLockApi partners;
   private final PartnerPaymentEventRepository events;
   private final PaymentAllocationCommandReceiptRepository requests;
   private final PaymentReceiptIntegrity cash;

@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.domain.partner;
+package com.greenhouse.backend.sales.api.partner;
 
 import java.util.Objects;
 

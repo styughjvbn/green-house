@@ -48,7 +48,8 @@ final class ArchitecturePackages {
     Set<String> features = FEATURES.getOrDefault(parts[0], Set.of());
     if (features.contains(parts[1])) return parts[1];
     if (parts.length > 2
-        && Set.of("application", "domain", "repository", "controller", "dto").contains(parts[1])
+        && Set.of("application", "domain", "repository", "controller", "dto", "api", "spi")
+            .contains(parts[1])
         && features.contains(parts[2])) return parts[2];
     return "";
   }

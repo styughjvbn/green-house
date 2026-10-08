@@ -2,7 +2,7 @@ package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SalesSlipDocumentAssembler {
 
-  private final BusinessPartnerReader partnerReader;
+  private final BusinessPartnerQueryApi partnerReader;
 
   private final AuctionDocumentPort auctionReader;
 

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.application.document;
 
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerInfo;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesType;
 import io.swagger.v3.oas.annotations.media.Schema;

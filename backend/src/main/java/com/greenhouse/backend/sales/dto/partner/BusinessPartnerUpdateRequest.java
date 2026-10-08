@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.dto.partner;
 
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

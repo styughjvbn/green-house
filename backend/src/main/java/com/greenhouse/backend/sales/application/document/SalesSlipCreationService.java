@@ -6,12 +6,12 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipCommand;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipInputPolicy;
 import com.greenhouse.backend.sales.domain.document.SalesType;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.repository.document.SalesCreationReceiptRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import java.security.MessageDigest;
@@ -39,7 +39,7 @@ public class SalesSlipCreationService {
   private final SalesCreationReceiptRepository receiptRepository;
   private final Clock clock;
 
-  private final BusinessPartnerReader partnerReader;
+  private final BusinessPartnerQueryApi partnerReader;
 
   private final SalesSlipRepository salesSlipRepository;
 

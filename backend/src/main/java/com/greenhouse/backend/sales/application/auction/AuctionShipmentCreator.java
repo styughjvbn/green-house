@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.auction;
 
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.CreatedShipment;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.LotDraft;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
@@ -21,7 +21,7 @@ public class AuctionShipmentCreator {
 
   private final AuctionShipmentRepository auctionShipmentRepository;
 
-  private final BusinessPartnerReader partnerReader;
+  private final BusinessPartnerQueryApi partnerReader;
 
   public CreatedShipment create(
       LocalDate shipmentDate, Long auctionHouseId, List<LotDraft> drafts) {

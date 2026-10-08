@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.domain.partner;
 
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import java.util.List;
 
 /** Current execution policy, independent of persisted partner preferences. */

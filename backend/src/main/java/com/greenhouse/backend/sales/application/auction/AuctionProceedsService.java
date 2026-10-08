@@ -3,11 +3,11 @@ package com.greenhouse.backend.sales.application.auction;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerLock;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.auction.AuctionInspectionStatus;
 import com.greenhouse.backend.sales.domain.auction.AuctionProceeds;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
+import com.greenhouse.backend.sales.partner.api.BusinessPartnerLockApi;
 import com.greenhouse.backend.sales.repository.auction.AuctionProceedsRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionResultLineRepository;
 import java.time.Clock;
@@ -24,9 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuctionProceedsService {
   private final AuctionProceedsRepository proceedsRepository;
   private final AuctionResultLineRepository resultRepository;
-  private final BusinessPartnerReader partners;
+  private final BusinessPartnerQueryApi partners;
   private final Clock clock;
-  private final BusinessPartnerLock partnerLock;
+  private final BusinessPartnerLockApi partnerLock;
 
   @Transactional
   public Long record(

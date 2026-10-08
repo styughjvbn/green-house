@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.domain.partner;
+package com.greenhouse.backend.sales.api.partner;
 
 public enum PartnerTextMatch {
   CONTACT_CONTAINS,

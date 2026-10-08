@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.auction;
 
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.Lot;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.Shipment;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
 import com.greenhouse.backend.sales.repository.auction.AuctionResultLineRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionResultReadRow;
@@ -26,7 +26,7 @@ public class AuctionDataReader {
 
   private static final int RESULT_BATCH_SIZE = 500;
 
-  private final BusinessPartnerReader partnerReader;
+  private final BusinessPartnerQueryApi partnerReader;
 
   private final AuctionShipmentRepository shipmentRepository;
 

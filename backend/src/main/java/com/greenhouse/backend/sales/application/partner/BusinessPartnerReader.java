@@ -1,10 +1,11 @@
 package com.greenhouse.backend.sales.application.partner;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
+import com.greenhouse.backend.sales.api.partner.PartnerTextMatch;
+import com.greenhouse.backend.sales.api.partner.PartnerTextSearch;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
-import com.greenhouse.backend.sales.domain.partner.PartnerTextMatch;
-import com.greenhouse.backend.sales.domain.partner.PartnerTextSearch;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-public class BusinessPartnerReader {
+public class BusinessPartnerReader implements BusinessPartnerQueryApi {
 
   private static final int ID_BATCH_SIZE = 500;
   private static final int SEARCH_BATCH_SIZE = 32;
@@ -31,6 +32,7 @@ public class BusinessPartnerReader {
   private final BusinessPartnerRepository partnerRepository;
 
   /** All matching IDs, read in bounded batches; historical searches include inactive partners. */
+  @Override
   public List<Long> findMatchingIds(PartnerTextMatch match, String value) {
     var matches = new ArrayList<Long>();
     long afterId = 0;
@@ -42,6 +44,7 @@ public class BusinessPartnerReader {
     }
   }
 
+  @Override
   public Map<PartnerTextSearch, List<Long>> findMatchingIds(
       Collection<PartnerTextSearch> searches) {
     var unique = new ArrayList<>(new LinkedHashSet<>(searches));
@@ -68,6 +71,7 @@ public class BusinessPartnerReader {
     return Map.copyOf(matches);
   }
 
+  @Override
   public Map<Long, Identity> getIdentities(Collection<Long> partnerIds) {
     var ids = new ArrayList<>(new HashSet<>(partnerIds));
     var identities = new HashMap<Long, Identity>();
@@ -83,15 +87,15 @@ public class BusinessPartnerReader {
     return Map.copyOf(identities);
   }
 
-  public record Identity(Long id, String name, PartnerType partnerType) {}
-
+  @Override
   public BusinessPartnerInfo getInfo(Long partnerId) {
     return partnerRepository
         .findById(partnerId)
-        .map(BusinessPartnerInfo::from)
+        .map(BusinessPartnerInfoFactory::from)
         .orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
   }
 
+  @Override
   public BusinessPartnerInfo getActiveInfo(Long partnerId) {
     var partner = getInfo(partnerId);
     if (!partner.active()) {
@@ -100,6 +104,7 @@ public class BusinessPartnerReader {
     return partner;
   }
 
+  @Override
   public Map<Long, BusinessPartnerInfo> getAllInfo(Collection<Long> partnerIds) {
     var requestedIds = new HashSet<>(partnerIds);
     if (requestedIds.isEmpty()) {
@@ -116,7 +121,7 @@ public class BusinessPartnerReader {
       throw new NotFoundException("거래처를 찾을 수 없습니다.");
     }
     return partners.stream()
-        .map(BusinessPartnerInfo::from)
+        .map(BusinessPartnerInfoFactory::from)
         .collect(Collectors.toUnmodifiableMap(BusinessPartnerInfo::id, Function.identity()));
   }
 }

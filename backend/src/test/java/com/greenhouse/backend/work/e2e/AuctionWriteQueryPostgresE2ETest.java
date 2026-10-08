@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
 import com.greenhouse.backend.sales.application.auction.RecordAuctionResultCommand;
 import com.greenhouse.backend.sales.domain.auction.AuctionAttempt;
@@ -12,7 +13,6 @@ import com.greenhouse.backend.sales.domain.auction.AuctionResultLine;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotAdjustmentRequest;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotResponse;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotReturnRequest;

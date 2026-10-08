@@ -2,7 +2,7 @@ package com.greenhouse.backend.sales.application.payment;
 
 import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.common.api.PageResponse;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
@@ -24,7 +24,7 @@ public class PaymentService {
 
   private final PartnerPaymentEventRepository eventRepository;
 
-  private final BusinessPartnerReader partnerReader;
+  private final BusinessPartnerQueryApi partnerReader;
   private final PaymentReceiptIntegrity integrity;
 
   @Transactional(readOnly = true)

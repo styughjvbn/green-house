@@ -2,8 +2,8 @@ package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerLock;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
+import com.greenhouse.backend.sales.partner.api.BusinessPartnerLockApi;
 import com.greenhouse.backend.sales.repository.document.SalesSlipItemAllocationRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import java.util.Collection;
@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(propagation = Propagation.MANDATORY)
 public class SalesSlipAggregateLoader {
   private final SalesSlipRepository salesSlipRepository;
-  private final BusinessPartnerLock partnerLock;
+  private final BusinessPartnerLockApi partnerLock;
   private final SalesSlipItemAllocationRepository allocationRepository;
 
   SalesSlip getForUpdate(Long id) {

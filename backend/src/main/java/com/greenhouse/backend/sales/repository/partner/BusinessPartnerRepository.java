@@ -1,7 +1,7 @@
 package com.greenhouse.backend.sales.repository.partner;
 
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;

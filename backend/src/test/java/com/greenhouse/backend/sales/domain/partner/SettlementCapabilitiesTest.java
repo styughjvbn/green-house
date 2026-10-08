@@ -3,6 +3,7 @@ package com.greenhouse.backend.sales.domain.partner;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.dto.partner.PartnerSettlementSettingsResponse;
 import java.util.ArrayList;
 import java.util.List;

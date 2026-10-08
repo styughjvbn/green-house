@@ -1,7 +1,7 @@
 package com.greenhouse.backend.sales.application.partner;
 
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.partner.PartnerSettlementSettings;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.dto.partner.PartnerSettlementSettingsRequest;
 import com.greenhouse.backend.sales.dto.partner.PartnerSettlementSettingsResponse;
 import com.greenhouse.backend.sales.repository.partner.PartnerSettlementSettingsRepository;

@@ -3,10 +3,10 @@ package com.greenhouse.backend.sales.application.document;
 import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
+import com.greenhouse.backend.sales.api.partner.PartnerTextMatch;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
-import com.greenhouse.backend.sales.domain.partner.PartnerTextMatch;
 import com.greenhouse.backend.sales.dto.document.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.repository.document.SalesSlipItemAllocationRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
@@ -34,7 +34,7 @@ public class SalesQueryService {
 
   private final SalesSlipRepository salesSlipRepository;
 
-  private final BusinessPartnerReader partnerReader;
+  private final BusinessPartnerQueryApi partnerReader;
 
   private final SalesSlipItemAllocationRepository allocationRepository;
 

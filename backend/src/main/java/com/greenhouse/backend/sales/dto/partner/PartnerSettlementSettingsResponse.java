@@ -1,7 +1,7 @@
 package com.greenhouse.backend.sales.dto.partner;
 
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.partner.PartnerSettlementSettings;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.partner.PaymentDayMode;
 import com.greenhouse.backend.sales.domain.partner.SettlementCapabilities;
 import com.greenhouse.backend.sales.domain.partner.SettlementUnit;

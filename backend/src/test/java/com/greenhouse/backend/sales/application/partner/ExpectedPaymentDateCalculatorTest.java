@@ -6,11 +6,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import com.greenhouse.backend.sales.application.partner.ExpectedPaymentDateCalculator.PaymentDateTarget;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.partner.PartnerSettlementSettings;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.partner.PaymentDayMode;
 import com.greenhouse.backend.sales.domain.partner.SettlementUnit;
+import com.greenhouse.backend.sales.partner.api.ExpectedPaymentDateApi.PaymentDateTarget;
 import com.greenhouse.backend.sales.repository.partner.PartnerSettlementSettingsRepository;
 import java.time.LocalDate;
 import java.util.List;

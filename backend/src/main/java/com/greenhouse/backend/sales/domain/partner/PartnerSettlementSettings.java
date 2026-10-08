@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.domain.partner;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

@@ -597,3 +597,16 @@ Farm 사용 여부 단계 검증 결과:
 - 프로덕션 코드의 다른 최상위 모듈에서 Farm/Work application 직접 참조는 각각 0개다. 이동 전 명령/결과/원장 대사/domain 값/중첩 metrics 클래스의 잔존 없음. 기존 Engine과 실제 구현 테스트/spy는 유지한다.
 - HTTP·SQL·DB/트랜잭션 경계·잠금·수량·상태 정책·CLI 변경 없음. `workE2eTest` 미실행. 전체 검증 이후에는 이 ADR 결과만 추가했다.
 - 이번 다섯 단계 완료. 전체 전환은 진행 중이며 Sales 공개 계약, 기능 우선 패키지 이동, Mutation 내부 분리와 최종 CI/문서 통합은 후속 단계다. 목표 문서의 archive 이동은 최종 통합 시 수행한다.
+
+### 2026-10-08: Sales 다섯 단계 — 1. Partner 조회·잠금·예정일
+
+- 외부 Analytics와 Sales 내부에서 사용하는 거래처 조회/Identity/Info/검색 값/enum은 `sales/api/partner`로 공개한다. Entity 변환은 내부 factory에 두고 기존 Reader가 직접 구현한다. 잠금·예정일 API는 실제 소비가 Sales 내부뿐이므로 `sales/partner/api`로 제한한다. 새 전달 Adapter·Port·integration 없음.
+- 기존 검색 keyset/500 ID·32 검색 조건 배치·정렬/중복/누락·비활성 조회·잠금 순서·예정일 계산·Info JSON 필드/Schema 이름/순서·readOnly/MANDATORY·호출자 트랜잭션 참여를 유지한다. Entity·projection·HTTP DTO를 API 시그니처에 노출하지 않는다.
+- Sales top-level API/SPI의 기능 소유권도 식별한다. 외부 공개 여부는 module contract 경로로 판단하고 기능 의존 그래프/정확한 계약 inventory는 partner/document 등 실제 소유권으로 판단한다. 기존 그래프·Document의 concrete service 금지는 유지하며 parser 회귀 검사에 공개 API/SPI 소유권을 추가한다.
+- reviewed inventory는 대응 FQCN을 치환하고 기존 domain 값이 공개 계약으로 이동하면서 새로 추적되는 접근만 개별 검토한다. HTTP·업무 정책·DB/잠금/트랜잭션·Receipt 지문 변경 없음.
+
+Sales 1단계 검증 결과:
+
+- 초기 잠금 API와 wildcard enum import 누락은 수정했다. 거래처/예정일·검색/일괄 조회 건수·소유권 parser·기능 그래프·값 계약 집중 검증 통과. 새로 추적되는 기존 검색 생성자·검색/enum TYPE 네 항목만 reviewed inventory에 추가했다.
+- 전체 `clean test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과. OpenAPI 재생성 157 operations/132 paths/292 schemas, diff 없음. 생성 타입 변경 불필요.
+- HTTP·SQL·DB/트랜잭션 경계·잠금·정책·Receipt 변경이 없어 `workE2eTest` 미실행. 전체 검증 이후에는 이 ADR 결과만 추가했다.

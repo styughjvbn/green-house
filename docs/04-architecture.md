@@ -292,7 +292,7 @@ Persistence 조회 규칙:
 
 ### 4.1 백엔드 구현 기준
 
-[ADR-004](adr/ADR-004-backend-architecture-migration.md)에 따라 기존 소유권과 허용 의존 방향을 유지하며 공개 API·SPI 정리부터 점진적으로 전환한다. 현재 운영 코드는 계층 우선 배치를 중심으로 유지하며, 작업 상세 참조·Mutation 그래프의 공개 확장 계약은 `work/spi/{target,operation}`, Farm 구현은 `farm/orchid/integration`으로 전환했다. Work가 SPI를 소유하고 Farm이 구현하므로 기존 `Farm → Work` 컴파일 의존과 Work에서 Farm 구현을 호출하는 런타임 흐름은 유지한다. 아키텍처 검사는 이행 중 기능 우선 배치도 동일한 소유권·계층 규칙으로 검사한다. 새 Farm/Work/Sales의 `api`·`spi`는 모든 public 값 계약에서 Entity·저장소 projection·HTTP 타입 누출을 금지하고, 기능 내부 API·SPI의 최상위 모듈 외 접근을 차단한다. 기존 application 계약은 검토된 타입·메서드 inventory로 계속 추적한다.
+[ADR-004](adr/ADR-004-backend-architecture-migration.md)에 따라 기존 소유권과 허용 의존 방향을 유지하며 공개 API·SPI 정리부터 점진적으로 전환한다. 현재 운영 코드는 계층 우선 배치를 중심으로 유지하며, 작업 상세 참조·Mutation 그래프의 공개 확장 계약은 `work/spi/{target,operation}`, Farm 구현은 `farm/orchid/integration`으로 전환했다. Work가 SPI를 소유하고 Farm이 구현하므로 기존 `Farm → Work` 컴파일 의존과 Work에서 Farm 구현을 호출하는 런타임 흐름은 유지한다. 아키텍처 검사는 이행 중 기능 우선 배치도 동일한 소유권·계층 규칙으로 검사한다. 새 Farm/Work/Sales의 `api`·`spi`는 모든 public 값 계약에서 Entity·저장소 projection·HTTP 타입 누출을 금지하고, 기능 내부 API·SPI의 최상위 모듈 외 접근을 차단한다. 기존 application 계약은 검토된 타입·메서드 inventory로 계속 추적한다. Sales의 최상위 공개 API/SPI도 기능 소유권을 식별해 기존 기능 의존 그래프를 검사하며, 최상위 모듈 공개 여부와 기능 소유권을 별도로 판단한다.
 
 입고 대상 계획·포트 취소·구조 변경 취소·구조 변경 선잠금의 확장 계약도 `work/spi/{target,operation}`에서 Work가 소유한다. Farm 구현은 `farm/inbound/integration`과 `farm/transformation/integration`에 두며, 기존 application 유스케이스와 같은 트랜잭션에서 처리한다. 구조 변경·포트 취소의 보상 Mutation과 이력·접수 소유권, 잠금 순서는 유지한다.
 
@@ -337,7 +337,7 @@ Farm 원장 대사는 Work 공개 조회 API와 결과 값을 직접 사용한�
 - Entity, Repository, DB table은 각각 하나의 업무 모듈이 소유한다. 소유 모듈 밖에서는 해당 Repository나 internal 구현을 직접 참조하지 않는다.
 - 다른 모듈의 기능이 필요하면 제공 모듈의 application API를 호출한다. 호출 측의 도메인 흐름에 필요한 조회 계약은 호출 측에 port를 두고 소유 모듈이 구현할 수 있다.
 - 모듈 간 계약은 필요한 값만 전달한다. 외부 모듈 Entity를 장기간 보관하거나 응답 조립 편의를 위해 aggregate 전체를 넘기지 않는다.
-- Partner 조회는 현재 기준 정보의 application 값을 반환한다. Document·Direct·Auction·Payment는 거래처 ID로 연결하며 기존 DB 외래키를 유지한다. Entity를 반환하는 호환 조회는 제거했다. 판매 응답의 연락처를 포함한 현재 거래처 정보와 경매장 이름은 ID를 모아 일괄 조회한다.
+- Partner 조회는 `sales/api/partner`의 공개 조회 API와 현재 기준 값·검색 값·enum을 사용한다. 기존 Reader가 API를 직접 구현하고 Entity 변환은 내부 factory에 둔다. Sales 내부 잠금·예정일 계산은 `sales/partner/api`로 제한하며 기존 구현의 readOnly·MANDATORY·호출자 트랜잭션 참여를 유지한다. Document·Direct·Auction·Payment는 거래처 ID로 연결하며 기존 DB 외래키를 유지한다. Entity를 반환하는 호환 조회는 제거했다. 판매 응답의 연락처를 포함한 현재 거래처 정보와 경매장 이름은 ID를 모아 일괄 조회한다.
 - Sales는 난 묶음 Entity 대신 ID와 Farm application의 현재 상태 값을 사용한다. 배분·재고 이동의 기존 DB 외래키는 유지하며, 상세 응답은 Sales의 배분·보존 스냅샷과 Farm의 상태 값을 따로 일괄 조회해 조립한다. 현재 상태 조회는 500개 ID씩 처리한다.
 - Farm의 외부 난 묶음 조회는 `farm/api/orchid`의 공개 API와 상태 값을 사용한다. 기존 Reader가 API를 직접 구현하며 Entity → 상태 값 factory는 application 내부에 둔다. 조회 계약은 상태 값·판매 선택·호출 트랜잭션 내 잠금으로 제한한다. Entity가 필요한 Farm 내부 유스케이스는 소유 Repository를 사용한다. 공개 Reader의 반환값·입력과 중첩 collection/record에 Entity를 추가하면 architecture 검증이 실패한다.
 - 기존 판매 전표의 수정·상태 전환·입금은 root를 먼저 잠그고 소유 품목·배분·역사 스냅샷을 일괄 로딩한다. 배분과 스냅샷 collection은 별도 쿼리로 초기화해 다중 collection fetch join과 대상별 lazy 조회를 피한다. 수정의 flush 후에도 같은 managed aggregate로 재예약·감사·최종 응답을 처리한다. Farm의 재잠금과 예약 전·해제 후·출고 직전 snapshot, 최종 현재 상태 조회는 각각의 시점 계약으로 유지한다.

@@ -17,7 +17,13 @@ class ArchitecturePackagesTest {
       assertThat(ArchitecturePackages.contractOwner(ROOT + "sales." + feature + ".spi"))
           .isEqualTo("sales." + feature);
     }
-    assertThat(ArchitecturePackages.contractOwner(ROOT + "sales.api.document")).isEqualTo("sales");
+    assertThat(ArchitecturePackages.contractOwner(ROOT + "sales.api.document"))
+        .isEqualTo("sales.document");
+    for (String feature : new String[] {"document", "direct", "auction", "payment", "partner"}) {
+      assertThat(ArchitecturePackages.feature(ROOT + "sales.api." + feature)).isEqualTo(feature);
+      assertThat(ArchitecturePackages.feature(ROOT + "sales.spi." + feature)).isEqualTo(feature);
+      assertThat(ArchitecturePackages.isModuleContract(ROOT + "sales.api." + feature)).isTrue();
+    }
   }
 
   @Test

@@ -2,8 +2,8 @@ package com.greenhouse.backend.sales.controller.partner;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.common.api.PageResponse;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.partner.BusinessPartnerService;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.dto.partner.BusinessPartnerCreateRequest;
 import com.greenhouse.backend.sales.dto.partner.BusinessPartnerOptionResponse;
 import com.greenhouse.backend.sales.dto.partner.BusinessPartnerResponse;

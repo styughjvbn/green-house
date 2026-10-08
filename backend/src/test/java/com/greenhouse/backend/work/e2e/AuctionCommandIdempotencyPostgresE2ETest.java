@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
 import com.greenhouse.backend.sales.application.auction.RecordAuctionResultCommand;
 import com.greenhouse.backend.sales.application.document.SalesSlipCreationService;
@@ -18,7 +19,6 @@ import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
-import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotResponse;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotReturnRequest;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
