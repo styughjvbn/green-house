@@ -66,6 +66,12 @@ METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult.mutation
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult.replayed()
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources.auctionReturnArrival(java.lang.Long, java.lang.String)
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources.sales(java.lang.Long, java.lang.String)
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationWriter.compensateCreations(com.greenhouse.backend.farm.api.orchid.CompensateCreateMutationsCommand)
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationWriter.consumeReservation(com.greenhouse.backend.farm.api.orchid.ConsumeOrchidGroupReservationsMutationCommand)
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationWriter.create(com.greenhouse.backend.farm.api.orchid.CreateOrchidGroupMutationCommand)
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationWriter.releaseReservation(com.greenhouse.backend.farm.api.orchid.ReleaseOrchidGroupReservationsMutationCommand)
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationWriter.reserve(com.greenhouse.backend.farm.api.orchid.ReserveOrchidGroupsMutationCommand)
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationWriter.restoreOutbound(com.greenhouse.backend.farm.api.orchid.RestoreOutboundOrchidGroupsMutationCommand)
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi.getStates(java.util.Collection)
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi.lockGroups(java.util.Collection)
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi.lockStates(java.util.Collection)
@@ -94,12 +100,6 @@ METHOD	com.greenhouse.backend.farm.api.orchid.RelatedOrchidGroupMutations.curren
 METHOD	com.greenhouse.backend.farm.api.orchid.RelatedOrchidGroupMutations.legacy()
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup.orchidGroupId()
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup.snapshot()
-METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.compensateCreations(com.greenhouse.backend.farm.api.orchid.CompensateCreateMutationsCommand)
-METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.consumeReservation(com.greenhouse.backend.farm.api.orchid.ConsumeOrchidGroupReservationsMutationCommand)
-METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.create(com.greenhouse.backend.farm.api.orchid.CreateOrchidGroupMutationCommand)
-METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.releaseReservation(com.greenhouse.backend.farm.api.orchid.ReleaseOrchidGroupReservationsMutationCommand)
-METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.reserve(com.greenhouse.backend.farm.api.orchid.ReserveOrchidGroupsMutationCommand)
-METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.restoreOutbound(com.greenhouse.backend.farm.api.orchid.RestoreOutboundOrchidGroupsMutationCommand)
 METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$InventorySummary.saleableQuantity()
 METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$InventorySummary.varieties()
 METHOD	com.greenhouse.backend.farm.application.status.FarmMetricsReader$Snapshot.bedZoneCount()
@@ -396,6 +396,7 @@ TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationDetails
 TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult
 TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult$Entry
 TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources
+TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationWriter
 TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupQuantityMutationItem
 TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi
 TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupState
@@ -408,7 +409,6 @@ TYPE	com.greenhouse.backend.farm.api.orchid.RestoreOutboundOrchidGroupsMutationC
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationIssue
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerRehearsalInspector
-TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine
 TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader
 TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader$InventorySummary
 TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader$Snapshot

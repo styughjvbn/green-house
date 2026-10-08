@@ -17,7 +17,7 @@ import com.greenhouse.backend.farm.api.orchid.CompensateCreateMutationsCommand;
 import com.greenhouse.backend.farm.api.orchid.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationWriter;
 import com.greenhouse.backend.sales.domain.auction.*;
 import com.greenhouse.backend.sales.dto.auction.AuctionArrivalResponse;
 import com.greenhouse.backend.sales.dto.auction.AuctionFollowUpResponse;
@@ -50,7 +50,7 @@ public class AuctionFollowUpService {
   private final AuctionFollowUpDecisionRepository decisions;
   private final AuctionReturnArrivalRepository arrivals;
   private final AuctionCommandReceiptRepository receipts;
-  private final OrchidGroupMutationEngine farm;
+  private final OrchidGroupMutationWriter farm;
   private final RequestActorProvider actors;
   private final AuditEventWriter audit;
   private final Clock clock;

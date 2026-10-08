@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.application.orchid.mutation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationWriter;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.support.EntityWriterInspection;
@@ -13,6 +14,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 class OrchidGroupWriterArchitectureTest {
 
@@ -42,6 +45,27 @@ class OrchidGroupWriterArchitectureTest {
           "deleteAllById",
           "deleteAllInBatch",
           "deleteAllByIdInBatch");
+
+  @Test
+  void publicWriterHasOnlyTheEngineImplementationAndRequiresTheCallerTransaction()
+      throws NoSuchMethodException {
+    assertThat(
+            APPLICATION_CLASSES.stream()
+                .filter(type -> !type.isInterface())
+                .filter(type -> type.isAssignableTo(OrchidGroupMutationWriter.class))
+                .map(type -> type.getName()))
+        .containsExactly(OrchidGroupMutationEngine.class.getName());
+    for (var method : OrchidGroupMutationWriter.class.getMethods()) {
+      var implementation =
+          OrchidGroupMutationEngine.class.getMethod(method.getName(), method.getParameterTypes());
+      var transaction = implementation.getAnnotation(Transactional.class);
+      if (transaction == null)
+        transaction = OrchidGroupMutationEngine.class.getAnnotation(Transactional.class);
+      assertThat(transaction).as(method.getName()).isNotNull();
+      assertThat(transaction.propagation()).as(method.getName()).isEqualTo(Propagation.MANDATORY);
+      assertThat(transaction.readOnly()).as(method.getName()).isFalse();
+    }
+  }
 
   @Test
   void runtimeHasNoLegacyRoutingClasses() {

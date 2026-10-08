@@ -559,3 +559,15 @@ Farm 사용 여부 단계 검증 결과:
 - 29개 명령/명령 전용 helper/출처 생성 class 본문은 package/import를 제외하면 동일하다. 출처 helper를 포함한 최종 상태에서 `clean` 집중 검증 통과: 지문·영구 필드/JSON·Mutation·입고·판매 재고·보상·공개 값·inventory·Writer.
 - 전체 `test spotlessCheck` 777개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과.
 - 초기 검증 중 source helper의 이동을 추가해 발생한 import 순서/inventory 불일치는 최종 clean build로 해결했다. Controller·HTTP DTO·schema 변경 없음. DB/트랜잭션·수량 정책 변경이 없어 OpenAPI/타입 재생성 및 `workE2eTest` 미실행. 전체 검증 후에는 이 ADR 결과만 추가했다.
+
+### 2026-10-08: 다섯 단계 진행 — 3. 외부 Mutation Writer
+
+- Sales의 기존 Engine 직접 참조를 `farm/api/orchid/OrchidGroupMutationWriter`로 전환한다. 외부에서 실제 사용한 create/reserve/releaseReservation/consumeReservation/restoreOutbound/compensateCreations 여섯 메서드만 공개하며 Engine이 직접 구현한다. Farm 내부의 나머지 메서드는 기존 Engine에 유지한다. 별도 위임 계층·Adapter 없음.
+- Engine의 `MANDATORY`, 유스케이스 트랜잭션·정렬된 잠금·원본 snapshot 캡처·지문/Receipt/replay·수량 처리·판매 이동 기록·경매 도착 보상은 동일하다. 본문 변경은 없고 선언/소비자 타입만 바꾼다. 기존 Engine 테스트/spy는 유지한다.
+- reviewed inventory의 Engine TYPE와 외부 여섯 METHOD만 Writer로 치환한다. architecture 회귀 검사에서 Writer의 유일 구현이 Engine이고 외부 메서드가 readOnly가 아닌 `MANDATORY`임을 확인한다. 기존 Entity/constructor/Repository 단일 Writer 검사는 그대로 유지한다.
+
+3단계 검증 결과:
+
+- 신규 Writer 구현/트랜잭션 회귀와 기존 단일 Writer·공개 값·inventory·integration, 판매 재고·Mutation 라우팅·경매 반환 집중 검증 통과.
+- 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과.
+- Engine 실행 본문·SQL·DB/트랜잭션 경계·잠금·수량 정책·HTTP 계약 변경 없음. OpenAPI/타입 재생성과 `workE2eTest` 미실행. 전체 검증 이후에는 이 ADR 결과만 추가했다.

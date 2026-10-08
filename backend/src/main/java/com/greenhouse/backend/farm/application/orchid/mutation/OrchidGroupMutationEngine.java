@@ -21,6 +21,7 @@ import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationWriter;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupQuantityMutationItem;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.api.orchid.ReconcileOrchidGroupMutationCommand;
@@ -71,7 +72,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(propagation = Propagation.MANDATORY)
-public class OrchidGroupMutationEngine {
+public class OrchidGroupMutationEngine implements OrchidGroupMutationWriter {
 
   private final OrchidGroupRepository orchidGroupRepository;
 
@@ -91,6 +92,7 @@ public class OrchidGroupMutationEngine {
 
   private final OrchidGroupMutationEffectiveHeadPolicy effectiveHeadPolicy;
 
+  @Override
   public OrchidGroupMutationResult create(CreateOrchidGroupMutationCommand command) {
     String fingerprint = commandFingerprint.calculate(command);
     var replay = replayResolver.findExisting(command.source(), fingerprint);
@@ -476,6 +478,7 @@ public class OrchidGroupMutationEngine {
         afterState);
   }
 
+  @Override
   public OrchidGroupMutationResult reserve(ReserveOrchidGroupsMutationCommand command) {
     return applyQuantityMutation(
         command,
@@ -489,6 +492,7 @@ public class OrchidGroupMutationEngine {
         OrchidGroup::reserve);
   }
 
+  @Override
   public OrchidGroupMutationResult releaseReservation(
       ReleaseOrchidGroupReservationsMutationCommand command) {
     return applyQuantityMutation(
@@ -503,6 +507,7 @@ public class OrchidGroupMutationEngine {
         OrchidGroup::releaseReserved);
   }
 
+  @Override
   public OrchidGroupMutationResult consumeReservation(
       ConsumeOrchidGroupReservationsMutationCommand command) {
     return applyQuantityMutation(
@@ -517,6 +522,7 @@ public class OrchidGroupMutationEngine {
         OrchidGroup::outboundReserved);
   }
 
+  @Override
   public OrchidGroupMutationResult restoreOutbound(
       RestoreOutboundOrchidGroupsMutationCommand command) {
     return applyQuantityMutation(
@@ -793,6 +799,7 @@ public class OrchidGroupMutationEngine {
     return replayResolver.findExisting(command.source(), commandFingerprint.calculate(command));
   }
 
+  @Override
   public OrchidGroupMutationResult compensateCreations(CompensateCreateMutationsCommand command) {
     return compensate(
         command,
