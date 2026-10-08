@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -36,11 +37,24 @@ public class SalesSlipAllocationFactory {
   }
 
   public List<SalesSlipItem> createItems(List<SalesSlipItemInput> requests) {
+    return createItems(requests, null);
+  }
+
+  public List<SalesSlipItem> createItems(
+      List<SalesSlipItemInput> requests, List<DirectDocumentAccountingPort.PriceSnapshot> prices) {
     requests.forEach(this::validateAllocationSum);
     var orchidGroups = orchidGroupReader.lockStates(allocationGroupIds(requests));
 
     LocalDateTime capturedAt = TimeConfig.utcNow(clock);
-    return requests.stream().map(request -> createItem(request, orchidGroups, capturedAt)).toList();
+    return IntStream.range(0, requests.size())
+        .mapToObj(
+            index ->
+                createItem(
+                    requests.get(index),
+                    orchidGroups,
+                    capturedAt,
+                    prices == null ? null : prices.get(index)))
+        .toList();
   }
 
   private List<Long> allocationGroupIds(List<SalesSlipItemInput> requests) {
@@ -55,16 +69,27 @@ public class SalesSlipAllocationFactory {
   private SalesSlipItem createItem(
       SalesSlipItemInput request,
       Map<Long, OrchidGroupState> orchidGroups,
-      LocalDateTime capturedAt) {
+      LocalDateTime capturedAt,
+      DirectDocumentAccountingPort.PriceSnapshot price) {
     var item =
-        new SalesSlipItem(
-            null,
-            SalesTextNormalizer.required(request.itemName()),
-            SalesTextNormalizer.normalize(request.genus()),
-            SalesTextNormalizer.normalize(request.spec()),
-            request.quantity(),
-            request.unitPrice(),
-            SalesTextNormalizer.normalize(request.memo()));
+        price == null
+            ? new SalesSlipItem(
+                null,
+                SalesTextNormalizer.required(request.itemName()),
+                SalesTextNormalizer.normalize(request.genus()),
+                SalesTextNormalizer.normalize(request.spec()),
+                request.quantity(),
+                request.unitPrice(),
+                SalesTextNormalizer.normalize(request.memo()))
+            : new SalesSlipItem(
+                null,
+                SalesTextNormalizer.required(request.itemName()),
+                SalesTextNormalizer.normalize(request.genus()),
+                SalesTextNormalizer.normalize(request.spec()),
+                request.quantity(),
+                price.unitPrice(),
+                price.amount(),
+                SalesTextNormalizer.normalize(request.memo()));
     for (SalesSlipAllocationInput allocationRequest : mergeAllocations(request.allocations())) {
       OrchidGroupState orchidGroup = orchidGroups.get(allocationRequest.orchidGroupId());
       validateItemVariety(request, orchidGroup);

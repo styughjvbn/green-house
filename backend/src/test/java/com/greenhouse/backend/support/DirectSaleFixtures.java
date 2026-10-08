@@ -2,12 +2,27 @@ package com.greenhouse.backend.support;
 
 import com.greenhouse.backend.sales.domain.direct.DirectSaleAmounts;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
+import com.greenhouse.backend.sales.domain.document.SalesType;
 import java.math.BigDecimal;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /** Explicit historical terms for tests that seed a document without its creation use case. */
 public final class DirectSaleFixtures {
   private DirectSaleFixtures() {}
+
+  public static void refreshProjection(SalesSlip document) {
+    if (document.getSalesType() != SalesType.DIRECT) return;
+    int total =
+        DirectSaleAmounts.total(
+            document.getItems().stream().map(item -> item.getAmount()).toList());
+    document.applyFinancialProjection(
+        total,
+        document.getExpectedPaymentDate(),
+        document.getPaymentMethod(),
+        document.getPaidAmount(),
+        DirectSaleAmounts.remaining(total, document.getPaidAmount()),
+        document.getPaymentStatus());
+  }
 
   public static void projectAllocation(SalesSlip document, long allocated) {
     document.applyFinancialProjection(

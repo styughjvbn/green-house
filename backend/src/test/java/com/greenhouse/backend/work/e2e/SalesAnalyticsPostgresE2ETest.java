@@ -84,6 +84,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
               null,
               null);
       slip.addItem(new SalesSlipItem(null, "Variety", "난", null, 1, 1_000_000_000, null));
+      DirectSaleFixtures.refreshProjection(slip);
       entityManager.persist(slip);
     }
     entityManager.flush();
@@ -144,6 +145,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
             null,
             null);
     auction.addItem(new SalesSlipItem(null, "Variety", "난", null, 10, 100, null));
+    DirectSaleFixtures.refreshProjection(auction);
     entityManager.persist(auction);
     var zero = partner("Zero sale");
     slip(zero, FROM, 1, 0);
@@ -373,6 +375,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
     var to = LocalDate.of(2040, 3, 31);
     var partial = slip(partner, from, 2, 100);
     partial.addItem(new SalesSlipItem(null, "Other variety", "난", null, 3, 200, null));
+    DirectSaleFixtures.refreshProjection(partial);
     DirectSaleFixtures.projectAllocation(partial, 100L);
     var paid = slip(partner, to, 1, 100);
     DirectSaleFixtures.projectAllocation(paid, 100L);
@@ -390,6 +393,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
             null,
             null);
     draft.addItem(new SalesSlipItem(null, "Excluded", null, null, 1, 9_999, null));
+    DirectSaleFixtures.refreshProjection(draft);
     entityManager.persist(draft);
     entityManager.flush();
     entityManager.clear();
@@ -434,6 +438,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
             null,
             null);
     slip.addItem(new SalesSlipItem(null, "Variety", "난", null, quantity, price, null));
+    DirectSaleFixtures.refreshProjection(slip);
     entityManager.persist(slip);
     return slip;
   }

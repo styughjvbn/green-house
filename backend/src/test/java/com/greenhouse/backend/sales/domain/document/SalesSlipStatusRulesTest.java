@@ -89,6 +89,7 @@ class SalesSlipStatusRulesTest {
   private SalesSlip payableSlip(SalesType salesType, String status) {
     SalesSlip slip = slip(salesType, status);
     slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
+    DirectSaleFixtures.refreshProjection(slip);
     return slip;
   }
 

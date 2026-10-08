@@ -179,6 +179,7 @@ class PaymentTests {
             "계좌이체",
             null);
     slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
+    DirectSaleFixtures.refreshProjection(slip);
     slip = salesSlipRepository.saveAndFlush(slip);
     DirectSaleFixtures.copyTerms(jdbc, slip.getId());
 
@@ -322,6 +323,7 @@ class PaymentTests {
             null,
             null);
     slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
+    DirectSaleFixtures.refreshProjection(slip);
     slip.updateSalesStatus(salesStatus);
     salesSlipRepository.saveAndFlush(slip);
     DirectSaleFixtures.copyTerms(jdbc, slip.getId());

@@ -23,6 +23,8 @@ public interface DirectDocumentAccountingPort {
 
   Set<Long> findPaidDocumentIds(Collection<Long> ids);
 
+  QuotedPrices quotePrices(List<Price> prices);
+
   void storeTerms(Terms terms);
 
   Map<Long, FinancialSnapshot> findFinancials(Collection<Long> documentIds);
@@ -39,6 +41,8 @@ public interface DirectDocumentAccountingPort {
       String paymentStatus,
       boolean paymentAllowed,
       Map<Long, PriceSnapshot> prices) {}
+
+  record QuotedPrices(Integer totalAmount, List<PriceSnapshot> prices) {}
 
   record PriceSnapshot(Integer pricedQuantity, Integer unitPrice, Integer amount) {}
 

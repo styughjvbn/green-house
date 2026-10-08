@@ -208,6 +208,7 @@ class CoreQueryRegressionTest {
       var item = new SalesSlipItem(null, group.getVarietyName(), null, null, 2, 1_000, null);
       item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
       slip.addItem(item);
+      DirectSaleFixtures.refreshProjection(slip);
     }
     salesSlipRepository.save(slip);
 

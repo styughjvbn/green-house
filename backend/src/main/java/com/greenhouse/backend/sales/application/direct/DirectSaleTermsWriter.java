@@ -2,6 +2,7 @@ package com.greenhouse.backend.sales.application.direct;
 
 import com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort;
 import com.greenhouse.backend.sales.domain.direct.DirectSale;
+import com.greenhouse.backend.sales.domain.direct.DirectSaleAmounts;
 import com.greenhouse.backend.sales.domain.direct.DirectSalePrice;
 import com.greenhouse.backend.sales.repository.direct.DirectSaleRepository;
 import java.util.List;
@@ -17,9 +18,30 @@ public class DirectSaleTermsWriter {
   private final DirectSaleRepository repository;
   private final DirectSaleReviewReader reviews;
 
+  public DirectDocumentAccountingPort.QuotedPrices quotePrices(
+      List<DirectDocumentAccountingPort.Price> inputs) {
+    var prices =
+        inputs.stream()
+            .map(
+                price ->
+                    new DirectDocumentAccountingPort.PriceSnapshot(
+                        price.quantity(),
+                        price.unitPrice(),
+                        DirectSaleAmounts.price(price.quantity(), price.unitPrice())))
+            .toList();
+    return new DirectDocumentAccountingPort.QuotedPrices(
+        DirectSaleAmounts.total(
+            prices.stream().map(DirectDocumentAccountingPort.PriceSnapshot::amount).toList()),
+        prices);
+  }
+
   public void store(DirectDocumentAccountingPort.Terms terms) {
     var existing = repository.findForUpdate(terms.documentId());
-    if (existing.isPresent()) reviews.requireClear(terms.documentId());
+    if (existing.isPresent()) {
+      var financial = reviews.requireClear(terms.documentId());
+      if (financial.allocatedAmount().signum() > 0)
+        throw new IllegalArgumentException("입금 이력이 있는 전표는 수정할 수 없습니다.");
+    }
     var prices =
         terms.prices().stream()
             .map(

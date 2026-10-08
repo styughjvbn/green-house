@@ -17,6 +17,7 @@ import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
@@ -217,6 +218,7 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
             null,
             null);
     slip.addItem(new SalesSlipItem(null, "분석 품종", "카틀레야", null, quantity, unitPrice, null));
+    DirectSaleFixtures.refreshProjection(slip);
     return slip;
   }
 }

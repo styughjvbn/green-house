@@ -105,6 +105,7 @@ class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
         new SalesSlipItem(null, variety.getName(), variety.getGenus(), "4인치", 2, 1000, "품목");
     item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
     slip.addItem(item);
+    DirectSaleFixtures.refreshProjection(slip);
     salesSlipRepository.saveAndFlush(slip);
     DirectSaleFixtures.copyTerms(jdbc, slip.getId());
 

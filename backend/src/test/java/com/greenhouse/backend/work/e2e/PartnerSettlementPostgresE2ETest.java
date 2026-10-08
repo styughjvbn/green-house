@@ -680,6 +680,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
                   slip.addItem(
                       new SalesSlipItem(
                           created.lotIdsBySourceItemId().get(20L), "호접란", "난", "A", 3, 0, null));
+                  DirectSaleFixtures.refreshProjection(slip);
                   return salesSlipRepository.saveAndFlush(slip).getId();
                 });
     assertThat(shipmentRepository.count()).isEqualTo(before + 1);
@@ -775,6 +776,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
             "계좌이체",
             null);
     slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
+    DirectSaleFixtures.refreshProjection(slip);
     var saved = salesSlipRepository.saveAndFlush(slip);
     DirectSaleFixtures.copyTerms(jdbcTemplate, saved.getId());
     return saved;

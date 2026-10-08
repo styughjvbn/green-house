@@ -183,6 +183,132 @@ class DirectSaleAmountMigrationPostgresE2ETest {
         });
   }
 
+  @Test
+  void refreshesProjectionsWithoutChangingOwnedFactsOriginalEvidenceOrCash() {
+    inDatabase(
+        jdbc -> {
+          seedLegacyFacts(jdbc);
+          migrate(jdbc, "48");
+          var owners = jdbc.queryForList("SELECT * FROM direct_sales ORDER BY sales_slip_id");
+          var prices =
+              jdbc.queryForList("SELECT * FROM direct_sale_prices ORDER BY sales_slip_item_id");
+          var cash = jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id");
+          String evidenceSql =
+              "SELECT sales_slip_id, stored_paid_amount, stored_remaining_amount, stored_payment_status, stored_item_amount_sum, confirmed_allocation_amount, total_mismatch, price_mismatch, paid_mismatch, remaining_mismatch, ledger_review_required, signed_amount_review_required FROM direct_sale_amount_reconciliations ORDER BY sales_slip_id";
+          var original = jdbc.queryForList(evidenceSql);
+          jdbc.update(
+              "UPDATE sales_slips SET total_amount=700, paid_amount=100, remaining_amount=600 WHERE id=901");
+          jdbc.update("UPDATE sales_slip_items SET unit_price=700, amount=700 WHERE id=901");
+          var physical =
+              jdbc.queryForList(
+                  "SELECT id, version, sale_date, partner_id, created_at, updated_at FROM sales_slips ORDER BY id");
+          var auction = jdbc.queryForMap("SELECT * FROM sales_slips WHERE id=905");
+          migrate(jdbc, "49");
+          assertThat(jdbc.queryForList("SELECT * FROM direct_sales ORDER BY sales_slip_id"))
+              .isEqualTo(owners);
+          assertThat(
+                  jdbc.queryForList("SELECT * FROM direct_sale_prices ORDER BY sales_slip_item_id"))
+              .isEqualTo(prices);
+          assertThat(jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id"))
+              .isEqualTo(cash);
+          assertThat(
+                  jdbc.queryForList(
+                      "SELECT id, version, sale_date, partner_id, created_at, updated_at FROM sales_slips ORDER BY id"))
+              .isEqualTo(physical);
+          assertThat(jdbc.queryForMap("SELECT * FROM sales_slips WHERE id=905")).isEqualTo(auction);
+          assertThat(jdbc.queryForList(evidenceSql)).isEqualTo(original);
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT cutover_review_required FROM direct_sale_amount_reconciliations WHERE sales_slip_id=901",
+                      Boolean.class))
+              .isTrue();
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT (cutover_legacy_snapshot->>'paidAmount')::bigint FROM direct_sale_amount_reconciliations WHERE sales_slip_id=901",
+                      Long.class))
+              .isEqualTo(100);
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT (cutover_legacy_snapshot->'items'->0->>'amount')::int FROM direct_sale_amount_reconciliations WHERE sales_slip_id=901",
+                      Integer.class))
+              .isEqualTo(700);
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT total_amount FROM sales_slips WHERE id=901", Integer.class))
+              .isEqualTo(777);
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT amount FROM sales_slip_items WHERE id=901", Integer.class))
+              .isEqualTo(1000);
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT paid_amount FROM sales_slips WHERE id=908", Long.class))
+              .isEqualTo(400);
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT paid_amount FROM sales_slips WHERE id=909", Long.class))
+              .isZero();
+          assertThat(migrate(jdbc, "49").migrate().migrationsExecuted).isZero();
+        });
+  }
+
+  @Test
+  void missingSourceAbortsCutoverWithoutChangingOriginalFacts() {
+    inDatabase(
+        jdbc -> {
+          seedLegacyFacts(jdbc);
+          migrate(jdbc, "48");
+          jdbc.update("DELETE FROM direct_sale_amount_reconciliations WHERE sales_slip_id=900");
+          jdbc.update("DELETE FROM direct_sale_prices WHERE sales_slip_id=900");
+          jdbc.update("DELETE FROM direct_sales WHERE sales_slip_id=900");
+          var documents = jdbc.queryForList("SELECT * FROM sales_slips ORDER BY id");
+          var cash = jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id");
+          assertThatThrownBy(() -> migrate(jdbc, "49"))
+              .hasStackTraceContaining("Direct financial source is missing");
+          assertThat(jdbc.queryForList("SELECT * FROM sales_slips ORDER BY id"))
+              .isEqualTo(documents);
+          assertThat(jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id"))
+              .isEqualTo(cash);
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT count(*) FROM information_schema.columns WHERE table_name='direct_sale_amount_reconciliations' AND column_name='cutover_review_required'",
+                      Long.class))
+              .isZero();
+        });
+  }
+
+  @Test
+  void capturesReviewEvidenceForSalesCreatedAfterTheInitialExpansion() {
+    inDatabase(
+        jdbc -> {
+          seedLegacyFacts(jdbc);
+          migrate(jdbc, "48");
+          // A post-expansion sale has owner terms but no original migration reconciliation.
+          jdbc.update("DELETE FROM direct_sale_amount_reconciliations WHERE sales_slip_id=906");
+          jdbc.update("UPDATE sales_slips SET paid_amount=50,remaining_amount=950 WHERE id=906");
+          migrate(jdbc, "49");
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT cutover_review_required FROM direct_sale_amount_reconciliations WHERE sales_slip_id=906",
+                      Boolean.class))
+              .isTrue();
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT stored_paid_amount FROM direct_sale_amount_reconciliations WHERE sales_slip_id=906",
+                      Long.class))
+              .isEqualTo(50);
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT paid_amount FROM sales_slips WHERE id=906", Long.class))
+              .isZero();
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT count(*) FROM partner_payment_events WHERE target_id=906",
+                      Long.class))
+              .isZero();
+        });
+  }
+
   private void assertReview(JdbcTemplate jdbc, long id, long allocation, boolean... flags) {
     var row =
         jdbc.queryForMap(

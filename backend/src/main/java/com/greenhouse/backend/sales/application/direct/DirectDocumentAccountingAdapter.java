@@ -7,6 +7,7 @@ import com.greenhouse.backend.sales.application.payment.PaymentEventReader;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,10 @@ public class DirectDocumentAccountingAdapter implements DirectDocumentAccounting
 
   public Map<Long, FinancialSnapshot> findFinancials(Collection<Long> documentIds) {
     return financials.findAll(documentIds);
+  }
+
+  public QuotedPrices quotePrices(List<Price> prices) {
+    return termsWriter.quotePrices(prices);
   }
 
   public void storeTerms(Terms terms) {

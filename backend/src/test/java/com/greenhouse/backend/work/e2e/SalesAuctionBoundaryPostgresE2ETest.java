@@ -23,6 +23,7 @@ import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import jakarta.persistence.EntityManagerFactory;
 import java.time.LocalDate;
 import java.util.List;
@@ -94,8 +95,10 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
                   "계좌",
                   "Slip Memo");
           slip.addItem(new SalesSlipItem(null, "Snow White", "Orchid", "A", 5, 1000, "item memo"));
+          DirectSaleFixtures.refreshProjection(slip);
           slipId = slips.save(slip).getId();
         });
+    DirectSaleFixtures.copyTerms(jdbc, slipId);
     jdbc.update("UPDATE business_partners SET is_active = FALSE");
   }
 
@@ -171,6 +174,7 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
                     null));
           }
         });
+    DirectSaleFixtures.copyAllTerms(jdbc);
     var lastPage = sales.getSalesSlipPage(null, DATE, DATE, null, null, "Batch Contact", 5, 100);
     assertThat(lastPage.totalElements()).isEqualTo(501);
     assertThat(lastPage.content()).hasSize(1);

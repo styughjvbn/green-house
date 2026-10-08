@@ -20,6 +20,7 @@ CONSTRUCTOR	com.greenhouse.backend.sales.application.document.AuctionDocumentPor
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$Shipment.<init>(java.lang.Long, java.time.LocalDate, java.lang.Long, java.lang.String, java.util.List)
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$FinancialSnapshot.<init>(java.lang.Long, java.lang.Long, java.lang.Integer, java.time.LocalDate, java.lang.String, java.math.BigDecimal, java.math.BigDecimal, boolean, java.lang.String, boolean, java.util.Map)
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$PriceSnapshot.<init>(java.lang.Integer, java.lang.Integer, java.lang.Integer)
+CONSTRUCTOR	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$QuotedPrices.<init>(java.lang.Integer, java.util.List)
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.SalesMetricsReader$PartnerSales.<init>(java.lang.Long, long, long, long, long, java.time.LocalDate)
 CONSTRUCTOR	com.greenhouse.backend.work.application.correction.WorkCorrectionPlan.<init>(java.util.List, java.util.List, com.greenhouse.backend.work.application.correction.StructureChangeMutationReferences)
 CONSTRUCTOR	com.greenhouse.backend.work.application.effect.InboundPottingCommand.<init>(java.lang.String, java.lang.Long, java.time.LocalDate, java.util.List, java.lang.String, java.lang.String)
@@ -123,6 +124,7 @@ METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountin
 METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Price.documentItemId()
 METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Price.quantity()
 METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Price.unitPrice()
+METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$PriceSnapshot.amount()
 METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms.documentId()
 METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms.expectedPaymentDate()
 METHOD	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms.partnerId()
@@ -401,6 +403,7 @@ TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingP
 TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$FinancialSnapshot
 TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Price
 TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$PriceSnapshot
+TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$QuotedPrices
 TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms
 TYPE	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget
 TYPE	com.greenhouse.backend.sales.application.document.SalesMetricsReader

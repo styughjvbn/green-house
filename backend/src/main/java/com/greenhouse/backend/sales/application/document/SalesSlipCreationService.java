@@ -122,7 +122,27 @@ public class SalesSlipCreationService {
             SalesTextNormalizer.defaultText(request.paymentMethod(), type.defaultPaymentMethod()),
             SalesTextNormalizer.normalize(request.memo()));
 
-    salesSlipAllocationFactory.createItems(request.items()).forEach(salesSlip::addItem);
+    var quote =
+        type == SalesType.DIRECT
+            ? accounting.quotePrices(
+                request.items().stream()
+                    .map(
+                        item ->
+                            new DirectDocumentAccountingPort.Price(
+                                null, item.quantity(), item.unitPrice()))
+                    .toList())
+            : null;
+    salesSlipAllocationFactory
+        .createItems(request.items(), quote == null ? null : quote.prices())
+        .forEach(salesSlip::addItem);
+    if (quote != null)
+      salesSlip.applyFinancialProjection(
+          quote.totalAmount(),
+          salesSlip.getExpectedPaymentDate(),
+          salesSlip.getPaymentMethod(),
+          0L,
+          quote.totalAmount().longValue(),
+          salesSlip.getPaymentStatus());
     if (type == SalesType.DIRECT) {
       salesSlip.updateExpectedPaymentDate(accounting.calculate(partner.id(), request.saleDate()));
     }

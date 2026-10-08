@@ -69,7 +69,29 @@ public class SalesSlipItem {
       Integer quantity,
       Integer unitPrice,
       String memo) {
-    int amount = calculateAmount(quantity, unitPrice);
+    this(
+        auctionShipmentLotId,
+        itemName,
+        genus,
+        spec,
+        quantity,
+        unitPrice,
+        calculateAmount(quantity, unitPrice),
+        memo);
+  }
+
+  /** The price is supplied by its owner; Document only validates physical quantity here. */
+  public SalesSlipItem(
+      Long auctionShipmentLotId,
+      String itemName,
+      String genus,
+      String spec,
+      Integer quantity,
+      Integer unitPrice,
+      Integer amount,
+      String memo) {
+    if (quantity == null || quantity <= 0)
+      throw new IllegalArgumentException("판매 품목 수량은 0보다 커야 합니다.");
     this.auctionShipmentLotId = auctionShipmentLotId;
     this.itemName = itemName;
     this.genus = genus;
@@ -96,7 +118,21 @@ public class SalesSlipItem {
       Integer quantity,
       Integer unitPrice,
       String memo) {
-    int amount = calculateAmount(quantity, unitPrice);
+    updateDetails(
+        itemName, genus, spec, quantity, unitPrice, calculateAmount(quantity, unitPrice), memo);
+  }
+
+  public void updateDetails(
+      String itemName,
+      String genus,
+      String spec,
+      Integer quantity,
+      Integer unitPrice,
+      Integer amount,
+      String memo) {
+    if (quantity == null || quantity <= 0)
+      throw new IllegalArgumentException("판매 품목 수량은 0보다 커야 합니다.");
+
     this.itemName = itemName;
     this.genus = genus;
     this.spec = spec;

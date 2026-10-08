@@ -114,7 +114,7 @@ class SalesSlipAmountRulesTest {
     return new SalesSlip(
         "SALE-TEST",
         LocalDate.of(2026, 10, 3),
-        SalesType.DIRECT,
+        SalesType.AUCTION,
         null,
         1L,
         "미입금",

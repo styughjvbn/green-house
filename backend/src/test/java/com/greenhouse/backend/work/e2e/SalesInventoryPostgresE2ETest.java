@@ -28,6 +28,7 @@ import com.greenhouse.backend.sales.dto.document.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.document.SalesInventoryMovementRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import jakarta.persistence.EntityManager;
 import java.net.URLEncoder;
@@ -665,6 +666,7 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
     var item = new SalesSlipItem(null, "E2E 난", null, null, 1, 100, null);
     item.addAllocation(new SalesSlipItemAllocation(-1L, 1));
     slip.addItem(item);
+    DirectSaleFixtures.refreshProjection(slip);
     assertThatThrownBy(() -> slips.saveAndFlush(slip))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("foreign key");
@@ -685,6 +687,7 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
             status -> {
               var managed = slips.findById(saved.getId()).orElseThrow();
               managed.addItem(new SalesSlipItem(null, "E2E 난", null, null, 1, 100, null));
+              DirectSaleFixtures.refreshProjection(managed);
               entityManager.flush();
             });
     assertThatThrownBy(

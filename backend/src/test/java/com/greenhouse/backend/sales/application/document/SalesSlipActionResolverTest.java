@@ -102,6 +102,7 @@ class SalesSlipActionResolverTest {
             null);
     ReflectionTestUtils.setField(salesSlip, "id", id);
     salesSlip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
+    DirectSaleFixtures.refreshProjection(salesSlip);
     return salesSlip;
   }
 }

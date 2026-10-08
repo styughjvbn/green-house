@@ -12,6 +12,7 @@ import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.domain.partner.PartnerType;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
@@ -76,6 +77,7 @@ class OrchidGroupUsageContractTest {
     var item = new SalesSlipItem(null, group.getVarietyName(), null, null, 2, 1000, null);
     item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
     slip.addItem(item);
+    DirectSaleFixtures.refreshProjection(slip);
     entityManager.persist(slip);
 
     assertThat(inspect(group.getId(), -1L))

@@ -61,7 +61,16 @@ public class SalesSlipUpdateService {
     UUID editId = UUID.randomUUID();
     salesSlipInventoryService.releaseForEdit(salesSlip, editId);
 
-    List<SalesSlipItem> items = salesSlipAllocationFactory.createItems(request.items());
+    var quote =
+        accounting.quotePrices(
+            request.items().stream()
+                .map(
+                    item ->
+                        new DirectDocumentAccountingPort.Price(
+                            null, item.quantity(), item.unitPrice()))
+                .toList());
+    List<SalesSlipItem> items =
+        salesSlipAllocationFactory.createItems(request.items(), quote.prices());
     if (salesSlip.getItems().size() != items.size()) {
       throw new IllegalArgumentException("품목 개수 변경 수정은 아직 지원하지 않습니다.");
     }
@@ -82,11 +91,18 @@ public class SalesSlipUpdateService {
           nextItem.getSpec(),
           nextItem.getQuantity(),
           nextItem.getUnitPrice(),
+          nextItem.getAmount(),
           nextItem.getMemo());
       currentItem.replaceAllocations(
           nextItem.getAllocations().stream().map(SalesSlipItemAllocation::copy).toList());
     }
-    salesSlip.refreshAmounts();
+    salesSlip.applyFinancialProjection(
+        quote.totalAmount(),
+        expectedPaymentDate,
+        salesSlip.getPaymentMethod(),
+        0L,
+        quote.totalAmount().longValue(),
+        salesSlip.getPaymentStatus());
     salesSlip.updateExpectedPaymentDate(expectedPaymentDate);
     salesSlipRepository.saveAndFlush(salesSlip);
     accounting.storeTerms(

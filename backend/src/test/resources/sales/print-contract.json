@@ -36,7 +36,8 @@
       "memo" : "item memo",
       "allocations" : [ ]
     } ],
-    "availableActions" : [ "EDIT", "COMPLETE", "CANCEL", "CONFIRM_PAYMENT" ]
+    "availableActions" : [ "EDIT", "COMPLETE", "CANCEL", "CONFIRM_PAYMENT" ],
+    "financialReviewRequired" : false
   },
   "list" : {
     "content" : [ {

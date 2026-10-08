@@ -115,25 +115,29 @@ public class SalesSlip extends BaseEntity {
   }
 
   public void addItem(SalesSlipItem item) {
-    int totalAmount = addAmount(calculateTotalAmount(this.items), item.getAmount());
+    int totalAmount =
+        salesType == SalesType.AUCTION
+            ? addAmount(calculateTotalAmount(this.items), item.getAmount())
+            : this.totalAmount;
     item.setSalesSlip(this);
     this.items.add(item);
-    applyAmounts(totalAmount);
+    if (salesType == SalesType.AUCTION) applyAmounts(totalAmount);
   }
 
   public void replaceItems(List<SalesSlipItem> items) {
     var replacement = List.copyOf(items);
-    int totalAmount = calculateTotalAmount(replacement);
+    int totalAmount =
+        salesType == SalesType.AUCTION ? calculateTotalAmount(replacement) : this.totalAmount;
     this.items.clear();
     for (var item : replacement) {
       item.setSalesSlip(this);
       this.items.add(item);
     }
-    applyAmounts(totalAmount);
+    if (salesType == SalesType.AUCTION) applyAmounts(totalAmount);
   }
 
   public void refreshAmounts() {
-    recalculateAmounts();
+    if (salesType == SalesType.AUCTION) recalculateAmounts();
   }
 
   public void updateDraftInfo(

@@ -12,6 +12,7 @@ import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.domain.partner.PartnerType;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
@@ -121,6 +122,7 @@ class OrchidGroupCreationCancellationIntegrationTest extends FarmFixtureIntegrat
     var item = new SalesSlipItem(null, group.getVarietyName(), null, null, 2, 1000, null);
     item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
     slip.addItem(item);
+    DirectSaleFixtures.refreshProjection(slip);
     fixtureEntityManager.persist(slip);
     fixtureEntityManager.flush();
     mockMvc

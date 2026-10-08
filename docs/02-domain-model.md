@@ -219,6 +219,8 @@ BusinessPartner 1 ─ N SalesSlip 1 ─ N SalesSlipItem 1 ─ N SalesSlipItemAll
 - 판매일, 거래처, 입금 상태, 판매 상태, 총액, 메모를 가진다.
 - A5 출력 대상이다.
 
+일반 판매의 조건·가격·거래금액은 Direct 전용 모델이 소유한다. 실제 수납액은 Payment 유효 배분의 합계이며, 전표·품목의 금액 칼럼은 검색·분석과 호환 표시를 위한 projection이다. 생성·수정은 Direct가 계산한 금액을 같은 transaction에서 저장하고, 입금 후에는 유효 배분으로 요약을 갱신한다. 이전 대사의 원문과 전환 시점 불일치 근거는 현재 금액 원천과 구분해 보존하며 검토가 끝나기 전 새 입금·금액 변경을 차단한다.
+
 ### SalesSlipItem
 
 판매 품목이다.
