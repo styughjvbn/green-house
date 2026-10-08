@@ -458,3 +458,22 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - Work 공개 API의 application/domain/DTO/Repository import 없음. 계보의 SQL·일괄 조회 방식·저장 사실 해석·트랜잭션 설정은 유지했고, 추가 코드는 기존 decoder의 canonical 유형 값 전달과 JSON 비노출 검증이다.
 - DB·트랜잭션 경계·잠금·수량/상태 처리 변경이 없어 `workE2eTest`는 실행하지 않았다. 전체 검증 이후에는 이 ADR의 검증 기록만 추가했다.
 - 이번 두 단계 완료. 남은 Work application의 외부 참조는 포트 command codec·이동 수량 allocator·운영 대사 inspector/report다. 구현 책임과 공개 값 의존을 확인해 후속 두 단계로 정리한다.
+
+
+### 2026-10-08: 두 단계 진행 — 공유 효과·운영 대사의 1단계
+
+| 소비자·책임 | 변경 전 | 변경 후 | 판단 |
+|---|---|---|---|
+| Farm 포트 효과의 과거 JSON fallback | `work/application/effect/InboundPottingCommandCodec.decode` | `work/api/effect/InboundPottingCommandDecodingApi` | 실제 Jackson/저장 JSON 호환 구현은 Work 내부에 유지하고 기존 decode만 공개 |
+| Farm 이동 전략과 Work의 이동/폐기 배분 | `work/application/effect/MovementQuantityAllocator` | `work/api/effect/MovementQuantityAllocator` | 이미 공유하는 순수 계산을 공개 위치로 이동. 새 interface·전달 계층 없음 |
+
+- 기존 codec component가 decode API를 직접 구현한다. 내부 `encode`, ObjectMapper와 StoredDetails는 그대로 내부에 둔다. Farm은 허용 API를 직접 호출하며 typed payload 우선·없을 때 JSON fallback·입고 ID 일치 검증 순서를 유지한다.
+- 기존 이동 수량 계산의 원본 ID 정렬·중복 검증·비례 폐기·나머지/ID tie-break·수량 합계·예외는 동일하다. allocator 본문은 package만 이동하며 수량 정책을 여러 모듈에 복제하지 않는다.
+- 공개 계약은 typed Work 명령·scalar·Map만 사용한다. codec의 encode/decode 본문·Bean 이름·JSON metadata 제외·입고 실행/Mutation 흐름·트랜잭션·잠금·Receipt 지문을 변경하지 않는다.
+- reviewed inventory는 기존 codec/allocator TYPE와 실제 METHOD 참조의 대응 FQCN만 치환한다. 공개 API를 호출하는 Wrapper/Adapter는 추가하지 않는다.
+
+공유 효과 단계 검증 결과:
+
+- codec의 저장 JSON 호환·metadata 제외, Farm typed payload/legacy fallback·입고 ID 검증, 이동 배분과 이동/포트 실행·공개 값·inventory·integration 집중 검증 통과. allocator class 본문은 이동 전과 동일하다.
+- 전체 `test spotlessCheck` 통과: 777개, 실패·오류·skip 0개. 임시 init script로 테스트 heap 2 GiB 적용. 프론트 `npm run check` 통과.
+- HTTP Controller·DTO·schema와 DB/트랜잭션·수량 계산 본문 변경 없음. OpenAPI/프론트 타입 재생성과 `workE2eTest`는 실행하지 않았다. 전체 검증 이후에는 이 ADR의 결과만 추가했다.

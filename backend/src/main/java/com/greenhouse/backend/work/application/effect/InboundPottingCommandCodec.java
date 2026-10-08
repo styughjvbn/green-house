@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.application.effect;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.effect.InboundPottingCommandDecodingApi;
 import com.greenhouse.backend.work.api.effect.InboundPottingResultInput;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 /** Preserves the existing effect JSON independently of the typed execution payload. */
 @Component
-public class InboundPottingCommandCodec {
+public class InboundPottingCommandCodec implements InboundPottingCommandDecodingApi {
 
   private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
@@ -25,6 +26,7 @@ public class InboundPottingCommandCodec {
     return details;
   }
 
+  @Override
   public InboundPottingCommand decode(Long inboundRecordId, Map<String, Object> details) {
     StoredDetails stored = objectMapper.convertValue(details, StoredDetails.class);
     return new InboundPottingCommand(

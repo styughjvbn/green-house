@@ -1,13 +1,13 @@
 package com.greenhouse.backend.farm.application.inbound;
 
 import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.effect.InboundPottingCommandDecodingApi;
 import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.api.effect.WorkEffectContext;
 import com.greenhouse.backend.work.api.effect.WorkEffectKind;
 import com.greenhouse.backend.work.api.effect.WorkEffectResults;
 import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
-import com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec;
 import com.greenhouse.backend.work.spi.effect.WorkEffectHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -18,7 +18,7 @@ public class InboundPottingExecutor implements WorkEffectHandler {
 
   private final InboundPottingService inboundPottingService;
 
-  private final InboundPottingCommandCodec commandCodec;
+  private final InboundPottingCommandDecodingApi commandCodec;
 
   @Override
   public String supports() {

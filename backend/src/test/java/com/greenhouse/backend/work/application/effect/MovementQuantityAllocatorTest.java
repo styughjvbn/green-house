@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.effect;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.work.api.effect.MovementQuantityAllocator;
 import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.api.effect.StructureChangeResultInput;
 import com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose;
