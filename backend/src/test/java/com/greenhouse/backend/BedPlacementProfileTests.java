@@ -7,10 +7,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.farm.application.structure.BedPlacementProfileService;
-import com.greenhouse.backend.farm.domain.structure.PlacementCapacityMode;
-import com.greenhouse.backend.farm.dto.structure.BedZoneCapacityRequest;
-import com.greenhouse.backend.farm.dto.structure.BedZonePlacementProfileRequest;
+import com.greenhouse.backend.farm.structure.application.BedPlacementProfileService;
+import com.greenhouse.backend.farm.structure.domain.PlacementCapacityMode;
+import com.greenhouse.backend.farm.structure.web.dto.BedZoneCapacityRequest;
+import com.greenhouse.backend.farm.structure.web.dto.BedZonePlacementProfileRequest;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;

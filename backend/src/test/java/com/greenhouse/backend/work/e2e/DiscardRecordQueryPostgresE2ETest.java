@@ -8,8 +8,8 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
+import com.greenhouse.backend.farm.variety.domain.Variety;
+import com.greenhouse.backend.farm.variety.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
 import jakarta.persistence.EntityManagerFactory;
 import java.nio.file.Files;

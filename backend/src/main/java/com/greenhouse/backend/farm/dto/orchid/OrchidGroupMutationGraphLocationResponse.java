@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.dto.orchid;
 
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
 import java.math.BigDecimal;
 
 public record OrchidGroupMutationGraphLocationResponse(

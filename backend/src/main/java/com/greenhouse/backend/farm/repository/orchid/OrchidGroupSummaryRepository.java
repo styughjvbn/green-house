@@ -2,10 +2,10 @@ package com.greenhouse.backend.farm.repository.orchid;
 
 import static com.greenhouse.backend.farm.domain.inbound.QInboundRecord.inboundRecord;
 import static com.greenhouse.backend.farm.domain.orchid.QOrchidGroup.orchidGroup;
-import static com.greenhouse.backend.farm.domain.structure.QBedZone.bedZone;
-import static com.greenhouse.backend.farm.domain.structure.QHouse.house;
-import static com.greenhouse.backend.farm.domain.structure.QPhysicalBed.physicalBed;
-import static com.greenhouse.backend.farm.domain.variety.QVariety.variety;
+import static com.greenhouse.backend.farm.structure.domain.QBedZone.bedZone;
+import static com.greenhouse.backend.farm.structure.domain.QHouse.house;
+import static com.greenhouse.backend.farm.structure.domain.QPhysicalBed.physicalBed;
+import static com.greenhouse.backend.farm.variety.domain.QVariety.variety;
 
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;

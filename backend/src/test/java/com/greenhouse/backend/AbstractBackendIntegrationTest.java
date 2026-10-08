@@ -1,14 +1,14 @@
 package com.greenhouse.backend;
 
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.material.repository.MaterialRepository;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
-import com.greenhouse.backend.farm.repository.material.MaterialRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
-import com.greenhouse.backend.farm.repository.structure.HouseRepository;
-import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
-import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
+import com.greenhouse.backend.farm.structure.repository.BedZoneRepository;
+import com.greenhouse.backend.farm.structure.repository.HouseRepository;
+import com.greenhouse.backend.farm.structure.repository.PhysicalBedRepository;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
+import com.greenhouse.backend.farm.variety.repository.VarietyRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptRepository;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;

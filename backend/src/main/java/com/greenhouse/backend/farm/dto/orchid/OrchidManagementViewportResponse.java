@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.dto.orchid;
 
-import com.greenhouse.backend.farm.dto.structure.PhysicalBedResponse;
+import com.greenhouse.backend.farm.structure.web.dto.PhysicalBedResponse;
 import java.util.List;
 
 public record OrchidManagementViewportResponse(

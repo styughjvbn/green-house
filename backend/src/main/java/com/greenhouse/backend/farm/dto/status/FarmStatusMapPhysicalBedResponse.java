@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.dto.status;
 
-import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
 import java.math.BigDecimal;
 import java.util.List;
 

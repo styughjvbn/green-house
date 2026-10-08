@@ -1,8 +1,8 @@
 package com.greenhouse.backend.farm.dto.status;
 
 import com.greenhouse.backend.farm.domain.status.FarmZoomLevel;
-import com.greenhouse.backend.farm.dto.structure.BedZoneResponse;
-import com.greenhouse.backend.farm.dto.structure.PhysicalBedResponse;
+import com.greenhouse.backend.farm.structure.web.dto.BedZoneResponse;
+import com.greenhouse.backend.farm.structure.web.dto.PhysicalBedResponse;
 import java.util.List;
 
 public record FarmStatusZoomResponse(

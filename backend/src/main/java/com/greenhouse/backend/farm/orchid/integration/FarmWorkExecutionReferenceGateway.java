@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.orchid.integration;
 
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import com.greenhouse.backend.farm.structure.repository.BedZoneRepository;
 import com.greenhouse.backend.work.spi.target.WorkExecutionLocation;
 import com.greenhouse.backend.work.spi.target.WorkExecutionReferenceGateway;
 import java.util.Collection;

@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import com.greenhouse.backend.farm.structure.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import com.greenhouse.backend.support.MovementTestSupport;
 import com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest;

@@ -15,7 +15,7 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRel
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
-import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import com.greenhouse.backend.farm.structure.repository.BedZoneRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;

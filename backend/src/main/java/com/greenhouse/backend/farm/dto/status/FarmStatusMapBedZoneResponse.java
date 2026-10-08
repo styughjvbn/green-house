@@ -1,8 +1,8 @@
 package com.greenhouse.backend.farm.dto.status;
 
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.BedZoneType;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.BedZoneType;
 
 public record FarmStatusMapBedZoneResponse(
     Long id,

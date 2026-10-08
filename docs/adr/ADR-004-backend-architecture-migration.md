@@ -716,3 +716,11 @@ P3 완료 검증 결과:
 - P2 완료 커밋과 대조해 P3 프로덕션 180개 파일은 package/import 외 실행 본문 변경이 없고, 생성 v1 필드 목록도 그대로임을 확인했다. reviewed inventory는 생성 보고서와 정확히 일치한다.
 - DB·SQL·트랜잭션·잠금·수량/금액 정책 변경 없음. `workE2eTest` 미실행. PostgreSQL 핵심 회귀는 P6 최종 검증 범위다. 전체 검증 이후 변경은 이 ADR 완료 기록과 문서 링크뿐이다.
 - 사용자 요청 범위인 P3까지 완료. P4/P5/P6는 진행하지 않는다. 목표 설계의 최종 통합·archive 이동은 P6에서 수행하며 이 ADR은 유지한다.
+
+### 2026-10-08: P4 — Farm 기준정보·구조
+
+- Variety/Material/Structure를 기능 우선 application/domain/repository/web로 이동한다. 기존 Farm 내부의 기준정보·위치·수량 조회와 JPA 연관관계, 품종 재사용·비활성화·Engine 전파·배치 정책/감사·일괄 조회를 유지한다. 새 전달 Adapter/Port/API 없음.
+- 클래스/Bean/Entity 이름·테이블·트랜잭션·잠금 순서·HTTP 계약을 유지한다. QueryDSL import·소비자·테스트·reflection/문자열의 FQCN을 같은 이동표로 갱신한다. reviewed inventory는 해당 FQCN만 치환한다.
+- P4는 업무별 패키지 배치와 기존 의존 방향 보존 범위다. Farm 내부의 기존 기능 간 저장소 조회·Entity 연관관계를 임의로 금지하거나 새 계약으로 일괄 감싸지 않는다. Mutation 내부와 CLI 진입점은 P5에 남긴다.
+
+- 프로덕션 53개·같은 패키지 테스트 2개 이동. clean 컴파일 및 품종 조회/복합키/감사·농장 구조·배치/profile/감사·architecture/public values/inventory/단일 Writer 집중 검증 통과. 전체 검증은 P4 전체 이동 후 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E 미실행.

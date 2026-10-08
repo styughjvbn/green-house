@@ -1,0 +1,124 @@
+package com.greenhouse.backend.farm.variety.domain;
+
+import com.greenhouse.backend.common.domain.BaseEntity;
+import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Entity
+@Table(
+    name = "varieties",
+    uniqueConstraints =
+        @UniqueConstraint(
+            name = "uk_varieties_genus_name",
+            columnNames = {"genus", "name"}))
+public class Variety extends BaseEntity {
+
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "varieties_id_seq")
+  @SequenceGenerator(
+      name = "varieties_id_seq",
+      sequenceName = "varieties_id_seq",
+      allocationSize = 50)
+  private Long id;
+
+  @Column(nullable = false, unique = true, length = 50)
+  private String code;
+
+  @Column(nullable = false, length = 100)
+  private String genus;
+
+  @Column(nullable = false, length = 150)
+  private String name;
+
+  @Column(length = 150)
+  private String alias;
+
+  @Column(name = "default_pot_size", length = 50)
+  private String defaultPotSize;
+
+  @Column(length = 7)
+  private String color;
+
+  @Column(name = "sale_enabled", nullable = false)
+  private boolean saleEnabled;
+
+  @Column(name = "is_active", nullable = false)
+  private boolean active;
+
+  @Column(columnDefinition = "text")
+  private String description;
+
+  @Column(columnDefinition = "text")
+  private String memo;
+
+  public Variety(
+      String code,
+      String genus,
+      String name,
+      String alias,
+      String defaultPotSize,
+      boolean saleEnabled,
+      boolean active,
+      String description,
+      String memo) {
+    this(code, genus, name, alias, defaultPotSize, null, saleEnabled, active, description, memo);
+  }
+
+  public Variety(
+      String code,
+      String genus,
+      String name,
+      String alias,
+      String defaultPotSize,
+      String color,
+      boolean saleEnabled,
+      boolean active,
+      String description,
+      String memo) {
+    this.code = code;
+    this.genus = genus;
+    this.name = name;
+    this.alias = alias;
+    this.defaultPotSize = PotSizeCode.fromInput(defaultPotSize).getDisplayValue();
+    this.color = color;
+    this.saleEnabled = saleEnabled;
+    this.active = active;
+    this.description = description;
+    this.memo = memo;
+  }
+
+  public void update(
+      String genus,
+      String name,
+      String alias,
+      String defaultPotSize,
+      String color,
+      boolean saleEnabled,
+      String description,
+      String memo) {
+    this.genus = genus;
+    this.name = name;
+    this.alias = alias;
+    this.defaultPotSize = PotSizeCode.fromInput(defaultPotSize).getDisplayValue();
+    this.color = color;
+    this.saleEnabled = saleEnabled;
+    this.description = description;
+    this.memo = memo;
+  }
+
+  public void deactivate() {
+    this.active = false;
+  }
+}

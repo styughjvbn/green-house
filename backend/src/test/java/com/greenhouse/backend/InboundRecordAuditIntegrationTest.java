@@ -12,7 +12,7 @@ import com.greenhouse.backend.audit.repository.AuditEventRepository;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
-import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.farm.variety.domain.Variety;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

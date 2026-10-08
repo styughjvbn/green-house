@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.application.inbound;
 
-import com.greenhouse.backend.farm.application.variety.InboundVarietyInput;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.variety.application.InboundVarietyInput;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

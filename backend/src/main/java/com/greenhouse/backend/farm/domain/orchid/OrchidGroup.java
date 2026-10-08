@@ -2,8 +2,8 @@ package com.greenhouse.backend.farm.domain.orchid;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.variety.domain.Variety;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
