@@ -136,13 +136,10 @@ class ModularArchitectureTests {
 
   @Test
   void salesLayersAreGroupedByOwnership() throws IOException {
-    assertFeaturePackages(
-        "sales", "application", "document", "direct", "auction", "payment", "partner");
-    for (String layer : List.of("domain", "repository")) {
-      assertFeaturePackages("sales", layer, "document", "direct", "auction", "payment", "partner");
-    }
-    for (String layer : List.of("controller", "dto")) {
-      assertFeaturePackages("sales", layer, "document", "auction", "payment", "partner");
+    for (String role : List.of("application", "domain", "repository", "controller", "dto")) {
+      assertThat(SOURCE_ROOT.resolve("sales").resolve(role))
+          .as("Sales no longer accepts the legacy role-first layout: %s", role)
+          .doesNotExist();
     }
     for (String oldModule : List.of("auction", "partner", "settlement")) {
       assertThat(SOURCE_ROOT.resolve(oldModule)).doesNotExist();

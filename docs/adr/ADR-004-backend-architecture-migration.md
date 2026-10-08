@@ -3,6 +3,7 @@
 - 상태: 승인 — 기존 소유권·의존 방향 유지, 단계적 전환 진행 중
 - 작성일: 2026-10-08, Asia/Seoul
 - 범위: 백엔드 패키지 배치, 공개 계약, 아키텍처 테스트 및 문서 전환
+- 진행: P2 공개 계약·P3 Sales 기능 우선 배치 완료. P4 Farm/Work·P5 Mutation·P6 최종 통합은 후속 작업.
 - 관련 문서: [목표 설계](../green-house-backend-architecture-final.md), [현행 아키텍처](../04-architecture.md), [Sales 소유권 결정](ADR-003-sales-document-information-architecture.md)
 
 실제 소스와 아키텍처 테스트를 기준으로 전환 방향과 이유를 기록한다. 구현 완료를 의미하지 않는다.
@@ -702,3 +703,16 @@ P2 마무리 검증 결과:
 - 생성/반환 Mutation 단일 Writer·snapshot·receipt·결정과 도착의 구분·lot 선잠금·대금/배분/정정·취소 보호·readOnly/최상위 트랜잭션을 유지한다. 소비자/QueryDSL/테스트의 FQCN과 reviewed inventory만 같은 이동표로 갱신한다.
 
 - Auction 프로덕션 56개·테스트 4개 이동. clean 컴파일과 경매 추적·수량/결과/반환 정책·대금·판매/배분·아키텍처/inventory 집중 검증 통과. 전체 검증은 Sales 완료 경계 검사와 함께 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E는 미실행.
+
+### 2026-10-08: P3 완료 경계 검사
+
+- Sales의 기존 application/domain/repository/controller/dto 루트를 재도입할 수 없도록 기존 경로 검사를 강화한다. 기존 Sales 기능 그래프 검사에서 다른 기능의 application 구현 직접 참조도 차단한다. 기능 간 API/SPI 호출·단일 Writer·저장소 소유권·공개 값 검사는 유지한다. Farm/Work의 이행 중 기존 경로 지원은 P4/P6까지 유지한다.
+- 이번 P3는 프로덕션 180개·소유 기능 테스트 18개를 이동했다. 모듈 밖 공개 범위·클래스/Bean 이름·DB·HTTP·업무 동작은 변경하지 않는다. 새 integration/전달 계층 없음. 전체 검증 및 생성 명세 확인 후 완료로 기록한다.
+
+P3 완료 검증 결과:
+
+- 강화된 Sales 경로·기능 API/SPI 경계·소유권 parser·공개 값·기능 그래프·저장소 소유권·단일 Writer·정확한 inventory 검사 통과. 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과.
+- OpenAPI 재생성 157 operations/132 paths/292 schemas, 생성 diff 없음. 타입 재생성 불필요. 기존 Sales 계층 루트의 class artifact 0개. Farm/Work/Sales application 구현의 다른 최상위 모듈 참조 각각 0개.
+- P2 완료 커밋과 대조해 P3 프로덕션 180개 파일은 package/import 외 실행 본문 변경이 없고, 생성 v1 필드 목록도 그대로임을 확인했다. reviewed inventory는 생성 보고서와 정확히 일치한다.
+- DB·SQL·트랜잭션·잠금·수량/금액 정책 변경 없음. `workE2eTest` 미실행. PostgreSQL 핵심 회귀는 P6 최종 검증 범위다. 전체 검증 이후 변경은 이 ADR 완료 기록과 문서 링크뿐이다.
+- 사용자 요청 범위인 P3까지 완료. P4/P5/P6는 진행하지 않는다. 목표 설계의 최종 통합·archive 이동은 P6에서 수행하며 이 ADR은 유지한다.

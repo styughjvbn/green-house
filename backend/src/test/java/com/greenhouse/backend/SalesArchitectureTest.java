@@ -68,6 +68,9 @@ class SalesArchitectureTest {
       for (var dependency : origin.getDirectDependenciesFromSelf()) {
         String target = feature(dependency.getTargetClass());
         if (target.isEmpty() || owner.equals(target)) continue;
+        assertThat(ArchitecturePackages.role(dependency.getTargetClass().getPackageName()))
+            .as("Sales feature consumers require an API/SPI: %s", dependency.getDescription())
+            .isNotEqualTo("application");
         assertThat(GRAPH.get(owner))
             .as("Forbidden sales dependency: %s", dependency.getDescription())
             .contains(target);

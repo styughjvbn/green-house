@@ -196,7 +196,7 @@ Sales 내부는 document/direct/auction/payment/partner의 소유권을 유지�
 - Document는 구체적인 Direct/Auction/Payment 서비스를 호출하지 않는다. 필요한 출하 생성·취소 보호·표시 조회는 `sales/document/spi`의 Document 소유 `AuctionDocumentPort`, 일반 판매의 예상일·입금 이력·잔액 연결은 `sales/document/spi`의 `DirectDocumentAccountingPort`로 요청하고 소유자 adapter가 처리한다. 기존 출하 값 계약은 port로 이동하며 복제하지 않는다.
 - `sales/payment/spi`의 Payment 소유 단건 대상 port와 배분 대상 port를 Direct·Auction adapter가 구현한다. Direct adapter는 `sales/document/api`의 Document 소유 계약으로 전표를 처리한다. Payment는 Entity를 받지 않고, 대상 잠금·유효성 검증 뒤 원장 멱등 확인→대상 금액 반영→입금/연결 원장→잔액→감사→응답을 조율한다. 유스케이스 진입점이 트랜잭션을 열고 대상 port와 원장 writer는 기존 트랜잭션에 반드시 참여한다.
 - Auction 후속 결정·실제 도착은 lot 선잠금과 receipt 확인 후 Farm 생성/생성 보상을 최상위 application transaction에서 조율한다. 결정과 실제 도착 이력은 분리하며, 도착은 새 묶음·생성/보상 Mutation ID만 연결한다. Farm에는 안정적인 `AUCTION_RETURN_ARRIVAL` 출처를 사용하고 기존 InboundRecord와 Work 포트 흐름을 거치지 않는다.
-- 저장소·Entity·QueryDSL EntityPath는 내부 소유 경계 밖으로 노출하지 않는다. application 공개 멤버의 중첩 값 계약 검사와 내부 의존 그래프 검사를 함께 실행한다. 구현 의존은 `Direct/Auction → Document/Payment/Partner`, `Document → Partner`, `Payment → Partner`이며 역방향 구현 의존을 허용하지 않는다.
+- 저장소·Entity·QueryDSL EntityPath는 내부 소유 경계 밖으로 노출하지 않는다. application 공개 멤버의 중첩 값 계약 검사와 내부 의존 그래프 검사를 함께 실행한다. 구현 의존은 `Direct/Auction → Document/Payment/Partner`, `Document → Partner/Payment 계약`, `Payment → Partner`이며 역방향 구현 의존을 허용하지 않는다.
 
 - 판매 전표
 - 판매 품목
@@ -292,7 +292,7 @@ Persistence 조회 규칙:
 
 ### 4.1 백엔드 구현 기준
 
-[ADR-004](adr/ADR-004-backend-architecture-migration.md)에 따라 기존 소유권과 허용 의존 방향을 유지하며 공개 API·SPI 정리부터 점진적으로 전환한다. 현재 운영 코드는 계층 우선 배치를 중심으로 유지하며, 작업 상세 참조·Mutation 그래프의 공개 확장 계약은 `work/spi/{target,operation}`, Farm 구현은 `farm/orchid/integration`으로 전환했다. Work가 SPI를 소유하고 Farm이 구현하므로 기존 `Farm → Work` 컴파일 의존과 Work에서 Farm 구현을 호출하는 런타임 흐름은 유지한다. 아키텍처 검사는 이행 중 기능 우선 배치도 동일한 소유권·계층 규칙으로 검사한다. 새 Farm/Work/Sales의 `api`·`spi`는 모든 public 값 계약에서 Entity·저장소 projection·HTTP 타입 누출을 금지하고, 기능 내부 API·SPI의 최상위 모듈 외 접근을 차단한다. 기존 application 계약은 검토된 타입·메서드 inventory로 계속 추적한다. Sales의 최상위 공개 API/SPI도 기능 소유권을 식별해 기존 기능 의존 그래프를 검사하며, 최상위 모듈 공개 여부와 기능 소유권을 별도로 판단한다.
+[ADR-004](adr/ADR-004-backend-architecture-migration.md)에 따라 기존 소유권과 허용 의존 방향을 유지하며 공개 API·SPI 정리부터 점진적으로 전환한다. Sales는 기능 우선 배치로 전환했고 Farm·Work 구현은 아직 계층 우선 배치를 중심으로 유지한다. 작업 상세 참조·Mutation 그래프의 공개 확장 계약은 `work/spi/{target,operation}`, Farm 구현은 `farm/orchid/integration`으로 전환했다. Work가 SPI를 소유하고 Farm이 구현하므로 기존 `Farm → Work` 컴파일 의존과 Work에서 Farm 구현을 호출하는 런타임 흐름은 유지한다. 아키텍처 검사는 이행 중 기능 우선 배치도 동일한 소유권·계층 규칙으로 검사한다. 새 Farm/Work/Sales의 `api`·`spi`는 모든 public 값 계약에서 Entity·저장소 projection·HTTP 타입 누출을 금지하고, 기능 내부 API·SPI의 최상위 모듈 외 접근을 차단한다. 기존 application 계약은 검토된 타입·메서드 inventory로 계속 추적한다. Sales의 최상위 공개 API/SPI도 기능 소유권을 식별해 기존 기능 의존 그래프를 검사하며, 최상위 모듈 공개 여부와 기능 소유권을 별도로 판단한다.
 
 입고 대상 계획·포트 취소·구조 변경 취소·구조 변경 선잠금의 확장 계약도 `work/spi/{target,operation}`에서 Work가 소유한다. Farm 구현은 `farm/inbound/integration`과 `farm/transformation/integration`에 두며, 기존 application 유스케이스와 같은 트랜잭션에서 처리한다. 구조 변경·포트 취소의 보상 Mutation과 이력·접수 소유권, 잠금 순서는 유지한다.
 
