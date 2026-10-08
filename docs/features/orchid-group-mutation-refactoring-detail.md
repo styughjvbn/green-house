@@ -88,7 +88,7 @@ Work의 작업 진행, Sales의 예약·출고 업무, Inbound의 입고 lifecyc
 
 ### F3. 전환 분기가 업무 데이터 변환까지 복제함 — P1
 
-근거: [BatchStructureTransformationExecutor](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/BatchStructureTransformationExecutor.java) `execute`, `mutationCommand`, `executeWithEngine`와 [SalesSlipInventoryService](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipInventoryService.java).
+근거: [BatchStructureTransformationExecutor](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/BatchStructureTransformationExecutor.java) `execute`, `mutationCommand`, `executeWithEngine`와 [SalesSlipInventoryService](../../backend/src/main/java/com/greenhouse/backend/sales/document/application/SalesSlipInventoryService.java).
 
 - 구조 변경 결과의 속성 상속, purpose→상태 변환, 결과 details 조립이 Legacy/Engine 양쪽에 있다.
 - Sales의 예약·해제·출고·복구마다 command 생성, 모드 확인, 직접 변경, movement 연결 패턴이 반복된다.
@@ -103,7 +103,7 @@ Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각
 
 ### F4. application Reader를 거쳐도 타 모듈 Entity가 노출됨 — P1
 
-근거: [OrchidGroupReader](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupReader.java), [SalesSlipAllocationBatch](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipAllocationBatch.java), [SalesSlipItemAllocation](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlipItemAllocation.java), [SalesInventoryMovement](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesInventoryMovement.java).
+근거: [OrchidGroupReader](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupReader.java), [SalesSlipAllocationBatch](../../backend/src/main/java/com/greenhouse/backend/sales/document/application/SalesSlipAllocationBatch.java), [SalesSlipItemAllocation](../../backend/src/main/java/com/greenhouse/backend/sales/document/domain/SalesSlipItemAllocation.java), [SalesInventoryMovement](../../backend/src/main/java/com/greenhouse/backend/sales/document/domain/SalesInventoryMovement.java).
 
 초기 진단이며, 아래 14·15차 이식 기록에 현재 상태를 정리한다.
 

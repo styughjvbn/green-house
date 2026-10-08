@@ -75,7 +75,7 @@ Repository import를 금지하는 것만으로는 확장 시 변경 전파를 �
 
 ### 2.2 조회가 모듈 경계를 우회
 
-기준 코드의 `SalesAnalyticsRepository`는 Sales뿐 아니라 Farm·Partner·Settlement·Work의 Q Entity를 직접 사용했다. 11·12차에서 제거했으며 현재 판매 집계는 [SalesMetricsReader](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesMetricsReader.java)가 소유한다.
+기준 코드의 `SalesAnalyticsRepository`는 Sales뿐 아니라 Farm·Partner·Settlement·Work의 Q Entity를 직접 사용했다. 11·12차에서 제거했으며 현재 판매 집계는 [SalesMetricsReader](../../backend/src/main/java/com/greenhouse/backend/sales/document/application/SalesMetricsReader.java)가 소유한다.
 [AuctionSettlementRepository](../../backend/src/main/java/com/greenhouse/backend/settlement/repository/AuctionSettlementRepository.java)의 `findUnsettledSoldResultLines`는 Auction Entity를 직접 조회한다.
 Native SQL 여부와 무관한 소유권 문제다.
 
