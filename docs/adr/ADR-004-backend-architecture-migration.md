@@ -477,3 +477,23 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - codec의 저장 JSON 호환·metadata 제외, Farm typed payload/legacy fallback·입고 ID 검증, 이동 배분과 이동/포트 실행·공개 값·inventory·integration 집중 검증 통과. allocator class 본문은 이동 전과 동일하다.
 - 전체 `test spotlessCheck` 통과: 777개, 실패·오류·skip 0개. 임시 init script로 테스트 heap 2 GiB 적용. 프론트 `npm run check` 통과.
 - HTTP Controller·DTO·schema와 DB/트랜잭션·수량 계산 본문 변경 없음. OpenAPI/프론트 타입 재생성과 `workE2eTest`는 실행하지 않았다. 전체 검증 이후에는 이 ADR의 결과만 추가했다.
+
+### 2026-10-08: 두 단계 진행 — 공유 효과·운영 대사의 2단계
+
+| 소비자·책임 | 변경 전 | 변경 후 | 판단 |
+|---|---|---|---|
+| Farm 원장 대사의 Work 참조 검사 | `work/application/effect/WorkOrchidGroupLedgerRehearsalInspector` | `work/api/effect/WorkOrchidGroupLedgerRehearsalApi` | Work 소유 저장소와 진행/효과 연결 검증 구현을 숨기고 실제 사용 `inspect()`만 공개 |
+| 대사 결과·보정 참조 | Work application effect report·중첩 record | `work/api/effect`의 동일 report·중첩 record | 식별자·UUID·boolean·목록만 제공하는 기존 값 계약 이동 |
+
+- 기존 inspector component가 API를 직접 구현하고 Farm 대사가 직접 호출한다. 저장소가 없는 전달 Service·Adapter·Port·integration 패키지는 추가하지 않는다. Entity·Repository projection·HTTP DTO와 보정 결과 JSON 해석은 공개 계약에 노출하지 않는다.
+- 기존 report의 collection 복사·생성자·중첩 보정 참조와 결과 내용은 동일하다. 조회 구현의 target/effect ID 조회, 실행 수량/상태 검증, 미완성 Mutation 연결 조회, 500개 keyset 보정 참조 조회·저장 JSON 해석은 그대로 유지한다.
+- Farm 대사의 `readOnly = true`, `REPEATABLE_READ`와 Work의 기존 호출자 트랜잭션 참여는 유지한다. SQL·저장소·상태/수량 정책·Mutation Writer·잠금·Receipt 지문·운영 CLI 진입점은 변경하지 않는다.
+- reviewed inventory는 기존 inspector/report/중첩 record의 TYPE와 실제 METHOD 대응 FQCN만 치환한다. 테스트의 실제 구현 spy/autowired 참조는 유지한다.
+
+운영 대사 단계 검증 결과:
+
+- 대사·원장 우회 변경 탐지·롤백/보상·Writer guard·공개 값·inventory·integration 집중 검증 통과. inspector 실행 본문과 report는 이동 전과 동일하다.
+- 전체 `clean test spotlessCheck` 통과: 777개, 실패·오류·skip 0개. 임시 init script로 테스트 heap 2 GiB 적용. 프론트 `npm run check` 통과. 이동 전 allocator/report/중첩 record의 클래스 잔존 없음.
+- 프로덕션 다른 최상위 모듈의 Work application 참조와 inventory의 Work application 항목은 0개다. Work 내부 구현 및 구현을 검증하는 테스트 참조는 유지한다.
+- HTTP Controller·DTO·schema와 SQL·DB/트랜잭션 경계·상태/수량 판단 변경 없음. OpenAPI/프론트 타입 재생성과 `workE2eTest`는 실행하지 않았다. 운영 CLI 진입점은 동일하고 운영 DB 명령은 실행하지 않았다. inventory의 설명 주석 순서는 유지했다. 전체 검증 이후에는 이 ADR의 결과 기록만 추가했다.
+- 이번 두 단계 완료. 전체 이행은 진행 중이며 후속 P2 대상은 Farm Reader/Writer·Mutation 값과 Sales 공개 계약이다.

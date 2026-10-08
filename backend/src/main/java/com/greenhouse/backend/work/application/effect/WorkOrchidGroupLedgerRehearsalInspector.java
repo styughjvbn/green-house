@@ -1,5 +1,7 @@
 package com.greenhouse.backend.work.application.effect;
 
+import com.greenhouse.backend.work.api.effect.WorkOrchidGroupLedgerRehearsalApi;
+import com.greenhouse.backend.work.api.effect.WorkOrchidGroupLedgerRehearsalReport;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionResultDetails;
 import com.greenhouse.backend.work.dto.operation.WorkCorrectionAdjustmentResponse;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
@@ -14,7 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 @Component
-public class WorkOrchidGroupLedgerRehearsalInspector {
+public class WorkOrchidGroupLedgerRehearsalInspector implements WorkOrchidGroupLedgerRehearsalApi {
 
   private final WorkTargetExecutionRepository executionRepository;
 
@@ -39,6 +41,7 @@ public class WorkOrchidGroupLedgerRehearsalInspector {
     this.correctionRepository = correctionRepository;
   }
 
+  @Override
   public WorkOrchidGroupLedgerRehearsalReport inspect() {
     return new WorkOrchidGroupLedgerRehearsalReport(
         targetRepository.findDistinctOrchidGroupIds(),

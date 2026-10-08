@@ -14,8 +14,8 @@ import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupLedgerC
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.ReconciliationEntryRow;
-import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
-import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.CorrectionReference;
+import com.greenhouse.backend.work.api.effect.WorkOrchidGroupLedgerRehearsalApi;
+import com.greenhouse.backend.work.api.effect.WorkOrchidGroupLedgerRehearsalReport.CorrectionReference;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -58,7 +58,7 @@ public class OrchidGroupLedgerReconciliationService {
 
   private final OrchidGroupMutationFingerprint fingerprint;
 
-  private final WorkOrchidGroupLedgerRehearsalInspector workInspector;
+  private final WorkOrchidGroupLedgerRehearsalApi workInspector;
 
   private final List<OrchidGroupLedgerRehearsalInspector> externalInspectors;
 
