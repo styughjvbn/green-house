@@ -137,6 +137,7 @@ public class SalesSlipCreationService {
               saved.getSaleDate(),
               saved.getExpectedPaymentDate(),
               saved.getPaymentMethod(),
+              saved.getPaymentStatus(),
               saved.getItems().stream()
                   .map(
                       item ->

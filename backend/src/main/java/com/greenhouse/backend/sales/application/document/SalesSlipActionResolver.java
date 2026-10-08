@@ -7,7 +7,9 @@ import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -26,12 +28,33 @@ public class SalesSlipActionResolver {
   }
 
   public Map<Long, Actions> resolveAll(List<SalesSlip> salesSlips) {
+    return resolveAll(
+        salesSlips,
+        accounting.findFinancials(
+            salesSlips.stream()
+                .filter(slip -> slip.getSalesType() == SalesType.DIRECT)
+                .map(SalesSlip::getId)
+                .toList()));
+  }
+
+  public Map<Long, Actions> resolveAll(
+      List<SalesSlip> salesSlips,
+      Map<Long, DirectDocumentAccountingPort.FinancialSnapshot> financials) {
     List<Long> directSalesSlipIds =
         salesSlips.stream()
             .filter(salesSlip -> salesSlip.getSalesType() == SalesType.DIRECT)
             .map(SalesSlip::getId)
             .toList();
-    Set<Long> reviews = accounting.findFinancialReviewRequiredIds(directSalesSlipIds);
+    Set<Long> reviews =
+        financials.values().stream()
+            .filter(DirectDocumentAccountingPort.FinancialSnapshot::reviewRequired)
+            .map(DirectDocumentAccountingPort.FinancialSnapshot::documentId)
+            .collect(Collectors.toSet());
+    for (var slip : salesSlips) {
+      var financial = financials.get(slip.getId());
+      if (financial != null && !Objects.equals(financial.partnerId(), slip.getPartnerId()))
+        reviews.add(slip.getId());
+    }
     Set<Long> paidSalesSlipIds = accounting.findPaidDocumentIds(directSalesSlipIds);
     List<Long> auctionShipmentIds =
         salesSlips.stream()
@@ -51,7 +74,8 @@ public class SalesSlipActionResolver {
                   salesSlip,
                   paidSalesSlipIds,
                   nonCancelableShipmentIds,
-                  reviews.contains(salesSlip.getId())),
+                  reviews.contains(salesSlip.getId()),
+                  financials.get(salesSlip.getId())),
               reviews.contains(salesSlip.getId())));
     }
     return actionsBySalesSlipId;
@@ -61,7 +85,8 @@ public class SalesSlipActionResolver {
       SalesSlip salesSlip,
       Set<Long> paidSalesSlipIds,
       Set<Long> nonCancelableShipmentIds,
-      boolean reviewRequired) {
+      boolean reviewRequired,
+      DirectDocumentAccountingPort.FinancialSnapshot financial) {
     if (salesSlip.isCanceled()) {
       return List.of();
     }
@@ -78,7 +103,10 @@ public class SalesSlipActionResolver {
     if (canCancel(salesSlip, hasPaymentEvent, nonCancelableShipmentIds)) {
       actions.add(SalesSlipAction.CANCEL);
     }
-    if (!reviewRequired && salesSlip.canConfirmPayment()) {
+    if (!reviewRequired
+        && financial != null
+        && financial.paymentAllowed()
+        && salesSlip.getSalesType() == SalesType.DIRECT) {
       actions.add(SalesSlipAction.CONFIRM_PAYMENT);
     }
 

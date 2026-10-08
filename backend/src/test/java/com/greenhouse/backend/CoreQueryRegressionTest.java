@@ -28,6 +28,7 @@ import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.math.BigDecimal;
@@ -43,6 +44,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +54,7 @@ import org.springframework.transaction.annotation.Transactional;
 @TestPropertySource(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 @Transactional
 class CoreQueryRegressionTest {
+  @Autowired JdbcTemplate jdbc;
 
   @Autowired FarmStatusService farmStatusService;
 
@@ -208,11 +211,13 @@ class CoreQueryRegressionTest {
     }
     salesSlipRepository.save(slip);
 
+    entityManager.flush();
+    DirectSaleFixtures.copyTerms(jdbc, slip.getId());
     long queryCount = measure(() -> salesQueryService.getSalesSlip(slip.getId()));
 
     // Root/items, allocations/snapshots, Farm states, partners and review evidence
     // are loaded in bulk, independently of the item count.
-    assertThat(queryCount).isEqualTo(6L);
+    assertThat(queryCount).isEqualTo(8L);
   }
 
   @ParameterizedTest
@@ -236,6 +241,8 @@ class CoreQueryRegressionTest {
               null));
       partner.update("현재 이름 " + index, PartnerType.WHOLESALE, "대표 Search", "010-7890", "주소", "메모");
     }
+    entityManager.flush();
+    DirectSaleFixtures.copyAllTerms(jdbc);
     long queries =
         measure(
             () -> {
@@ -254,7 +261,7 @@ class CoreQueryRegressionTest {
               }
             });
     // One scalar Partner search, followed by the unchanged page/count/detail queries.
-    assertThat(queries).isEqualTo(4);
+    assertThat(queries).isEqualTo(7);
     assertThat(
             salesQueryService
                 .getSalesSlipPage(null, date, date, null, null, "7890", 0, 1)

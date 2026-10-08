@@ -23,7 +23,8 @@ public record SalesSlipDocumentItem(
   public static SalesSlipDocumentItem from(
       SalesSlipItem item,
       List<SalesSlipItemAllocation> allocations,
-      Map<Long, OrchidGroupState> states) {
+      Map<Long, OrchidGroupState> states,
+      DirectDocumentAccountingPort.PriceSnapshot price) {
     return new SalesSlipDocumentItem(
         item.getId(),
         item.getAuctionShipmentLotId(),
@@ -31,8 +32,8 @@ public record SalesSlipDocumentItem(
         item.getGenus(),
         item.getSpec(),
         item.getQuantity(),
-        item.getUnitPrice(),
-        item.getAmount(),
+        price == null ? item.getUnitPrice() : price.unitPrice(),
+        price == null ? item.getAmount() : price.amount(),
         item.getMemo(),
         allocations.stream()
             .map(

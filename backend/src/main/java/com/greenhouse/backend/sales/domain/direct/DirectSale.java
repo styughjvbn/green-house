@@ -46,6 +46,15 @@ public class DirectSale extends BaseEntity {
   @Column(name = "payment_method")
   private String paymentMethod;
 
+  @Column(name = "unpaid_payment_label", nullable = false)
+  @org.hibernate.annotations.ColumnDefault("'미입금'")
+  private String unpaidPaymentLabel = "미입금";
+
+  public void changeUnpaidPaymentLabel(String label) {
+    if (label == null) throw new IllegalArgumentException("입금 표시 문구가 필요합니다.");
+    this.unpaidPaymentLabel = label;
+  }
+
   @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
   @OrderBy("documentItemId ASC")
   private List<DirectSalePrice> prices = new ArrayList<>();

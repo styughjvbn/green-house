@@ -123,18 +123,18 @@ class SalesWriteQueryPostgresE2ETest extends WorkE2ETestBase {
     long queryLimit =
         switch (action) {
           // Direct root/price writes and review checks stay constant for 1 and 8 items.
-          case "EDIT" -> 26;
-          case "OUTBOUND" -> 12;
-          case "PAYMENT" -> 22;
-          case "DRAFT_CANCEL" -> 15;
-          case "OUTBOUND_CANCEL" -> 20;
-          case "PAYMENT_REPLAY" -> 9;
-          case "UNCHANGED" -> 7;
+          case "EDIT" -> 32;
+          case "OUTBOUND" -> 14;
+          case "PAYMENT" -> 24;
+          case "DRAFT_CANCEL" -> 17;
+          case "OUTBOUND_CANCEL" -> 22;
+          case "PAYMENT_REPLAY" -> 11;
+          case "UNCHANGED" -> 9;
           default -> throw new IllegalArgumentException(action);
         };
     assertThat(stats.getQueryExecutionCount()).isLessThanOrEqualTo(queryLimit);
-    if (action.equals("UNCHANGED")) assertThat(stats.getPrepareStatementCount()).isEqualTo(8);
-    if (action.equals("PAYMENT_REPLAY")) assertThat(stats.getPrepareStatementCount()).isEqualTo(10);
+    if (action.equals("UNCHANGED")) assertThat(stats.getPrepareStatementCount()).isEqualTo(10);
+    if (action.equals("PAYMENT_REPLAY")) assertThat(stats.getPrepareStatementCount()).isEqualTo(12);
     assertThat(response).isEqualTo(queries.getSalesSlip(first.id()));
     assertThat(response.items()).hasSize(size);
     assertThat(response.items())

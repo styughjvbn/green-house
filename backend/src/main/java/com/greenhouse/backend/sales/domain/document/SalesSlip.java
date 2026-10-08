@@ -179,17 +179,12 @@ public class SalesSlip extends BaseEntity {
   private String editRejectionReason(boolean hasPaymentEvent) {
     if (salesType != SalesType.DIRECT) return "경매 판매 전표 수정은 아직 지원하지 않습니다.";
     if (!STATUS_DRAFT.equals(salesStatus)) return "작성중 상태 전표만 수정할 수 있습니다.";
-    if (hasPaymentEvent || (paidAmount != null && paidAmount > 0))
-      return "입금 이력이 있는 전표는 수정할 수 없습니다.";
+    if (hasPaymentEvent) return "입금 이력이 있는 전표는 수정할 수 없습니다.";
     return null;
   }
 
   public boolean canComplete() {
     return STATUS_DRAFT.equals(salesStatus);
-  }
-
-  public boolean canConfirmPayment() {
-    return paymentTargetRejectionReason() == null && remainingAmount != null && remainingAmount > 0;
   }
 
   // 잔액 검사는 새 입금에만 적용한다. 완납 후에도 기존 입금의 재요청은 확인할 수 있다.

@@ -38,7 +38,8 @@ class DirectSaleFinancialPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
-  void derivesCurrentMoneyFromDirectTermsAndPaymentLinksAndIgnoresDocumentSummaries() {
+  void derivesCurrentMoneyFromDirectTermsAndPaymentLinksAndIgnoresDocumentSummaries()
+      throws Exception {
     seedSale(1000, 1, 1000, 1000);
     var cash =
         events.saveAndFlush(
@@ -62,6 +63,23 @@ class DirectSaleFinancialPostgresE2ETest extends WorkE2ETestBase {
     jdbc.execute(
         "UPDATE sales_slips SET total_amount = 700, paid_amount = 700, remaining_amount = 0, payment_status = '입금 완료' WHERE id = 900");
     assertThat(reader.findAll(List.of(900L)).get(900L)).isEqualTo(before);
+    jdbc.execute("UPDATE sales_slip_items SET unit_price=1,amount=1 WHERE id=901");
+    var storedDocument = jdbc.queryForList("SELECT * FROM sales_slips WHERE id=900");
+    var detail = get("/api/sales-slips/900");
+    assertThat(detail.status()).as(detail.body().toString()).isEqualTo(200);
+    assertThat(detail.data().path("totalAmount").asInt()).isEqualTo(1000);
+    assertThat(detail.data().path("paidAmount").asLong()).isEqualTo(400);
+    assertThat(detail.data().path("remainingAmount").asLong()).isEqualTo(600);
+    assertThat(detail.data().path("paymentStatus").asText()).isEqualTo("부분입금");
+    assertThat(detail.data().path("items").get(0).path("unitPrice").asInt()).isEqualTo(1000);
+    assertThat(detail.data().path("items").get(0).path("amount").asInt()).isEqualTo(1000);
+    assertThat(detail.data().path("availableActions").toString()).contains("CONFIRM_PAYMENT");
+    var page = get("/api/sales-slips/page?partnerId=" + partnerId);
+    assertThat(page.status()).as(page.body().toString()).isEqualTo(200);
+    assertThat(page.data().path("content").get(0).path("totalAmount").asInt()).isEqualTo(1000);
+    assertThat(page.data().path("content").get(0).path("paidAmount").asLong()).isEqualTo(400);
+    assertThat(jdbc.queryForList("SELECT * FROM sales_slips WHERE id=900"))
+        .isEqualTo(storedDocument);
   }
 
   @Test
@@ -246,8 +264,35 @@ class DirectSaleFinancialPostgresE2ETest extends WorkE2ETestBase {
     assertThat(blocked.status()).isEqualTo(409);
     assertThat(blocked.body().path("error").path("code").asText())
         .isEqualTo("DIRECT_AMOUNT_REVIEW_REQUIRED");
+    var detail = get("/api/sales-slips/900");
+    assertThat(detail.data().path("financialReviewRequired").asBoolean()).isTrue();
+    assertThat(detail.data().path("availableActions").toString())
+        .doesNotContain("EDIT", "CONFIRM_PAYMENT");
     assertThat(jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id"))
         .isEqualTo(before);
+  }
+
+  @Test
+  void conflictingDocumentPartnerBlocksNewCashAndMarksTheDetailForReview() throws Exception {
+    seedSale(1000, 1, 1000, 1000);
+    var other =
+        partners.saveAndFlush(
+            new BusinessPartner(
+                "전표 참조 불일치 " + UUID.randomUUID(), PartnerType.WHOLESALE, null, null, null, null));
+    jdbc.update("UPDATE sales_slips SET partner_id=? WHERE id=900", other.getId());
+    var detail = get("/api/sales-slips/900");
+    assertThat(detail.status()).isEqualTo(200);
+    assertThat(detail.data().path("financialReviewRequired").asBoolean()).isTrue();
+    assertThat(detail.data().path("availableActions").toString())
+        .doesNotContain("EDIT", "CONFIRM_PAYMENT");
+    var blocked =
+        post(
+            "/api/sales-slips/900/confirm-payment",
+            "{\"amount\":100,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"wrong-document-party\"}");
+    assertThat(blocked.status()).isEqualTo(409);
+    assertThat(blocked.body().path("error").path("code").asText())
+        .isEqualTo("DIRECT_AMOUNT_REVIEW_REQUIRED");
+    assertThat(events.count()).isZero();
   }
 
   private void seedSale(int total, int quantity, int unitPrice, int amount) {

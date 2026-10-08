@@ -23,16 +23,12 @@ public class DirectDocumentAccountingAdapter implements DirectDocumentAccounting
   private final DirectSaleReviewReader reviews;
   private final DirectSalePaymentPolicy payments;
 
-  public Set<Long> findFinancialReviewRequiredIds(Collection<Long> ids) {
-    return reviews.findRequired(ids);
+  public void requireFinancialReviewCleared(Long id, Long expectedPartnerId) {
+    reviews.requireClear(id, expectedPartnerId);
   }
 
-  public void requireFinancialReviewCleared(Long id) {
-    reviews.requireClear(id);
-  }
-
-  public void requirePaymentAmount(Long documentId, Long amount) {
-    payments.requirePaymentAmount(documentId, amount);
+  public void requirePaymentAmount(Long documentId, Long expectedPartnerId, Long amount) {
+    payments.requirePaymentAmount(documentId, expectedPartnerId, amount);
   }
 
   public Map<Long, FinancialSnapshot> findFinancials(Collection<Long> documentIds) {

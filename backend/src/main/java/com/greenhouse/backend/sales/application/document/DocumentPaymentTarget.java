@@ -44,7 +44,8 @@ public class DocumentPaymentTarget implements PaymentTargetPort<SalesSlipDocumen
   }
 
   public void recordPayment(Long id, Long amount, String worker, LocalDateTime now) {
-    accounting.requirePaymentAmount(id, amount);
+    accounting.requirePaymentAmount(
+        id, repository.findById(id).orElseThrow().getPartnerId(), amount);
   }
 
   public void updateBalance(Long id, Long eventId) {

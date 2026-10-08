@@ -58,6 +58,18 @@ public class SalesController {
    * @deprecated Use {@code GET /api/sales-slips/page}.
    */
   @Deprecated(since = "2026-08", forRemoval = false)
+  @Operation(
+      description = "일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.",
+      responses = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "조회 결과",
+            useReturnTypeSchema = true),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "409",
+            description = "DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+      })
   @GetMapping("/sales-slips")
   public ApiResponse<List<SalesSlipDocument>> getSalesSlips(
       @RequestParam(required = false) Long partnerId,
@@ -66,6 +78,18 @@ public class SalesController {
     return ApiResponse.ok(salesQueryService.getSalesSlips(partnerId, from, to));
   }
 
+  @Operation(
+      description = "일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.",
+      responses = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "조회 결과",
+            useReturnTypeSchema = true),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "409",
+            description = "DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+      })
   @GetMapping("/sales-slips/page")
   public ApiResponse<PageResponse<SalesSlipSummary>> getSalesSlipPage(
       @RequestParam(required = false) Long partnerId,
@@ -81,6 +105,18 @@ public class SalesController {
             partnerId, from, to, paymentStatus, salesStatus, keyword, page, size));
   }
 
+  @Operation(
+      description = "일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.",
+      responses = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "조회 결과",
+            useReturnTypeSchema = true),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "409",
+            description = "DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+      })
   @GetMapping("/sales-slips/{salesSlipId}")
   public ApiResponse<SalesSlipDocument> getSalesSlip(@PathVariable Long salesSlipId) {
     return ApiResponse.ok(salesQueryService.getSalesSlip(salesSlipId));
@@ -111,6 +147,18 @@ public class SalesController {
     return ApiResponse.ok(salesSlipCreationService.create(request, idempotencyKey));
   }
 
+  @Operation(
+      responses = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "수정 결과",
+            useReturnTypeSchema = true),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "409",
+            description =
+                "DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+      })
   @PutMapping("/sales-slips/{salesSlipId}")
   public ApiResponse<SalesSlipDocument> updateSalesSlip(
       @PathVariable Long salesSlipId, @Valid @RequestBody SalesSlipCommand request) {
@@ -132,7 +180,8 @@ public class SalesController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "409",
-            description = "IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경",
+            description =
+                "IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경. DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
       })
   public ApiResponse<SalesSlipDocument> confirmPayment(

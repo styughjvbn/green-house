@@ -10,6 +10,7 @@ paths:
     get:
       tags:
       - sales-controller
+      description: 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.
       operationId: getSalesSlip
       parameters:
       - name: salesSlipId
@@ -20,11 +21,17 @@ paths:
           format: int64
       responses:
         '200':
-          description: OK
+          description: 조회 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     put:
       tags:
       - sales-controller
@@ -44,15 +51,22 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: 수정 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/sales-slips:
     get:
       tags:
       - sales-controller
+      description: 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.
       operationId: getSalesSlips
       parameters:
       - name: partnerId
@@ -75,11 +89,17 @@ paths:
           format: date
       responses:
         '200':
-          description: OK
+          description: 조회 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListSalesSlipResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
       deprecated: true
     post:
       tags:
@@ -140,7 +160,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: 'IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경'
+          description: 'IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경. DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING:
+            금액 자료 없음'
           content:
             application/json:
               schema:
@@ -249,6 +270,7 @@ paths:
     get:
       tags:
       - sales-controller
+      description: 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.
       operationId: getSalesSlipPage
       parameters:
       - name: partnerId
@@ -300,11 +322,17 @@ paths:
           default: 10
       responses:
         '200':
-          description: OK
+          description: 조회 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePageResponseSalesSlipListItemResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/sales-slips/auction-shipments:
     get:
       tags:

@@ -142,6 +142,47 @@ class DirectSaleAmountMigrationPostgresE2ETest {
         });
   }
 
+  @Test
+  void preservesLegacyDisplayLabelsWithoutChangingAnyMonetaryFacts() {
+    inDatabase(
+        jdbc -> {
+          seedLegacyFacts(jdbc);
+          jdbc.execute("UPDATE sales_slips SET payment_status='  입금 보류  ' WHERE id=906");
+          jdbc.execute("UPDATE sales_slips SET payment_status='과거 정정 검토' WHERE id=904");
+          migrate(jdbc, "47");
+          var documents = jdbc.queryForList("SELECT * FROM sales_slips ORDER BY id");
+          var prices =
+              jdbc.queryForList("SELECT * FROM direct_sale_prices ORDER BY sales_slip_item_id");
+          var cash = jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id");
+          var evidence =
+              jdbc.queryForList(
+                  "SELECT * FROM direct_sale_amount_reconciliations ORDER BY sales_slip_id");
+          migrate(jdbc, "48");
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT unpaid_payment_label FROM direct_sales WHERE sales_slip_id=906",
+                      String.class))
+              .isEqualTo("  입금 보류  ");
+          assertThat(
+                  jdbc.queryForObject(
+                      "SELECT unpaid_payment_label FROM direct_sales WHERE sales_slip_id=904",
+                      String.class))
+              .isEqualTo("과거 정정 검토");
+          assertThat(jdbc.queryForList("SELECT * FROM sales_slips ORDER BY id"))
+              .isEqualTo(documents);
+          assertThat(
+                  jdbc.queryForList("SELECT * FROM direct_sale_prices ORDER BY sales_slip_item_id"))
+              .isEqualTo(prices);
+          assertThat(jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id"))
+              .isEqualTo(cash);
+          assertThat(
+                  jdbc.queryForList(
+                      "SELECT * FROM direct_sale_amount_reconciliations ORDER BY sales_slip_id"))
+              .isEqualTo(evidence);
+          assertThat(migrate(jdbc, "48").migrate().migrationsExecuted).isZero();
+        });
+  }
+
   private void assertReview(JdbcTemplate jdbc, long id, long allocation, boolean... flags) {
     var row =
         jdbc.queryForMap(

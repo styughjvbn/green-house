@@ -80,7 +80,10 @@ public class DirectSaleFinancialReader {
                 allocation.amount(),
                 total.subtract(allocation.amount()).max(BigDecimal.ZERO),
                 review,
-                DirectSaleAmounts.paymentStatus(sale.getTotalAmount(), allocation.amount()),
+                DirectSaleAmounts.paymentStatus(
+                    sale.getTotalAmount(), allocation.amount(), sale.getUnpaidPaymentLabel()),
+                DirectSaleAmounts.isPaymentAllowed(
+                    sale.getTotalAmount(), allocation.amount(), review),
                 Map.copyOf(prices)));
       }
     }

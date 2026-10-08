@@ -186,10 +186,10 @@ application|domain|dto/
 Sales 내부는 기존 계층을 유지한 `sales/{application,domain,repository,controller,dto}/{document,direct,auction,payment,partner}`로 나눈다. Farm은 별도 모듈이다. HTTP Controller는 공개 application 계약을 조합하며 저장소와 트랜잭션을 소유하지 않는다.
 
 - Document는 공통 전표·품목·allocation·예약·출고·snapshot·생성 receipt를 소유한다. 일반/경매 allocation 합계와 Farm 예약 대사를 계속 함께 수행한다.
-- Direct는 일반 판매 회계 연결과 입금 진입 유스케이스를 맡는다. V43은 전용 금액 테이블과 기존 금액의 원문 복사·이전 시점 대사를 준비한다. 신규 생성·작성중 수정은 Document와 Direct 거래/가격 모델을 같은 최상위 transaction에서 저장하며, Direct writer는 호출 transaction에 반드시 참여한다. 전표·품목 ID만 연결하고 Entity를 공유하지 않는다. 현재 입금 허용 금액은 Direct 거래와 Payment 유효 배분을 기준으로 검증한다. 입금 후 공통 전표의 금액 요약은 이 값으로 갱신하는 조회 projection이며, 조회·생성/수정 금액 정책의 최종 전환은 미완료다. 이전 시점 검토 근거를 현재 수납액 원천으로 사용하지 않는다.
+- Direct는 일반 판매 회계 연결과 입금 진입 유스케이스를 맡는다. V43은 전용 금액 테이블과 기존 금액의 원문 복사·이전 시점 대사를 준비한다. 신규 생성·작성중 수정은 Document와 Direct 거래/가격 모델을 같은 최상위 transaction에서 저장하며, Direct writer는 호출 transaction에 반드시 참여한다. 전표·품목 ID만 연결하고 Entity를 공유하지 않는다. 현재 입금 허용 금액은 Direct 거래와 Payment 유효 배분을 기준으로 검증한다. 입금 후 공통 전표의 금액 요약은 이 값으로 갱신하는 조회 projection이며, 상세·목록·출력 조회도 이 계약으로 일반 판매의 거래/품목 금액·예상일·지급 방식·유효 수납·잔액을 조립한다. 검색/분석 projection과 생성/수정 금액 정책의 최종 전환은 미완료다. 이전 시점 검토 근거를 현재 수납액 원천으로 사용하지 않는다.
 - Auction은 출하·lot·시도·결과·반환 추적과 임시 호환 파생 정산(`auction/settlement`)을 소유한다.
 - Payment는 실제 입금 이벤트·연결 원장·거래처 잔액을 소유한다. Partner는 거래처 기준정보·거래처별 결제 선호 설정을 소유하며 금액 원장을 직접 변경하지 않는다.
-- 내부 Direct 금액 조회는 Document 소유 값 계약으로 전용 거래/가격과 Payment의 유효 배분을 조합한다. Payment Repository projection은 외부로 노출하지 않고 application 값으로 변환한다. 조회의 검토 필요 상태는 이전 대사와 현재 연결 검증을 반영하며 원장이나 저장 금액을 변경하지 않는다. 수동 입금의 대상 정책은 이 계약을 사용하며 현재 입금 후 감사·조회 projection도 이 값으로 갱신한다. 전체 HTTP 조회의 금액 원천 전환은 미완료다.
+- 내부 Direct 금액 조회는 Document 소유 값 계약으로 전용 거래/가격과 Payment의 유효 배분을 조합한다. Payment Repository projection은 외부로 노출하지 않고 application 값으로 변환한다. 조회의 검토 필요 상태는 이전 대사와 현재 연결 검증을 반영하며 원장이나 저장 금액을 변경하지 않는다. 수동 입금의 대상 정책은 이 계약을 사용하며 현재 입금 후 감사·조회 projection도 이 값으로 갱신한다. 전표 상세·목록·출력은 이 값 계약을 사용하며 조회 때문에 전표 요약이나 원장을 수정하지 않는다. 일반 판매 금액 자료가 없는 경우 기존 요약으로 대체하지 않는다. 기존 자유 입금 문구도 Direct가 소유하며 V48에서 원문을 보존한다. 배분 전의 표시 문구와 실제 수납/입금 capability를 구분한다. 원래 생성 receipt와 과거 snapshot은 저장된 응답을 그대로 보존한다.
 - Payment의 유효 배분 조회는 대상 ID·소유 거래처를 bound parameter로 전달하는 CTE 집계로 수납 원문을 중복 합산하지 않는다. 동일한 조회를 H2와 PostgreSQL에서 검증하며, 같은 transaction의 아직 flush되지 않은 원장 기록도 반영한다. 대상은 500개씩 처리하고 다른 내부 경계의 테이블을 읽지 않는다.
 - Direct의 이전 시점 대사 검토는 Direct가 판정한다. Document는 내부 port의 검토 결과로 수정·수납 경로를 차단하고 서버 업무 capability와 상세 상태를 조립한다. 대사 근거는 변경하지 않으며 성공한 원래 입금 재전송은 먼저 확인한다. 검토 조회는 대상 ID를 모아 일괄 처리하므로 품목 수에 비례하는 조회를 추가하지 않는다.
 - Document는 구체적인 Direct/Auction/Payment 서비스를 호출하지 않는다. 필요한 출하 생성·취소 보호·표시 조회는 Document 소유 `AuctionDocumentPort`, 일반 판매의 예상일·입금 이력·잔액 연결은 `DirectDocumentAccountingPort`로 요청하고 소유자 adapter가 처리한다. 기존 출하 값 계약은 port로 이동하며 복제하지 않는다.
@@ -583,7 +583,7 @@ cd backend
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
 - `FarmQueryPostgresE2ETest`는 다이 1·10·50개와 다이별 복수 구역에서 전체 구조·맵 SQL 3회, 다이·구역 목록 SQL 2회와 맵의 난 묶음·품종 Entity 로딩 0건을 검증한다. Work 정형 상세는 보정 0·1·10·50건에서 SQL 4회로 고정한다.
 - 거래처 검색 경계를 거치는 판매 검색은 1·10·50행에서 SQL 4회, 품종과 경매장 이름에 걸친 경매 문구 검색은 6회 이내다. 기존 3회·5회에 scalar 검색이 추가되며 경매의 다중 검색은 일괄 처리해 행별 반복 조회를 피한다. 검색 없는 경매 페이지의 기존 5회 상한은 유지한다.
-- `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 6회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
+- `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 8회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
 - 사용자 그룹 목록은 1·10·50개에서 SQL 3회, 난 묶음별 소속 그룹 조회는 5회 이내인지 검증한다. 보관·탈퇴 제외와 소속 순서도 함께 확인한다.
 - CI의 기본 job은 `check`와 `bootJar`, `backend-postgres` job은 Docker 확인 후 `workE2eTest`와 `workBenchmark -PworkBenchmarkEnforce=true`를 각각 실행한다. Docker가 없으면 PostgreSQL 검사는 실패하며 조용히 건너뛰지 않는다. 검사별 결과는 Actions Summary에 기록하고 테스트·벤치마크 보고서는 14일간 artifact로 보관한다. 기본 architecture 검사도 테스트 비활성화와 모듈 내부·직접 시간 조회 예외의 재도입을 막는다.
 - Java의 최종 포맷 기준은 Spotless의 [Google Java Format](https://github.com/diffplug/spotless/blob/main/plugin-gradle/README.md#google-java-format)이다. `backend`에서 `./gradlew format`으로 적용하고 `./gradlew spotlessCheck`로 검사한다. CI의 `check`에도 `spotlessCheck`가 연결되며 검사 중 소스를 수정하지 않는다. Spring Java Format, Eclipse formatter XML, `formatAll`은 사용하지 않는다.

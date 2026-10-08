@@ -14,8 +14,18 @@ public final class DirectSaleAmounts {
           "DIRECT_AMOUNT_REVIEW_REQUIRED", "과거 금액과 입금 연결의 검토가 끝나기 전에는 새 입금이나 금액 변경을 할 수 없습니다.");
   }
 
+  public static boolean isPaymentAllowed(int total, BigDecimal allocated, boolean reviewRequired) {
+    return !reviewRequired
+        && allocated.signum() >= 0
+        && allocated.compareTo(BigDecimal.valueOf(total)) < 0;
+  }
+
   public static String paymentStatus(int total, BigDecimal allocated) {
-    if (allocated.signum() == 0) return "미입금";
+    return paymentStatus(total, allocated, "미입금");
+  }
+
+  public static String paymentStatus(int total, BigDecimal allocated, String unpaidLabel) {
+    if (allocated.signum() == 0) return unpaidLabel;
     return allocated.compareTo(BigDecimal.valueOf(total)) >= 0 ? "입금 완료" : "부분입금";
   }
 

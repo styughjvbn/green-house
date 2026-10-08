@@ -43,7 +43,7 @@ public class SalesSlipUpdateService {
     Long previousPartnerId = salesSlip.getPartnerId();
     Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
-    accounting.requireFinancialReviewCleared(salesSlipId);
+    accounting.requireFinancialReviewCleared(salesSlipId, salesSlip.getPartnerId());
     validateEditable(salesSlip, request);
     SalesSlipInputPolicy.requirePartner(SalesType.DIRECT, request.partnerId());
     SalesSlipInputPolicy.requireItems(SalesType.DIRECT, request.items().size());
@@ -96,6 +96,7 @@ public class SalesSlipUpdateService {
             salesSlip.getSaleDate(),
             salesSlip.getExpectedPaymentDate(),
             salesSlip.getPaymentMethod(),
+            salesSlip.getPaymentStatus(),
             salesSlip.getItems().stream()
                 .map(
                     item ->

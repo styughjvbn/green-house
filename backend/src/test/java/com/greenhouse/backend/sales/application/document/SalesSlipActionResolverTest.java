@@ -9,8 +9,10 @@ import com.greenhouse.backend.sales.domain.document.SalesSlipAction;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.support.DirectSaleFixtures;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +71,20 @@ class SalesSlipActionResolverTest {
     if (remainingAmount < 100_000L) {
       DirectSaleFixtures.projectAllocation(salesSlip, 100_000L - remainingAmount);
     }
+    var financial =
+        new DirectDocumentAccountingPort.FinancialSnapshot(
+            id,
+            1L,
+            100_000,
+            null,
+            null,
+            BigDecimal.valueOf(100_000L - remainingAmount),
+            BigDecimal.valueOf(remainingAmount),
+            false,
+            salesSlip.getPaymentStatus(),
+            remainingAmount > 0,
+            Map.of());
+    when(paymentEventReader.findFinancials(List.of(id))).thenReturn(Map.of(id, financial));
     return salesSlip;
   }
 

@@ -9,11 +9,9 @@ import java.util.Set;
 
 /** Document-owned value contract for Direct terms and accounting coordination. */
 public interface DirectDocumentAccountingPort {
-  Set<Long> findFinancialReviewRequiredIds(Collection<Long> ids);
+  void requireFinancialReviewCleared(Long documentId, Long expectedPartnerId);
 
-  void requireFinancialReviewCleared(Long documentId);
-
-  void requirePaymentAmount(Long documentId, Long amount);
+  void requirePaymentAmount(Long documentId, Long expectedPartnerId, Long amount);
 
   void lockPartners(Collection<Long> ids);
 
@@ -39,6 +37,7 @@ public interface DirectDocumentAccountingPort {
       BigDecimal remainingAmount,
       boolean reviewRequired,
       String paymentStatus,
+      boolean paymentAllowed,
       Map<Long, PriceSnapshot> prices) {}
 
   record PriceSnapshot(Integer pricedQuantity, Integer unitPrice, Integer amount) {}
@@ -49,6 +48,7 @@ public interface DirectDocumentAccountingPort {
       LocalDate saleDate,
       LocalDate expectedPaymentDate,
       String paymentMethod,
+      String unpaidPaymentLabel,
       List<Price> prices) {}
 
   record Price(Long documentItemId, Integer quantity, Integer unitPrice) {}

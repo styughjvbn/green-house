@@ -30,21 +30,18 @@ class SalesSlipStatusRulesTest {
 
   @ParameterizedTest
   @ValueSource(strings = {SalesSlip.STATUS_DRAFT, SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED})
-  void directPaymentAvailabilityFollowsRemainingAmount(String status) {
+  void validatesTheDocumentPaymentTargetEvenAfterFullAllocation(String status) {
     SalesSlip slip = payableSlip(SalesType.DIRECT, status);
-    assertThat(slip.canConfirmPayment()).isTrue();
 
     DirectSaleFixtures.projectAllocation(slip, 30_000L);
     assertThat(slip.getPaidAmount()).isEqualTo(30_000L);
     assertThat(slip.getRemainingAmount()).isEqualTo(70_000L);
     assertThat(slip.getPaymentStatus()).isEqualTo("부분입금");
-    assertThat(slip.canConfirmPayment()).isTrue();
 
     DirectSaleFixtures.projectAllocation(slip, 100_000L);
     assertThat(slip.getPaidAmount()).isEqualTo(100_000L);
     assertThat(slip.getRemainingAmount()).isZero();
     assertThat(slip.getPaymentStatus()).isEqualTo("입금 완료");
-    assertThat(slip.canConfirmPayment()).isFalse();
     assertThatCode(slip::validatePaymentTarget).doesNotThrowAnyException();
   }
 
@@ -64,7 +61,7 @@ class SalesSlipStatusRulesTest {
   }
 
   @Test
-  void editCapabilityAndValidationSharePaidAmountAndEventGuards() {
+  void editCapabilityUsesPaymentHistoryRatherThanTheFinancialProjection() {
     var slip = payableSlip(SalesType.DIRECT, SalesSlip.STATUS_DRAFT);
     assertThat(slip.canEdit(false)).isTrue();
     assertThatCode(() -> slip.requireEditable(false)).doesNotThrowAnyException();
@@ -72,13 +69,11 @@ class SalesSlipStatusRulesTest {
     assertThatThrownBy(() -> slip.requireEditable(true))
         .isInstanceOf(IllegalArgumentException.class);
     DirectSaleFixtures.projectAllocation(slip, 1L);
-    assertThat(slip.canEdit(false)).isFalse();
-    assertThatThrownBy(() -> slip.requireEditable(false))
-        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(slip.canEdit(false)).isTrue();
+    assertThat(slip.canEdit(true)).isFalse();
   }
 
   private void assertPaymentRejected(SalesSlip slip, String message) {
-    assertThat(slip.canConfirmPayment()).isFalse();
     assertThatThrownBy(slip::validatePaymentTarget)
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage(message);

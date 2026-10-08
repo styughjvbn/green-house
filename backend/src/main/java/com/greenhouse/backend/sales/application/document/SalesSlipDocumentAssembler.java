@@ -1,10 +1,12 @@
 package com.greenhouse.backend.sales.application.document;
 
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
+import com.greenhouse.backend.sales.domain.document.SalesType;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,11 +24,14 @@ public class SalesSlipDocumentAssembler {
 
   private final SalesSlipActionResolver actionResolver;
 
+  private final DirectDocumentAccountingPort accounting;
+
   private final OrchidGroupReader orchidGroupReader;
 
   public Page<SalesSlipSummary> assemblePage(Page<SalesSlip> page) {
     var partners = partnerReader.getAllInfo(page.map(SalesSlip::getPartnerId).getContent());
     var marketNames = marketNames(page.getContent());
+    var financials = financials(page.getContent());
     return page.map(
         slip ->
             SalesSlipSummary.from(
@@ -34,7 +39,8 @@ public class SalesSlipDocumentAssembler {
                 partners.get(slip.getPartnerId()),
                 slip.getAuctionShipmentId() == null
                     ? null
-                    : marketNames.get(slip.getAuctionShipmentId())));
+                    : marketNames.get(slip.getAuctionShipmentId()),
+                financials.get(slip.getId())));
   }
 
   private Map<Long, String> marketNames(List<SalesSlip> slips) {
@@ -64,8 +70,9 @@ public class SalesSlipDocumentAssembler {
     var partners =
         partnerReader.getAllInfo(salesSlips.stream().map(SalesSlip::getPartnerId).toList());
     var marketNames = marketNames(salesSlips);
+    var financials = financials(salesSlips);
     Map<Long, SalesSlipActionResolver.Actions> actionsBySalesSlipId =
-        actionResolver.resolveAll(salesSlips);
+        actionResolver.resolveAll(salesSlips, financials);
     return salesSlips.stream()
         .map(
             salesSlip ->
@@ -77,6 +84,7 @@ public class SalesSlipDocumentAssembler {
                         : marketNames.get(salesSlip.getAuctionShipmentId()),
                     allocationsByItemId,
                     states,
+                    financials.get(salesSlip.getId()),
                     actionsBySalesSlipId
                         .getOrDefault(
                             salesSlip.getId(),
@@ -88,5 +96,18 @@ public class SalesSlipDocumentAssembler {
                             new SalesSlipActionResolver.Actions(List.of(), false))
                         .financialReviewRequired()))
         .toList();
+  }
+
+  private Map<Long, DirectDocumentAccountingPort.FinancialSnapshot> financials(
+      List<SalesSlip> slips) {
+    var ids =
+        slips.stream()
+            .filter(slip -> slip.getSalesType() != SalesType.AUCTION)
+            .map(SalesSlip::getId)
+            .toList();
+    var values = accounting.findFinancials(ids);
+    if (!values.keySet().containsAll(ids))
+      throw new ConflictException("DIRECT_AMOUNT_SOURCE_MISSING", "일반 판매 금액 자료를 찾을 수 없습니다.");
+    return values;
   }
 }

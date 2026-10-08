@@ -26,15 +26,18 @@ import com.greenhouse.backend.sales.repository.document.SalesInventoryMovementRe
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.repository.payment.PartnerBalanceSummaryRepository;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
 class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
+  @Autowired JdbcTemplate jdbc;
 
   @Autowired AuditEventRepository auditEventRepository;
 
@@ -103,6 +106,7 @@ class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
     item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
     slip.addItem(item);
     salesSlipRepository.saveAndFlush(slip);
+    DirectSaleFixtures.copyTerms(jdbc, slip.getId());
 
     mockMvc
         .perform(

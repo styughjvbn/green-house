@@ -47,6 +47,7 @@ public class DirectSaleTermsWriter {
               terms.paymentMethod(),
               prices);
     }
+    sale.changeUnpaidPaymentLabel(terms.unpaidPaymentLabel());
     repository.saveAndFlush(sale);
   }
 }

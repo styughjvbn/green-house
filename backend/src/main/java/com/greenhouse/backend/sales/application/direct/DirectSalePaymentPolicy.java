@@ -16,7 +16,7 @@ public class DirectSalePaymentPolicy {
   private final DirectSaleRepository repository;
   private final DirectSaleFinancialReader financials;
 
-  public void requirePaymentAmount(Long documentId, Long amount) {
+  public void requirePaymentAmount(Long documentId, Long expectedPartnerId, Long amount) {
     var sale =
         repository
             .findForUpdate(documentId)
@@ -25,7 +25,8 @@ public class DirectSalePaymentPolicy {
                     new ConflictException(
                         "DIRECT_AMOUNT_SOURCE_MISSING", "일반 판매 금액 자료가 없어 입금을 처리할 수 없습니다."));
     var financial = financials.findAll(List.of(documentId)).get(documentId);
-    DirectSaleAmounts.requireReviewCleared(financial.reviewRequired());
+    DirectSaleAmounts.requireReviewCleared(
+        financial.reviewRequired() || !sale.getPartnerId().equals(expectedPartnerId));
     sale.requirePaymentAmount(financial.allocatedAmount().longValueExact(), amount);
   }
 }

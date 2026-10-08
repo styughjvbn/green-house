@@ -25,7 +25,10 @@ public record SalesSlipSummary(
     String memo) {
 
   public static SalesSlipSummary from(
-      SalesSlip salesSlip, BusinessPartnerInfo partner, String auctionMarket) {
+      SalesSlip salesSlip,
+      BusinessPartnerInfo partner,
+      String auctionMarket,
+      DirectDocumentAccountingPort.FinancialSnapshot financial) {
     return new SalesSlipSummary(
         salesSlip.getId(),
         salesSlip.getSlipNumber(),
@@ -34,13 +37,17 @@ public record SalesSlipSummary(
         salesSlip.getAuctionShipmentId(),
         auctionMarket,
         partner,
-        salesSlip.getTotalAmount(),
-        salesSlip.getExpectedPaymentDate(),
-        salesSlip.getPaidAmount(),
-        salesSlip.getRemainingAmount(),
-        salesSlip.getPaymentStatus(),
+        financial == null ? salesSlip.getTotalAmount() : financial.totalAmount(),
+        financial == null ? salesSlip.getExpectedPaymentDate() : financial.expectedPaymentDate(),
+        financial == null
+            ? salesSlip.getPaidAmount()
+            : financial.allocatedAmount().longValueExact(),
+        financial == null
+            ? salesSlip.getRemainingAmount()
+            : financial.remainingAmount().longValueExact(),
+        financial == null ? salesSlip.getPaymentStatus() : financial.paymentStatus(),
         salesSlip.getSalesStatus(),
-        salesSlip.getPaymentMethod(),
+        financial == null ? salesSlip.getPaymentMethod() : financial.paymentMethod(),
         salesSlip.getMemo());
   }
 }

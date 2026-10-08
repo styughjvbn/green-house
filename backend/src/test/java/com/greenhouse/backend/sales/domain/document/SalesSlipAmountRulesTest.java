@@ -93,7 +93,6 @@ class SalesSlipAmountRulesTest {
     DirectSaleFixtures.projectAllocation(slip, 2147483647L);
     assertThat(slip.getPaidAmount()).isEqualTo((long) Integer.MAX_VALUE);
     assertThat(slip.getRemainingAmount()).isZero();
-    assertThat(slip.canConfirmPayment()).isFalse();
   }
 
   @Test

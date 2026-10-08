@@ -11,6 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다. */
         get: operations["getSalesSlip"];
         put: operations["updateSalesSlip"];
         post?: never;
@@ -528,7 +529,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @deprecated */
+        /**
+         * @deprecated
+         * @description 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.
+         */
         get: operations["getSalesSlips"];
         put?: never;
         post: operations["createSalesSlip"];
@@ -1403,6 +1407,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다. */
         get: operations["getSalesSlipPage"];
         put?: never;
         post?: never;
@@ -2122,6 +2127,14 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ErrorBody: {
+            code?: string;
+            details?: string[];
+            message?: string;
+        };
+        ErrorResponse: {
+            error?: components["schemas"]["ErrorBody"];
+        };
         SalesSlipCreateRequest: {
             /** Format: int64 */
             auctionShipmentId?: number;
@@ -2925,14 +2938,6 @@ export interface components {
             totalQuantity?: number;
             /** Format: date-time */
             updatedAt?: string;
-        };
-        ErrorBody: {
-            code?: string;
-            details?: string[];
-            message?: string;
-        };
-        ErrorResponse: {
-            error?: components["schemas"]["ErrorBody"];
         };
         ManualPaymentRequest: {
             /** Format: int64 */
@@ -5116,13 +5121,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
+                };
+            };
+            /** @description DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -5142,13 +5156,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 수정 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
+                };
+            };
+            /** @description DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -6084,13 +6107,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseListSalesSlipResponse"];
+                };
+            };
+            /** @description DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -6155,7 +6187,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경 */
+            /** @description IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경. DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7859,13 +7891,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponsePageResponseSalesSlipListItemResponse"];
+                };
+            };
+            /** @description DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

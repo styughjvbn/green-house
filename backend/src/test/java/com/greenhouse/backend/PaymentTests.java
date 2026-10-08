@@ -324,6 +324,7 @@ class PaymentTests {
     slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
     slip.updateSalesStatus(salesStatus);
     salesSlipRepository.saveAndFlush(slip);
+    DirectSaleFixtures.copyTerms(jdbc, slip.getId());
 
     mockMvc
         .perform(get("/api/sales-slips/{id}", slip.getId()))
