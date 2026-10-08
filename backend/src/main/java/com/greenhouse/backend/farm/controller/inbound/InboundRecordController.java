@@ -14,7 +14,7 @@ import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
 import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.api.effect.InboundPottingResultInput;
-import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
+import com.greenhouse.backend.work.api.operation.InboundPottingOperationApi;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -42,7 +42,7 @@ public class InboundRecordController {
 
   private final InboundRecordQueryService inboundRecordQueryService;
 
-  private final InboundPottingOperationService inboundPottingOperationService;
+  private final InboundPottingOperationApi inboundPottingOperationService;
 
   @GetMapping
   public ApiResponse<PageResponse<InboundRecordResponse>> getInboundRecords(

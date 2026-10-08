@@ -304,7 +304,7 @@ Farm에서 필요한 구조 변경 참조·과거 수량 수지 조회와 보정
 
 작업 대상 해석은 Work 소유 `work/spi/target`과 `farm/orchid/integration`의 기존 구현으로 연결한다. 선택·포함 출처 값은 `work/api/target`에 두고 대상 조건 snapshot·정렬된 선잠금·활성 대상 검증을 유지한다. Farm에서 Work 사용 여부를 확인할 때는 `work/api/target`을 직접 호출하며 Work 저장소 구현은 내부에 둔다.
 
-입고에 연결된 Work의 선잠금·취소 가능 조회·포트 되돌리기·입고 기록 취소는 `work/api/operation`의 lifecycle API를 통해 직접 호출한다. Work의 기존 lifecycle service가 API를 구현하며, Farm 취소 유스케이스와 같은 트랜잭션 참여 및 조회 메서드의 readOnly 설정을 유지한다. 입고 작업 기록도 Work 공개 API를 직접 호출한다. Farm이 생성 시점의 명령 snapshot과 Mutation 연결 값을 전달하고, 기존 Work 기록 서비스가 같은 트랜잭션에서 대상·효과·작업 이력을 저장한다.
+입고에 연결된 Work의 선잠금·취소 가능 조회·포트 되돌리기·입고 기록 취소는 `work/api/operation`의 lifecycle API를 통해 직접 호출한다. Work의 기존 lifecycle service가 API를 구현하며, Farm 취소 유스케이스와 같은 트랜잭션 참여 및 조회 메서드의 readOnly 설정을 유지한다. 입고 작업 기록도 Work 공개 API를 직접 호출한다. Farm이 생성 시점의 명령 snapshot과 Mutation 연결 값을 전달하고, 기존 Work 기록 서비스가 같은 트랜잭션에서 대상·효과·작업 이력을 저장한다. Farm의 입고 포트 즉시 실행·되돌리기도 Work 공개 API를 직접 호출한다. 포트 계획 조합·Receipt·지문·활성 계획 재사용·잠금은 기존 Work 구현에 유지한다.
 
 Farm의 즉시 작업 이력 생성과 작업 단건 조회는 Work 공개 API를 직접 호출한다. 공개 작업·대상·진행 값과 상태/action/workflow enum은 `work/api/{operation,target}`에 두며, Entity·현재 입고 값·저장 JSON을 조합하는 factory는 Work application 내부에 둔다. 응답 schema·시간대 변환·capability 판단·진행 계산·Receipt 지문과 replay는 기존 규칙을 유지한다.
 

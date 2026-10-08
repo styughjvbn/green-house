@@ -413,3 +413,23 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - OpenAPI 재생성 성공: 157 operations, 132 paths, 292 schemas; 생성 명세 차이 없음. 프론트 타입은 계약 차이가 없어 재생성하지 않았다.
 - SQL·DB 제약·트랜잭션 경계·잠금·수량/상태 처리 변경이 없어 `workE2eTest`는 실행하지 않았다. E2E 소스의 import 전환은 `compileTestJava`로 검증했다. 전체 검증 이후에는 이 ADR의 검증 기록만 추가했다.
 - 이번 두 단계 완료. 남은 Work 외부 참조는 입고 포트 실행·계보·운영 대사·codec/계산 계약이다. 각 반환 값과 책임을 확인해 후속 두 단계로 진행한다.
+
+
+### 2026-10-08: 두 단계 진행 — 포트 실행·계보 조회의 1단계
+
+| 소비자 | 변경 전 | 변경 후 | 경계 목적 |
+|---|---|---|---|
+| Farm 입고 Controller의 포트 실행 | `work/application/operation/InboundPottingOperationService` | `work/api/operation/InboundPottingOperationApi` | 공개 명령·작업 값만 사용하며 Work 계획/잠금/효과 구현을 숨김 |
+| Farm 입고 service의 포트 되돌리기 | 같은 구현 직접 참조 | 같은 API 직접 호출 | 기존 MANDATORY 트랜잭션 참여·접수/보상 흐름 유지 |
+
+- 외부 사용 메서드 `executeNow(command)`·`voidForInbound(id, key, reason)`만 공개했다. 기존 Work service가 API를 직접 구현하며 별도 facade·Adapter·Port·integration 패키지는 추가하지 않는다.
+- package-private `executeRecord(plan, executions)`와 HTTP plan DTO 조합은 Work 내부에 유지한다. 공개 API는 이미 전환한 Work 명령·작업 값과 scalar만 노출한다.
+- 기존 트랜잭션 annotation, key/reason 정규화·Receipt namespace/지문·replay, 입고 계획 선잠금·활성 계획 재사용·효과 조회/검증·Work 시작/완료·Mutation 단일 Writer·Bean 이름은 동일하다.
+- reviewed inventory의 기존 TYPE 1개·METHOD 2개만 대응 API FQCN으로 치환한다. Controller의 요청·응답·validation·HTTP status나 SQL/잠금/수량 처리 변경은 없다.
+
+포트 실행 단계 검증 결과:
+
+- 포트 계획·입고 감사·Mutation 라우팅과 API/SPI/integration/Writer 집중 검증 통과. Farm Controller/service의 API 주입 후 기존 구현 연결을 Spring 통합 테스트로 확인했다.
+- 전체 `test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 프론트엔드 `npm run check` 통과.
+- 서비스 메서드 본문·트랜잭션 annotation은 동일하다. Controller 요청/응답·validation·schema 변경이 없어 OpenAPI·프론트 타입은 재생성하지 않았다.
+- SQL·DB 제약·트랜잭션 경계·잠금·수량/상태 처리 변경이 없어 `workE2eTest`는 실행하지 않았다. 전체 검증 이후 변경은 이 ADR의 검증 기록뿐이다.

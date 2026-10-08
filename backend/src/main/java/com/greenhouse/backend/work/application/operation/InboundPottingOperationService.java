@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.operation.InboundPottingOperationApi;
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.api.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec;
@@ -25,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class InboundPottingOperationService {
+public class InboundPottingOperationService implements InboundPottingOperationApi {
 
   private final InboundPottingPlanService planService;
 
@@ -48,6 +49,7 @@ public class InboundPottingOperationService {
   private final InboundPottingVoidPort voidPort;
 
   @Transactional(propagation = Propagation.MANDATORY)
+  @Override
   public void voidForInbound(Long inboundRecordId, String idempotencyKey, String reason) {
     String requestKey = WorkCommandReceipts.normalizeKey(idempotencyKey);
     String normalizedReason = reason == null || reason.trim().isEmpty() ? null : reason.trim();
@@ -61,6 +63,7 @@ public class InboundPottingOperationService {
   // Persisted fingerprint fields are kept separate from retry key and execution metadata.
   private record PottingVoidIdentity(Long inboundRecordId, String reason) {}
 
+  @Override
   public WorkOperationView executeNow(InboundPottingCommand request) {
     var ids =
         receipts.executeExisting(

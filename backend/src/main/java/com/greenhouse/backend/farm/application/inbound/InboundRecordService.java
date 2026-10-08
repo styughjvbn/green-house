@@ -30,9 +30,9 @@ import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.work.api.effect.WorkMutationLink;
+import com.greenhouse.backend.work.api.operation.InboundPottingOperationApi;
 import com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi;
 import com.greenhouse.backend.work.api.operation.InboundWorkOperationRecordingApi;
-import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
@@ -86,7 +86,7 @@ public class InboundRecordService {
 
   private final InboundRecordResponseAssembler responseAssembler;
 
-  private final InboundPottingOperationService pottingOperationService;
+  private final InboundPottingOperationApi pottingOperationService;
 
   public InboundRecordResponse create(InboundRecordCreateCommand request) {
     return createNew(request);
