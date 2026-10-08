@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.inbound.integration;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.application.orchid.mutation.CompensateCreateMutationsCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEffectiveHeadPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
@@ -10,7 +11,6 @@ import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;

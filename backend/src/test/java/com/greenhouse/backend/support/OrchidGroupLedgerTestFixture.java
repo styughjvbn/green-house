@@ -1,14 +1,14 @@
 package com.greenhouse.backend.support;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationReport;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupLedgerCoverage;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshotFactory;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupLedgerCoverageRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
@@ -57,7 +57,7 @@ public class OrchidGroupLedgerTestFixture {
       group.establishBaselineRevision();
       entries.save(
           OrchidGroupMutationEntry.baseline(
-              mutation, group.getId(), OrchidGroupStateSnapshot.from(group)));
+              mutation, group.getId(), OrchidGroupStateSnapshotFactory.from(group)));
     }
     entries.flush();
     return 1;

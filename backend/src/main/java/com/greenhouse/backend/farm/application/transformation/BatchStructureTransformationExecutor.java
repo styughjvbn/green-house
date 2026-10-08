@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
@@ -10,7 +11,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGr
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.api.effect.StructureChangeResultInput;

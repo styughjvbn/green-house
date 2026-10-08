@@ -2,16 +2,18 @@ package com.greenhouse.backend.farm.application.orchid.mutation;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryRole;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshotFactory;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
@@ -198,12 +200,12 @@ public class OrchidGroupMutationEngine {
     for (TransformOrchidGroupMutationSource sourceCommand : command.sources()) {
       OrchidGroup sourceGroup = sourceById.get(sourceCommand.orchidGroupId());
       long revisionBefore = sourceGroup.getStateRevision();
-      OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshot.from(sourceGroup);
+      OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshotFactory.from(sourceGroup);
       sourceGroup.applyTransformation(
           sourceCommand.transformedQuantity(),
           sourceCommand.releasedStartPosition(),
           sourceCommand.releasedEndPosition());
-      OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(sourceGroup);
+      OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshotFactory.from(sourceGroup);
       sourceGroup.advanceStateRevision();
       sourceChanges.add(
           new OrchidGroupMutationRecorder.Change(
@@ -246,7 +248,7 @@ public class OrchidGroupMutationEngine {
     orchidPlacementPolicy.validatePlacement(
         group.getBedZone(), details.startPosition(), details.endPosition(), group.getId());
     long revisionBefore = group.getStateRevision();
-    OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshot.from(group);
+    OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshotFactory.from(group);
     group.updateDetails(
         variety.getGenus(),
         variety.getName(),
@@ -261,7 +263,7 @@ public class OrchidGroupMutationEngine {
         details.endPosition(),
         details.memo());
     group.assignVariety(variety);
-    OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
+    OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshotFactory.from(group);
     requireStateChange(beforeState, afterState);
     group.advanceStateRevision();
 
@@ -294,13 +296,13 @@ public class OrchidGroupMutationEngine {
     orchidPlacementPolicy.validatePlacement(
         destination, command.startPosition(), command.endPosition(), group.getId());
     long revisionBefore = group.getStateRevision();
-    OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshot.from(group);
+    OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshotFactory.from(group);
     int sortOrder =
         group.getBedZone().getId().equals(destination.getId())
             ? group.getSortOrder()
             : orchidGroupRepository.findMaxSortOrderByBedZoneId(destination.getId()) + 1;
     group.moveTo(destination, sortOrder, command.startPosition(), command.endPosition());
-    OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
+    OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshotFactory.from(group);
     requireStateChange(beforeState, afterState);
     group.advanceStateRevision();
 
@@ -344,7 +346,7 @@ public class OrchidGroupMutationEngine {
     for (MoveOrchidGroupMutationItem item : command.items()) {
       OrchidGroup group = groups.get(item.orchidGroupId());
       BedZone destination = zones.get(item.toBedZoneId());
-      OrchidGroupStateSnapshot before = OrchidGroupStateSnapshot.from(group);
+      OrchidGroupStateSnapshot before = OrchidGroupStateSnapshotFactory.from(group);
       if (group.getBedZone().getId().equals(destination.getId())
           && equalNumber(group.getStartPosition(), item.startPosition())
           && equalNumber(group.getEndPosition(), item.endPosition())) {
@@ -356,7 +358,7 @@ public class OrchidGroupMutationEngine {
               ? group.getSortOrder()
               : nextSortOrders.compute(destination.getId(), (id, current) -> current + 1);
       group.moveTo(destination, sortOrder, item.startPosition(), item.endPosition());
-      OrchidGroupStateSnapshot after = OrchidGroupStateSnapshot.from(group);
+      OrchidGroupStateSnapshot after = OrchidGroupStateSnapshotFactory.from(group);
       group.advanceStateRevision();
       changes.add(
           new OrchidGroupMutationRecorder.Change(group.getId(), revisionBefore, before, after));
@@ -389,9 +391,9 @@ public class OrchidGroupMutationEngine {
     }
     requireBaseline(group);
     long revisionBefore = group.getStateRevision();
-    OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshot.from(group);
+    OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshotFactory.from(group);
     group.cancelCreation();
-    OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
+    OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshotFactory.from(group);
     requireStateChange(beforeState, afterState);
     group.advanceStateRevision();
 
@@ -431,9 +433,9 @@ public class OrchidGroupMutationEngine {
     }
     requireBaseline(group);
     long revisionBefore = group.getStateRevision();
-    OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshot.from(group);
+    OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshotFactory.from(group);
     group.discard(command.quantity());
-    OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
+    OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshotFactory.from(group);
     group.advanceStateRevision();
 
     return recordChanged(
@@ -558,9 +560,9 @@ public class OrchidGroupMutationEngine {
       OrchidGroup group = groupsById.get(item.orchidGroupId());
       requireBaseline(group);
       long revisionBefore = group.getStateRevision();
-      OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshot.from(group);
+      OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshotFactory.from(group);
       mutationAction.accept(group, item.quantity());
-      OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
+      OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshotFactory.from(group);
       requireStateChange(beforeState, afterState);
       group.advanceStateRevision();
       changes.add(
@@ -652,9 +654,9 @@ public class OrchidGroupMutationEngine {
       }
       OrchidGroup group = groupsById.get(item.orchidGroupId());
       long revisionBefore = group.getStateRevision();
-      OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshot.from(group);
+      OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshotFactory.from(group);
       group.correctQuantityAndStatus(item.correctedQuantity(), item.correctedStatus());
-      OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
+      OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshotFactory.from(group);
       group.advanceStateRevision();
       changes.add(
           new OrchidGroupMutationRecorder.Change(
@@ -684,7 +686,7 @@ public class OrchidGroupMutationEngine {
           zone, command.actualStartPosition(), command.actualEndPosition(), group.getId());
     }
     long revisionBefore = group.getStateRevision();
-    OrchidGroupStateSnapshot before = OrchidGroupStateSnapshot.from(group);
+    OrchidGroupStateSnapshot before = OrchidGroupStateSnapshotFactory.from(group);
     int sortOrder =
         group.getBedZone().getId().equals(zone.getId())
             ? group.getSortOrder()
@@ -696,7 +698,7 @@ public class OrchidGroupMutationEngine {
         sortOrder,
         command.actualStartPosition(),
         command.actualEndPosition());
-    OrchidGroupStateSnapshot after = OrchidGroupStateSnapshot.from(group);
+    OrchidGroupStateSnapshot after = OrchidGroupStateSnapshotFactory.from(group);
     requireStateChange(before, after);
     group.advanceStateRevision();
     return recordChanged(
@@ -732,7 +734,7 @@ public class OrchidGroupMutationEngine {
           Set.of(group.getId()));
     }
     long revision = group.getStateRevision();
-    var before = OrchidGroupStateSnapshot.from(group);
+    var before = OrchidGroupStateSnapshotFactory.from(group);
     group.applyStockCount(command.actualQuantity());
     group.advanceStateRevision();
     return recordChanged(
@@ -744,7 +746,7 @@ public class OrchidGroupMutationEngine {
         group,
         revision,
         before,
-        OrchidGroupStateSnapshot.from(group));
+        OrchidGroupStateSnapshotFactory.from(group));
   }
 
   public OrchidGroupMutationResult compensateTransforms(
@@ -856,7 +858,7 @@ public class OrchidGroupMutationEngine {
       OrchidGroupMutationEntry entry = earliestEntry(groupEntry.getValue());
       OrchidGroup group = groups.get(groupEntry.getKey());
       long revisionBefore = group.getStateRevision();
-      OrchidGroupStateSnapshot before = OrchidGroupStateSnapshot.from(group);
+      OrchidGroupStateSnapshot before = OrchidGroupStateSnapshotFactory.from(group);
       if (creationCancellationIds.contains(group.getId())) {
         group.cancelCreation();
       } else if (entry.getBeforeState() != null) {
@@ -873,7 +875,7 @@ public class OrchidGroupMutationEngine {
       } else {
         throw new IllegalArgumentException("구조 변경 Mutation entry 역할이 올바르지 않습니다.");
       }
-      OrchidGroupStateSnapshot after = OrchidGroupStateSnapshot.from(group);
+      OrchidGroupStateSnapshot after = OrchidGroupStateSnapshotFactory.from(group);
       group.advanceStateRevision();
       changes.add(
           new OrchidGroupMutationRecorder.Change(group.getId(), revisionBefore, before, after));

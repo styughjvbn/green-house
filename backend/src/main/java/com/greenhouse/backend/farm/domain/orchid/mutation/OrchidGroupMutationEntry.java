@@ -1,5 +1,8 @@
 package com.greenhouse.backend.farm.domain.orchid.mutation;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryKind;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryRole;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

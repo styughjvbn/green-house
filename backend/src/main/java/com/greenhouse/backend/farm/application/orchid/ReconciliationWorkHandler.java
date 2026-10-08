@@ -3,7 +3,7 @@ package com.greenhouse.backend.farm.application.orchid;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.ReconcileOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshotFactory;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.api.effect.WorkEffectContext;
@@ -46,7 +46,7 @@ public class ReconciliationWorkHandler implements WorkEffectHandler {
     var before =
         orchidGroupRepository
             .findById(groupId)
-            .map(OrchidGroupStateSnapshot::from)
+            .map(OrchidGroupStateSnapshotFactory::from)
             .orElseThrow(() -> new IllegalArgumentException("현장 동기화 대상 난 묶음을 찾을 수 없습니다."));
     var mutation =
         mutationEngine.reconcile(
@@ -61,7 +61,10 @@ public class ReconciliationWorkHandler implements WorkEffectHandler {
                 request.workDate(),
                 request.reason()));
     var after =
-        orchidGroupRepository.findById(groupId).map(OrchidGroupStateSnapshot::from).orElseThrow();
+        orchidGroupRepository
+            .findById(groupId)
+            .map(OrchidGroupStateSnapshotFactory::from)
+            .orElseThrow();
     var details = new LinkedHashMap<String, Object>();
     details.put("orchidGroupId", groupId);
     details.put("reason", request.reason().trim());

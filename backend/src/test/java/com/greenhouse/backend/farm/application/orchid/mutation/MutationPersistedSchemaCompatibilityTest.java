@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
 import java.lang.reflect.RecordComponent;
 import java.util.Arrays;
 import java.util.List;

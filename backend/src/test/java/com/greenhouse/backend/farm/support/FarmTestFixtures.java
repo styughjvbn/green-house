@@ -1,12 +1,12 @@
 package com.greenhouse.backend.farm.support;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshotFactory;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
@@ -84,7 +84,7 @@ public final class FarmTestFixtures {
     entityManager.persist(mutation);
     entityManager.persist(
         OrchidGroupMutationEntry.baseline(
-            mutation, group.getId(), OrchidGroupStateSnapshot.from(group)));
+            mutation, group.getId(), OrchidGroupStateSnapshotFactory.from(group)));
   }
 
   public record Layout(House house, PhysicalBed bed, BedZone left, BedZone right) {}

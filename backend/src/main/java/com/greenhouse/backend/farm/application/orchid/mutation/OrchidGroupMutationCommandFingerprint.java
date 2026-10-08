@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.application.orchid.mutation;
 
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;

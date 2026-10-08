@@ -1,9 +1,9 @@
 package com.greenhouse.backend.farm.dto.orchid;
 
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryKind;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryKind;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryRole;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
 import java.time.Instant;
 import java.time.LocalDate;
 

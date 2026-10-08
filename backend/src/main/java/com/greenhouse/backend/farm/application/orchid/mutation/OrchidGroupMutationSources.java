@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.application.orchid.mutation;
 
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 

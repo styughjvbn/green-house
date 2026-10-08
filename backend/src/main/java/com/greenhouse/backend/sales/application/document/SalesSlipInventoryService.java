@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.document;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;

@@ -168,7 +168,7 @@
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot": [
+  "com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot": [
     "ageYear",
     "bedZoneId",
     "endPosition",

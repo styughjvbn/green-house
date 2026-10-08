@@ -2,10 +2,10 @@ package com.greenhouse.backend.farm.controller.orchid;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.common.api.PageResponse;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationResponse;
 import io.swagger.v3.oas.annotations.Operation;

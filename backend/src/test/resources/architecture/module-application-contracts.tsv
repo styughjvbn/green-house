@@ -7,14 +7,14 @@ CONSTRUCTOR	com.greenhouse.backend.audit.application.AuditEvent$Target.<init>(ja
 CONSTRUCTOR	com.greenhouse.backend.audit.application.AuditEvent$Target.<init>(java.lang.String, java.lang.Long, java.lang.Long, java.lang.Long, java.lang.Long, java.lang.Long)
 CONSTRUCTOR	com.greenhouse.backend.common.application.RequestActorProvider.<init>(boolean, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.api.orchid.OrchidGroupUsage.<init>(java.lang.String, java.lang.String, long)
-CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.CompensateCreateMutationsCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
-CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
-CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.lang.Long, com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.CompensateCreateMutationsCommand.<init>(com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand.<init>(com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand.<init>(com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource, java.lang.Long, com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationIssue.<init>(java.lang.String, java.lang.String, java.lang.String, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem.<init>(java.lang.Long, java.lang.Integer)
-CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
-CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
-CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand.<init>(com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand.<init>(com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand.<init>(com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource, java.util.List, com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$CreatedShipment.<init>(java.lang.Long, java.util.Map)
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$Lot.<init>(java.lang.Long, java.lang.String, java.lang.String, java.lang.String, java.lang.Integer)
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$Shipment.<init>(java.lang.Long, java.time.LocalDate, java.lang.Long, java.lang.String, java.util.List)
@@ -58,6 +58,11 @@ METHOD	com.greenhouse.backend.audit.application.AuditEventWriter.record(com.gree
 METHOD	com.greenhouse.backend.audit.application.AuditEventWriter.record(com.greenhouse.backend.audit.domain.AuditAction, com.greenhouse.backend.audit.domain.AuditSource, java.lang.String, java.lang.Long, java.util.Map, java.util.Map, java.util.Map)
 METHOD	com.greenhouse.backend.audit.application.AuditEventWriter.recordChanges(com.greenhouse.backend.audit.domain.AuditAction, com.greenhouse.backend.audit.domain.AuditSource, com.greenhouse.backend.audit.application.AuditEvent$Target, java.util.List, java.lang.Object, java.lang.Object, java.util.Map)
 METHOD	com.greenhouse.backend.common.application.RequestActorProvider.resolve(java.lang.String)
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult$Entry.orchidGroupId()
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult.correlationId()
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult.entries()
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult.mutationId()
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult.replayed()
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi.getStates(java.util.Collection)
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi.lockGroups(java.util.Collection)
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi.lockStates(java.util.Collection)
@@ -81,6 +86,7 @@ METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupState.startPosition()
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupState.status()
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupState.varietyId()
 METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupState.varietyName()
+METHOD	com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot.reservedQuantity()
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup.orchidGroupId()
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup.snapshot()
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails.quantity()
@@ -90,11 +96,6 @@ METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.releaseReservation(com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand)
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.reserve(com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand)
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine.restoreOutbound(com.greenhouse.backend.farm.application.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand)
-METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult$Entry.orchidGroupId()
-METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult.correlationId()
-METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult.entries()
-METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult.mutationId()
-METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult.replayed()
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources.auctionReturnArrival(java.lang.Long, java.lang.String)
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources.sales(java.lang.Long, java.lang.String)
 METHOD	com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations.current(java.util.List)
@@ -388,8 +389,11 @@ METHOD	com.greenhouse.backend.work.spi.target.ResolvedWorkTarget.orchidGroupId()
 TYPE	com.greenhouse.backend.audit.application.AuditEvent$Target
 TYPE	com.greenhouse.backend.audit.application.AuditEventWriter
 TYPE	com.greenhouse.backend.common.application.RequestActorProvider
+TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult
+TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult$Entry
 TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi
 TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupState
+TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot
 TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupUsage
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.CompensateCreateMutationsCommand
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand
@@ -399,8 +403,6 @@ TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerRe
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerRehearsalInspector
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine
-TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult
-TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult$Entry
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations

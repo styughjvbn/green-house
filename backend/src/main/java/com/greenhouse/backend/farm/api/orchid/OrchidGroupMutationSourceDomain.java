@@ -1,4 +1,4 @@
-package com.greenhouse.backend.farm.domain.orchid.mutation;
+package com.greenhouse.backend.farm.api.orchid;
 
 public enum OrchidGroupMutationSourceDomain {
   FARM,

@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.repository.orchid.mutation;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryKind;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryKind;
 import jakarta.persistence.QueryHint;
 import java.time.LocalDate;
 import java.util.Collection;

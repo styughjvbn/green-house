@@ -3,7 +3,7 @@ package com.greenhouse.backend.farm.application.orchid.mutation;
 import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationCommandNormalizer.normalizeText;
 import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationCommandNormalizer.normalizeItems;
 
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
 import java.time.LocalDate;
 import java.util.List;
 

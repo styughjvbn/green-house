@@ -1,15 +1,17 @@
 package com.greenhouse.backend.farm.application.orchid.mutation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryRole;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshotFactory;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
@@ -96,14 +98,14 @@ class OrchidGroupMutationRecorder {
                     mutation,
                     group.getId(),
                     OrchidGroupMutationEntryRole.RESULT,
-                    OrchidGroupStateSnapshot.from(group)))
+                    OrchidGroupStateSnapshotFactory.from(group)))
         .toList();
   }
 
   private OrchidGroupMutationResult saveEntries(
       OrchidGroupMutation mutation, List<OrchidGroupMutationEntry> entries) {
     entryRepository.saveAll(entries);
-    return OrchidGroupMutationResult.from(mutation, entries);
+    return OrchidGroupMutationResultFactory.from(mutation, entries);
   }
 
   List<OrchidGroupMutation> findRelated(

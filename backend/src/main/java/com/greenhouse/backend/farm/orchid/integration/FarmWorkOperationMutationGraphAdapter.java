@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.orchid.integration;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneLocationRow;

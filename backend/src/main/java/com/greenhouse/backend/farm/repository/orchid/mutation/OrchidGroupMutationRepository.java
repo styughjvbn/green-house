@@ -1,8 +1,8 @@
 package com.greenhouse.backend.farm.repository.orchid.mutation;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;

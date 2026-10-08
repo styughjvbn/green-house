@@ -2,7 +2,7 @@ package com.greenhouse.backend.farm.application.orchid.mutation;
 
 import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationCommandNormalizer.requireText;
 
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 

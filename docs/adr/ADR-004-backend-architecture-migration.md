@@ -533,3 +533,17 @@ Farm 사용 여부 단계 검증 결과:
 - 전체 `clean test spotlessCheck` 통과: 777개, 실패·오류·skip 0개. 임시 init script로 heap 2 GiB 적용. 프론트 `npm run check` 통과. 이전 상태/사용 여부 값·SPI 클래스 잔존 없음.
 - Controller·HTTP DTO·schema와 SQL·DB 경계·트랜잭션/잠금·수량·업무 판단 변경 없음. OpenAPI/프론트 타입 재생성과 `workE2eTest`는 실행하지 않았다. 전체 검증 이후 변경은 이 ADR의 결과 기록뿐이다.
 - 이번 두 단계 완료. 후속 P2에서 Mutation Writer의 실제 소비 메서드, sealed 명령·정규화, 결과의 Entity factory와 원장 snapshot을 함께 검토·분리한다. Farm 운영 대사 SPI/값과 집계, Sales 공개 계약도 후속 대상이다. 전체 전환 완료 전 목표 문서 archive 이동은 수행하지 않는다.
+
+### 2026-10-08: 다섯 단계 진행 — 1. Mutation 출처·결과·snapshot 값
+
+- Mutation source/source domain, 결과/Entry, type/kind/role enum과 상태 snapshot을 `farm/api/orchid`로 이동한다. 결과·Entry Entity 변환과 replay flag 조합은 application factory, snapshot Entity 변환은 내부 domain factory로 분리한다. 공개 값은 Entity·projection·HTTP 타입을 받지 않는다.
+- 기존 enum 명칭·필드·null·JSON 순서·canonical 위치 정밀도·source UUID 생성·source 정규화·Entry 순서·replay 값은 동일하다. Engine·Recorder·ReplayResolver는 기존 변환 본문을 호출하며 Entity 캡처 시점과 SQL·트랜잭션·잠금·Writer를 바꾸지 않는다. 새 전달 Adapter·Port·integration 없음.
+- 저장 schema 회귀 fixture는 snapshot의 Java FQCN 키만 치환하며 필드/JSON/기대 지문은 그대로 유지한다. 설정·scripts/main resources의 저장 FQCN 참조 없음. reviewed inventory는 대응 FQCN과 새로 추적되는 공개 값의 기존 외부 접근만 개별 검토한다.
+
+- 이번에 새로 추적되는 snapshot TYPE와 Sales 대사의 기존 `reservedQuantity()` 접근 두 항목만 inventory에 추가했다. 설정된 전체 계약을 자동 승인하지 않았다. 초기 컴파일에서 factory import/메서드 참조를 수정했으며, 집중 테스트의 업무·JSON·지문 검증은 통과하고 inventory 차이를 검토해 반영했다.
+
+1단계 검증 결과:
+
+- Mutation 저장 JSON·snapshot canonical·기존 fingerprint·실행/조회/판매 재고·공개 값·단일 Writer 집중 검증 통과. inventory 검토 반영 후 재검증 통과. 초기 factory import/메서드 참조 오류는 수정 완료.
+- 전체 `clean test spotlessCheck` 777개 통과, 실패·오류·skip 0개. 임시 테스트 heap 2 GiB 사용. 프론트 `npm run check` 통과. OpenAPI 재생성 157 operations/132 paths/292 schemas, diff 없음. HTTP 타입 재생성 불필요.
+- DB schema·저장 JSON·트랜잭션/잠금·수량 계산 변경이 없어 `workE2eTest` 미실행. 전체 검증 후 변경은 이 ADR 결과 기록뿐이다.
