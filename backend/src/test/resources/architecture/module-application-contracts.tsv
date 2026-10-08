@@ -15,6 +15,7 @@ CONSTRUCTOR	com.greenhouse.backend.farm.api.orchid.OrchidGroupUsage.<init>(java.
 CONSTRUCTOR	com.greenhouse.backend.farm.api.orchid.ReleaseOrchidGroupReservationsMutationCommand.<init>(com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.api.orchid.ReserveOrchidGroupsMutationCommand.<init>(com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.api.orchid.RestoreOutboundOrchidGroupsMutationCommand.<init>(com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource, java.util.List, com.greenhouse.backend.farm.api.orchid.RelatedOrchidGroupMutations, java.time.LocalDate, java.lang.String)
+CONSTRUCTOR	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales.<init>(java.lang.Long, long, long, long, long, java.time.LocalDate)
 CONSTRUCTOR	com.greenhouse.backend.sales.api.partner.PartnerTextSearch.<init>(com.greenhouse.backend.sales.api.partner.PartnerTextMatch, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$CreatedShipment.<init>(java.lang.Long, java.util.Map)
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$Lot.<init>(java.lang.Long, java.lang.String, java.lang.String, java.lang.String, java.lang.Integer)
@@ -22,7 +23,6 @@ CONSTRUCTOR	com.greenhouse.backend.sales.application.document.AuctionDocumentPor
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$FinancialSnapshot.<init>(java.lang.Long, java.lang.Long, java.lang.Integer, java.time.LocalDate, java.lang.String, java.math.BigDecimal, java.math.BigDecimal, boolean, java.lang.String, boolean, boolean, java.util.Map)
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$PriceSnapshot.<init>(java.lang.Integer, java.lang.Integer, java.lang.Integer)
 CONSTRUCTOR	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$QuotedPrices.<init>(java.lang.Integer, java.util.List)
-CONSTRUCTOR	com.greenhouse.backend.sales.application.document.SalesMetricsReader$PartnerSales.<init>(java.lang.Long, long, long, long, long, java.time.LocalDate)
 CONSTRUCTOR	com.greenhouse.backend.work.api.effect.InboundPottingCommand.<init>(java.lang.String, java.lang.Long, java.time.LocalDate, java.util.List, java.lang.String, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.work.api.effect.InboundPottingResultInput.<init>(java.lang.Long, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.Boolean, java.math.BigDecimal, java.math.BigDecimal, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.work.api.effect.LegacyRepotCommand$Result.<init>(java.lang.Long, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.String, java.lang.Integer, java.lang.Boolean, java.math.BigDecimal, java.math.BigDecimal, java.lang.String)
@@ -113,6 +113,32 @@ METHOD	com.greenhouse.backend.farm.api.status.FarmMetricsApi$VarietyInventory.va
 METHOD	com.greenhouse.backend.farm.api.status.FarmMetricsApi$VarietyInventory.warningGroupCount()
 METHOD	com.greenhouse.backend.farm.api.status.FarmMetricsApi.getInventorySummary()
 METHOD	com.greenhouse.backend.farm.api.status.FarmMetricsApi.getSnapshot()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$NamedAmount.amount()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$NamedAmount.name()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales.latestSaleDate()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales.paidAmount()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales.partnerId()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales.totalSales()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales.transactionCount()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales.unpaidAmount()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.id()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.paidAmount()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.partnerId()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.paymentStatus()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.remainingAmount()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.saleDate()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.salesStatus()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.slipNumber()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.totalAmount()
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi.monthlySales(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi.partnerSales(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi.paymentBreakdown(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi.recentSlips(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi.sumSales(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi.sumShippedQuantity(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi.sumUnpaidAmount(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi.unpaidSlips(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi.varietySales(java.time.LocalDate, java.time.LocalDate)
 METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo.id()
 METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo.name()
 METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo.partnerType()
@@ -162,32 +188,6 @@ METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.p
 METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.recordPayment(java.lang.Long, java.lang.Long, java.lang.String, java.time.LocalDateTime)
 METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.response(java.lang.Long)
 METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.updateBalance(java.lang.Long, java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$NamedAmount.amount()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$NamedAmount.name()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$PartnerSales.latestSaleDate()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$PartnerSales.paidAmount()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$PartnerSales.partnerId()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$PartnerSales.totalSales()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$PartnerSales.transactionCount()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$PartnerSales.unpaidAmount()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$SlipSummary.id()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$SlipSummary.paidAmount()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$SlipSummary.partnerId()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$SlipSummary.paymentStatus()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$SlipSummary.remainingAmount()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$SlipSummary.saleDate()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$SlipSummary.salesStatus()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$SlipSummary.slipNumber()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader$SlipSummary.totalAmount()
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader.monthlySales(java.time.LocalDate, java.time.LocalDate)
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader.partnerSales(java.time.LocalDate, java.time.LocalDate)
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader.paymentBreakdown(java.time.LocalDate, java.time.LocalDate)
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader.recentSlips(java.time.LocalDate, java.time.LocalDate)
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader.sumSales(java.time.LocalDate, java.time.LocalDate)
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader.sumShippedQuantity(java.time.LocalDate, java.time.LocalDate)
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader.sumUnpaidAmount(java.time.LocalDate, java.time.LocalDate)
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader.unpaidSlips(java.time.LocalDate, java.time.LocalDate)
-METHOD	com.greenhouse.backend.sales.application.document.SalesMetricsReader.varietySales(java.time.LocalDate, java.time.LocalDate)
 METHOD	com.greenhouse.backend.sales.application.document.SalesQueryService.getSalesSlip(java.lang.Long)
 METHOD	com.greenhouse.backend.sales.application.document.SalesQueryService.getSalesSlipPage(java.lang.Long, java.time.LocalDate, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.String, int, int)
 METHOD	com.greenhouse.backend.sales.application.payment.ManualPaymentService.confirm(java.lang.Long, com.greenhouse.backend.sales.domain.payment.PaymentTargetType, com.greenhouse.backend.sales.application.payment.ManualPaymentCommand, com.greenhouse.backend.sales.application.payment.PaymentTargetPort)
@@ -415,6 +415,11 @@ TYPE	com.greenhouse.backend.farm.api.status.FarmMetricsApi$Snapshot
 TYPE	com.greenhouse.backend.farm.api.status.FarmMetricsApi$VarietyInventory
 TYPE	com.greenhouse.backend.farm.spi.orchid.OrchidGroupLedgerRehearsalInspector
 TYPE	com.greenhouse.backend.farm.spi.orchid.OrchidGroupUsageInspector
+TYPE	com.greenhouse.backend.sales.api.document.SalesMetricsApi
+TYPE	com.greenhouse.backend.sales.api.document.SalesMetricsApi$NamedAmount
+TYPE	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales
+TYPE	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary
+TYPE	com.greenhouse.backend.sales.api.document.SalesPaymentCategory
 TYPE	com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo
 TYPE	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi
 TYPE	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi$Identity
@@ -435,10 +440,6 @@ TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingP
 TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms
 TYPE	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget
 TYPE	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget$PaymentOption
-TYPE	com.greenhouse.backend.sales.application.document.SalesMetricsReader
-TYPE	com.greenhouse.backend.sales.application.document.SalesMetricsReader$NamedAmount
-TYPE	com.greenhouse.backend.sales.application.document.SalesMetricsReader$PartnerSales
-TYPE	com.greenhouse.backend.sales.application.document.SalesMetricsReader$SlipSummary
 TYPE	com.greenhouse.backend.sales.application.document.SalesQueryService
 TYPE	com.greenhouse.backend.sales.application.document.SalesSlipDocument
 TYPE	com.greenhouse.backend.sales.application.document.SalesSlipSummary

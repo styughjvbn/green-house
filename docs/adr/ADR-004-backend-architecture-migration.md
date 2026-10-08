@@ -610,3 +610,14 @@ Sales 1단계 검증 결과:
 - 초기 잠금 API와 wildcard enum import 누락은 수정했다. 거래처/예정일·검색/일괄 조회 건수·소유권 parser·기능 그래프·값 계약 집중 검증 통과. 새로 추적되는 기존 검색 생성자·검색/enum TYPE 네 항목만 reviewed inventory에 추가했다.
 - 전체 `clean test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과. OpenAPI 재생성 157 operations/132 paths/292 schemas, diff 없음. 생성 타입 변경 불필요.
 - HTTP·SQL·DB/트랜잭션 경계·잠금·정책·Receipt 변경이 없어 `workE2eTest` 미실행. 전체 검증 이후에는 이 ADR 결과만 추가했다.
+
+### 2026-10-08: Sales 다섯 단계 — 2. 판매 집계 API
+
+- Analytics의 SalesMetricsReader 직접 참조를 `sales/api/document/SalesMetricsApi`로 전환한다. 기존 외부 아홉 조회와 세 중첩 record·저장 결제 상태 분류 enum을 같은 공개 값 패키지에 두며 기존 Reader가 직접 구현한다. QueryDSL/집계 구현은 내부에 유지한다. 전달 Service/Adapter/Port/integration 없음.
+- 완료 전표 조건·기간·합계/coalesce·상태 문자열 호환 분류·정렬/10개·5개 제한·projection 구성·readOnly는 동일하다. enum 분류 본문도 그대로 이동하고 규칙을 Analytics에 복제하지 않는다. reviewed inventory는 대응 FQCN과 기존 domain enum 접근만 검토한다.
+
+Sales 2단계 검증 결과:
+
+- clean 집중 검증의 집계·응답/조회 건수·공개 값·기능 그래프·단일 Writer 통과. 기존 분류 enum TYPE 한 항목만 reviewed inventory에 추가 후 전체 검사 통과.
+- 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과. HTTP DTO/schema 변경 없음.
+- SQL·DB/트랜잭션 경계·정책 변경 없음. OpenAPI는 출력 값 이동 후 다시 확인하며 이번 단계에는 타입 재생성/`workE2eTest` 미실행. 전체 검증 후에는 이 ADR 결과만 추가했다.

@@ -3,7 +3,8 @@ package com.greenhouse.backend.sales.application.document;
 import static com.greenhouse.backend.sales.domain.document.QSalesSlip.salesSlip;
 import static com.greenhouse.backend.sales.domain.document.QSalesSlipItem.salesSlipItem;
 
-import com.greenhouse.backend.sales.domain.document.SalesPaymentCategory;
+import com.greenhouse.backend.sales.api.document.SalesMetricsApi;
+import com.greenhouse.backend.sales.api.document.SalesPaymentCategory;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -22,10 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-public class SalesMetricsReader {
+public class SalesMetricsReader implements SalesMetricsApi {
 
   private final JPAQueryFactory queryFactory;
 
+  @Override
   public long sumSales(LocalDate from, LocalDate to) {
     return queryFactory
         .select(salesSlip.totalAmount.sum().longValue().coalesce(0L))
@@ -34,6 +36,7 @@ public class SalesMetricsReader {
         .fetchOne();
   }
 
+  @Override
   public long sumShippedQuantity(LocalDate from, LocalDate to) {
     return queryFactory
         .select(salesSlipItem.quantity.sum().longValue().coalesce(0L))
@@ -43,6 +46,7 @@ public class SalesMetricsReader {
         .fetchOne();
   }
 
+  @Override
   public long sumUnpaidAmount(LocalDate from, LocalDate to) {
     return queryFactory
         .select(salesSlip.remainingAmount.sum().coalesce(0L))
@@ -51,6 +55,7 @@ public class SalesMetricsReader {
         .fetchOne();
   }
 
+  @Override
   public Map<YearMonth, Long> monthlySales(LocalDate from, LocalDate to) {
     var year = salesSlip.saleDate.year();
     var month = salesSlip.saleDate.month();
@@ -67,6 +72,7 @@ public class SalesMetricsReader {
                 row -> YearMonth.of(row.get(year), row.get(month)), row -> row.get(amount)));
   }
 
+  @Override
   public List<NamedAmount> varietySales(LocalDate from, LocalDate to) {
     var amount = salesSlipItem.amount.sum().longValue();
     return queryFactory
@@ -80,6 +86,7 @@ public class SalesMetricsReader {
         .fetch();
   }
 
+  @Override
   public Map<Long, PartnerSales> partnerSales(LocalDate from, LocalDate to) {
     return queryFactory
         .select(
@@ -99,6 +106,7 @@ public class SalesMetricsReader {
         .collect(Collectors.toUnmodifiableMap(PartnerSales::partnerId, Function.identity()));
   }
 
+  @Override
   public Map<SalesPaymentCategory, Long> paymentBreakdown(LocalDate from, LocalDate to) {
     return queryFactory
         .select(
@@ -118,6 +126,7 @@ public class SalesMetricsReader {
                 Long::sum));
   }
 
+  @Override
   public List<SlipSummary> recentSlips(LocalDate from, LocalDate to) {
     return slipSummaryQuery(from, to)
         .orderBy(salesSlip.saleDate.desc(), salesSlip.id.desc())
@@ -125,6 +134,7 @@ public class SalesMetricsReader {
         .fetch();
   }
 
+  @Override
   public List<SlipSummary> unpaidSlips(LocalDate from, LocalDate to) {
     return slipSummaryQuery(from, to)
         .where(salesSlip.remainingAmount.gt(0L))
@@ -160,25 +170,4 @@ public class SalesMetricsReader {
                 SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED,
                 SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED));
   }
-
-  public record NamedAmount(String name, long amount) {}
-
-  public record PartnerSales(
-      Long partnerId,
-      long totalSales,
-      long transactionCount,
-      long unpaidAmount,
-      long paidAmount,
-      LocalDate latestSaleDate) {}
-
-  public record SlipSummary(
-      Long id,
-      String slipNumber,
-      LocalDate saleDate,
-      Long partnerId,
-      Integer totalAmount,
-      Long paidAmount,
-      Long remainingAmount,
-      String paymentStatus,
-      String salesStatus) {}
 }

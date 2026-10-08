@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.domain.document;
+package com.greenhouse.backend.sales.api.document;
 
 /** Compatibility groups for stored free-form labels, not payment eligibility or ledger state. */
 public enum SalesPaymentCategory {

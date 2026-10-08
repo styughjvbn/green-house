@@ -2,6 +2,7 @@ package com.greenhouse.backend.sales.domain.document;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.sales.api.document.SalesPaymentCategory;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 

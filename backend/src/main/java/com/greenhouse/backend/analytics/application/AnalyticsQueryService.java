@@ -11,12 +11,12 @@ import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsResponse;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.api.status.FarmMetricsApi;
+import com.greenhouse.backend.sales.api.document.SalesMetricsApi;
+import com.greenhouse.backend.sales.api.document.SalesMetricsApi.NamedAmount;
+import com.greenhouse.backend.sales.api.document.SalesMetricsApi.PartnerSales;
+import com.greenhouse.backend.sales.api.document.SalesMetricsApi.SlipSummary;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi.Identity;
-import com.greenhouse.backend.sales.application.document.SalesMetricsReader;
-import com.greenhouse.backend.sales.application.document.SalesMetricsReader.NamedAmount;
-import com.greenhouse.backend.sales.application.document.SalesMetricsReader.PartnerSales;
-import com.greenhouse.backend.sales.application.document.SalesMetricsReader.SlipSummary;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService.Balance;
 import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi;
@@ -37,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AnalyticsQueryService {
 
-  private final SalesMetricsReader salesMetrics;
+  private final SalesMetricsApi salesMetrics;
 
   private final FarmMetricsApi farmMetricsReader;
 

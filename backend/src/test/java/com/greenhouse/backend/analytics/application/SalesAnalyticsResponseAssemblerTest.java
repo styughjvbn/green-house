@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.analytics.dto.AnalyticsInsightResponse;
 import com.greenhouse.backend.analytics.dto.AnalyticsRankedValueResponse;
-import com.greenhouse.backend.sales.domain.document.SalesPaymentCategory;
+import com.greenhouse.backend.sales.api.document.SalesPaymentCategory;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Locale;
