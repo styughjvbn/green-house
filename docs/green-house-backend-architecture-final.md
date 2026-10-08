@@ -95,7 +95,7 @@ com.greenhouse.backend/
 │   ├── target/
 │   ├── effect/
 │   ├── correction/
-│   └── integration/
+│   └── integration/         # 실제 Port/SPI 구현·기술 격리가 필요한 경우만 (선택)
 ├── sales/
 │   ├── api/
 │   ├── spi/
@@ -106,7 +106,7 @@ com.greenhouse.backend/
 │   ├── auction/
 │   ├── settlement/
 │   ├── payment/
-│   └── integration/
+│   └── integration/         # 실제 Port/SPI 구현·기술 격리가 필요한 경우만 (선택)
 ├── analytics/
 ├── audit/
 ├── auth/

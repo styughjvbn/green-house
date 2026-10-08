@@ -296,6 +296,16 @@ Persistence 조회 규칙:
 
 입고 대상 계획·포트 취소·구조 변경 취소·구조 변경 선잠금의 확장 계약도 `work/spi/{target,operation}`에서 Work가 소유한다. Farm 구현은 `farm/inbound/integration`과 `farm/transformation/integration`에 두며, 기존 application 유스케이스와 같은 트랜잭션에서 처리한다. 구조 변경·포트 취소의 보상 Mutation과 이력·접수 소유권, 잠금 순서는 유지한다.
 
+#### integration 생성 기준
+
+`integration`은 선택적인 연동 구현 위치다. 모든 기능에 생성하거나 application·domain·repository·web와 함께 필수 계층으로 취급하지 않는다.
+
+- 실제 호출 측 Outbound Port 구현, 다른 최상위 모듈의 공개 SPI 구현 또는 명확한 외부 기술·프로토콜 격리가 있을 때만 생성한다.
+- 동일 모듈 내부의 허용된 기능 API와 허용된 최상위 모듈 API는 직접 호출한다. 단순 전달을 위해 Adapter·Port·Interface·Gateway를 추가하지 않는다.
+- 기존 Service가 필요한 SPI를 직접 구현할 수 있으면 별도 전달 Adapter를 강제하지 않는다. 외부 기술 격리도 인터페이스 생성을 자동으로 요구하지 않는다.
+- 각 구현의 계약 소유자·실제 소비자·격리 대상·트랜잭션 참여를 설명할 수 있어야 한다. 빈 integration 디렉터리는 만들지 않는다.
+- 현재 integration 구현은 `IntegrationArchitectureTest`에서 외부 공개 SPI 또는 호출 모듈 소유 `application/port/out` 구현 여부를 검사한다. Port 없이 외부 기술을 격리하는 구현은 클래스별 근거를 검토해 기록한다. 검사를 통과하려고 새 Port를 만들지 않는다. 전달만 하는지는 호출 경로와 업무 책임을 함께 검토한다.
+
 #### 모듈 소유권과 호출 방향
 
 - Entity, Repository, DB table은 각각 하나의 업무 모듈이 소유한다. 소유 모듈 밖에서는 해당 Repository나 internal 구현을 직접 참조하지 않는다.

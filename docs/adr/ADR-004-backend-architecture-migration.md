@@ -13,6 +13,8 @@
 
 목표 문서의 예시 트리를 그대로 복제하지 않는다. HTTP·DB·업무 정책 변경과 구조 리팩터링은 분리한다. 기존 클래스명도 1차 이동에서 유지한다.
 
+`integration`은 실제 Outbound Port·공개 SPI 구현 또는 외부 기술 격리가 필요한 경우에만 생성하는 선택적 패키지다. 허용된 내부 기능·최상위 모듈 API는 직접 호출하며, 패키지를 채우기 위한 Port·Interface·Gateway·전달 Adapter는 추가하지 않는다. 기존 구현이 SPI를 직접 제공할 수 있으면 별도 위임 계층을 만들지 않는다.
+
 ### 확인된 차이
 
 | 항목 | 현재 코드·테스트 | 계획에 반영할 결정 |
@@ -217,3 +219,38 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - `python3 scripts/generate_openapi.py` 재생성 후 전체 명세·slice diff 없음. 프론트엔드 `npm run check` 통과. TypeScript schema 계약 변경 없음.
 - main/resources/scripts에서 이동한 타입의 이전 FQCN·설정 또는 저장용 클래스명 문자열 참조 없음.
 - DB·트랜잭션·잠금·멱등 처리 로직은 변경하지 않아 `workE2eTest` 미실행. 기존 PostgreSQL E2E의 참조는 전환하고 컴파일했다. 전체 검증 후에는 문서의 검증 기록만 추가했다.
+
+### 2026-10-08: integration 생성 기준과 새 패키지 전수 재검토
+
+조사 범위는 main source의 모든 `integration` 경로다. 현재 3개 패키지에 구현 7개가 있으며 모두 이전 리팩터링에서 기존 클래스·계약을 옮긴 것이다. 이번 감사에서 새 프로덕션 Port·Interface·Gateway·Adapter는 추가하지 않았다.
+
+| 패키지 | 구현 | 계약 소유자·실제 소비자 | 격리 대상과 유지 이유 |
+|---|---|---|---|
+| `farm/orchid/integration` | `FarmWorkExecutionReferenceGateway` | Work `WorkExecutionReferenceGateway`; `WorkOperationDetailService` | Farm 묶음·구역 저장소 projection을 Work 위치·품종명 값으로 변환. Work의 Farm 저장소 직접 참조 방지 |
+| `farm/orchid/integration` | `FarmWorkOperationMutationGraphAdapter` | Work `WorkOperationMutationGraphPort`; `WorkOperationGraphQueryService` | Farm 원장 Entry·관계·snapshot의 읽기 및 제한된 그래프 탐색을 Work 값으로 변환. Work에 원장 Entity·저장소 노출 방지 |
+| `farm/inbound/integration` | `FarmInboundPottingPlanGateway` | Work `InboundPottingPlanGateway`; 계획·진행·잠금·취소·응답 유스케이스 | Farm 입고 조회·자격 검증·상태 변경·잠금을 Work의 대상 계약으로 제공. 단순 전달이 아니라 입고 모델과 저장소 접근 소유 |
+| `farm/inbound/integration` | `FarmInboundPottingVoidAdapter` | Work `InboundPottingVoidPort`; `InboundPottingOperationService` | Work 호출 전후 입고 root 잠금·취소 가능 검증·변경 전후 감사 수행. Work lifecycle 직접 호출도 포함하지만 이를 전달만 하는 래퍼로 제거하면 Farm 책임이 Work에 유출됨 |
+| `farm/inbound/integration` | `FarmPottingVoidAdapter` | Work `PottingVoidPort`; `WorkOperationVoidService` | 입고·포트 생성 원장·현재 유효 head·후속 참조의 검증과 잠금, Mutation 생성 보상 및 필요 시 입고 재개를 Farm에서 실행 |
+| `farm/transformation/integration` | `FarmStructureChangeRecordLockAdapter` | Work `StructureChangeRecordLockPort`; `StructureChangeRecordService` | Farm 묶음·구역 저장소 잠금과 존재 검증. 묶음 ID 순 → 잠금 후 위치를 포함한 구역 ID 순의 전체 잠금 순서를 제공 |
+| `farm/transformation/integration` | `FarmStructureChangeVoidAdapter` | Work `StructureChangeVoidPort`; `WorkOperationVoidService` | Farm 원장·유효 head·예약·후속 참조를 검증하고 단건/일괄 Mutation 보상과 일괄 감사 조율. Work의 재고 Entity·원장 직접 접근 방지 |
+
+판정: **유지 7개, 제거 0개**. 동일 최상위 모듈의 허용 API를 전달만 하는 구현이나, 허용된 최상위 API 호출을 장식하는 구현은 이 범위에서 발견되지 않았다. 모두 Work 소유 공개 SPI의 공급자이며 외부 네트워크·기술 Adapter는 아니다. 외부 기술 연동이라는 이유로 유지한다고 설명하지 않는다.
+
+변경 전후 관계:
+
+```text
+컴파일: Farm 구현 → Work 공개 SPI ← Work application
+런타임: Work 유스케이스 → Work SPI를 구현한 Farm 구현 → Farm 소유 저장소/정책/Mutation
+```
+
+이 관계는 감사 전후 동일하다. Work의 Farm 직접 의존을 허용하지 않는 현재 모듈 그래프에서 위 구현을 제거하고 Work가 Farm API를 직접 호출하면 새 역방향 의존과 순환이 생긴다. 기존 허용표를 바꾸어 제거하지 않는다. Farm 구현 내부의 허용된 application·정책·Mutation 호출에는 새 위임 Adapter를 추가하지 않는다.
+
+`FarmInboundPottingVoidAdapter`의 runtime 재진입은 별도로 확인했다: Work 포트 취소 접수 → Farm 입고 잠금·검증 → Work lifecycle/취소 → Farm 포트 보상 → Farm 입고 감사. 기존 `MANDATORY`, 접수 replay 순서와 동일 트랜잭션 처리를 유지한다. 구조 변경 선잠금도 `MANDATORY`를 유지하며, 두 조회 구현의 `readOnly`와 취소 구현의 기존 트랜잭션 annotation은 변경하지 않는다. OrchidGroup 변경은 계속 Mutation Engine을 거친다.
+
+변경은 선택적 생성 기준 명시와 architecture 검사 보강이다. 검사는 공개 SPI·호출 측 Outbound Port 또는 클래스별 검토된 기술 격리 근거를 요구하며, 허용 API를 전달만 하는 음성 fixture를 거절한다. 이 검사가 메서드 본문만으로 불필요한 전달을 모두 판정하는 것은 아니므로 유지 이유와 실제 사용처는 코드 리뷰에서 함께 확인한다.
+
+검증 결과:
+
+- 관련 integration 생성 기준·모듈 경계·공개 값 계약·단일 Writer·상세/그래프·입고 계획·작업 취소·잠금 adapter 집중 테스트 통과.
+- 전체 `test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 프론트엔드 `npm run check` 통과.
+- 프로덕션 코드·HTTP/OpenAPI·DB·트랜잭션·잠금·Mutation 쓰기 경로 변경 없음. OpenAPI 재생성 및 `workE2eTest`는 이번 검토에서 실행하지 않았다. 전체 검증 이후에는 문서의 검증 기록만 추가했다.
