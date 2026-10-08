@@ -283,7 +283,7 @@ Persistence 조회 규칙:
 
 ### 4.1 백엔드 구현 기준
 
-[ADR-004](adr/ADR-004-backend-architecture-migration.md)의 코드·문서 전환을 완료했다. 기본 CI 재현성과 백업 복원본 CLI의 최종 검증은 ADR의 재감사 기록을 따른다. 현행 구조와 신규 개발의 기준은 이 문서이며 이전 목표 설계는 [보관 문서](archive/plans/green-house-backend-architecture-final.md)로 남긴다. Sales·Farm·Work의 기능 우선 배치와 Mutation 내부 책임별 배치를 사용하며 이전 계층 루트는 허용하지 않는다.
+[ADR-004](adr/ADR-004-backend-architecture-migration.md)의 코드·문서 전환과 최종 검증을 완료했다. 저장소 기본 CI 명령 및 실제 운영 백업 복원본의 대사·기동 CLI 검증 근거는 ADR의 마지막 실행 기록을 따른다. 현행 구조와 신규 개발의 기준은 이 문서이며 이전 목표 설계는 [보관 문서](archive/plans/green-house-backend-architecture-final.md)로 남긴다. Sales·Farm·Work의 기능 우선 배치와 Mutation 내부 책임별 배치를 사용하며 이전 계층 루트는 허용하지 않는다.
 
 소유권, 컴파일 의존, 런타임 호출을 구분한다. 공개 SPI 구현으로 컴파일 방향을 유지해도 런타임 재진입·트랜잭션·잠금 안전성은 별도로 검토한다. 실제 모듈 허용 컴파일 의존은 다음과 같다. 표에 없는 방향과 순환 의존은 허용하지 않는다.
 

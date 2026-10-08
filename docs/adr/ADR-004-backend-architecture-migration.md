@@ -1,9 +1,9 @@
 # ADR-004: 공개 API·SPI 경계와 기능 우선 패키지로 백엔드를 점진적으로 전환한다
 
-- 상태: 승인 — 코드·현행 문서 전환 완료, P6 최종 검증 보류
+- 상태: 승인 — P0~P6 전환 및 최종 검증 완료
 - 작성일: 2026-10-08, Asia/Seoul
 - 범위: 백엔드 패키지 배치, 공개 계약, 아키텍처 테스트 및 문서 전환
-- 진행: P0~P5와 P6 구조·문서 정리 완료. 기본 CI 재현 및 백업 복원본 CLI 검증을 확정하기 전에는 최종 완료로 판정하지 않는다.
+- 진행: P0~P6 코드·현행 문서 전환 완료. 저장소 기본 CI 명령과 실제 운영 백업 복원본의 두 CLI 검증까지 완료했다. 재감사에서 보류한 두 항목의 해소 근거는 마지막 실행 기록을 따른다.
 - 관련 문서: [보관된 최초 목표 설계](../archive/plans/green-house-backend-architecture-final.md), [현행 아키텍처](../04-architecture.md), [Sales 소유권 결정](ADR-003-sales-document-information-architecture.md)
 
 실제 소스와 아키텍처 테스트를 기준으로 결정 이유와 완료된 전환·검증을 기록한다. 현행 구현과 신규 작업의 기준은 `docs/04-architecture.md`다.
@@ -818,3 +818,14 @@ P6 완료 검증 결과:
 2. **백업 복원본의 두 CLI 실행.** 현재 CLI 회귀는 Testcontainers에 구성한 ACTIVE 원장에서 두 별도 JVM의 종료 코드·대사·기동 검증과 데이터 보존을 확인했다. 검증 계획의 복원본 CLI 조건을 실제 백업 복원으로 수행한 것은 아니다. `docs/07-deployment.md` 절차에 따라 준비한 복원본에서 두 task의 검증 결과가 필요하다. 운영 DB 변경·배포는 이번 감사에서 수행하지 않았다.
 
 판정: 합의한 모듈 소유권·허용 방향·공개 계약·기능 배치·선택적 integration·Mutation 단일 Writer의 구현 전환은 완료. 테스트된 업무 경로의 기능 회귀는 발견되지 않음. 기본 CI 재현성과 복원본 검증까지 모두 완료됐다는 판정은 아직 불가. 이 감사에서는 프로덕션 코드와 테스트 설정을 변경하지 않았다.
+
+### 2026-10-08: 재감사 보류 항목 보완 및 최종 완료
+
+1. **저장소 기본 CI 재현성 확보.** 기본 512 MiB를 유지하고 OOM 즉시 종료 옵션만 추가한 진단 실행에서 `OutOfMemoryError: Java heap space`와 worker 종료 코드 3을 확인했다. 앞선 SIGTERM 종료 코드 143과 구분되는 실제 메모리 부족 근거다. 모든 Gradle Test task의 기본 heap을 2 GiB로 명시하고 `backendTestHeap`으로 조정 가능하게 했으며 OOM 즉시 종료 옵션을 적용했다. 애플리케이션 실행 heap은 변경하지 않았다. 임시 init script 없이 `./gradlew clean check bootJar --no-daemon`이 성공했다. 전체 테스트 779개·실패/오류/skip 0, Spotless와 패키징 통과.
+2. **실제 백업 복원본 검증 완료.** 프로젝트에 보관된 2026-10-06 운영 백업을 별도의 폐기 가능한 PostgreSQL 18.6에 복원했다. 원본 V34에 기존 V35~V51 migration 17개를 적용하고 Hibernate schema validation을 통과했다. ACTIVE 원장·난 묶음 320개가 있는 복원본에서 실제 Gradle `orchidLedgerReconcile`, `orchidLedgerStartupVerify` task가 모두 종료 코드 0으로 성공했다. 대사는 `ACTIVE`, `ready=true`, `issues=[]`이고 기동 검증은 startup guard를 통과했다. 각 CLI 실행 전후 public 57개 테이블의 모든 행·시퀀스·스키마 정의가 동일했다. 백업 원본과 기존 DB는 보존했으며 임시 컨테이너는 제거했다. 백업 식별자·해시와 데이터 보존 검증 해시는 [복원 검증 근거](../archive/plans/backend-architecture-restore-verification-20261008.md)에 남긴다.
+
+검증을 지속할 수 있도록 기존 CLI PostgreSQL 테스트도 ACTIVE fixture를 `pg_dump`/`pg_restore`로 별도 DB에 복원한 뒤 두 CLI를 실행하도록 강화했다. 모든 public 테이블·시퀀스가 원본과 같고 실행 후에도 보존되는지 검사한다. 새로운 업무 계약·Port·Adapter를 추가하지 않았다.
+
+- 원장 schema·대사·복원 CLI의 `workE2eTest` 집중 회귀 4개와 `workBenchmark -PworkBenchmarkEnforce=true` 2개 통과. 실패/오류/skip 0, queryLimitsEnforced=true. 이번 보완은 테스트 설정·테스트 코드·문서 변경이며 업무 코드·SQL·Flyway·트랜잭션·잠금은 바꾸지 않았다. 전체 PostgreSQL E2E 818개는 앞선 P6 성공 체크포인트를 사용하며 이번에는 전체 재실행하지 않았다.
+- 프론트 `npm run check` 통과. OpenAPI 재생성 성공(157 operations, 132 paths, 292 schemas), 생성 명세·TypeScript schema 차이 0. 기존 모듈·하위 기능 허용 방향과 Mutation 단일 Writer 검사가 포함된 전체 테스트 통과.
+- 기본 CI 재현성과 실제 백업 복원본 CLI 검증의 보류 항목을 모두 해소했다. 합의한 P0~P6 전환은 최종 완료이며 테스트된 업무 경로의 기능 회귀는 발견되지 않았다. 운영 서버 재배포는 이번 작업 범위가 아니다. 최종 검증 이후 변경은 완료 근거·현행 문서뿐이다.

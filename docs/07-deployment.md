@@ -45,6 +45,8 @@ Linux/macOS에서는 개발 서버를 한 번에 실행할 수 있다.
 ./scripts/dev-start.sh --frontend-production
 ```
 
+백엔드 검증은 `cd backend && ./gradlew check bootJar --no-daemon`을 사용한다. 전체 Spring·ArchUnit 테스트의 JVM heap은 기본 2 GiB이며 `-PbackendTestHeap=3g`처럼 변경할 수 있다. 이 값은 테스트 worker에만 적용되고 애플리케이션 실행 heap을 바꾸지 않는다. OOM은 즉시 비정상 종료해 CI가 정체되지 않도록 한다. 임시 Gradle init script는 필요하지 않다.
+
 ## 2. 환경 변수
 
 ### Backend
@@ -489,6 +491,8 @@ cd backend
 ```
 
 기동 검증의 Gradle task도 `farm/mutation/verification`의 CLI를 실행하며 writer 설정·startup guard는 `farm/mutation/config`가 소유한다. 접속 대상과 writer version은 앞의 복원본 접속 설정을 사용한다. 일반 서버에서 startup guard를 끄거나 원장 불일치를 강제 활성화로 우회하지 않는다. 실제 운영 재배포·복원은 최신 백업, 배포 후보, 데이터 보존 범위와 검증 결과를 확인하고 진행한다.
+
+CLI 복원 회귀는 `./gradlew workE2eTest --tests '*OrchidGroupLedgerCliPostgresE2ETest' --no-daemon`으로 실행한다. Testcontainers PostgreSQL에 구성한 ACTIVE 원장을 custom dump로 백업·복원한 뒤 두 CLI의 성공과 모든 public 테이블·시퀀스의 보존을 검사한다. 실제 운영 백업 복원본으로 수행한 [2026-10-08 검증 근거](archive/plans/backend-architecture-restore-verification-20261008.md)는 별도로 보관한다.
 
 ### 데모 환경
 
