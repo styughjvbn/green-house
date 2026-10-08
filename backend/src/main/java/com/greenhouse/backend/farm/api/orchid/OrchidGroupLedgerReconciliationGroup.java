@@ -1,6 +1,5 @@
-package com.greenhouse.backend.farm.application.orchid.mutation;
+package com.greenhouse.backend.farm.api.orchid;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
 import java.math.BigDecimal;
 
 public record OrchidGroupLedgerReconciliationGroup(

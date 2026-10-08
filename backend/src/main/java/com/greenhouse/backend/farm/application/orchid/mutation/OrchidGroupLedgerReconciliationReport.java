@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.orchid.mutation;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupLedgerReconciliationIssue;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupLedgerCoverageStatus;
 import java.time.Instant;
 import java.util.List;

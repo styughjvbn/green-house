@@ -571,3 +571,15 @@ Farm 사용 여부 단계 검증 결과:
 - 신규 Writer 구현/트랜잭션 회귀와 기존 단일 Writer·공개 값·inventory·integration, 판매 재고·Mutation 라우팅·경매 반환 집중 검증 통과.
 - 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과.
 - Engine 실행 본문·SQL·DB/트랜잭션 경계·잠금·수량 정책·HTTP 계약 변경 없음. OpenAPI/타입 재생성과 `workE2eTest` 미실행. 전체 검증 이후에는 이 ADR 결과만 추가했다.
+
+### 2026-10-08: 다섯 단계 진행 — 4. Farm 원장 대사 SPI
+
+- 기존 `OrchidGroupLedgerRehearsalInspector`는 `farm/spi/orchid`, 대상 group/issue record는 `farm/api/orchid`로 이동한다. snapshot은 1단계의 공개 순수 값을 그대로 사용한다. Farm이 대사 흐름을 소유하고 Sales가 자신의 allocation/movement 저장소로 정합성을 검사하는 실제 확장 계약이다.
+- Sales inspector가 기존 구현으로 SPI를 직접 구현하고 Farm 대사가 호출한다. 새 위임 Service/Adapter/Port/integration 없음. SPI/값의 필드·검증·issue 코드·메시지, 구현과 조회/대사 순서·readOnly/REPEATABLE_READ 트랜잭션은 동일하다. 원장을 자동 보정하지 않는다.
+- reviewed inventory는 대응 FQCN만 치환한다. 운영 CLI 진입점·mainClass·기동 검증·SQL·snapshot·단일 Writer 변경 없음. 공개 SPI/값에 Entity·Repository projection·HTTP 타입을 노출하지 않는다.
+
+4단계 검증 결과:
+
+- SPI와 group/issue class 본문은 package/import 외 동일하다. clean 집중 검증 통과: 대사·원장 우회 변경 탐지·보상/rollback·writer guard·판매 재고·공개 값·inventory·integration·단일 Writer.
+- 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과.
+- HTTP·SQL·트랜잭션 경계·DB·업무 판단 변경 없음. OpenAPI/타입 재생성과 `workE2eTest` 미실행. 운영 CLI 변경/실행 없음. 전체 검증 이후에는 이 ADR 결과만 추가했다.

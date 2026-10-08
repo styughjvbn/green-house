@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.document;
 
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationGroup;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationIssue;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerRehearsalInspector;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupLedgerReconciliationGroup;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupLedgerReconciliationIssue;
+import com.greenhouse.backend.farm.spi.orchid.OrchidGroupLedgerRehearsalInspector;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.repository.document.SalesInventoryMovementRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipItemAllocationRepository;
