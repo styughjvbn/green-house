@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.correction;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.greenhouse.backend.work.api.correction.WorkQuantityBalanceChange;
 import com.greenhouse.backend.work.dto.operation.WorkCorrectionAdjustmentResponse;
 import java.time.LocalDate;
 import java.util.List;

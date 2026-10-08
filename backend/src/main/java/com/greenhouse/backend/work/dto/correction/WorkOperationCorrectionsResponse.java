@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.dto.correction;
 
-import com.greenhouse.backend.work.application.correction.WorkQuantityBalance;
+import com.greenhouse.backend.work.api.correction.WorkQuantityBalance;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.dto.operation.WorkCorrectionDetailResponse;
 import java.util.List;

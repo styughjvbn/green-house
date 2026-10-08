@@ -1,4 +1,4 @@
-package com.greenhouse.backend.work.application.effect;
+package com.greenhouse.backend.work.api.effect;
 
 import java.util.UUID;
 

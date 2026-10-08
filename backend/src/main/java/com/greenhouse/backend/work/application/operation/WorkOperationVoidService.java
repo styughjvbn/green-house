@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
@@ -10,7 +11,6 @@ import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
-import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationEligibilityResponse;

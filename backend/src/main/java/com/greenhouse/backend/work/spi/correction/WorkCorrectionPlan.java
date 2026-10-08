@@ -1,6 +1,8 @@
-package com.greenhouse.backend.work.application.correction;
+package com.greenhouse.backend.work.spi.correction;
 
-import com.greenhouse.backend.work.application.effect.WorkEffectResults;
+import com.greenhouse.backend.work.api.correction.StructureChangeMutationReferences;
+import com.greenhouse.backend.work.api.correction.WorkQuantityBalanceChange;
+import com.greenhouse.backend.work.api.effect.WorkEffectResults;
 import java.util.List;
 
 /** Values prepared under Farm locks, retained in the calling Work transaction. */

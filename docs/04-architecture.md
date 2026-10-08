@@ -296,6 +296,8 @@ Persistence 조회 규칙:
 
 입고 대상 계획·포트 취소·구조 변경 취소·구조 변경 선잠금의 확장 계약도 `work/spi/{target,operation}`에서 Work가 소유한다. Farm 구현은 `farm/inbound/integration`과 `farm/transformation/integration`에 두며, 기존 application 유스케이스와 같은 트랜잭션에서 처리한다. 구조 변경·포트 취소의 보상 Mutation과 이력·접수 소유권, 잠금 순서는 유지한다.
 
+효과 실행·보정 확장 계약은 `work/spi/{effect,correction}`, 공유 명령·결과·enum은 `work/api/{effect,correction,target}`에 둔다. Entity에서 효과 context로 변환하는 factory와 처리·저장·codec 구현은 Work application 내부에 남긴다. 기존 Farm 효과 handler는 SPI를 직접 구현하고, Farm 보정 adapter는 `farm/transformation/integration`에서 잠금·사용 여부 검증·Mutation 적용을 수행한다. 별도 전달 계층을 추가하지 않는다.
+
 #### integration 생성 기준
 
 `integration`은 선택적인 연동 구현 위치다. 모든 기능에 생성하거나 application·domain·repository·web와 함께 필수 계층으로 취급하지 않는다.

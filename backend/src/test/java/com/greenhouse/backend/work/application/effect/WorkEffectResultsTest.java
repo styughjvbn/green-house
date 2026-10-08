@@ -2,7 +2,8 @@ package com.greenhouse.backend.work.application.effect;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.api.effect.WorkEffectResults;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;

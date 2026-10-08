@@ -1,8 +1,8 @@
 package com.greenhouse.backend.farm.application.transformation;
 
-import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
-import com.greenhouse.backend.work.application.effect.WorkEffectContext;
-import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectContext;
+import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

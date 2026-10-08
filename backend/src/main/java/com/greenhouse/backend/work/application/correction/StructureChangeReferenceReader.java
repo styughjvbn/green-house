@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.correction;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.api.correction.StructureChangeMutationReferences;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;

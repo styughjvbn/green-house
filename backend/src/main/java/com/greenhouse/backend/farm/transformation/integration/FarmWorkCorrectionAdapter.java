@@ -1,4 +1,4 @@
-package com.greenhouse.backend.farm.application.transformation;
+package com.greenhouse.backend.farm.transformation.integration;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
@@ -13,14 +13,14 @@ import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidStockCountRepository;
-import com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput;
+import com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput;
+import com.greenhouse.backend.work.api.correction.WorkCorrectionCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectResults;
+import com.greenhouse.backend.work.api.effect.WorkMutationLink;
 import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
-import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
-import com.greenhouse.backend.work.application.correction.WorkCorrectionPlan;
-import com.greenhouse.backend.work.application.correction.WorkCorrectionPort;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionQuantityService;
-import com.greenhouse.backend.work.application.effect.WorkEffectResults;
-import com.greenhouse.backend.work.application.effect.WorkMutationLink;
+import com.greenhouse.backend.work.spi.correction.WorkCorrectionPlan;
+import com.greenhouse.backend.work.spi.correction.WorkCorrectionPort;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;

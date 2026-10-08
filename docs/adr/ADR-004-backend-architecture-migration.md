@@ -254,3 +254,28 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - 관련 integration 생성 기준·모듈 경계·공개 값 계약·단일 Writer·상세/그래프·입고 계획·작업 취소·잠금 adapter 집중 테스트 통과.
 - 전체 `test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 프론트엔드 `npm run check` 통과.
 - 프로덕션 코드·HTTP/OpenAPI·DB·트랜잭션·잠금·Mutation 쓰기 경로 변경 없음. OpenAPI 재생성 및 `workE2eTest`는 이번 검토에서 실행하지 않았다. 전체 검증 이후에는 문서의 검증 기록만 추가했다.
+
+
+### 2026-10-08: P2 효과 실행·보정 공개 계약 전환
+
+| 기존 위치·책임 | 확정 위치 | 판단 |
+|---|---|---|
+| Work application의 효과 handler 계약 | `work/spi/effect` | Work가 호출하고 Farm이 구현하는 기존 의존 역전 보존 |
+| Work application의 보정 Port·준비 결과 | `work/spi/correction` | 동일 Work 트랜잭션에서 Farm 잠금을 유지하며 prepare/apply 실행 |
+| 효과·보정 명령, 입력, 결과, Mutation 연결 값 | `work/api/{effect,correction}` | 공유 값만 공개. sealed payload와 허용 구현, typed 결과는 함께 이동 |
+| 효과 종류·결과 목적·대상 참조 종류 enum | `work/api/{effect,target}` | 공개 시그니처가 내부 domain enum에 의존하지 않도록 이동. 문자열 값 유지 |
+| Farm 보정 adapter | `farm/transformation/integration` | 실제 Work SPI 구현. 대상 검증·잠금·재고 실사/사용 여부 검사·Mutation 적용 책임 보유 |
+
+- 변경 전: Work processor/correction service → Work application 확장 계약 → Farm handler/보정 adapter. 변경 후: 같은 소비자 → Work 공개 SPI·API 값 → 동일 Farm 구현. 컴파일 의존은 계속 `Farm → Work`다.
+- 보정 adapter는 기존 클래스를 이동했으며 신규 위임 계층은 없다. 기존 Farm 효과 handler도 공개 SPI를 직접 구현한다. 허용된 Work application 호출을 전달하는 Adapter나 새 Port는 추가하지 않았다.
+- Entity → effect context 변환은 공개 값에서 내부 processor의 private factory로 옮겼다. 동일 필드·null 처리·과거 location snapshot의 불변 복사 규칙을 유지한다. processor/store/codec 및 보정 계산·참조 조회 구현은 내부에 남기며, 외부의 기존 직접 참조는 후속 API 정리 대상이다.
+- 기존 MANDATORY/쓰기 트랜잭션, 잠금·검증·Mutation 호출 순서, 단일 Writer, 저장 JSON 필드 존재 여부·지문·Receipt 재전송 의미를 유지한다. 클래스명·Bean 이름·HTTP schema 이름과 validation도 유지한다. 이동 대상의 저장/설정용 FQCN 문자열이나 다형 JSON 타입 식별자는 확인되지 않았다.
+- 검토된 inventory는 이동 FQCN만 치환했다. domain에서 API로 이동한 기존 enum 참조 3개 TYPE와 결과 목적 enum의 `values()`·`ordinal()` 2개 METHOD는 공개 계약 검사에 새로 포함되므로 개별 검토해 추가했다. 신규 업무 호출은 없다.
+
+검증 결과:
+
+- architecture·공개 값 계약·integration·효과 processor/store·저장 JSON·보정·지문·입고/구조 변경 mapper 집중 검증 통과. enum 이동으로 검사 대상이 된 기존 참조는 개별 확인 후 inventory 재검증했다.
+- `clean test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 이전 FQCN 클래스 잔존 없음. 이동한 26개 선언의 본문은 동일하며, context의 Entity factory만 동일 필드 변환으로 내부 processor에 옮겼다.
+- 프론트엔드 `npm run check` 통과. OpenAPI 재생성 성공: 157 operations, 132 paths, 292 schemas; 생성 명세 차이 없음. 프론트 타입 재생성은 계약 차이가 없어 실행하지 않았다.
+- SQL·Flyway·트랜잭션 경계·잠금·수량 계산·Mutation 로직 변경이 없어 `workE2eTest`는 실행하지 않았다. E2E 소스 import도 변경했으며 `compileTestJava`로 컴파일했다.
+- 전체 검증 이후 변경은 이 ADR의 검증 기록뿐이다. 후속 작업은 남은 Work 내부 구현의 외부 참조를 공개 API로 정리하며, 허용 API 호출은 직접 유지한다.

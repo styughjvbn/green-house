@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.domain.effect;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import jakarta.persistence.Column;

@@ -1,4 +1,4 @@
-package com.greenhouse.backend.work.application.effect;
+package com.greenhouse.backend.work.api.effect;
 
 /** Application inputs accepted by work execution; persistence JSON is a separate contract. */
 public sealed interface WorkEffectPayload

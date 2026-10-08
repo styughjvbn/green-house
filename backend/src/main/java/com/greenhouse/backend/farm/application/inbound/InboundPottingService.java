@@ -7,8 +7,8 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
-import com.greenhouse.backend.work.application.effect.WorkMutationLink;
+import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.effect.WorkMutationLink;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;

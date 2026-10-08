@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.domain.operation;
 
-import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
+import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;

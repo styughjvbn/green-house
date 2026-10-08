@@ -1,6 +1,11 @@
 package com.greenhouse.backend.work.application.effect;
 
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectContext;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.WorkEffectResults;
+import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.spi.effect.WorkEffectHandler;
 import java.util.List;
 import org.springframework.stereotype.Component;
 

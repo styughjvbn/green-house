@@ -1,4 +1,4 @@
-package com.greenhouse.backend.work.application.correction;
+package com.greenhouse.backend.work.api.correction;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;

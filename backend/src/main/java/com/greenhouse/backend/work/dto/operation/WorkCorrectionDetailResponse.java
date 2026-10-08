@@ -1,8 +1,8 @@
 package com.greenhouse.backend.work.dto.operation;
 
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.work.api.correction.WorkQuantityBalanceChange;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionResultDetails;
-import com.greenhouse.backend.work.application.correction.WorkQuantityBalanceChange;
 import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

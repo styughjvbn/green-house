@@ -1,3 +1,3 @@
-package com.greenhouse.backend.work.application.correction;
+package com.greenhouse.backend.work.api.correction;
 
 public record WorkQuantityBalanceChange(WorkQuantityBalance before, WorkQuantityBalance after) {}

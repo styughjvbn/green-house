@@ -1,9 +1,13 @@
 package com.greenhouse.backend.work.application.effect;
 
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectContext;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
+import com.greenhouse.backend.work.spi.effect.WorkEffectHandler;
 import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.List;
@@ -107,7 +111,7 @@ public class WorkEffectProcessor {
     WorkEffectKind effectKind = handler.effectKind();
 
     WorkEffectCommand routedCommand = command.withEffectKey(effectKey);
-    var context = WorkEffectContext.from(operation, target);
+    var context = contextFrom(operation, target);
     WorkExecutionResult result = handler.execute(context, routedCommand);
     var definition = WorkTypeDefinition.forCode(context.workTypeCode());
     if (definition.supportsStructureExecution()
@@ -118,5 +122,21 @@ public class WorkEffectProcessor {
     }
     return effectStore.save(
         operation, target, routedCommand, effectKey, sourceOrchidGroupIds, effectKind, result);
+  }
+
+  private static WorkEffectContext contextFrom(
+      WorkOperation operation, WorkOperationTarget target) {
+    return new WorkEffectContext(
+        operation.getId(),
+        operation.getWorkType().getCode(),
+        operation.getPlannedStartDate(),
+        operation.getMemo(),
+        target == null
+            ? null
+            : new WorkEffectContext.Target(
+                target.getTargetReferenceType(),
+                target.getOrchidGroupId(),
+                target.getInboundRecordId(),
+                target.getLocationSnapshot()));
   }
 }

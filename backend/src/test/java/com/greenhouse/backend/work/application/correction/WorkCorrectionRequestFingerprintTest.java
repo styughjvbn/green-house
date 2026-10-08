@@ -2,6 +2,8 @@ package com.greenhouse.backend.work.application.correction;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput;
+import com.greenhouse.backend.work.api.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
 import java.time.LocalDate;
 import java.util.List;

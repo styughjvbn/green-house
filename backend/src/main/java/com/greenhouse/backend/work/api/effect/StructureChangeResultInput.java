@@ -1,7 +1,6 @@
-package com.greenhouse.backend.work.application.effect;
+package com.greenhouse.backend.work.api.effect;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;

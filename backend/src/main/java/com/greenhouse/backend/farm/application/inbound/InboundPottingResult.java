@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.application.inbound;
 
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
-import com.greenhouse.backend.work.application.effect.WorkMutationLink;
+import com.greenhouse.backend.work.api.effect.WorkMutationLink;
 import java.util.List;
 
 public record InboundPottingResult(

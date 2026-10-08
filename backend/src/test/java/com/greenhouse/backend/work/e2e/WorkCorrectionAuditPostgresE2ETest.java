@@ -13,12 +13,12 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
-import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
-import com.greenhouse.backend.work.application.correction.WorkCorrectionPlan;
-import com.greenhouse.backend.work.application.correction.WorkCorrectionPort;
+import com.greenhouse.backend.work.api.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationVoidService;
+import com.greenhouse.backend.work.spi.correction.WorkCorrectionPlan;
+import com.greenhouse.backend.work.spi.correction.WorkCorrectionPort;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;

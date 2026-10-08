@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.domain.target;
 
+import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

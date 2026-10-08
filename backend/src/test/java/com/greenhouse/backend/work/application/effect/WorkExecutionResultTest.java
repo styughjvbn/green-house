@@ -4,9 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.greenhouse.backend.work.application.correction.WorkQuantityBalance;
-import com.greenhouse.backend.work.application.correction.WorkQuantityBalanceChange;
-import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.api.correction.WorkQuantityBalance;
+import com.greenhouse.backend.work.api.correction.WorkQuantityBalanceChange;
+import com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectResultDetails;
+import com.greenhouse.backend.work.api.effect.WorkEffectResults;
+import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.api.effect.WorkMutationLink;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;

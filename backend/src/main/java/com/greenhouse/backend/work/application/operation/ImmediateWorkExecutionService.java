@@ -2,8 +2,8 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
-import com.greenhouse.backend.work.application.effect.WorkEffectPayload;
+import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectPayload;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
 import com.greenhouse.backend.work.application.target.WorkTargetResolver;

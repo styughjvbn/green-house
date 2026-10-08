@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.domain.operation;
 
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor

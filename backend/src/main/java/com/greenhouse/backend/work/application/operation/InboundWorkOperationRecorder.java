@@ -1,11 +1,11 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
-import com.greenhouse.backend.work.application.effect.WorkEffectResults;
+import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.WorkEffectResults;
+import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.api.effect.WorkMutationLink;
 import com.greenhouse.backend.work.application.effect.WorkEffectStore;
-import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.application.effect.WorkMutationLink;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkType;

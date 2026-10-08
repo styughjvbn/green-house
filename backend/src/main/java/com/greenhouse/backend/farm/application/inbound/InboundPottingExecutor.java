@@ -1,14 +1,14 @@
 package com.greenhouse.backend.farm.application.inbound;
 
-import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectContext;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.WorkEffectResults;
+import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec;
-import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
-import com.greenhouse.backend.work.application.effect.WorkEffectContext;
-import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
-import com.greenhouse.backend.work.application.effect.WorkEffectResults;
-import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
+import com.greenhouse.backend.work.spi.effect.WorkEffectHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

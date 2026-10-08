@@ -3,8 +3,8 @@ package com.greenhouse.backend.work.application.effect;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;

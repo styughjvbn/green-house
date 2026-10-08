@@ -1,4 +1,4 @@
-package com.greenhouse.backend.work.application.correction;
+package com.greenhouse.backend.work.api.correction;
 
 import java.util.List;
 

@@ -11,8 +11,8 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedger
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
-import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
-import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
+import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.effect.InboundPottingResultInput;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;

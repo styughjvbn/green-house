@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.effect.InboundPottingResultInput;
 import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
 import java.math.BigDecimal;
 import java.time.LocalDate;

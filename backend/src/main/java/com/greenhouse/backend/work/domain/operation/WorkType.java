@@ -1,8 +1,8 @@
 package com.greenhouse.backend.work.domain.operation;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

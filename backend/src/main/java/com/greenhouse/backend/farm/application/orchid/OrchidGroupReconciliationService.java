@@ -3,7 +3,7 @@ package com.greenhouse.backend.farm.application.orchid;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupReconciliationRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.work.application.effect.WorkReconciliationCommand;
+import com.greenhouse.backend.work.api.effect.WorkReconciliationCommand;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;

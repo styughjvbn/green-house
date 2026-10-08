@@ -2,6 +2,8 @@ package com.greenhouse.backend.work.application.effect;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.effect.InboundPottingResultInput;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;

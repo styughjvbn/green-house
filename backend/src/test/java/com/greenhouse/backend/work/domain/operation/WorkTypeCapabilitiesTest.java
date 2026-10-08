@@ -2,8 +2,8 @@ package com.greenhouse.backend.work.domain.operation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;

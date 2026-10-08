@@ -1,7 +1,8 @@
 package com.greenhouse.backend.work.application.correction;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.work.application.effect.WorkEffectResults;
+import com.greenhouse.backend.work.api.correction.WorkCorrectionCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.operation.WorkCommandReceipts;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
 import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
@@ -12,6 +13,8 @@ import com.greenhouse.backend.work.dto.operation.WorkCorrectionDetailResponse;
 import com.greenhouse.backend.work.repository.WorkCorrectionReceiptRepository;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.spi.correction.WorkCorrectionPlan;
+import com.greenhouse.backend.work.spi.correction.WorkCorrectionPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

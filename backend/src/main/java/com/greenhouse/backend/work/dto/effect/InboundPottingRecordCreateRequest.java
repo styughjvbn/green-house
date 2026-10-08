@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.dto.effect;
 
-import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;

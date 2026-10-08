@@ -1,4 +1,4 @@
-package com.greenhouse.backend.work.application.correction;
+package com.greenhouse.backend.work.api.correction;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

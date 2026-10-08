@@ -1,7 +1,6 @@
-package com.greenhouse.backend.work.application.effect;
+package com.greenhouse.backend.work.api.effect;
 
-import com.greenhouse.backend.work.application.correction.WorkQuantityBalanceChange;
-import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.api.correction.WorkQuantityBalanceChange;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;

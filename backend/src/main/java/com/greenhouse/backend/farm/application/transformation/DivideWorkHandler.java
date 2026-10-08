@@ -1,12 +1,12 @@
 package com.greenhouse.backend.farm.application.transformation;
 
-import com.greenhouse.backend.work.application.effect.LegacyRepotCommand;
-import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
-import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
-import com.greenhouse.backend.work.application.effect.WorkEffectContext;
-import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
-import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.LegacyRepotCommand;
+import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectContext;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.spi.effect.WorkEffectHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

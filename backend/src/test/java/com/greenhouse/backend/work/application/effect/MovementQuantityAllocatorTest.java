@@ -2,7 +2,10 @@ package com.greenhouse.backend.work.application.effect;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.api.effect.StructureChangeResultInput;
+import com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.api.effect.StructureChangeSourceInput;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
