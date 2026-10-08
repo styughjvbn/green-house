@@ -3,12 +3,12 @@ package com.greenhouse.backend.work.application.effect;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.greenhouse.backend.work.api.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,8 +46,7 @@ class StructureChangeLineageQueryServiceTest {
     var views = service.findByOrchidGroupId(11L);
     assertThat(views)
         .hasSize(count)
-        .allSatisfy(
-            view -> assertThat(view.structureType()).isEqualTo(WorkTypeDefinition.MOVEMENT));
+        .allSatisfy(view -> assertThat(view.structureTypeCode()).isEqualTo("MOVEMENT"));
     verify(repository)
         .findByOrchidGroupIdOrderByWorkAppliedEffectAppliedAtDescWorkAppliedEffectIdDesc(11L);
     verify(repository)
@@ -81,12 +80,32 @@ class StructureChangeLineageQueryServiceTest {
         .singleElement()
         .satisfies(
             view -> {
-              assertThat(view.structureType()).isEqualTo(WorkTypeDefinition.REPOT);
+              assertThat(view.structureTypeCode()).isEqualTo("REPOT");
               assertThat(view.sources())
                   .singleElement()
                   .satisfies(source -> assertThat(source.quantity()).isEqualTo(5));
             });
     verify(operation, never()).getWorkType();
+  }
+
+  @Test
+  void decodedTypePreservesStoredHandlerAndStaysOutOfJson() {
+    when(operation.getId()).thenReturn(91L);
+    var effect = effect(1L, "MOVE", "EXECUTION:1", false);
+    var links =
+        List.of(new WorkEffectOrchidGroup(effect, 11L, WorkEffectOrchidGroupRelationType.SOURCE));
+    when(repository.findByOrchidGroupIdOrderByWorkAppliedEffectAppliedAtDescWorkAppliedEffectIdDesc(
+            11L))
+        .thenReturn(links);
+    when(repository.findByWorkAppliedEffectIdInOrderByWorkAppliedEffectIdAscIdAsc(any()))
+        .thenReturn(links);
+
+    var view = service.findByOrchidGroupId(11L).getFirst();
+    assertThat(view.structureTypeCode()).isEqualTo("MOVEMENT");
+    var json = JsonMapper.builder().findAndAddModules().build().valueToTree(view);
+    assertThat(json.get("handlerCode").asText()).isEqualTo("MOVE");
+    assertThat(json.has("structureTypeCode")).isFalse();
+    assertThat(json.has("structureType")).isFalse();
   }
 
   private WorkAppliedEffect effect(Long id, String handler, String key, boolean sourceRows) {

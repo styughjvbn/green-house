@@ -4,6 +4,9 @@ import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec
 import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.resultQuantities;
 import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.sourceQuantities;
 
+import com.greenhouse.backend.work.api.effect.StructureChangeLineageEffectView;
+import com.greenhouse.backend.work.api.effect.StructureChangeLineageGroupView;
+import com.greenhouse.backend.work.api.effect.StructureChangeLineageQueryApi;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
@@ -22,10 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-public class StructureChangeLineageQueryService {
+public class StructureChangeLineageQueryService implements StructureChangeLineageQueryApi {
 
   private final WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
 
+  @Override
   public List<StructureChangeLineageEffectView> findByOrchidGroupId(Long orchidGroupId) {
     Map<Long, WorkAppliedEffect> effectsById =
         effectOrchidGroupRepository
@@ -83,7 +87,15 @@ public class StructureChangeLineageQueryService {
         integerValue(effect.getResultDetails().get("lossQuantity")),
         integerValue(effect.getResultDetails().get("increaseQuantity")),
         groups(links, WorkEffectOrchidGroupRelationType.SOURCE, sourceQuantities),
-        groups(links, WorkEffectOrchidGroupRelationType.RESULT, resultQuantities));
+        groups(links, WorkEffectOrchidGroupRelationType.RESULT, resultQuantities),
+        structureTypeCode(effect.getHandlerCode()));
+  }
+
+  private String structureTypeCode(String handlerCode) {
+    return WorkTypeDefinition.forStoredStructureHandler(handlerCode)
+        .orElseThrow(
+            () -> new IllegalStateException("구조 변경 계보의 저장 handler를 해석할 수 없습니다: " + handlerCode))
+        .name();
   }
 
   private List<StructureChangeLineageGroupView> groups(

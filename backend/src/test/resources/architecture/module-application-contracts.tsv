@@ -259,6 +259,17 @@ METHOD	com.greenhouse.backend.work.api.effect.StructureChangeCommand.idempotency
 METHOD	com.greenhouse.backend.work.api.effect.StructureChangeCommand.memo()
 METHOD	com.greenhouse.backend.work.api.effect.StructureChangeCommand.results()
 METHOD	com.greenhouse.backend.work.api.effect.StructureChangeCommand.sources()
+METHOD	com.greenhouse.backend.work.api.effect.StructureChangeLineageEffectView.appliedAt()
+METHOD	com.greenhouse.backend.work.api.effect.StructureChangeLineageEffectView.id()
+METHOD	com.greenhouse.backend.work.api.effect.StructureChangeLineageEffectView.increaseQuantity()
+METHOD	com.greenhouse.backend.work.api.effect.StructureChangeLineageEffectView.lossQuantity()
+METHOD	com.greenhouse.backend.work.api.effect.StructureChangeLineageEffectView.results()
+METHOD	com.greenhouse.backend.work.api.effect.StructureChangeLineageEffectView.sources()
+METHOD	com.greenhouse.backend.work.api.effect.StructureChangeLineageEffectView.structureTypeCode()
+METHOD	com.greenhouse.backend.work.api.effect.StructureChangeLineageEffectView.workOperationId()
+METHOD	com.greenhouse.backend.work.api.effect.StructureChangeLineageGroupView.orchidGroupId()
+METHOD	com.greenhouse.backend.work.api.effect.StructureChangeLineageGroupView.quantity()
+METHOD	com.greenhouse.backend.work.api.effect.StructureChangeLineageQueryApi.findByOrchidGroupId(java.lang.Long)
 METHOD	com.greenhouse.backend.work.api.effect.StructureChangeResultInput.ageYear()
 METHOD	com.greenhouse.backend.work.api.effect.StructureChangeResultInput.attributeSourceOrchidGroupId()
 METHOD	com.greenhouse.backend.work.api.effect.StructureChangeResultInput.bedZoneId()
@@ -351,17 +362,6 @@ METHOD	com.greenhouse.backend.work.api.target.WorkTargetSelection.sourceScopeId(
 METHOD	com.greenhouse.backend.work.api.target.WorkTargetSelection.sourceScopeType()
 METHOD	com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec.decode(java.lang.Long, java.util.Map)
 METHOD	com.greenhouse.backend.work.application.effect.MovementQuantityAllocator.allocateMovedBySource(com.greenhouse.backend.work.api.effect.StructureChangeCommand)
-METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.appliedAt()
-METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.id()
-METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.increaseQuantity()
-METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.lossQuantity()
-METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.results()
-METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.sources()
-METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.structureType()
-METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.workOperationId()
-METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageGroupView.orchidGroupId()
-METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageGroupView.quantity()
-METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageQueryService.findByOrchidGroupId(java.lang.Long)
 METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector.inspect()
 METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference.changesGroups()
 METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference.correlationId()
@@ -458,6 +458,9 @@ TYPE	com.greenhouse.backend.work.api.effect.InboundPottingResultInput
 TYPE	com.greenhouse.backend.work.api.effect.LegacyRepotCommand
 TYPE	com.greenhouse.backend.work.api.effect.LegacyRepotCommand$Result
 TYPE	com.greenhouse.backend.work.api.effect.StructureChangeCommand
+TYPE	com.greenhouse.backend.work.api.effect.StructureChangeLineageEffectView
+TYPE	com.greenhouse.backend.work.api.effect.StructureChangeLineageGroupView
+TYPE	com.greenhouse.backend.work.api.effect.StructureChangeLineageQueryApi
 TYPE	com.greenhouse.backend.work.api.effect.StructureChangeResultInput
 TYPE	com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose
 TYPE	com.greenhouse.backend.work.api.effect.StructureChangeSourceInput
@@ -495,9 +498,6 @@ TYPE	com.greenhouse.backend.work.api.target.WorkTargetReferenceType
 TYPE	com.greenhouse.backend.work.api.target.WorkTargetSelection
 TYPE	com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec
 TYPE	com.greenhouse.backend.work.application.effect.MovementQuantityAllocator
-TYPE	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView
-TYPE	com.greenhouse.backend.work.application.effect.StructureChangeLineageGroupView
-TYPE	com.greenhouse.backend.work.application.effect.StructureChangeLineageQueryService
 TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector
 TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport
 TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference

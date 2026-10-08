@@ -308,6 +308,8 @@ Farm에서 필요한 구조 변경 참조·과거 수량 수지 조회와 보정
 
 Farm의 즉시 작업 이력 생성과 작업 단건 조회는 Work 공개 API를 직접 호출한다. 공개 작업·대상·진행 값과 상태/action/workflow enum은 `work/api/{operation,target}`에 두며, Entity·현재 입고 값·저장 JSON을 조합하는 factory는 Work application 내부에 둔다. 응답 schema·시간대 변환·capability 판단·진행 계산·Receipt 지문과 replay는 기존 규칙을 유지한다.
 
+구조 변경 계보는 Work 공개 조회 API의 저장 효과·원본/결과 값으로 조합한다. 저장 handler 별칭의 해석은 Work 내부 정의 한 곳에서 수행하고 Farm에는 유형 코드만 전달한다. Work 저장소·codec·정책 enum은 공개 값에서 노출하지 않으며, 기존 계보 JSON·두 번의 일괄 조회·역사 시점 해석을 유지한다.
+
 #### integration 생성 기준
 
 `integration`은 선택적인 연동 구현 위치다. 모든 기능에 생성하거나 application·domain·repository·web와 함께 필수 계층으로 취급하지 않는다.

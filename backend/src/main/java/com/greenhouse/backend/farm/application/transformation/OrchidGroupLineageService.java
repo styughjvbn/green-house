@@ -12,7 +12,7 @@ import com.greenhouse.backend.farm.dto.transformation.OrchidGroupLineageResponse
 import com.greenhouse.backend.farm.dto.transformation.OrchidGroupLineageTransformationResponse;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
-import com.greenhouse.backend.work.application.effect.StructureChangeLineageQueryService;
+import com.greenhouse.backend.work.api.effect.StructureChangeLineageQueryApi;
 import java.time.Clock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -31,7 +31,7 @@ public class OrchidGroupLineageService {
 
   private final OrchidGroupRepository orchidGroupRepository;
 
-  private final StructureChangeLineageQueryService structureChangeLineageQueryService;
+  private final StructureChangeLineageQueryApi structureChangeLineageQueryService;
 
   private final StructureChangeStrategyRegistry strategyRegistry;
 
@@ -88,7 +88,7 @@ public class OrchidGroupLineageService {
                 view ->
                     new OrchidGroupLineageTransformationResponse(
                         view.id(),
-                        strategyRegistry.get(view.structureType().name()).lineageType(),
+                        strategyRegistry.get(view.structureTypeCode()).lineageType(),
                         view.workOperationId(),
                         view.sources().stream().mapToInt(group -> value(group.quantity())).sum(),
                         view.results().stream().mapToInt(group -> value(group.quantity())).sum(),

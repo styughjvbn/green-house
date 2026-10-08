@@ -433,3 +433,28 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - 전체 `test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 프론트엔드 `npm run check` 통과.
 - 서비스 메서드 본문·트랜잭션 annotation은 동일하다. Controller 요청/응답·validation·schema 변경이 없어 OpenAPI·프론트 타입은 재생성하지 않았다.
 - SQL·DB 제약·트랜잭션 경계·잠금·수량/상태 처리 변경이 없어 `workE2eTest`는 실행하지 않았다. 전체 검증 이후 변경은 이 ADR의 검증 기록뿐이다.
+
+
+### 2026-10-08: 두 단계 진행 — 포트 실행·계보 조회의 2단계
+
+| 소비자·책임 | 변경 전 | 변경 후 | 이유 |
+|---|---|---|---|
+| Farm 난 묶음 계보 조합 | `work/application/effect/StructureChangeLineageQueryService` | `work/api/effect/StructureChangeLineageQueryApi` | Work의 효과/연결 저장소·JSON codec을 숨기고 저장된 사실 값만 제공 |
+| 효과·원본/결과 계보 값 | Work application effect | `work/api/effect` | 두 record를 공개 값 계약으로 이동 |
+| 저장 handler → 구조 변경 유형 | 공개 값이 내부 `WorkTypeDefinition`을 반환 | Work 내부 조회 구현이 해석한 유형 코드 값 | 정책 enum 누출 제거. 기존 authoritative decoder와 별칭 해석 그대로 사용 |
+
+- 기존 Work readOnly service가 조회 API를 직접 구현하고 Farm이 직접 호출한다. 새 전달 Service·Adapter·Port·integration 패키지는 없다. Work의 Farm 직접 의존도 추가하지 않는다.
+- 계보 효과 값에 JSON/schema에서 숨긴 유형 코드를 전달한다. 기존 `structureType()` 정책 enum 반환 메서드를 제거하고 Farm의 `structureType().name()` 사용을 해당 코드 접근으로 치환했다. 저장 handler 문자열과 기존 JSON 필드·schema 이름은 유지한다. 공개 값에 내부 domain·Repository·codec 의존이 없다.
+- 기존 `WorkTypeDefinition.forStoredStructureHandler()`가 코드 해석을 계속 소유한다. MOVE/MOVEMENT 등 저장 별칭이나 조건을 Farm에 복제하지 않는다. 현재 WorkType Entity를 읽어 과거 유형을 복원하지 않는다.
+- 효과 조회 → 효과 ID 집합의 연결 일괄 조회, source/result 수량의 저장 JSON 보완·순서·중복 제거·분류/제외 조건, Farm 난 묶음 일괄 hydration·기존 계보 제외·표시 시간대 변환은 동일하다. 타입 코드 계산 외 SQL·조회/잠금·트랜잭션 annotation·Mutation Writer 변경 없음.
+- reviewed inventory는 API/값의 FQCN 치환과 실제 외부 접근 `structureType()` → `structureTypeCode()` 변경만 개별 반영한다. 새로운 업무 호출을 일괄 승인하지 않는다.
+- 기존 별칭 분류·무관 효과 제외·1개/20개 모두 두 번의 조회 회귀 검사를 유지한다. 새 JSON 회귀 검사는 canonical 코드가 저장 handler를 덮어쓰지 않고 JSON에 새 필드를 추가하지 않음을 확인한다.
+
+계보 조회 단계 검증 결과:
+
+- 계보 별칭/저장 source rows 분류·무관 효과 제외·1개/20개 모두 두 번의 일괄 조회, 새 JSON 회귀 검사, 계보·분갈이·분리/병합·공개 값·inventory·integration·단일 Writer 집중 검증 통과.
+- `clean test spotlessCheck` 통과: 777개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 프론트엔드 `npm run check` 통과. 이전 계보 값 FQCN 클래스 잔존 없음.
+- OpenAPI 재생성 성공: 157 operations, 132 paths, 292 schemas; 생성 명세 차이 없음. 프론트 타입은 계약 차이가 없어 재생성하지 않았다. 이동한 값의 설정·저장용 FQCN 문자열은 main/resources와 scripts에서 발견되지 않았다.
+- Work 공개 API의 application/domain/DTO/Repository import 없음. 계보의 SQL·일괄 조회 방식·저장 사실 해석·트랜잭션 설정은 유지했고, 추가 코드는 기존 decoder의 canonical 유형 값 전달과 JSON 비노출 검증이다.
+- DB·트랜잭션 경계·잠금·수량/상태 처리 변경이 없어 `workE2eTest`는 실행하지 않았다. 전체 검증 이후에는 이 ADR의 검증 기록만 추가했다.
+- 이번 두 단계 완료. 남은 Work application의 외부 참조는 포트 command codec·이동 수량 allocator·운영 대사 inspector/report다. 구현 책임과 공개 값 의존을 확인해 후속 두 단계로 정리한다.
