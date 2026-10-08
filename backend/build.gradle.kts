@@ -68,6 +68,10 @@ spotless {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	// Full Spring/ArchUnit suites exceed Gradle's default 512 MiB test worker heap.
+	maxHeapSize = providers.gradleProperty("backendTestHeap").orElse("2g").get()
+	// Report OOM immediately instead of leaving the worker's remote shutdown waiting.
+	jvmArgs("-XX:+ExitOnOutOfMemoryError")
 }
 
 tasks.named<Test>("test") {
