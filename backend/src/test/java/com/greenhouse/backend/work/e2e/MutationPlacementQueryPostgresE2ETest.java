@@ -8,7 +8,7 @@ import com.greenhouse.backend.farm.api.orchid.CreateOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import jakarta.persistence.EntityManagerFactory;
 import java.math.BigDecimal;

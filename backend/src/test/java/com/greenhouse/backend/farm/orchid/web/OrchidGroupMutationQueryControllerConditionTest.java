@@ -3,8 +3,8 @@ package com.greenhouse.backend.farm.orchid.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService;
+import com.greenhouse.backend.farm.mutation.query.OrchidGroupMutationGraphQueryService;
+import com.greenhouse.backend.farm.mutation.query.OrchidGroupMutationQueryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;

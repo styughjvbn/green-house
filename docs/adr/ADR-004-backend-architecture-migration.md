@@ -3,7 +3,7 @@
 - 상태: 승인 — 기존 소유권·의존 방향 유지, 단계적 전환 진행 중
 - 작성일: 2026-10-08, Asia/Seoul
 - 범위: 백엔드 패키지 배치, 공개 계약, 아키텍처 테스트 및 문서 전환
-- 진행: P2 공개 계약·P3 Sales·P4 Farm/Work 기능 우선 배치 완료. P5 Mutation·P6 최종 통합은 후속 작업.
+- 진행: P2 공개 계약·P3 Sales·P4 Farm/Work 기능 우선 배치·P5 Mutation 내부 분리 완료. P6 최종 통합은 후속 작업.
 - 관련 문서: [목표 설계](../green-house-backend-architecture-final.md), [현행 아키텍처](../04-architecture.md), [Sales 소유권 결정](ADR-003-sales-document-information-architecture.md)
 
 실제 소스와 아키텍처 테스트를 기준으로 전환 방향과 이유를 기록한다. 구현 완료를 의미하지 않는다.
@@ -761,3 +761,19 @@ P4 완료 검증 결과:
 - Work의 이전 계층 소스 0개. Farm 이전 계층 소스는 명시적 P5 Mutation 33개뿐이다. 이 범위 밖의 이전 class artifact는 0개다. Farm/Work/Sales application 구현의 다른 최상위 모듈 참조 각각 0개. Mutation 단일 Writer·CLI mainClass는 동일하다.
 - P4 시작 커밋과 대조해 Farm 189·Work 127 파일의 실행 본문은 package/import/JPQL 클래스 FQCN 외 동일하며, 모든 v1 필드 목록도 그대로다. 구조 변경 정책·수량/금액·입고/실행/취소·잠금·트랜잭션·SQL·DB 제약 변경 없음. `workE2eTest` 미실행. PostgreSQL 핵심 회귀는 P6 최종 검증 범위다.
 - 전체 검증 이후 변경은 이 ADR 결과와 문서 소스 링크뿐이다. P4 완료. 다음은 P5 Mutation 내부 재배치이며 최종 문서 통합/archive 이동은 P6에서 수행한다.
+
+### 2026-10-08: P5 — Mutation 내부 책임별 배치
+
+- 기존 33개를 engine 5, ledger 16(domain 7/repository 7/Recorder·결과 변환 2), query 3, verification 5, config 4로 이동한다. 소유 패키지 테스트 4개와 소비자·QueryDSL·JPQL/reflection·Gradle 두 CLI mainClass를 같은 이동표로 갱신한다. 공개 Writer/command/result·snapshot은 farm/api에 유지한다.
+- Engine의 상태 변경/생성/Repository 쓰기 유일성·MANDATORY·잠금 순서·schema version·지문·canonical snapshot·replay·revision·write fence·대사/기동 검증 실행 본문을 유지한다. Work SPI 구현과 기존 Farm/Work/Sales 업무 책임은 동일하다.
+- 분리로 Engine↔Ledger 접근에 필요한 Recorder/Change·결과 Factory의 기존 멤버만 public으로 연다. 새 API/Port/Adapter를 만들지 않으며 Recorder의 Mutation 밖 참조는 architecture 검사로 차단한다. 기존 단일 Writer 검사와 전체 공개 값 검사도 유지한다.
+- Farm의 마지막 이행 경로를 제거하고 기존 계층 루트 재도입을 차단한다. Gradle task 이름·보호 옵션·CLI 종료 코드/출력·읽기 전용 동작은 유지한다. 문서 통합/archive 이동은 P6에 남긴다.
+
+P5 완료 검증 결과:
+
+- clean 컴파일과 아키텍처·단일 Writer·지문/snapshot 호환·Mutation/원장 집중 검증 통과. 백엔드 전체 `test` 779개(실패·오류·skip 0), `spotlessCheck`, 프론트 `npm run check` 통과.
+- Testcontainers PostgreSQL에서 원장 schema·대사·CLI 회귀 4개 통과. 기존 ACTIVE 원장을 구성한 테스트 DB에서 이동한 두 CLI를 별도 JVM으로 실행하고 종료 코드·대사 결과·기동 검증과 난 묶음/원장 5개 테이블의 실행 전후 데이터 동일성을 확인했다. 실제 운영 백업 복원본 검증과 전체 PostgreSQL 핵심 회귀는 이번 실행 범위가 아니며 P6·운영 체크포인트에 남긴다.
+- P5 시작 커밋과 대조해 이동한 프로덕션 33개 파일의 실행 본문은 package/import/필요한 접근 범위 외 동일하며, 저장 JSON fixture도 그대로다. reviewed 공개 계약 inventory는 대응 FQCN만 갱신했고 승인 멤버를 추가하지 않았다.
+- Farm/Work/Sales 이전 계층의 프로덕션 소스와 Mutation 이전 FQCN 참조는 제거했다. 단일 Writer·트랜잭션·잠금·지문·snapshot·replay·revision·write fence와 기존 API/DB 정책은 유지한다. 새 integration/위임 Adapter/Port 없음.
+- OpenAPI 재생성 결과 157 operations/132 paths/292 schemas이며 전체 명세·slice 차이 0. 프론트 생성 타입 갱신은 필요하지 않다.
+- 전체 검증 이후 변경은 문서 완료 기록과 소스 링크뿐이다. 사용자 요청 범위인 P5까지 완료하며 P6 최종 문서 통합·archive 이동은 후속 작업으로 남긴다.

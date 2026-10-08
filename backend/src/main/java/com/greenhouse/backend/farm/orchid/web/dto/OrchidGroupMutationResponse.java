@@ -2,7 +2,7 @@ package com.greenhouse.backend.farm.orchid.web.dto;
 
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
+import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutation;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;

@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.orchid.web.dto;
 
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelation;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
+import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationRelation;
+import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationRelationType;
 
 public record OrchidGroupMutationRelationResponse(
     Long id,

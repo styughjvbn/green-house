@@ -2,8 +2,8 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelation;
+import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationRelation;
+import com.greenhouse.backend.farm.mutation.query.OrchidGroupMutationGraphQueryService;
 import com.greenhouse.backend.farm.transformation.domain.OrchidGroupLineage;
 import com.greenhouse.backend.work.correction.domain.WorkOperationCorrection;
 import com.greenhouse.backend.work.effect.domain.WorkAppliedEffect;

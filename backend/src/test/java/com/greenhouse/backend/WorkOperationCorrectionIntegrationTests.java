@@ -12,12 +12,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
+import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationRelationType;
+import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationRelationRepository;
+import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationRepository;
 import com.greenhouse.backend.farm.orchid.application.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupCreateRequest;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.farm.structure.domain.BedZone;
 import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
 import com.greenhouse.backend.farm.structure.domain.House;

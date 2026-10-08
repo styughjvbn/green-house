@@ -427,6 +427,8 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 ./gradlew orchidLedgerReconcile --args="--debug=false --logging.level.org.hibernate.SQL=OFF"
 ```
 
+Gradle task는 `farm/mutation/verification`의 대사 CLI를 실행한다. task 이름·옵션·종료 코드와 read-only 동작은 유지한다.
+
 명령은 데이터를 변경하지 않고 다음 조건을 전수 검사한다.
 
 - 최초 관측 그룹은 해당 coverage의 `BASELINE` Entry, 이후 생성 근거가 있는 그룹은
@@ -486,7 +488,7 @@ cd backend
 ./gradlew orchidLedgerStartupVerify
 ```
 
-접속 대상과 writer version은 앞의 복원본 접속 설정을 사용한다. 일반 서버에서 startup guard를 끄거나 원장 불일치를 강제 활성화로 우회하지 않는다. 실제 운영 재배포·복원은 최신 백업, 배포 후보, 데이터 보존 범위와 검증 결과를 확인하고 진행한다.
+기동 검증의 Gradle task도 `farm/mutation/verification`의 CLI를 실행하며 writer 설정·startup guard는 `farm/mutation/config`가 소유한다. 접속 대상과 writer version은 앞의 복원본 접속 설정을 사용한다. 일반 서버에서 startup guard를 끄거나 원장 불일치를 강제 활성화로 우회하지 않는다. 실제 운영 재배포·복원은 최신 백업, 배포 후보, 데이터 보존 범위와 검증 결과를 확인하고 진행한다.
 
 ### 데모 환경
 

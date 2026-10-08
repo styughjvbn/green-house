@@ -2,7 +2,7 @@ package com.greenhouse.backend.farm.orchid.web.dto;
 
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryKind;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryRole;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
+import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationEntry;
 
 public record OrchidGroupMutationEntryResponse(
     Long id,

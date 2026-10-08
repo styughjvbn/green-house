@@ -2,9 +2,9 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService;
+import com.greenhouse.backend.farm.mutation.query.OrchidGroupMutationGraphQueryService;
+import com.greenhouse.backend.farm.mutation.query.OrchidGroupMutationQueryService;
+import com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.effect.application.WorkOrchidGroupLedgerRehearsalInspector;

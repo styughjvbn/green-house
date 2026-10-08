@@ -7,7 +7,7 @@ import com.greenhouse.backend.farm.api.orchid.CorrectOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.api.orchid.CorrectOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.api.orchid.RelatedOrchidGroupMutations;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;

@@ -111,19 +111,9 @@ class ModularArchitectureTests {
   @Test
   void farmLayersAreGroupedByFeature() throws IOException {
     for (String role : List.of("application", "domain", "repository", "controller", "dto")) {
-      Path legacyRoot = SOURCE_ROOT.resolve("farm").resolve(role);
-      if (List.of("controller", "dto").contains(role)) {
-        assertThat(legacyRoot).doesNotExist();
-        continue;
-      }
-      for (Path source : javaSources(legacyRoot)) {
-        Path relative = legacyRoot.relativize(source);
-        assertThat(relative.getNameCount()).isGreaterThanOrEqualTo(3);
-        assertThat(relative.getName(0).toString()).isEqualTo("orchid");
-        assertThat(relative.getName(1).toString())
-            .as("Only the P5 Mutation subsystem remains in the legacy Farm layout: %s", source)
-            .isEqualTo("mutation");
-      }
+      assertThat(SOURCE_ROOT.resolve("farm").resolve(role))
+          .as("Farm no longer accepts the legacy role-first layout: %s", role)
+          .doesNotExist();
     }
   }
 

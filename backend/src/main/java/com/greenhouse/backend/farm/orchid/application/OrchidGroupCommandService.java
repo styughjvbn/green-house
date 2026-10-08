@@ -10,7 +10,7 @@ import com.greenhouse.backend.farm.api.orchid.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.api.orchid.UpdateOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupBatchUpdateRequest;

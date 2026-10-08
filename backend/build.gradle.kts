@@ -97,7 +97,7 @@ tasks.register<JavaExec>("orchidLedgerReconcile") {
 	description = "Runs the read-only OrchidGroup ledger rehearsal checks against a restored database."
 	dependsOn(tasks.named("classes"))
 	classpath = sourceSets["main"].runtimeClasspath
-	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationCli")
+	mainClass.set("com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerReconciliationCli")
 }
 
 tasks.register<JavaExec>("orchidLedgerStartupVerify") {
@@ -105,7 +105,7 @@ tasks.register<JavaExec>("orchidLedgerStartupVerify") {
 	description = "Runs Hibernate validation and the OrchidGroup ledger startup guard without HTTP."
 	dependsOn(tasks.named("classes"))
 	classpath = sourceSets["main"].runtimeClasspath
-	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerStartupVerificationCli")
+	mainClass.set("com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerStartupVerificationCli")
 }
 
 tasks.register<Test>("workE2eTest") {
@@ -122,6 +122,8 @@ tasks.register<Test>("workE2eTest") {
 		includeTags("work-e2e")
 	}
 	shouldRunAfter(tasks.named("test"))
+	systemProperty("greenhouse.cli.runtime-classpath", sourceSets["main"].runtimeClasspath.asPath)
+
 	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")
 }
 
