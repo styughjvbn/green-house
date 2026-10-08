@@ -63,7 +63,7 @@ Work의 작업 진행, Sales의 예약·출고 업무, Inbound의 입고 lifecyc
 
 ### F1. 엔진의 공통 절차가 반복되고 변경 순서가 메서드마다 다름 — P1
 
-근거: [MutationEngine](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEngine.java)의 `create`, `updateDetails`, `move`, `discard`, `correct`, `applyQuantityMutation`.
+근거: [MutationEngine](../../backend/src/main/java/com/greenhouse/backend/farm/mutation/engine/OrchidGroupMutationEngine.java)의 `create`, `updateDetails`, `move`, `discard`, `correct`, `applyQuantityMutation`.
 
 - fingerprint 계산, 잠금 전 replay, 잠금, 잠금 후 replay가 반복된다.
 - before/after snapshot, revision 증가, Mutation/Entry/Relation 조립이 여러 경로에 있다.
@@ -77,7 +77,7 @@ Work의 작업 진행, Sales의 예약·출고 업무, Inbound의 입고 lifecyc
 
 ### F2. 배치 생성의 조회·저장 순서가 JPA 자동 flush에 의존 — P0 확인, P1 개선
 
-근거: [MutationEngine](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEngine.java) `createMany:97`, `createFromInbound:138`, `createGroup:825`, `saveMutation:742`와 [OrchidPlacementPolicy](../../backend/src/main/java/com/greenhouse/backend/farm/structure/application/OrchidPlacementPolicy.java).
+근거: [MutationEngine](../../backend/src/main/java/com/greenhouse/backend/farm/mutation/engine/OrchidGroupMutationEngine.java) `createMany:97`, `createFromInbound:138`, `createGroup:825`, `saveMutation:742`와 [OrchidPlacementPolicy](../../backend/src/main/java/com/greenhouse/backend/farm/structure/application/OrchidPlacementPolicy.java).
 
 - 결과를 순회하며 기존 배치를 조회하고 그룹을 `save`한다. Mutation 저장과 fence context 설정은 루프 뒤의 `recordCreated`에서 수행한다.
 - 다음 결과의 배치 검증이 이전 결과 INSERT를 자동 flush하면 `ACTIVE` fence context 설정보다 실제 쓰기가 앞설 가능성이 있다.
@@ -122,7 +122,7 @@ Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각
 
 ### F5. typed command 내부에 다시 비정형 타입과 긴 인자 조합이 있음 — P1
 
-근거: [OrchidGroupMutationCommandFingerprint](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationCommandFingerprint.java) `calculate(Object):19`, [OrchidGroupMutationDetails](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationDetails.java), 엔진의 수량 처리 helper.
+근거: [OrchidGroupMutationCommandFingerprint](../../backend/src/main/java/com/greenhouse/backend/farm/mutation/engine/OrchidGroupMutationCommandFingerprint.java) `calculate(Object):19`, [OrchidGroupMutationDetails](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationDetails.java), 엔진의 수량 처리 helper.
 
 - command가 추가되어도 fingerprint 지원 누락은 컴파일 단계에서 드러나지 않는다.
 - 여러 곳에서 긴 positional constructor를 통해 같은 상태 정보를 옮긴다.
@@ -164,7 +164,7 @@ correction operation의 lazy loading도 함께 계측한다. 단순히 effect �
 
 ### F8. importer와 상시 대사의 수명·검증·조회 책임이 한 패키지에 혼재 — P1/P2
 
-근거: 당시 StateChainMigrationService(2026-10-06 제거), [LedgerReconciliationService](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupLedgerReconciliationService.java).
+근거: 당시 StateChainMigrationService(2026-10-06 제거), [LedgerReconciliationService](../../backend/src/main/java/com/greenhouse/backend/farm/mutation/verification/OrchidGroupLedgerReconciliationService.java).
 
 - importer에 입력 검증, source 해석, chain 검증, replay 검증, 적재, Work/Lineage 연결과 coverage 관리가 함께 있다.
 - importer의 `validateChains`와 대사의 `inspectLedger`가 연속 revision·snapshot·terminal 조건을 각각 해석한다.
