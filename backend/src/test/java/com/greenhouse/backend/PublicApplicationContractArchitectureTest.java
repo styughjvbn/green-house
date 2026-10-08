@@ -3,8 +3,8 @@ package com.greenhouse.backend;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.application.OrchidGroupReader;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.work.operation.application.WorkCommandReceipts;
 import com.greenhouse.backend.work.operation.application.WorkOperationSupport;
 import com.greenhouse.backend.work.operation.application.WorkRequestFingerprint;

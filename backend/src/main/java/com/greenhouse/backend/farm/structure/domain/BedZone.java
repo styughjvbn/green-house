@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.structure.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

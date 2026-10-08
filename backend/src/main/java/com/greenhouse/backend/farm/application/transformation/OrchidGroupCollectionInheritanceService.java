@@ -1,10 +1,10 @@
 package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
-import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
-import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
-import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionRepository;
+import com.greenhouse.backend.farm.collection.domain.OrchidGroupCollection;
+import com.greenhouse.backend.farm.collection.domain.OrchidGroupCollectionMember;
+import com.greenhouse.backend.farm.collection.repository.OrchidGroupCollectionMemberRepository;
+import com.greenhouse.backend.farm.collection.repository.OrchidGroupCollectionRepository;
 import java.time.Clock;
 import java.util.Collection;
 import java.util.List;

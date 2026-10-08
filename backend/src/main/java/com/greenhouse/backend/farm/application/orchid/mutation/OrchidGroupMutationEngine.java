@@ -35,13 +35,13 @@ import com.greenhouse.backend.farm.api.orchid.TransformOrchidGroupMutationSource
 import com.greenhouse.backend.farm.api.orchid.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshotFactory;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.structure.application.OrchidPlacementPolicy;
 import com.greenhouse.backend.farm.structure.domain.BedZone;
 import com.greenhouse.backend.farm.structure.repository.BedZoneRepository;

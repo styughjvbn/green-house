@@ -4,8 +4,8 @@ import static com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationCommandN
 import static com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationCommandNormalizer.normalizeText;
 import static com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationCommandNormalizer.requireText;
 
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
-import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroupStatusPolicy;
+import com.greenhouse.backend.farm.orchid.domain.PotSizeCode;
 import java.math.BigDecimal;
 
 public record OrchidGroupMutationDetails(

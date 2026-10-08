@@ -1,0 +1,19 @@
+package com.greenhouse.backend.farm.orchid.application;
+
+import java.math.BigDecimal;
+
+public record OrchidGroupAuditSnapshot(
+    Long varietyId,
+    Integer ageYear,
+    String potSize,
+    Integer quantity,
+    Long houseId,
+    Long physicalBedId,
+    Long zoneId,
+    BigDecimal startPosition,
+    BigDecimal endPosition,
+    String status,
+    String placementType,
+    Integer trayCount,
+    Boolean splitPlacementAllowed,
+    String memo) {}

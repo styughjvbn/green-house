@@ -19,7 +19,7 @@ import com.greenhouse.backend.farm.api.orchid.TransformOrchidGroupMutationSource
 import com.greenhouse.backend.farm.api.orchid.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.farm.structure.domain.BedZone;

@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupLedgerCoverage;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupLedgerCoverageStatus;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupLedgerCoverageRepository;
 import java.time.Instant;
 import java.time.LocalDate;

@@ -7,10 +7,10 @@ import com.greenhouse.backend.farm.application.transformation.OrchidGroupLineage
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineage;
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupResponse;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;

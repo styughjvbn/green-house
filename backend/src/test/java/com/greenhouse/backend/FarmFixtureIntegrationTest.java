@@ -1,7 +1,7 @@
 package com.greenhouse.backend;
 
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.material.domain.Material;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.structure.domain.BedZone;
 import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
 import com.greenhouse.backend.farm.structure.domain.House;

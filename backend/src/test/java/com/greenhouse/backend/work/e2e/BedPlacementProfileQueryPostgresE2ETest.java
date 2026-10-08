@@ -3,7 +3,7 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.structure.application.BedPlacementProfileService;
 import com.greenhouse.backend.farm.structure.domain.BedZoneCapacity;
 import com.greenhouse.backend.farm.structure.domain.PlacementCapacityMode;

@@ -2,9 +2,9 @@ package com.greenhouse.backend.farm.structure.application;
 
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupResponse;
 import com.greenhouse.backend.farm.structure.domain.BedZone;
 import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
 import com.greenhouse.backend.farm.structure.repository.BedZoneRepository;

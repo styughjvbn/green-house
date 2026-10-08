@@ -4,8 +4,8 @@ import static com.greenhouse.backend.work.e2e.PersistencePlanFixtures.BASE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.sales.auction.repository.AuctionProceedsRepository;
 import com.greenhouse.backend.sales.auction.repository.AuctionShipmentRepository;

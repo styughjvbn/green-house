@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.domain.inbound;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.variety.domain.Variety;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

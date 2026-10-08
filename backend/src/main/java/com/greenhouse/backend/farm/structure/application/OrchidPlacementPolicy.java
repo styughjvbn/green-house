@@ -1,8 +1,8 @@
 package com.greenhouse.backend.farm.structure.application;
 
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.orchid.OrchidPlacementRow;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.repository.OrchidPlacementRow;
 import com.greenhouse.backend.farm.structure.domain.BedZone;
 import java.math.BigDecimal;
 import java.math.RoundingMode;

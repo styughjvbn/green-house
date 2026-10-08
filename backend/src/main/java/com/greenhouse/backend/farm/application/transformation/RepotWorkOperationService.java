@@ -2,10 +2,10 @@ package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationResponse;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupResponse;
 import com.greenhouse.backend.work.api.operation.ImmediateWorkExecutionApi;
 import com.greenhouse.backend.work.api.operation.WorkOperationQueryApi;
 import com.greenhouse.backend.work.operation.domain.WorkTypeDefinition;

@@ -3,7 +3,7 @@ package com.greenhouse.backend.farm.dto.inbound;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecordAction;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;

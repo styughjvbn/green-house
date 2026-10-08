@@ -2,7 +2,7 @@ package com.greenhouse.backend.farm.application.orchid.mutation;
 
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationWorkOperationResponse;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupMutationWorkOperationResponse;
 import com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi;
 import java.util.Collection;
 import java.util.LinkedHashMap;

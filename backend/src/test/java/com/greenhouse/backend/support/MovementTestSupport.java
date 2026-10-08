@@ -1,8 +1,8 @@
 package com.greenhouse.backend.support;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupResponse;
 import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.api.effect.StructureChangeResultInput;
 import com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose;

@@ -10,8 +10,8 @@ import com.greenhouse.backend.farm.api.orchid.TransformOrchidGroupMutationResult
 import com.greenhouse.backend.farm.api.orchid.TransformOrchidGroupMutationSource;
 import com.greenhouse.backend.farm.api.orchid.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
 import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.api.effect.StructureChangeResultInput;
 import com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose;

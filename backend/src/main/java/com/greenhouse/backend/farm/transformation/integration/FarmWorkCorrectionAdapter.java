@@ -8,10 +8,10 @@ import com.greenhouse.backend.farm.api.orchid.CorrectOrchidGroupsMutationCommand
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.api.orchid.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.orchid.OrchidStockCountRepository;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroupStatusPolicy;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.repository.OrchidStockCountRepository;
 import com.greenhouse.backend.farm.spi.orchid.OrchidGroupUsageInspector;
 import com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput;
 import com.greenhouse.backend.work.api.correction.StructureChangeReferenceApi;

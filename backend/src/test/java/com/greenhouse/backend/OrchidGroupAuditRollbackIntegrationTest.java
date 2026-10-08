@@ -6,9 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 
 import com.greenhouse.backend.audit.application.AuditRecorder;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
+import com.greenhouse.backend.farm.orchid.application.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.structure.domain.BedZone;
 import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
 import com.greenhouse.backend.farm.structure.domain.House;

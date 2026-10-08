@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.domain.orchid.mutation;
 
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 
 public final class OrchidGroupStateSnapshotFactory {
 

@@ -8,12 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupBatchUpdateItem;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupBatchUpdateRequest;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.application.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.orchid.domain.PotSizeCode;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupBatchUpdateItem;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupBatchUpdateRequest;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.document.application.SalesSlipCreationService;

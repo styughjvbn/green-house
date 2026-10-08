@@ -31,7 +31,7 @@ class AnnotatedQueryTargetsTest {
   void qualifiedJpqlUsesTheEntityNameWithoutChangingItsCase() {
     assertThat(
             AnnotatedQueryTargets.names(
-                "select g from com.greenhouse.backend.farm.domain.orchid.OrchidGroup g join g.variety v",
+                "select g from com.greenhouse.backend.farm.orchid.domain.OrchidGroup g join g.variety v",
                 false))
         .contains("OrchidGroup")
         .doesNotContain("Variety");

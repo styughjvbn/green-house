@@ -129,7 +129,7 @@ demo
 - Entity 직접 상태 변경·생성자·Repository 쓰기는 Engine으로 한정하고 architecture test로 검사한다. 신규 업무 변경은 typed Engine command에 편입한다.
 - 과거 Work·Sales·Lineage 데이터와 기존 Flyway 이력은 보존한다. 실행 코드 제거와 복구 도구·데이터 보존 정책은 `features/orchid-group-mutation-transition.md`를 따른다.
 
-Farm 기준정보·구조는 `farm/{variety,material,structure}/{application,domain,repository,web}`로 이동했다. 다른 기능은 기존 기능 경계를 유지하며 순차 전환한다. HTTP DTO는 web/dto에 둔다. 저장소·Entity의 기존 Farm 내부 조회와 연관관계는 그대로 유지한다.
+Farm 기준정보·구조·난 묶음·그룹·현황은 `farm/{variety,material,structure,orchid,collection,status}/{application,domain,repository,web}`로 이동했다. 입고·구조 변경은 순차 전환하며 Mutation 내부는 P5에서 분리한다. HTTP DTO는 web/dto에 둔다. 저장소·Entity의 기존 Farm 내부 조회와 연관관계는 그대로 유지한다.
 
 ```text
 application|domain|repository|controller|dto/

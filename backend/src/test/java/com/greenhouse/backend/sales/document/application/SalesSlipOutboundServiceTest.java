@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
+import com.greenhouse.backend.farm.orchid.application.OrchidGroupReader;
 import com.greenhouse.backend.sales.api.document.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.document.domain.SalesSlip;

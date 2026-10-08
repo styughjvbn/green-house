@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.e2e;
 
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import jakarta.persistence.EntityManager;
 import java.sql.PreparedStatement;

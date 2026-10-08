@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.variety.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
+import com.greenhouse.backend.farm.orchid.domain.PotSizeCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

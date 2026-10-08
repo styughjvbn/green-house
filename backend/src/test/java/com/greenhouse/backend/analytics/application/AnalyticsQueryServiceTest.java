@@ -4,7 +4,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
+import com.greenhouse.backend.farm.status.application.FarmMetricsReader;
 import com.greenhouse.backend.sales.document.application.SalesMetricsReader;
 import com.greenhouse.backend.sales.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.sales.payment.application.PartnerBalanceService;

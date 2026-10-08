@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.dto.transformation;
 
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupResponse;
 import com.greenhouse.backend.work.api.operation.WorkOperationView;
 import java.util.List;
 

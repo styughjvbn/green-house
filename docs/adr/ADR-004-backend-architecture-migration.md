@@ -732,3 +732,11 @@ P3 완료 검증 결과:
 - Work의 Farm 직접 의존은 추가하지 않는다. 기존 Work → 공개 SPI 호출/Farm 구현, Farm → Work 공개 API 호출의 컴파일·runtime 방향을 유지한다. 최상위/MANDATORY/readOnly·Receipt 지문·snapshot·효과/보정 codec·batch flush·capability·오류 계약은 동일하다. 새 전달 Adapter/API/Port 없음.
 
 - Work 프로덕션 127개·같은 패키지 테스트 29개 이동. clean 컴파일과 Work 기능 단위 테스트·작업/입고 포트 통합·공개 값·의존 방향·inventory·단일 Writer 집중 검증 통과. Custom/Impl·JPQL constructor projection 새 FQCN과 v1 필드 fixture도 함께 갱신했다. 전체 검증은 P4 전체 이동 후 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E 미실행.
+
+### 2026-10-08: P4 — Farm 난 묶음·그룹·현황
+
+- Orchid/Collection/Status 구현·Entity·Repository·web/dto를 기능 우선으로 옮긴다. 기존 farm/api의 Reader/Writer/metrics 및 farm/spi 사용 여부·대사 계약, orchid/integration의 실제 Work SPI 구현은 유지한다.
+- OrchidGroup Entity와 Repository의 FQCN만 바꾸고 상태 변경/생성/저장 단일 Writer는 기존 Engine으로 유지한다. `farm/{application,domain,repository}/orchid/mutation` 하위 전체는 P5 대상이므로 이번 prefix 이동에서 명시적으로 제외한다. CLI/Gradle mainClass도 변경하지 않는다.
+- 현재 값/과거 snapshot·조회 배치·collection 소속/활성·현황/집계·순수 policy·쓰기를 포함한 유스케이스/잠금/트랜잭션은 그대로다. 새 전달 Adapter/Port/API 없음. 기존 integration의 참조만 새 소유 패키지로 갱신한다.
+
+- Orchid/Collection/Status 프로덕션 82개·같은 패키지 테스트 10개 이동. clean 컴파일과 난 묶음 조회/생성/변경/취소/소속/사용 여부·현황/집계·일괄 조회·단일 Writer·공개 값/inventory 집중 검증 통과. Mutation 패키지·Gradle CLI mainClass는 이동하지 않았다. 전체 검증은 P4 전체 이동 후 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E 미실행.

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.dto.inbound;
 
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import java.math.BigDecimal;
 
 public record InboundOrchidGroupResponse(

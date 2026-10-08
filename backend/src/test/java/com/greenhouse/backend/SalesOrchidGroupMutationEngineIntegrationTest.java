@@ -15,8 +15,8 @@ import com.greenhouse.backend.farm.api.orchid.ReleaseOrchidGroupReservationsMuta
 import com.greenhouse.backend.farm.api.orchid.ReserveOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.RestoreOutboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
