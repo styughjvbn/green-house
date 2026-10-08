@@ -18,7 +18,7 @@ import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
-import com.greenhouse.backend.work.application.target.WorkOrchidGroupUsageInspector;
+import com.greenhouse.backend.work.api.target.WorkOrchidGroupUsageApi;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.Collection;
@@ -42,7 +42,7 @@ public class OrchidGroupCommandService {
 
   private final BedZoneRepository bedZoneRepository;
 
-  private final WorkOrchidGroupUsageInspector workUsageInspector;
+  private final WorkOrchidGroupUsageApi workUsageInspector;
 
   private final List<OrchidGroupUsageInspector> usageInspectors;
 

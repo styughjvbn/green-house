@@ -1,7 +1,6 @@
-package com.greenhouse.backend.work.application.target;
+package com.greenhouse.backend.work.api.target;
 
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

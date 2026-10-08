@@ -4,7 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
+import com.greenhouse.backend.work.api.target.WorkTargetInclusionSource;
+import com.greenhouse.backend.work.api.target.WorkTargetSelection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

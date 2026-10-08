@@ -1,11 +1,9 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.api.target.WorkTargetSelection;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
-import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
 import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
-import com.greenhouse.backend.work.application.target.WorkTargetResolver;
-import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
@@ -15,6 +13,8 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.work.spi.target.ResolvedWorkTarget;
+import com.greenhouse.backend.work.spi.target.WorkTargetResolver;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.farm.application.orchid.DerivedOrchidGroupService;
-import com.greenhouse.backend.farm.application.orchid.FarmWorkTargetResolver;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
@@ -14,6 +13,7 @@ import com.greenhouse.backend.farm.application.orchid.mutation.UpdateOrchidGroup
 import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.orchid.integration.FarmWorkTargetResolver;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.sales.application.document.SalesOrchidGroupQueryService;
 import com.greenhouse.backend.sales.application.document.SalesQueryService;
@@ -31,7 +31,7 @@ import com.greenhouse.backend.sales.dto.document.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.application.target.WorkTargetSelection;
+import com.greenhouse.backend.work.api.target.WorkTargetSelection;
 import jakarta.persistence.EntityManager;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;

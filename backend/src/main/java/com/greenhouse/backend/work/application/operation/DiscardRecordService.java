@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.target.WorkTargetSelection;
+import com.greenhouse.backend.work.api.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkType;

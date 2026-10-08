@@ -1,4 +1,4 @@
-package com.greenhouse.backend.work.application.target;
+package com.greenhouse.backend.work.api.target;
 
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import java.util.List;

@@ -324,3 +324,25 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - 두 조회 구현의 쿼리 본문, 결과 record 4개, enum 3개의 값·동작이 동일함을 확인했다. 설정·저장용 FQCN 참조는 main/resources와 scripts에서 발견되지 않았다.
 - SQL·조회 조건·트랜잭션·잠금·DB 제약·업무 계산 변경이 없어 `workE2eTest`는 실행하지 않았다. E2E 소스의 import도 전환했으며 `compileTestJava`로 컴파일했다.
 - 전체 검증 이후 변경은 이 ADR의 검증 기록뿐이다. 후속 Work 공개 계약 전환은 대상 해석·입고 lifecycle·즉시 실행·계보·운영 대사 참조를 각각 검토한다.
+
+
+### 2026-10-08: 두 단계 진행 — 1단계 대상 해석·사용 여부 계약
+
+| 소비자·책임 | 변경 전 | 변경 후 | 판단 |
+|---|---|---|---|
+| Work 계획·대상 조회/잠금 → Farm 대상 해석 | `work/application/target/WorkTargetResolver`, `ResolvedWorkTarget` | `work/spi/target` | 실제 Farm 데이터 조회·값 변환·잠금 검증을 Work 소유 SPI로 제공 |
+| 대상 선택·입력 값·포함 출처 enum | Work application/domain target | `work/api/target` | 기존 validation·조건 snapshot·출처 의미 그대로 공개 |
+| Farm 대상 해석 구현 | `farm/application/orchid/FarmWorkTargetResolver` | `farm/orchid/integration` | 기존 실제 SPI 구현 이동. 새 위임 Adapter 없음 |
+| Farm 난 묶음 명령·사용 blocker 조합 | `work/application/target/WorkOrchidGroupUsageInspector` | `work/api/target/WorkOrchidGroupUsageApi` | Work 소유 대상/효과 저장소를 숨기고 기존 사용 여부·건수 검사만 공개 |
+
+- Work 사용 여부 조회 구현은 기존 component가 API를 직접 구현한다. Farm의 허용 API 호출에 새 Adapter·Gateway를 추가하지 않는다. 기존 Farm `WorkOrchidGroupUsageAdapter`는 Work 집계 결과를 Farm의 ordered blocker 값으로 조합하는 역할을 유지하며 integration으로 옮기지 않는다.
+- Work에서 Farm을 실행하는 의존 역전과 `Farm → Work` 컴파일 방향을 유지한다. Farm 대상 해석의 그룹/위치/사용자 그룹/자동 그룹 조회·snapshot 변환·업무일 년생 계산은 동일하다.
+- 선택 ID의 null 제거·중복 제거·조건 검증, ID 정렬·500개 단위 선잠금·활성 대상 검증·MANDATORY, 사용 여부의 취소/무효 제외 조건·readOnly와 단일 Writer를 유지한다.
+- 기존 선언 6개는 package/import만 변경했으며 본문은 동일하다. 사용 여부 구현도 interface/Override 선언만 추가한다. Bean 이름·HTTP 요청·validation·JSON·지문·DB 변경 없음. reviewed inventory는 대응 FQCN만 치환한다.
+
+1단계 검증 결과:
+
+- 대상 선택·scope·Farm 선잠금·난 묶음 명령 잠금·사용 여부 blocker·모듈/API/SPI/integration/Writer 집중 검사 통과. reviewed inventory는 이동에 따른 치환 외 차이가 없다.
+- `clean test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 이전 FQCN 클래스 잔존 없음. 프론트엔드 `npm run check` 통과.
+- OpenAPI 재생성 성공: 157 operations, 132 paths, 292 schemas; 생성 명세 차이 없음. 프론트 타입은 계약 차이가 없어 재생성하지 않았다. 설정·저장용 FQCN 문자열은 main/resources와 scripts에서 발견되지 않았다.
+- SQL·트랜잭션·잠금·DB 제약·업무 계산이 동일해 `workE2eTest`는 실행하지 않았다. E2E 소스의 import 전환은 `compileTestJava`로 검증했다. 전체 검증 이후에는 이 ADR의 검증 기록만 추가했다.

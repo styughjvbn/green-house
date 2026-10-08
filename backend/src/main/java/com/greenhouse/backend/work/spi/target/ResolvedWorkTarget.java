@@ -1,4 +1,4 @@
-package com.greenhouse.backend.work.application.target;
+package com.greenhouse.backend.work.spi.target;
 
 import java.util.Map;
 

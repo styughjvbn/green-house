@@ -1,5 +1,6 @@
-package com.greenhouse.backend.work.application.target;
+package com.greenhouse.backend.work.spi.target;
 
+import com.greenhouse.backend.work.api.target.WorkTargetSelection;
 import java.util.List;
 
 public interface WorkTargetResolver {

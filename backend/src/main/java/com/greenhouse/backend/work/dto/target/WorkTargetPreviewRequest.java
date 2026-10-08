@@ -1,7 +1,7 @@
 package com.greenhouse.backend.work.dto.target;
 
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.application.target.WorkTargetSelectionInput;
+import com.greenhouse.backend.work.api.target.WorkTargetSelectionInput;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 

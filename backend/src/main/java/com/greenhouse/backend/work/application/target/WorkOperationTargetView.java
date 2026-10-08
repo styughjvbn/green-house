@@ -1,14 +1,15 @@
 package com.greenhouse.backend.work.application.target;
 
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.work.api.target.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetAction;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
-import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.spi.target.InboundPottingPlanTarget;
+import com.greenhouse.backend.work.spi.target.ResolvedWorkTarget;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;

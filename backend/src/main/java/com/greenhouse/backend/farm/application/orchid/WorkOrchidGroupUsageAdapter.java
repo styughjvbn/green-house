@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.application.orchid;
 
-import com.greenhouse.backend.work.application.target.WorkOrchidGroupUsageInspector;
+import com.greenhouse.backend.work.api.target.WorkOrchidGroupUsageApi;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class WorkOrchidGroupUsageAdapter implements OrchidGroupUsageInspector {
 
-  private final WorkOrchidGroupUsageInspector workUsage;
+  private final WorkOrchidGroupUsageApi workUsage;
 
   @Override
   public List<OrchidGroupUsage> inspect(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {

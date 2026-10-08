@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
+import com.greenhouse.backend.farm.orchid.integration.FarmWorkTargetResolver;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import java.util.ArrayList;
 import java.util.Collection;

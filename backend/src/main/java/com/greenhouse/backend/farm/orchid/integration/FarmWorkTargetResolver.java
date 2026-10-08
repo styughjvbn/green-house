@@ -1,8 +1,9 @@
-package com.greenhouse.backend.farm.application.orchid;
+package com.greenhouse.backend.farm.orchid.integration;
 
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.farm.application.orchid.DerivedOrchidGroupService;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionStatus;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
@@ -12,9 +13,9 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
-import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
-import com.greenhouse.backend.work.application.target.WorkTargetResolver;
-import com.greenhouse.backend.work.application.target.WorkTargetSelection;
+import com.greenhouse.backend.work.api.target.WorkTargetSelection;
+import com.greenhouse.backend.work.spi.target.ResolvedWorkTarget;
+import com.greenhouse.backend.work.spi.target.WorkTargetResolver;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;

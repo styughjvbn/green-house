@@ -1,15 +1,15 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
-import com.greenhouse.backend.work.application.target.WorkTargetResolver;
+import com.greenhouse.backend.work.api.target.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import com.greenhouse.backend.work.spi.target.InboundPottingPlanTarget;
+import com.greenhouse.backend.work.spi.target.ResolvedWorkTarget;
+import com.greenhouse.backend.work.spi.target.WorkTargetResolver;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
