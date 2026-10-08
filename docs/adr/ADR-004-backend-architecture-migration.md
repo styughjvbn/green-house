@@ -1,9 +1,9 @@
 # ADR-004: 공개 API·SPI 경계와 기능 우선 패키지로 백엔드를 점진적으로 전환한다
 
-- 상태: 승인 — P0~P6 구현·검증·현행 문서 통합 완료
+- 상태: 승인 — 코드·현행 문서 전환 완료, P6 최종 검증 보류
 - 작성일: 2026-10-08, Asia/Seoul
 - 범위: 백엔드 패키지 배치, 공개 계약, 아키텍처 테스트 및 문서 전환
-- 진행: P0~P6 완료. 공개 API·SPI, 기능 우선 배치, Mutation 내부 분리와 최종 경계·문서 통합을 적용했다.
+- 진행: P0~P5와 P6 구조·문서 정리 완료. 기본 CI 재현 및 백업 복원본 CLI 검증을 확정하기 전에는 최종 완료로 판정하지 않는다.
 - 관련 문서: [보관된 최초 목표 설계](../archive/plans/green-house-backend-architecture-final.md), [현행 아키텍처](../04-architecture.md), [Sales 소유권 결정](ADR-003-sales-document-information-architecture.md)
 
 실제 소스와 아키텍처 테스트를 기준으로 결정 이유와 완료된 전환·검증을 기록한다. 현행 구현과 신규 작업의 기준은 `docs/04-architecture.md`다.
@@ -801,3 +801,20 @@ P6 완료 검증 결과:
 - Verify workflow의 검사 항목을 로컬에서 실행했다. 기존 임시 init script의 테스트 heap 2 GiB를 사용했으며 저장소 heap/CI 설정은 변경하지 않았다. 검토된 4개 inventory는 생성 보고서와 일치하고 승인 항목을 추가하지 않았다. clean 후 Farm/Work/Sales 이전 계층 소스·main/test class artifact 0. 수정 문서의 상대 Markdown 링크 모두 정상.
 - P6 프로덕션 실행 코드·DB/Flyway·업무 정책·API·트랜잭션·잠금·저장 형식 변경 없음. 실제 운영 백업 복원·재배포는 이번 로컬 검증 범위가 아니며 기존 배포 절차를 따른다.
 - 목표 설계의 확정된 규칙을 현행 아키텍처에 통합했고 최초 목표 문서는 `docs/archive/plans/green-house-backend-architecture-final.md`에 보관했다. 목차·features·archive 안내와 ADR 링크를 갱신했으며 이 ADR은 결정·검증 기록으로 유지한다. P0~P6 전환 완료. 최종 검증 이후 변경은 이 완료 기록뿐이다.
+
+### 2026-10-08: 사용자 요청에 따른 완료 판정 재감사
+
+이전의 P0~P6 완료 표시는 코드·문서 전환과 임시 heap을 사용한 로컬 성공 결과를 최종 완료 조건과 충분히 구분하지 못했다. 구조 전환은 완료됐으나 **P6의 최종 완료 판정은 보류**로 정정한다.
+
+확인한 근거:
+
+- 전환 전 `050e0765`와 현재 HEAD를 대조해 DB/Flyway 리소스·OpenAPI 전체/slice·프론트 생성 schema 변경 0. 같은 이름의 기존 프로덕션 클래스 712개에서 추출한 트랜잭션 annotation은 동일했다. 선언 비교는 런타임 동작 전체의 증명이 아니며, 기존 PostgreSQL rollback/경쟁/재전송 회귀와 함께 평가한다.
+- 외부 모듈의 Farm/Work/Sales application import, Farm 밖 Engine 참조, 이전 FQCN, Entity 소유권으로 확인 가능한 다른 모듈 SQL 테이블 참조 후보는 0. 기존 저장소/Entity/HTTP 결합·쿼리·시간 조회 inventory에도 승인 예외가 남아 있지 않다. 지원 모듈의 검토된 application 계약은 의도적으로 유지한다.
+- 앞선 성공 체크포인트는 테스트 heap 2 GiB에서 백엔드 779개, PostgreSQL E2E 818개, 벤치마크 2개, 프론트 check 및 생성 계약 차이 0이다. 주요 업무 회귀가 발견되지 않았다는 근거이며, 모든 실제 사용자 동작과 운영 환경에 오류가 없다는 보장은 아니다.
+
+최종 판정에 남은 검증:
+
+1. **저장소 기본 CI 설정의 재현성.** 임시 init script 없이 `./gradlew check bootJar --no-daemon`을 실행했다. 실제 Test JVM은 `-Xmx512m`이며, 기존 P1 기록에도 기본 heap OOM과 임시 2 GiB 우회가 있다. 이번 실행은 테스트 worker 종료 단계에서 진행이 멈췄고 146초 간격의 스레드 덤프에서 같은 MessageHub/executor 종료 대기를 확인했다. 약 9분 뒤 감사자가 해당 worker에 SIGTERM을 보내 중단했다. 종료 코드 143은 이 중단의 결과이며 새로운 assertion 실패나 OOM 발생을 직접 증명하지 않는다. 생성된 부분 보고서는 48개 클래스/267개 테스트뿐이므로 전체 통과로 취급하지 않는다. 원인 확인과 명시적인 테스트 리소스 설정 또는 메모리 사용 개선 후 CI 기본 명령으로 전체 통과를 확인해야 한다.
+2. **백업 복원본의 두 CLI 실행.** 현재 CLI 회귀는 Testcontainers에 구성한 ACTIVE 원장에서 두 별도 JVM의 종료 코드·대사·기동 검증과 데이터 보존을 확인했다. 검증 계획의 복원본 CLI 조건을 실제 백업 복원으로 수행한 것은 아니다. `docs/07-deployment.md` 절차에 따라 준비한 복원본에서 두 task의 검증 결과가 필요하다. 운영 DB 변경·배포는 이번 감사에서 수행하지 않았다.
+
+판정: 합의한 모듈 소유권·허용 방향·공개 계약·기능 배치·선택적 integration·Mutation 단일 Writer의 구현 전환은 완료. 테스트된 업무 경로의 기능 회귀는 발견되지 않음. 기본 CI 재현성과 복원본 검증까지 모두 완료됐다는 판정은 아직 불가. 이 감사에서는 프로덕션 코드와 테스트 설정을 변경하지 않았다.
