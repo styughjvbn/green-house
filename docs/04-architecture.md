@@ -298,6 +298,8 @@ Persistence 조회 규칙:
 
 효과 실행·보정 확장 계약은 `work/spi/{effect,correction}`, 공유 명령·결과·enum은 `work/api/{effect,correction,target}`에 둔다. Entity에서 효과 context로 변환하는 factory와 처리·저장·codec 구현은 Work application 내부에 남긴다. 기존 Farm 효과 handler는 SPI를 직접 구현하고, Farm 보정 adapter는 `farm/transformation/integration`에서 잠금·사용 여부 검증·Mutation 적용을 수행한다. 별도 전달 계층을 추가하지 않는다.
 
+Farm에서 필요한 구조 변경 참조·과거 수량 수지 조회와 보정 검증은 `work/api/correction`의 공개 API를 직접 호출한다. Work 저장소를 사용하는 구현은 application에 남아 API를 직접 구현하며, Farm은 구현 클래스에 의존하지 않는다. 보정 기능의 활성화 여부 조회는 Work 내부에서 유지하고 외부에는 실제 필요한 활성화 검증만 공개한다.
+
 #### integration 생성 기준
 
 `integration`은 선택적인 연동 구현 위치다. 모든 기능에 생성하거나 application·domain·repository·web와 함께 필수 계층으로 취급하지 않는다.

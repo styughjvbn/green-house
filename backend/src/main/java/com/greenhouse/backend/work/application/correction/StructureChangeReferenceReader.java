@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.correction;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.api.correction.StructureChangeMutationReferences;
+import com.greenhouse.backend.work.api.correction.StructureChangeReferenceApi;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
@@ -17,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-public class StructureChangeReferenceReader {
+public class StructureChangeReferenceReader implements StructureChangeReferenceApi {
 
   private final WorkOperationRepository workOperationRepository;
 
@@ -25,6 +26,7 @@ public class StructureChangeReferenceReader {
 
   private final WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
 
+  @Override
   public Set<Long> getActiveOrchidGroupIds(Long workOperationId) {
     return workOperationTargetRepository
         .findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(workOperationId)
@@ -33,6 +35,7 @@ public class StructureChangeReferenceReader {
         .collect(Collectors.toSet());
   }
 
+  @Override
   public List<Long> getCorrectableResultOrchidGroupIds(Long operationId) {
     var operation =
         workOperationRepository
@@ -50,6 +53,7 @@ public class StructureChangeReferenceReader {
         .toList();
   }
 
+  @Override
   public StructureChangeMutationReferences getMutationReferences(
       Long operationId, Set<Long> orchidGroupIds) {
     if (orchidGroupIds.isEmpty()) {

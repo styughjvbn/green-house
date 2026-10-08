@@ -14,11 +14,11 @@ import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidStockCountRepository;
 import com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput;
+import com.greenhouse.backend.work.api.correction.StructureChangeReferenceApi;
 import com.greenhouse.backend.work.api.correction.WorkCorrectionCommand;
+import com.greenhouse.backend.work.api.correction.WorkCorrectionQuantityApi;
 import com.greenhouse.backend.work.api.effect.WorkEffectResults;
 import com.greenhouse.backend.work.api.effect.WorkMutationLink;
-import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
-import com.greenhouse.backend.work.application.correction.WorkCorrectionQuantityService;
 import com.greenhouse.backend.work.spi.correction.WorkCorrectionPlan;
 import com.greenhouse.backend.work.spi.correction.WorkCorrectionPort;
 import java.util.LinkedHashSet;
@@ -37,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class FarmWorkCorrectionAdapter implements WorkCorrectionPort {
 
-  private final StructureChangeReferenceReader structureChangeReferenceReader;
+  private final StructureChangeReferenceApi structureChangeReferenceReader;
 
   private final OrchidGroupRepository orchidGroupRepository;
 
@@ -45,7 +45,7 @@ public class FarmWorkCorrectionAdapter implements WorkCorrectionPort {
 
   private final OrchidGroupMutationEngine mutationEngine;
 
-  private final WorkCorrectionQuantityService quantityService;
+  private final WorkCorrectionQuantityApi quantityService;
 
   private final OrchidStockCountRepository stockCounts;
 

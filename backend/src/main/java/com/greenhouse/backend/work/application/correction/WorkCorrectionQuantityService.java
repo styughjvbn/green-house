@@ -5,6 +5,7 @@ import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput;
 import com.greenhouse.backend.work.api.correction.WorkCorrectionCommand;
+import com.greenhouse.backend.work.api.correction.WorkCorrectionQuantityApi;
 import com.greenhouse.backend.work.api.correction.WorkQuantityBalance;
 import com.greenhouse.backend.work.api.correction.WorkQuantityBalanceChange;
 import com.greenhouse.backend.work.api.correction.WorkQuantityCorrectionInput;
@@ -29,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class WorkCorrectionQuantityService {
+public class WorkCorrectionQuantityService implements WorkCorrectionQuantityApi {
 
   private static final JsonMapper MAPPER = JsonMapper.builder().findAndAddModules().build();
 
@@ -46,10 +47,12 @@ public class WorkCorrectionQuantityService {
     return enabled;
   }
 
+  @Override
   public void requireEnabled() {
     if (!enabled) throw new ConflictException("FEATURE_ON_HOLD", "작업 기록의 수량 정정은 현재 비활성화되어 있습니다.");
   }
 
+  @Override
   public List<WorkQuantityBalance> context(Long workId) {
     var work =
         operations
@@ -140,6 +143,7 @@ public class WorkCorrectionQuantityService {
     return List.copyOf(balances.values());
   }
 
+  @Override
   public List<WorkQuantityBalanceChange> validate(Long workId, WorkCorrectionCommand request) {
     if (!enabled) {
       if (request.quantityCorrections() != null && !request.quantityCorrections().isEmpty())

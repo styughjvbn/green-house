@@ -3,6 +3,7 @@ package com.greenhouse.backend.farm.application.transformation;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.application.transformation.LegacyStructureChangeRequestMapper.Merge;
 import com.greenhouse.backend.farm.application.transformation.LegacyStructureChangeRequestMapper.MergeSource;
+import com.greenhouse.backend.work.api.correction.StructureChangeReferenceApi;
 import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.api.effect.StructureChangeResultInput;
 import com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose;
@@ -11,7 +12,6 @@ import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.api.effect.WorkEffectContext;
 import com.greenhouse.backend.work.api.effect.WorkEffectKind;
 import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
 import com.greenhouse.backend.work.spi.effect.WorkEffectHandler;
 import java.util.List;
 import java.util.Set;
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MergeWorkHandler implements WorkEffectHandler {
 
-  private final StructureChangeReferenceReader structureChangeReferenceReader;
+  private final StructureChangeReferenceApi structureChangeReferenceReader;
 
   private final StructureChangeExecutor structureChangeExecutor;
 

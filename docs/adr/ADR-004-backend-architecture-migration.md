@@ -279,3 +279,24 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - 프론트엔드 `npm run check` 통과. OpenAPI 재생성 성공: 157 operations, 132 paths, 292 schemas; 생성 명세 차이 없음. 프론트 타입 재생성은 계약 차이가 없어 실행하지 않았다.
 - SQL·Flyway·트랜잭션 경계·잠금·수량 계산·Mutation 로직 변경이 없어 `workE2eTest`는 실행하지 않았다. E2E 소스 import도 변경했으며 `compileTestJava`로 컴파일했다.
 - 전체 검증 이후 변경은 이 ADR의 검증 기록뿐이다. 후속 작업은 남은 Work 내부 구현의 외부 참조를 공개 API로 정리하며, 허용 API 호출은 직접 유지한다.
+
+
+### 2026-10-08: P2 Farm의 Work 보정 구현 직접 참조 제거
+
+| 소비자 | 변경 전 | 변경 후 | 경계가 필요한 이유 |
+|---|---|---|---|
+| Farm 병합 handler·보정 adapter | `work/application/correction/StructureChangeReferenceReader` | `work/api/correction/StructureChangeReferenceApi` | Work 소유 대상·효과·작업 저장소를 숨기고 ID·Mutation 참조 값만 공개 |
+| Farm 보정 adapter | `work/application/correction/WorkCorrectionQuantityService` | `work/api/correction/WorkCorrectionQuantityApi` | 저장된 Work 스냅샷·보정 이력의 수량 수지와 검증만 제공하고 저장소·codec·feature flag 구현은 내부 유지 |
+
+- 기존 Work 서비스가 공개 API를 직접 구현한다. 새 Service·Port·전달 Adapter나 integration 패키지는 추가하지 않았다. Farm은 허용된 `Farm → Work` 공개 API를 직접 호출한다.
+- 기존 외부 사용 메서드 6개만 계약으로 추출했다. `isEnabled()`는 Work 내부 전용으로 유지하고 Farm이 이미 사용하던 `requireEnabled()` 검증만 공개한다. 기존 Work 내부 호출은 그대로 유지한다.
+- 기존 서비스의 `readOnly = true`, Farm 보정의 `MANDATORY`, 기존 Bean 이름, 호출·잠금 순서·수량 계산·Mutation Writer·저장 스냅샷/JSON·지문을 유지한다. 조회와 검증의 본문은 변경하지 않았다.
+- reviewed inventory는 두 구현 TYPE·메서드 참조 8개를 대응하는 API FQCN으로 치환한다. 신규 업무 메서드나 모듈 의존은 추가하지 않는다.
+- Work의 metrics/metadata·입고 lifecycle·즉시 실행·대상 해석·계보·운영 대사 관련 외부 참조는 후속 작업으로 남는다. 공개 API를 추가하기 전에 각 반환 값의 domain·HTTP·Entity 의존을 따로 확인한다.
+
+검증 결과:
+
+- 공개 값 계약·모듈 inventory·integration·단일 Writer·작업 보정·수량 수지·지문·병합·생성 취소 집중 테스트 통과. Spring 통합 테스트로 API 주입 후 기존 구현 연결도 확인했다.
+- 전체 `test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 프론트엔드 `npm run check` 통과.
+- HTTP Controller·DTO·validation·schema 변경이 없어 OpenAPI·프론트 타입은 재생성하지 않았다. DB·트랜잭션·잠금·수량 계산 로직 변경이 없어 `workE2eTest`는 실행하지 않았다.
+- 전체 검증 이후에는 이 ADR의 검증 기록만 추가했다.

@@ -210,10 +210,16 @@ METHOD	com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput.qua
 METHOD	com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput.status()
 METHOD	com.greenhouse.backend.work.api.correction.StructureChangeMutationReferences.legacySource()
 METHOD	com.greenhouse.backend.work.api.correction.StructureChangeMutationReferences.mutationIds()
+METHOD	com.greenhouse.backend.work.api.correction.StructureChangeReferenceApi.getActiveOrchidGroupIds(java.lang.Long)
+METHOD	com.greenhouse.backend.work.api.correction.StructureChangeReferenceApi.getCorrectableResultOrchidGroupIds(java.lang.Long)
+METHOD	com.greenhouse.backend.work.api.correction.StructureChangeReferenceApi.getMutationReferences(java.lang.Long, java.util.Set)
 METHOD	com.greenhouse.backend.work.api.correction.WorkCorrectionCommand.cancelResultCreation()
 METHOD	com.greenhouse.backend.work.api.correction.WorkCorrectionCommand.orchidGroupAdjustments()
 METHOD	com.greenhouse.backend.work.api.correction.WorkCorrectionCommand.reason()
 METHOD	com.greenhouse.backend.work.api.correction.WorkCorrectionCommand.workDate()
+METHOD	com.greenhouse.backend.work.api.correction.WorkCorrectionQuantityApi.context(java.lang.Long)
+METHOD	com.greenhouse.backend.work.api.correction.WorkCorrectionQuantityApi.requireEnabled()
+METHOD	com.greenhouse.backend.work.api.correction.WorkCorrectionQuantityApi.validate(java.lang.Long, com.greenhouse.backend.work.api.correction.WorkCorrectionCommand)
 METHOD	com.greenhouse.backend.work.api.correction.WorkQuantityBalance.resultQuantities()
 METHOD	com.greenhouse.backend.work.api.correction.WorkQuantityBalanceChange.before()
 METHOD	com.greenhouse.backend.work.api.effect.InboundPottingCommand.inboundRecordId()
@@ -295,12 +301,6 @@ METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.actualSt
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.actualStatus()
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.reason()
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.workDate()
-METHOD	com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader.getActiveOrchidGroupIds(java.lang.Long)
-METHOD	com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader.getCorrectableResultOrchidGroupIds(java.lang.Long)
-METHOD	com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader.getMutationReferences(java.lang.Long, java.util.Set)
-METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionQuantityService.context(java.lang.Long)
-METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionQuantityService.requireEnabled()
-METHOD	com.greenhouse.backend.work.application.correction.WorkCorrectionQuantityService.validate(java.lang.Long, com.greenhouse.backend.work.api.correction.WorkCorrectionCommand)
 METHOD	com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec.decode(java.lang.Long, java.util.Map)
 METHOD	com.greenhouse.backend.work.application.effect.MovementQuantityAllocator.allocateMovedBySource(com.greenhouse.backend.work.api.effect.StructureChangeCommand)
 METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.appliedAt()
@@ -446,7 +446,9 @@ TYPE	com.greenhouse.backend.sales.application.payment.PaymentAllocationTargetPor
 TYPE	com.greenhouse.backend.sales.application.payment.PaymentEventReader
 TYPE	com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput
 TYPE	com.greenhouse.backend.work.api.correction.StructureChangeMutationReferences
+TYPE	com.greenhouse.backend.work.api.correction.StructureChangeReferenceApi
 TYPE	com.greenhouse.backend.work.api.correction.WorkCorrectionCommand
+TYPE	com.greenhouse.backend.work.api.correction.WorkCorrectionQuantityApi
 TYPE	com.greenhouse.backend.work.api.correction.WorkQuantityBalance
 TYPE	com.greenhouse.backend.work.api.correction.WorkQuantityBalanceChange
 TYPE	com.greenhouse.backend.work.api.effect.InboundPottingCommand
@@ -471,8 +473,6 @@ TYPE	com.greenhouse.backend.work.api.effect.WorkExecutionResult
 TYPE	com.greenhouse.backend.work.api.effect.WorkMutationLink
 TYPE	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand
 TYPE	com.greenhouse.backend.work.api.target.WorkTargetReferenceType
-TYPE	com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader
-TYPE	com.greenhouse.backend.work.application.correction.WorkCorrectionQuantityService
 TYPE	com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec
 TYPE	com.greenhouse.backend.work.application.effect.MovementQuantityAllocator
 TYPE	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView
