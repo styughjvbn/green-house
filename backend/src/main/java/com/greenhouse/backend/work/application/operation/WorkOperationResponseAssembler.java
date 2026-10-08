@@ -1,7 +1,5 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
-import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
@@ -13,6 +11,8 @@ import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.work.spi.target.InboundPottingPlanGateway;
+import com.greenhouse.backend.work.spi.target.InboundPottingPlanTarget;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

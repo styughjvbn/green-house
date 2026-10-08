@@ -10,6 +10,7 @@ import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateReque
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.work.spi.operation.InboundPottingVoidPort;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;

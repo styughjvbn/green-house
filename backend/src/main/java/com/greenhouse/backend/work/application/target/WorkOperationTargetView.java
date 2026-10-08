@@ -8,6 +8,7 @@ import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
+import com.greenhouse.backend.work.spi.target.InboundPottingPlanTarget;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;

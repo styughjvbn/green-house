@@ -1,8 +1,10 @@
-package com.greenhouse.backend.farm.application.inbound;
+package com.greenhouse.backend.farm.inbound.integration;
 
 import com.greenhouse.backend.audit.domain.AuditAction;
-import com.greenhouse.backend.work.application.operation.InboundPottingVoidPort;
+import com.greenhouse.backend.farm.application.inbound.InboundRecordAuditSupport;
+import com.greenhouse.backend.farm.application.inbound.InboundRecordFinder;
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService;
+import com.greenhouse.backend.work.spi.operation.InboundPottingVoidPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;

@@ -1,7 +1,5 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
-import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
@@ -10,6 +8,8 @@ import com.greenhouse.backend.work.dto.effect.InboundPottingCandidateResponse;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.work.spi.target.InboundPottingPlanGateway;
+import com.greenhouse.backend.work.spi.target.InboundPottingPlanTarget;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;

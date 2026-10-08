@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
@@ -24,6 +23,9 @@ import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.work.spi.operation.PottingVoidPort;
+import com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort;
+import com.greenhouse.backend.work.spi.target.InboundPottingPlanGateway;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;

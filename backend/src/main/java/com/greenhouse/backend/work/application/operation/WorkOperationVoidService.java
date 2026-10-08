@@ -2,7 +2,6 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
@@ -20,6 +19,9 @@ import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.work.spi.operation.PottingVoidPort;
+import com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort;
+import com.greenhouse.backend.work.spi.target.InboundPottingPlanGateway;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;

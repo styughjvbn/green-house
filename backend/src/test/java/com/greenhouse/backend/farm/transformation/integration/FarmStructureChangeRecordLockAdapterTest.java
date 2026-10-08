@@ -1,4 +1,4 @@
-package com.greenhouse.backend.farm.application.transformation;
+package com.greenhouse.backend.farm.transformation.integration;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyCollection;

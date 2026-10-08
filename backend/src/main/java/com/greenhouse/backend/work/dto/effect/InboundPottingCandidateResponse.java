@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.dto.effect;
 
-import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
+import com.greenhouse.backend.work.spi.target.InboundPottingPlanTarget;
 import java.time.LocalDate;
 
 public record InboundPottingCandidateResponse(

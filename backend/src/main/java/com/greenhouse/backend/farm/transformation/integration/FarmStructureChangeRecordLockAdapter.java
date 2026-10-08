@@ -1,9 +1,9 @@
-package com.greenhouse.backend.farm.application.transformation;
+package com.greenhouse.backend.farm.transformation.integration;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
-import com.greenhouse.backend.work.application.operation.StructureChangeRecordLockPort;
+import com.greenhouse.backend.work.spi.operation.StructureChangeRecordLockPort;
 import java.util.Collection;
 import java.util.HashSet;
 import lombok.RequiredArgsConstructor;

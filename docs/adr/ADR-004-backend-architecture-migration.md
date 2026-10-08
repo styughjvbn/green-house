@@ -195,3 +195,25 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - `python3 scripts/generate_openapi.py` 재생성 후 전체 명세·slice diff 없음. 공개 schema가 동일하므로 TypeScript 타입 재생성은 필요하지 않았다.
 - 프론트엔드 `npm run check` 통과.
 - DB·트랜잭션·잠금·멱등 처리 변경이 없는 구조 이동이므로 `workE2eTest` 미실행. 전체 검증 이후 변경은 이 ADR의 검증 기록뿐이다.
+
+### 2026-10-08: P2 입고·취소·선잠금 Work SPI 전환
+
+| 계약·구현 | 확정 위치 | 책임 |
+|---|---|---|
+| `InboundPottingPlanGateway`, `InboundPottingPlanTarget` | `work/spi/target` | Work가 입고 후보·현재 값·계획 상태·실행 잠금 계약 소유 |
+| `InboundPottingVoidPort`, `PottingVoidPort`, `StructureChangeVoidPort` 및 중첩 값 | `work/spi/operation` | Work가 취소 검증·Farm 보상·입고 감사 협력 계약 소유 |
+| `StructureChangeRecordLockPort` | `work/spi/operation` | Work가 구조 변경 기록의 Farm 선잠금 계약 소유 |
+| 입고 관련 Farm 구현 3개 | `farm/inbound/integration` | 입고 소유 저장소·유스케이스로 Work SPI 구현 |
+| 구조 변경 취소·선잠금 Farm 구현 2개 | `farm/transformation/integration` | 구조 변경의 Farm 보상·잠금 실행 |
+
+- Work의 계획·실행·취소·진행·응답 조립, Farm 구현과 기존 테스트의 참조를 함께 전환했다. 검토된 계약 inventory는 기존 FQCN만 치환하고 정렬했으며 승인 멤버를 추가하지 않았다.
+- 이동한 11개 프로덕션 선언의 본문과 annotation은 이전 커밋과 동일하다. 기존 클래스명·Bean 이름·트랜잭션 참여 방식·잠금 순서·보상·Receipt·snapshot 형식을 유지한다.
+- 구조 변경 선잠금 adapter의 기존 테스트도 새 integration 패키지로 이동했다. 입고 계획 integration, 취소 유스케이스, 잠금 adapter, 공개 계약·모듈 경계·단일 Writer 집중 검증 통과.
+- 보정·효과 실행 계약은 관련 공개 값과 내부 factory·codec의 책임 분리가 필요하므로 별도 후속으로 남긴다. 단순히 SPI를 옮기면서 내부 application 값을 공개 계약에 남기지 않는다.
+
+검증 결과:
+
+- `clean test spotlessCheck` 통과: 774개, 실패·오류·skip 0개. 임시 Gradle init script의 테스트 heap 2 GiB 사용. 이전 FQCN의 `.class` 파일 11개는 제거됐고 새 경로에만 선언이 존재한다.
+- `python3 scripts/generate_openapi.py` 재생성 후 전체 명세·slice diff 없음. 프론트엔드 `npm run check` 통과. TypeScript schema 계약 변경 없음.
+- main/resources/scripts에서 이동한 타입의 이전 FQCN·설정 또는 저장용 클래스명 문자열 참조 없음.
+- DB·트랜잭션·잠금·멱등 처리 로직은 변경하지 않아 `workE2eTest` 미실행. 기존 PostgreSQL E2E의 참조는 전환하고 컴파일했다. 전체 검증 후에는 문서의 검증 기록만 추가했다.

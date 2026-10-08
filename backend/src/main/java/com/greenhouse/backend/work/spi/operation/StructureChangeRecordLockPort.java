@@ -1,4 +1,4 @@
-package com.greenhouse.backend.work.application.operation;
+package com.greenhouse.backend.work.spi.operation;
 
 import java.util.Collection;
 

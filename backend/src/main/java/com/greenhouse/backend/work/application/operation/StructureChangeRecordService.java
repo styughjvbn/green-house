@@ -6,6 +6,7 @@ import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
+import com.greenhouse.backend.work.spi.operation.StructureChangeRecordLockPort;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;

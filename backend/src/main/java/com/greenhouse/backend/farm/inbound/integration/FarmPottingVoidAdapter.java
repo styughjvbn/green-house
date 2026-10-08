@@ -1,4 +1,4 @@
-package com.greenhouse.backend.farm.application.inbound;
+package com.greenhouse.backend.farm.inbound.integration;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
@@ -16,9 +16,9 @@ import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
-import com.greenhouse.backend.work.application.operation.PottingVoidPort;
-import com.greenhouse.backend.work.application.operation.StructureChangeVoidPort.Blocker;
-import com.greenhouse.backend.work.application.operation.StructureChangeVoidPort.OrchidGroupSummary;
+import com.greenhouse.backend.work.spi.operation.PottingVoidPort;
+import com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort.Blocker;
+import com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort.OrchidGroupSummary;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

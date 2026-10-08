@@ -294,6 +294,8 @@ Persistence 조회 규칙:
 
 [ADR-004](adr/ADR-004-backend-architecture-migration.md)에 따라 기존 소유권과 허용 의존 방향을 유지하며 공개 API·SPI 정리부터 점진적으로 전환한다. 현재 운영 코드는 계층 우선 배치를 중심으로 유지하며, 작업 상세 참조·Mutation 그래프의 공개 확장 계약은 `work/spi/{target,operation}`, Farm 구현은 `farm/orchid/integration`으로 전환했다. Work가 SPI를 소유하고 Farm이 구현하므로 기존 `Farm → Work` 컴파일 의존과 Work에서 Farm 구현을 호출하는 런타임 흐름은 유지한다. 아키텍처 검사는 이행 중 기능 우선 배치도 동일한 소유권·계층 규칙으로 검사한다. 새 Farm/Work/Sales의 `api`·`spi`는 모든 public 값 계약에서 Entity·저장소 projection·HTTP 타입 누출을 금지하고, 기능 내부 API·SPI의 최상위 모듈 외 접근을 차단한다. 기존 application 계약은 검토된 타입·메서드 inventory로 계속 추적한다.
 
+입고 대상 계획·포트 취소·구조 변경 취소·구조 변경 선잠금의 확장 계약도 `work/spi/{target,operation}`에서 Work가 소유한다. Farm 구현은 `farm/inbound/integration`과 `farm/transformation/integration`에 두며, 기존 application 유스케이스와 같은 트랜잭션에서 처리한다. 구조 변경·포트 취소의 보상 Mutation과 이력·접수 소유권, 잠금 순서는 유지한다.
+
 #### 모듈 소유권과 호출 방향
 
 - Entity, Repository, DB table은 각각 하나의 업무 모듈이 소유한다. 소유 모듈 밖에서는 해당 Repository나 internal 구현을 직접 참조하지 않는다.

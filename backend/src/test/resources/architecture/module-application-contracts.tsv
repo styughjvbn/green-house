@@ -40,18 +40,18 @@ CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkEffectResults$Tra
 CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkExecutionResult.<init>(java.lang.String, com.greenhouse.backend.work.application.effect.WorkEffectResultDetails, java.util.List, com.greenhouse.backend.work.application.effect.WorkMutationLink)
 CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkMutationLink.<init>(java.lang.Long, java.util.UUID)
 CONSTRUCTOR	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand.<init>(java.lang.String, java.lang.String, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.String, java.lang.Integer, java.lang.String, java.lang.Long, java.math.BigDecimal, java.math.BigDecimal)
-CONSTRUCTOR	com.greenhouse.backend.work.application.operation.PottingVoidPort$Inspection.<init>(java.util.List, java.util.List)
 CONSTRUCTOR	com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand.<init>(java.lang.Long, java.time.LocalDate, java.lang.Long, java.lang.String, java.lang.Integer, java.lang.String, java.util.Map, java.util.List, java.lang.String, java.lang.String, java.util.Map)
-CONSTRUCTOR	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Blocker.<init>(java.lang.String, java.lang.String, long)
-CONSTRUCTOR	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Inspection.<init>(java.util.List, java.util.List, java.util.List)
-CONSTRUCTOR	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$OrchidGroupSummary.<init>(java.lang.Long, java.lang.String, java.lang.Integer)
-CONSTRUCTOR	com.greenhouse.backend.work.application.target.InboundPottingPlanTarget.<init>(java.lang.Long, java.lang.Long, java.lang.String, java.lang.String, java.lang.Integer, java.lang.Integer, java.lang.String, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.work.application.target.ResolvedWorkTarget.<init>(java.lang.Long, java.lang.Long, java.lang.String, java.lang.Integer, java.lang.Integer, java.lang.String, java.lang.String, java.util.Map)
+CONSTRUCTOR	com.greenhouse.backend.work.spi.operation.PottingVoidPort$Inspection.<init>(java.util.List, java.util.List)
+CONSTRUCTOR	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort$Blocker.<init>(java.lang.String, java.lang.String, long)
+CONSTRUCTOR	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort$Inspection.<init>(java.util.List, java.util.List, java.util.List)
+CONSTRUCTOR	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort$OrchidGroupSummary.<init>(java.lang.Long, java.lang.String, java.lang.Integer)
 CONSTRUCTOR	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$Edge.<init>(java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$Fragment.<init>(boolean, java.util.List, java.util.List, java.util.List)
 CONSTRUCTOR	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$MutationNode.<init>(java.lang.Long, java.lang.String, java.time.LocalDate, java.time.Instant)
 CONSTRUCTOR	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$State.<init>(java.lang.Integer, java.lang.Integer, java.lang.String, java.lang.Long, java.lang.String, java.lang.String, java.lang.Integer, java.lang.String, java.lang.Long, java.lang.Integer, java.lang.Integer, java.lang.String, java.math.BigDecimal, java.math.BigDecimal)
 CONSTRUCTOR	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$StateNode.<init>(java.lang.String, java.lang.Long, java.lang.Long, com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$State)
+CONSTRUCTOR	com.greenhouse.backend.work.spi.target.InboundPottingPlanTarget.<init>(java.lang.Long, java.lang.Long, java.lang.String, java.lang.String, java.lang.Integer, java.lang.Integer, java.lang.String, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.work.spi.target.WorkExecutionLocation.<init>(java.lang.Integer, java.lang.Integer, java.lang.String)
 METHOD	com.greenhouse.backend.audit.application.AuditEventWriter.detectChanges(java.util.Map, java.util.Map)
 METHOD	com.greenhouse.backend.audit.application.AuditEventWriter.record(com.greenhouse.backend.audit.domain.AuditAction, com.greenhouse.backend.audit.domain.AuditSource, com.greenhouse.backend.audit.application.AuditEvent$Target, java.util.Map, java.util.Map, java.util.Map)
@@ -335,14 +335,6 @@ METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLif
 METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.voidInboundRegistrationForCancellation(java.lang.Long, java.lang.String, java.lang.String)
 METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.voidPottingForInboundRecord(java.lang.Long, java.lang.String, java.lang.String)
 METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder.record(com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand, com.greenhouse.backend.work.application.effect.WorkMutationLink)
-METHOD	com.greenhouse.backend.work.application.operation.PottingVoidPort$Effect.inboundRecordId()
-METHOD	com.greenhouse.backend.work.application.operation.PottingVoidPort$Effect.mutationId()
-METHOD	com.greenhouse.backend.work.application.operation.PottingVoidPort$Inspection.blockers()
-METHOD	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Blocker.message()
-METHOD	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Inspection.blockers()
-METHOD	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Inspection.resultOrchidGroups()
-METHOD	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Inspection.sourceOrchidGroups()
-METHOD	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$OrchidGroupSummary.orchidGroupId()
 METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata.id()
 METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata.title()
 METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata.workType()
@@ -380,6 +372,14 @@ METHOD	com.greenhouse.backend.work.application.target.WorkTargetSelection.source
 METHOD	com.greenhouse.backend.work.application.target.WorkTargetSelection.sourceOrchidGroupIds()
 METHOD	com.greenhouse.backend.work.application.target.WorkTargetSelection.sourceScopeId()
 METHOD	com.greenhouse.backend.work.application.target.WorkTargetSelection.sourceScopeType()
+METHOD	com.greenhouse.backend.work.spi.operation.PottingVoidPort$Effect.inboundRecordId()
+METHOD	com.greenhouse.backend.work.spi.operation.PottingVoidPort$Effect.mutationId()
+METHOD	com.greenhouse.backend.work.spi.operation.PottingVoidPort$Inspection.blockers()
+METHOD	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort$Blocker.message()
+METHOD	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort$Inspection.blockers()
+METHOD	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort$Inspection.resultOrchidGroups()
+METHOD	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort$Inspection.sourceOrchidGroups()
+METHOD	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort$OrchidGroupSummary.orchidGroupId()
 METHOD	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$Fragment.empty()
 TYPE	com.greenhouse.backend.audit.application.AuditEvent$Target
 TYPE	com.greenhouse.backend.audit.application.AuditEventWriter
@@ -481,18 +481,9 @@ TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehears
 TYPE	com.greenhouse.backend.work.application.effect.WorkReconciliationCommand
 TYPE	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService
 TYPE	com.greenhouse.backend.work.application.operation.InboundPottingOperationService
-TYPE	com.greenhouse.backend.work.application.operation.InboundPottingVoidPort
 TYPE	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService
 TYPE	com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder
-TYPE	com.greenhouse.backend.work.application.operation.PottingVoidPort
-TYPE	com.greenhouse.backend.work.application.operation.PottingVoidPort$Effect
-TYPE	com.greenhouse.backend.work.application.operation.PottingVoidPort$Inspection
 TYPE	com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand
-TYPE	com.greenhouse.backend.work.application.operation.StructureChangeRecordLockPort
-TYPE	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort
-TYPE	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Blocker
-TYPE	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$Inspection
-TYPE	com.greenhouse.backend.work.application.operation.StructureChangeVoidPort$OrchidGroupSummary
 TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader
 TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata
 TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader
@@ -501,17 +492,26 @@ TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReade
 TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$TypeCount
 TYPE	com.greenhouse.backend.work.application.operation.WorkOperationQueryService
 TYPE	com.greenhouse.backend.work.application.operation.WorkOperationView
-TYPE	com.greenhouse.backend.work.application.target.InboundPottingPlanGateway
-TYPE	com.greenhouse.backend.work.application.target.InboundPottingPlanTarget
 TYPE	com.greenhouse.backend.work.application.target.ResolvedWorkTarget
 TYPE	com.greenhouse.backend.work.application.target.WorkOrchidGroupUsageInspector
 TYPE	com.greenhouse.backend.work.application.target.WorkTargetResolver
 TYPE	com.greenhouse.backend.work.application.target.WorkTargetSelection
+TYPE	com.greenhouse.backend.work.spi.operation.InboundPottingVoidPort
+TYPE	com.greenhouse.backend.work.spi.operation.PottingVoidPort
+TYPE	com.greenhouse.backend.work.spi.operation.PottingVoidPort$Effect
+TYPE	com.greenhouse.backend.work.spi.operation.PottingVoidPort$Inspection
+TYPE	com.greenhouse.backend.work.spi.operation.StructureChangeRecordLockPort
+TYPE	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort
+TYPE	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort$Blocker
+TYPE	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort$Inspection
+TYPE	com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort$OrchidGroupSummary
 TYPE	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort
 TYPE	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$Edge
 TYPE	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$Fragment
 TYPE	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$MutationNode
 TYPE	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$State
 TYPE	com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort$StateNode
+TYPE	com.greenhouse.backend.work.spi.target.InboundPottingPlanGateway
+TYPE	com.greenhouse.backend.work.spi.target.InboundPottingPlanTarget
 TYPE	com.greenhouse.backend.work.spi.target.WorkExecutionLocation
 TYPE	com.greenhouse.backend.work.spi.target.WorkExecutionReferenceGateway

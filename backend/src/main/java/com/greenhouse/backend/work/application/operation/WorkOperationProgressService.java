@@ -7,8 +7,6 @@ import com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.application.effect.WorkEffectStore;
-import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
-import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
@@ -19,6 +17,8 @@ import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.work.spi.target.InboundPottingPlanGateway;
+import com.greenhouse.backend.work.spi.target.InboundPottingPlanTarget;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;

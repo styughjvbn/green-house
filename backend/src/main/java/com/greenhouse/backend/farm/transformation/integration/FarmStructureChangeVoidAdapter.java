@@ -1,4 +1,4 @@
-package com.greenhouse.backend.farm.application.transformation;
+package com.greenhouse.backend.farm.transformation.integration;
 
 import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.common.exception.ConflictException;
@@ -15,7 +15,7 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationTyp
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
-import com.greenhouse.backend.work.application.operation.StructureChangeVoidPort;
+import com.greenhouse.backend.work.spi.operation.StructureChangeVoidPort;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
