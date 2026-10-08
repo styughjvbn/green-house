@@ -3,7 +3,7 @@ package com.greenhouse.backend.farm.application.orchid.mutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationWorkOperationResponse;
-import com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader;
+import com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -19,7 +19,7 @@ class OrchidGroupMutationWorkOperationReader {
 
   private static final String WORK_EFFECT = "WORK_EFFECT";
 
-  private final WorkOperationMetadataReader workOperationMetadataReader;
+  private final WorkOperationMetadataApi workOperationMetadataReader;
 
   Map<Long, OrchidGroupMutationWorkOperationResponse> resolveByMutationId(
       Collection<OrchidGroupMutation> mutations) {
@@ -35,7 +35,7 @@ class OrchidGroupMutationWorkOperationReader {
 
     Map<Long, OrchidGroupMutationWorkOperationResponse> workOperationsById = new LinkedHashMap<>();
     (workOperationIds.isEmpty()
-            ? List.<WorkOperationMetadataReader.WorkOperationMetadata>of()
+            ? List.<WorkOperationMetadataApi.WorkOperationMetadata>of()
             : workOperationMetadataReader.findByIds(workOperationIds))
         .forEach(
             workOperation ->

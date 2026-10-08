@@ -1,9 +1,9 @@
 package com.greenhouse.backend.work.repository;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;

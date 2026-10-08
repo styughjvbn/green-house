@@ -300,6 +300,8 @@ Persistence 조회 규칙:
 
 Farm에서 필요한 구조 변경 참조·과거 수량 수지 조회와 보정 검증은 `work/api/correction`의 공개 API를 직접 호출한다. Work 저장소를 사용하는 구현은 application에 남아 API를 직접 구현하며, Farm은 구현 클래스에 의존하지 않는다. 보정 기능의 활성화 여부 조회는 Work 내부에서 유지하고 외부에는 실제 필요한 활성화 검증만 공개한다.
 
+작업 집계·메타데이터 조회는 `work/api/operation`에서 공개한다. Farm·Analytics는 이 API와 중첩 결과 값을 직접 사용하며, 기존 조회 서비스가 API를 구현한다. QueryDSL·Repository·Entity 변환은 Work application 내부에 유지하고, 조회 결과의 작업 상태·범위·유형 enum도 공개 값 계약에 둔다. 조회 방식·건수 제한·트랜잭션 설정은 유지한다.
+
 #### integration 생성 기준
 
 `integration`은 선택적인 연동 구현 위치다. 모든 기능에 생성하거나 application·domain·repository·web와 함께 필수 계층으로 취급하지 않는다.

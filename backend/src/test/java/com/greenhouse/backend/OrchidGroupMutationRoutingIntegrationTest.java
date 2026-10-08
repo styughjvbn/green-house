@@ -39,6 +39,7 @@ import com.greenhouse.backend.sales.repository.document.SalesInventoryMovementRe
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.api.effect.InboundPottingResultInput;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.application.operation.DiscardRecordService;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
@@ -46,7 +47,6 @@ import com.greenhouse.backend.work.application.operation.WorkOperationProgressSe
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordResultRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.dto.operation;
 
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 
 public enum WorkHistoryScopeType {
   HOUSE,

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;

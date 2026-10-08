@@ -301,6 +301,33 @@ METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.actualSt
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.actualStatus()
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.reason()
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.workDate()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi$WorkOperationMetadata.id()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi$WorkOperationMetadata.title()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi$WorkOperationMetadata.workType()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi$WorkOperationMetadata.workTypeCode()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi.findByIds(java.util.Collection)
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi.findOriginalsByCorrectionMutationIds(java.util.Collection)
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$RecentRecord.id()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$RecentRecord.memo()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$RecentRecord.sourceScopeType()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$RecentRecord.status()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$RecentRecord.title()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$RecentRecord.workDate()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$RecentRecord.workType()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$RecentRecord.workTypeTemplate()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$RecentRecord.worker()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$Summary.latestWorkDate()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$Summary.movementCount()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$Summary.recentRecords()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$Summary.statusCount()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$Summary.totalCount()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$Summary.typeCounts()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$TypeCount.count()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$TypeCount.name()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi.getLatestWorkDates(java.util.Collection)
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi.getSummary(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.work.api.operation.WorkSourceScopeType.ordinal()
+METHOD	com.greenhouse.backend.work.api.operation.WorkSourceScopeType.values()
 METHOD	com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec.decode(java.lang.Long, java.util.Map)
 METHOD	com.greenhouse.backend.work.application.effect.MovementQuantityAllocator.allocateMovedBySource(com.greenhouse.backend.work.api.effect.StructureChangeCommand)
 METHOD	com.greenhouse.backend.work.application.effect.StructureChangeLineageEffectView.appliedAt()
@@ -335,31 +362,6 @@ METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLif
 METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.voidInboundRegistrationForCancellation(java.lang.Long, java.lang.String, java.lang.String)
 METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.voidPottingForInboundRecord(java.lang.Long, java.lang.String, java.lang.String)
 METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder.record(com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand, com.greenhouse.backend.work.api.effect.WorkMutationLink)
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata.id()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata.title()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata.workType()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata.workTypeCode()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader.findByIds(java.util.Collection)
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader.findOriginalsByCorrectionMutationIds(java.util.Collection)
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.id()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.memo()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.sourceScopeType()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.status()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.title()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.workDate()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.workType()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.workTypeTemplate()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord.worker()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.latestWorkDate()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.movementCount()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.recentRecords()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.statusCount()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.totalCount()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary.typeCounts()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$TypeCount.count()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$TypeCount.name()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader.getLatestWorkDates(java.util.Collection)
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader.getSummary(java.time.LocalDate, java.time.LocalDate)
 METHOD	com.greenhouse.backend.work.application.operation.WorkOperationQueryService.get(java.lang.Long)
 METHOD	com.greenhouse.backend.work.application.operation.WorkOperationView.details()
 METHOD	com.greenhouse.backend.work.application.operation.WorkOperationView.id()
@@ -472,6 +474,15 @@ TYPE	com.greenhouse.backend.work.api.effect.WorkEffectResults$Transformation
 TYPE	com.greenhouse.backend.work.api.effect.WorkExecutionResult
 TYPE	com.greenhouse.backend.work.api.effect.WorkMutationLink
 TYPE	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand
+TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi
+TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi$WorkOperationMetadata
+TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi
+TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$RecentRecord
+TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$Summary
+TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$TypeCount
+TYPE	com.greenhouse.backend.work.api.operation.WorkOperationStatus
+TYPE	com.greenhouse.backend.work.api.operation.WorkSourceScopeType
+TYPE	com.greenhouse.backend.work.api.operation.WorkTypeTemplate
 TYPE	com.greenhouse.backend.work.api.target.WorkTargetReferenceType
 TYPE	com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec
 TYPE	com.greenhouse.backend.work.application.effect.MovementQuantityAllocator
@@ -486,12 +497,6 @@ TYPE	com.greenhouse.backend.work.application.operation.InboundPottingOperationSe
 TYPE	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService
 TYPE	com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder
 TYPE	com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand
-TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader
-TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetadataReader$WorkOperationMetadata
-TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader
-TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$RecentRecord
-TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$Summary
-TYPE	com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader$TypeCount
 TYPE	com.greenhouse.backend.work.application.operation.WorkOperationQueryService
 TYPE	com.greenhouse.backend.work.application.operation.WorkOperationView
 TYPE	com.greenhouse.backend.work.application.target.ResolvedWorkTarget

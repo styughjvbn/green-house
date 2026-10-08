@@ -1,5 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi;
+import com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi.WorkOperationMetadata;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.util.Collection;
@@ -13,12 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-public class WorkOperationMetadataReader {
+public class WorkOperationMetadataReader implements WorkOperationMetadataApi {
 
   private final WorkOperationRepository workOperationRepository;
 
   private final WorkOperationCorrectionRepository correctionRepository;
 
+  @Override
   public Map<Long, WorkOperationMetadata> findOriginalsByCorrectionMutationIds(
       Collection<Long> mutationIds) {
     if (mutationIds.isEmpty()) return Map.of();
@@ -36,6 +39,7 @@ public class WorkOperationMetadataReader {
                 }));
   }
 
+  @Override
   public List<WorkOperationMetadata> findByIds(Collection<Long> workOperationIds) {
     return workOperationRepository.findByIdIn(workOperationIds).stream()
         .map(
@@ -47,7 +51,4 @@ public class WorkOperationMetadataReader {
                     operation.getTitle()))
         .toList();
   }
-
-  public record WorkOperationMetadata(
-      Long id, String workTypeCode, String workType, String title) {}
 }

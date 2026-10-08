@@ -6,10 +6,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;

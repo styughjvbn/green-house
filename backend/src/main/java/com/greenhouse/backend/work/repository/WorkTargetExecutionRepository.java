@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.repository;
 
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import java.util.Collection;
 import java.util.List;

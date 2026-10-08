@@ -9,7 +9,7 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupSummaryRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupVarietyReference;
 import com.greenhouse.backend.farm.repository.orchid.VarietyInventorySummary;
-import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
+import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,7 +32,7 @@ public class VarietyResponseAssembler {
 
   private static final int WORK_BATCH_SIZE = 500;
 
-  private final WorkOperationMetricsReader workOperationMetricsReader;
+  private final WorkOperationMetricsApi workOperationMetricsReader;
 
   public Page<VarietyResponse> assemble(Page<Variety> varieties) {
     var varietyIds = varieties.getContent().stream().map(Variety::getId).toList();

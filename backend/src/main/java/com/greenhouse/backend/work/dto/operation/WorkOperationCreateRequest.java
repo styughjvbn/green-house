@@ -1,8 +1,8 @@
 package com.greenhouse.backend.work.dto.operation;
 
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.application.target.WorkTargetSelectionInput;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

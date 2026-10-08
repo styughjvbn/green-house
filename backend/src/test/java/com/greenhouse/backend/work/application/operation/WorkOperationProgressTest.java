@@ -2,7 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
 import org.junit.jupiter.api.Test;
 
 class WorkOperationProgressTest {

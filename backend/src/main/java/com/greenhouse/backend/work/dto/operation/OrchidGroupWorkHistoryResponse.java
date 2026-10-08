@@ -1,8 +1,8 @@
 package com.greenhouse.backend.work.dto.operation;
 
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import java.time.LocalDate;
 import java.util.Map;

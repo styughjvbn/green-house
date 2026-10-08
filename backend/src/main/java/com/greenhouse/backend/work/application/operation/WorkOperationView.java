@@ -1,13 +1,13 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationAction;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;

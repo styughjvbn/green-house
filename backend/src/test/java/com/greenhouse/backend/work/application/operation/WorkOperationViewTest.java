@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import java.util.List;
 import org.junit.jupiter.api.Test;

@@ -300,3 +300,27 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - 전체 `test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 프론트엔드 `npm run check` 통과.
 - HTTP Controller·DTO·validation·schema 변경이 없어 OpenAPI·프론트 타입은 재생성하지 않았다. DB·트랜잭션·잠금·수량 계산 로직 변경이 없어 `workE2eTest`는 실행하지 않았다.
 - 전체 검증 이후에는 이 ADR의 검증 기록만 추가했다.
+
+
+### 2026-10-08: P2 작업 집계·메타데이터 조회 API 전환
+
+| 소비자·책임 | 변경 전 | 변경 후 | 이유 |
+|---|---|---|---|
+| Farm 품종 응답·Analytics 작업 집계 | Work application의 `WorkOperationMetricsReader`와 중첩 값 | `work/api/operation/WorkOperationMetricsApi`와 중첩 값 | QueryDSL 구현을 숨기고 집계·최근 작업·일괄 최신 작업일 계약 공개 |
+| Farm Mutation의 원본/보정 작업 표시 | Work application의 `WorkOperationMetadataReader`와 중첩 값 | `work/api/operation/WorkOperationMetadataApi`와 중첩 값 | Work 저장소·Entity 변환을 숨기고 식별자·이름·제목만 공개 |
+| 조회 결과의 작업 상태·범위·유형 enum | `work/domain/operation` | `work/api/operation` | 공개 결과가 내부 domain 타입을 참조하지 않도록 기존 값 계약 이동 |
+
+- 기존 조회 서비스가 API를 직접 구현하며 Farm·Analytics는 허용된 API를 직접 호출한다. 새 전달 Service·Adapter·Port·integration 패키지는 추가하지 않는다. 컴파일 의존과 Bean 이름은 유지한다.
+- 기존 공개 조회 메서드 4개와 중첩 결과 record 4개를 전환한다. 결과 값의 필드·생성자·불변 목록 복사, enum의 문자열·handler/effect/custom-type 규칙은 동일하다.
+- QueryDSL projection은 Work API의 값 record를 직접 생성하며 Repository projection을 외부 계약으로 노출하지 않는다. 기존 쿼리 본문·완료 상태 조건·최근 10개 제한·500개 단위 ID 일괄 조회·정렬·제외 대상 처리·`readOnly = true`를 유지한다.
+- Work 저장 JSON·JPA enum 문자열·Mutation 단일 Writer·트랜잭션 및 잠금 순서는 변경하지 않는다. 기존 Work 내부 조회 구현 테스트는 구체 서비스를 검증하며, 외부 Analytics 테스트는 공개 API를 사용한다.
+- reviewed inventory는 조회 구현/중첩 값 FQCN만 대응 계약으로 치환한다. domain에서 공개 API로 이동한 enum의 기존 외부 참조는 별도 확인해 추가하며, 신규 업무 호출을 승인하지 않는다.
+
+검증 결과:
+
+- 집중 검증의 Analytics·품종·Mutation 조회 및 공개 값 계약·integration·단일 Writer 검사 통과. enum 이동으로 새로 검사된 기존 TYPE 3개와 범위 enum의 `values()`·`ordinal()` METHOD 2개는 개별 확인 후 반영했으며 전체 검증에서 inventory 검사도 통과했다.
+- `clean test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. QueryDSL 생성 코드가 새 enum 경로를 사용하며 이전 enum·중첩 결과 FQCN 클래스는 남아 있지 않다.
+- 프론트엔드 `npm run check` 통과. OpenAPI 재생성 성공: 157 operations, 132 paths, 292 schemas; 명세 차이 없음. 프론트 타입 재생성은 계약 차이가 없어 실행하지 않았다.
+- 두 조회 구현의 쿼리 본문, 결과 record 4개, enum 3개의 값·동작이 동일함을 확인했다. 설정·저장용 FQCN 참조는 main/resources와 scripts에서 발견되지 않았다.
+- SQL·조회 조건·트랜잭션·잠금·DB 제약·업무 계산 변경이 없어 `workE2eTest`는 실행하지 않았다. E2E 소스의 import도 전환했으며 `compileTestJava`로 컴파일했다.
+- 전체 검증 이후 변경은 이 ADR의 검증 기록뿐이다. 후속 Work 공개 계약 전환은 대상 해석·입고 lifecycle·즉시 실행·계보·운영 대사 참조를 각각 검토한다.

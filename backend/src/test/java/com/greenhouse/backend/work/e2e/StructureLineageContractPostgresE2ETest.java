@@ -8,8 +8,8 @@ import static org.mockito.Mockito.reset;
 
 import com.greenhouse.backend.farm.application.transformation.StructureChangeExecutor;
 import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;
 import java.util.LinkedHashMap;
 import java.util.List;

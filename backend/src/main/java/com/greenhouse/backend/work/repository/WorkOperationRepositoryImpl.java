@@ -4,11 +4,11 @@ import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOp
 import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
 import com.greenhouse.backend.common.api.QueryLimits;
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.correction.QWorkOperationCorrection;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;

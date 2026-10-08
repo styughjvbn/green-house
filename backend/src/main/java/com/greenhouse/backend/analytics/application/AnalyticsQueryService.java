@@ -19,7 +19,7 @@ import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader.Identity;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService.Balance;
-import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
+import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -41,7 +41,7 @@ public class AnalyticsQueryService {
 
   private final FarmMetricsReader farmMetricsReader;
 
-  private final WorkOperationMetricsReader workMetricsReader;
+  private final WorkOperationMetricsApi workMetricsReader;
 
   private final BusinessPartnerReader partnerReader;
 

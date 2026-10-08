@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import java.time.LocalDate;

@@ -5,7 +5,7 @@ import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 import static com.greenhouse.backend.work.domain.target.QWorkOperationTarget.workOperationTarget;
 import static com.greenhouse.backend.work.domain.target.QWorkTargetExecution.workTargetExecution;
 
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;

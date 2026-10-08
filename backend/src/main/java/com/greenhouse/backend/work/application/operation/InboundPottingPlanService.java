@@ -1,7 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.effect.InboundPottingCandidateResponse;

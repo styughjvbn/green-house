@@ -6,6 +6,8 @@ import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.work.api.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.application.correction.WorkOperationCorrectionService;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
@@ -19,8 +21,6 @@ import com.greenhouse.backend.work.application.operation.WorkOperationQueryServi
 import com.greenhouse.backend.work.application.operation.WorkOperationRelationQueryService;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionsResponse;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingCandidateResponse;

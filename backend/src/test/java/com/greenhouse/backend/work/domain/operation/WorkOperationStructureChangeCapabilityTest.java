@@ -2,6 +2,9 @@ package com.greenhouse.backend.work.domain.operation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;

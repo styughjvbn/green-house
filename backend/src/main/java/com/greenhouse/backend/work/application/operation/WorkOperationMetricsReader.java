@@ -4,9 +4,12 @@ import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOp
 import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 import static com.greenhouse.backend.work.domain.target.QWorkOperationTarget.workOperationTarget;
 
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi;
+import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi.RecentRecord;
+import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi.Summary;
+import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi.TypeCount;
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -16,7 +19,6 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-public class WorkOperationMetricsReader {
+public class WorkOperationMetricsReader implements WorkOperationMetricsApi {
 
   private final JPAQueryFactory queryFactory;
 
+  @Override
   public Summary getSummary(LocalDate from, LocalDate to) {
     var completedInPeriod =
         completedWorkOperations().and(workOperation.plannedStartDate.between(from, to));
@@ -96,6 +99,7 @@ public class WorkOperationMetricsReader {
         totalCount, movementCount, statusCount, latestWorkDate, typeCounts, recentRecords);
   }
 
+  @Override
   public Map<Long, LocalDate> getLatestWorkDates(Collection<Long> orchidGroupIds) {
     if (orchidGroupIds == null || orchidGroupIds.isEmpty()) {
       return Map.of();
@@ -130,30 +134,4 @@ public class WorkOperationMetricsReader {
   private BooleanExpression completedWorkOperations() {
     return workOperation.status.in(WorkOperationStatus.COMPLETED);
   }
-
-  public record Summary(
-      long totalCount,
-      long movementCount,
-      long statusCount,
-      LocalDate latestWorkDate,
-      List<TypeCount> typeCounts,
-      List<RecentRecord> recentRecords) {
-    public Summary {
-      typeCounts = List.copyOf(typeCounts);
-      recentRecords = List.copyOf(recentRecords);
-    }
-  }
-
-  public record TypeCount(String name, long count) {}
-
-  public record RecentRecord(
-      Long id,
-      LocalDate workDate,
-      String workType,
-      WorkTypeTemplate workTypeTemplate,
-      String title,
-      WorkSourceScopeType sourceScopeType,
-      String worker,
-      String memo,
-      WorkOperationStatus status) {}
 }

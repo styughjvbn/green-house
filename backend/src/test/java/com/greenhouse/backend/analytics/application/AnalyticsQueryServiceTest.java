@@ -8,7 +8,7 @@ import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
 import com.greenhouse.backend.sales.application.document.SalesMetricsReader;
 import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
-import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
+import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -22,11 +22,11 @@ class AnalyticsQueryServiceTest {
   void queriesTheKoreanBusinessDateWhenItIsStillThePreviousUtcDate() {
     var repository = mock(SalesMetricsReader.class);
     var farmMetrics = mock(FarmMetricsReader.class);
-    var workMetrics = mock(WorkOperationMetricsReader.class);
+    var workMetrics = mock(WorkOperationMetricsApi.class);
     var from = LocalDate.of(2025, 10, 1);
     var to = LocalDate.of(2026, 9, 6);
     when(workMetrics.getSummary(from, to))
-        .thenReturn(new WorkOperationMetricsReader.Summary(0, 0, 0, null, List.of(), List.of()));
+        .thenReturn(new WorkOperationMetricsApi.Summary(0, 0, 0, null, List.of(), List.of()));
     Clock clock = Clock.fixed(Instant.parse("2026-09-05T15:00:00Z"), ZoneOffset.UTC);
 
     new AnalyticsQueryService(

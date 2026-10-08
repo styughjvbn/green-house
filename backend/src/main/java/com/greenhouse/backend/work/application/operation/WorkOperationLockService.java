@@ -2,8 +2,8 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.spi.target.InboundPottingPlanGateway;

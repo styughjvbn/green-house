@@ -1,9 +1,9 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.dto.operation.WorkTypeCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkTypeMetadataResponse;
 import com.greenhouse.backend.work.dto.operation.WorkTypeReorderRequest;
