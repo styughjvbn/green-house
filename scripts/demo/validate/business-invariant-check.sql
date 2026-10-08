@@ -49,9 +49,6 @@ BEGIN
 
   IF EXISTS (
     SELECT 1 FROM auction_result_lines
-    WHERE amount <> quantity * unit_price
-  ) OR EXISTS (
-    SELECT 1 FROM auction_settlement_lines
     WHERE amount <> quantity::bigint * unit_price
   ) THEN
     RAISE EXCEPTION 'Auction line amount is inconsistent';
@@ -59,19 +56,14 @@ BEGIN
 
   IF EXISTS (
     SELECT 1
-    FROM auction_settlements settlement
-    LEFT JOIN (
-      SELECT settlement_id, coalesce(sum(amount), 0) AS line_total
-      FROM auction_settlement_lines
-      GROUP BY settlement_id
-    ) lines ON lines.settlement_id = settlement.id
-    WHERE settlement.gross_amount <> coalesce(lines.line_total, 0)
-       OR settlement.expected_deposit_amount <>
-          greatest(0, settlement.gross_amount - settlement.fee_amount - settlement.deduction_amount)
-       OR settlement.remaining_amount <>
-          greatest(0, settlement.expected_deposit_amount - settlement.paid_amount)
+    FROM auction_proceeds proceeds
+    WHERE proceeds.reported_gross_amount < 0 OR proceeds.receivable_amount < 0
+       OR (proceeds.matching_confirmed AND (
+         proceeds.source_reference IS NULL OR proceeds.reported_gross_amount IS NULL
+         OR NOT EXISTS (SELECT 1 FROM auction_proceeds_results reference
+           WHERE reference.auction_proceeds_id=proceeds.id)))
   ) THEN
-    RAISE EXCEPTION 'Auction settlement total is inconsistent';
+    RAISE EXCEPTION 'Auction proceeds evidence is inconsistent';
   END IF;
 
   IF EXISTS (
@@ -80,6 +72,8 @@ BEGIN
        OR sold_quantity < 0
        OR returned_quantity < 0
        OR waiting_quantity < 0
+       OR disposed_quantity < 0
+       OR inferred_return_quantity < 0
        OR sold_quantity > shipped_quantity
        OR returned_quantity > shipped_quantity
        OR waiting_quantity > shipped_quantity

@@ -54,6 +54,36 @@ class CatalogTest(unittest.TestCase):
 
 
 class JsonSanitizationTest(unittest.TestCase):
+    def test_nested_receipt_dates_follow_database_date_shift(self) -> None:
+        result = transform_business_json(
+            {"arrival": {"arrivalDate": "2026-10-07"},
+             "createdAt": "2026-10-07T09:10:11.123Z"},
+            key="k" * 32, namespace="receipt", quantity_factor=3,
+            price_factor=2, master_mapping={}, catalog=[CatalogPair("난", "품종")],
+            date_shift_days=-8,
+        )
+        self.assertEqual(result["arrival"]["arrivalDate"], "2026-09-29")
+        self.assertEqual(result["createdAt"], "2026-09-29T09:10:11.123Z")
+
+    def test_sales_receipt_dates_and_nullable_proceeds_remain_replayable(self) -> None:
+        source = {"id": 7, "arrivalDate": "2026-10-07", "createdAt": "2026-10-07T09:10:11.123Z",
+                  "quantity": 2, "lot": {"soldQuantity": 3, "waitingQuantity": 4, "currentStatus": "WAITING"},
+                  "reportedGrossAmount": 1000, "receivableAmount": None, "reviewRequired": True,
+                  "worker": "원래 담당자", "reason": "원래 사유"}
+        result = transform_business_json(source, key="k" * 32, namespace="auction-receipt",
+            quantity_factor=3, price_factor=2, master_mapping={}, catalog=[CatalogPair("난", "품종")])
+        self.assertEqual(result["id"], 7)
+        self.assertEqual(result["arrivalDate"], source["arrivalDate"])
+        self.assertEqual(result["createdAt"], source["createdAt"])
+        self.assertEqual(result["lot"]["currentStatus"], "WAITING")
+        self.assertEqual(result["lot"]["soldQuantity"], 9)
+        self.assertEqual(result["quantity"], 6)
+        self.assertEqual(result["reportedGrossAmount"], 6000)
+        self.assertIsNone(result["receivableAmount"])
+        self.assertTrue(result["reviewRequired"])
+        self.assertIsNone(result["worker"])
+        self.assertIsNone(result["reason"])
+
     def test_active_engine_snapshot_transformation_preserves_shape(self) -> None:
         source = {
             "quantity": 2,

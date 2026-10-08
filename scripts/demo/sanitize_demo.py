@@ -14,6 +14,7 @@ import os
 import re
 import sys
 from dataclasses import dataclass
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Sequence
@@ -31,7 +32,9 @@ SAFE_CODE = re.compile(r"^[A-Z][A-Z0-9_:-]{1,49}$")
 ACTOR_COLUMNS = (
     ("audit_events", "actor_id"),
     ("auction_lot_status_history", "worker"),
-    ("auction_settlements", "confirmed_by"),
+    ("auction_follow_up_decisions", "worker"),
+    ("auction_return_arrivals", "worker"),
+    ("auction_proceeds", "confirmed_by"),
     ("inbound_records", "worker"),
     ("partner_payment_events", "created_by"),
     ("work_records", "worker"),
@@ -44,8 +47,9 @@ ACTOR_COLUMNS = (
 
 JSON_COLUMNS = {
     "audit_events": ("before_data", "after_data", "context_data"),
-    "auction_settlement_lines": ("line_meta_json",),
-    "auction_settlements": ("payment_meta_json",),
+    "direct_sale_amount_reconciliations": ("cutover_legacy_snapshot",),
+    "sales_creation_receipts": ("response_snapshot",),
+    "auction_command_receipts": ("response_snapshot",),
     "partner_balance_summaries": ("summary_json",),
     "partner_payment_events": (
         "allocation_payload",
@@ -70,6 +74,12 @@ QUANTITY_JSON_FIELDS = {
     "sourceQuantity",
     "resultQuantity",
     "quantityDelta",
+    "shippedQuantity",
+    "soldQuantity",
+    "waitingQuantity",
+    "returnedQuantity",
+    "disposedQuantity",
+    "inferredReturnQuantity",
 }
 PRICE_JSON_FIELDS = {"unitPrice"}
 AMOUNT_JSON_FIELDS = {
@@ -78,6 +88,8 @@ AMOUNT_JSON_FIELDS = {
     "paidAmount",
     "remainingAmount",
     "grossAmount",
+    "reportedGrossAmount",
+    "receivableAmount",
     "feeAmount",
     "deductionAmount",
     "expectedDepositAmount",
@@ -246,6 +258,7 @@ def transform_business_json(
     price_factor: int,
     master_mapping: dict[int, CatalogPair],
     catalog: Sequence[CatalogPair],
+    date_shift_days: int = 0,
 ) -> Any:
     """Transform business JSON without changing keys, array order, or references."""
     if isinstance(value, list):
@@ -258,6 +271,7 @@ def transform_business_json(
                 price_factor=price_factor,
                 master_mapping=master_mapping,
                 catalog=catalog,
+                date_shift_days=date_shift_days,
             )
             for item in value
         ]
@@ -278,6 +292,12 @@ def transform_business_json(
             transformed[field] = item * quantity_factor * price_factor
         elif field in SENSITIVE_JSON_FIELDS and item is not None:
             transformed[field] = None
+        elif isinstance(item, str) and (field.endswith("Date") or field.endswith("At")) and re.fullmatch(
+            r"\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)?", item
+        ):
+            transformed[field] = (
+                date.fromisoformat(item[:10]) + timedelta(days=date_shift_days)
+            ).isoformat() + item[10:]
         elif isinstance(item, str):
             transformed[field] = (
                 item
@@ -293,6 +313,7 @@ def transform_business_json(
                 price_factor=price_factor,
                 master_mapping=master_mapping,
                 catalog=catalog,
+                date_shift_days=date_shift_days,
             )
 
     variety_id = transformed.get("varietyId")
@@ -332,7 +353,9 @@ def collect_original_sensitive_values(cursor: Any) -> set[str]:
         ("business_partners", "phone"),
         ("audit_events", "actor_id"),
         ("auction_lot_status_history", "worker"),
-        ("auction_settlements", "confirmed_by"),
+        ("auction_follow_up_decisions", "worker"),
+        ("auction_return_arrivals", "worker"),
+        ("auction_proceeds", "confirmed_by"),
         ("inbound_records", "worker"),
         ("partner_payment_events", "created_by"),
         ("partner_payment_events", "depositor_name"),
@@ -350,7 +373,9 @@ def collect_original_sensitive_values(cursor: Any) -> set[str]:
         ("materials", "usage"),
         ("auction_attempts", "memo"),
         ("auction_result_lines", "note"),
-        ("auction_settlements", "memo"),
+        ("auction_proceeds", "source_reference"),
+        ("auction_follow_up_decisions", "reason"),
+        ("auction_return_arrivals", "cancellation_reason"),
         ("auction_shipment_lots", "memo"),
         ("auction_shipments", "memo"),
         ("inbound_records", "memo"),
@@ -434,7 +459,9 @@ def clear_sensitive_data(cursor: Any) -> None:
         "UPDATE auction_attempts SET memo=NULL, failed_reason=CASE WHEN failed_reason IS NULL THEN NULL ELSE '데모 사유' END",
         "UPDATE auction_lot_status_history SET memo=NULL, reason='데모 상태 변경'",
         "UPDATE auction_result_lines SET note=NULL",
-        "UPDATE auction_settlements SET memo=NULL",
+        "UPDATE auction_proceeds SET source_reference=CASE WHEN source_reference IS NULL THEN NULL ELSE 'DEMO-SOURCE-' || id END",
+        "UPDATE auction_follow_up_decisions SET reason=CASE WHEN reason IS NULL THEN NULL ELSE '데모 처리 사유' END",
+        "UPDATE auction_return_arrivals SET cancellation_reason=CASE WHEN cancellation_reason IS NULL THEN NULL ELSE '데모 도착 정정' END",
         "UPDATE auction_shipment_lots SET memo=NULL",
         "UPDATE auction_shipments SET memo=NULL",
         "UPDATE bed_zone_capacities SET memo=NULL",
@@ -704,10 +731,7 @@ def scaling_fits(cursor: Any, quantity_factor: int, price_factor: int) -> bool:
     checks = (
         (
             "SELECT coalesce(max(abs(value::numeric)),0) FROM ("
-            "SELECT bottle_count value FROM inbound_records UNION ALL "
-            "SELECT estimated_quantity FROM inbound_records UNION ALL "
-            "SELECT actual_quantity FROM inbound_records UNION ALL "
-            "SELECT tray_count FROM inbound_records UNION ALL "
+            "SELECT estimated_quantity value FROM inbound_records UNION ALL "
             "SELECT quantity FROM orchid_groups UNION ALL SELECT tray_count FROM orchid_groups UNION ALL "
             "SELECT reserved_quantity FROM orchid_groups UNION ALL "
             "SELECT source_quantity FROM orchid_group_lineage UNION ALL "
@@ -722,7 +746,11 @@ def scaling_fits(cursor: Any, quantity_factor: int, price_factor: int) -> bool:
             "SELECT sold_quantity FROM auction_shipment_lots UNION ALL "
             "SELECT waiting_quantity FROM auction_shipment_lots UNION ALL "
             "SELECT quantity FROM auction_result_lines UNION ALL "
-            "SELECT quantity FROM auction_settlement_lines"
+            "SELECT priced_quantity FROM direct_sale_prices UNION ALL "
+            "SELECT quantity FROM auction_follow_up_decisions UNION ALL "
+            "SELECT quantity FROM auction_return_arrivals UNION ALL "
+            "SELECT disposed_quantity FROM auction_shipment_lots UNION ALL "
+            "SELECT inferred_return_quantity FROM auction_shipment_lots"
             ") values",
             quantity_factor,
             INT_MAX,
@@ -731,7 +759,7 @@ def scaling_fits(cursor: Any, quantity_factor: int, price_factor: int) -> bool:
             "SELECT coalesce(max(abs(value::numeric)),0) FROM ("
             "SELECT unit_price value FROM sales_slip_items UNION ALL "
             "SELECT unit_price FROM auction_result_lines UNION ALL "
-            "SELECT unit_price FROM auction_settlement_lines"
+            "SELECT unit_price FROM direct_sale_prices"
             ") values",
             price_factor,
             INT_MAX,
@@ -740,6 +768,8 @@ def scaling_fits(cursor: Any, quantity_factor: int, price_factor: int) -> bool:
             "SELECT coalesce(max(abs(value::numeric)),0) FROM ("
             "SELECT quantity::numeric * unit_price value FROM sales_slip_items UNION ALL "
             "SELECT quantity::numeric * unit_price FROM auction_result_lines UNION ALL "
+            "SELECT total_amount FROM direct_sales UNION ALL "
+            "SELECT amount FROM direct_sale_prices UNION ALL "
             "SELECT paid_amount FROM sales_slips UNION ALL "
             "SELECT coalesce(sum(item.quantity::numeric * item.unit_price),0) "
             "FROM sales_slips slip LEFT JOIN sales_slip_items item ON item.sales_slip_id=slip.id "
@@ -750,20 +780,18 @@ def scaling_fits(cursor: Any, quantity_factor: int, price_factor: int) -> bool:
         ),
         (
             "SELECT coalesce(max(abs(value::numeric)),0) FROM ("
-            "SELECT quantity::numeric * unit_price value FROM auction_settlement_lines UNION ALL "
-            "SELECT deduction_amount FROM auction_settlements UNION ALL "
-            "SELECT fee_amount FROM auction_settlements UNION ALL "
-            "SELECT paid_amount FROM auction_settlements UNION ALL "
+            "SELECT reported_gross_amount value FROM auction_proceeds UNION ALL "
+            "SELECT receivable_amount FROM auction_proceeds UNION ALL "
+            "SELECT stored_paid_amount FROM direct_sale_amount_reconciliations UNION ALL "
+            "SELECT stored_remaining_amount FROM direct_sale_amount_reconciliations UNION ALL "
+            "SELECT stored_item_amount_sum FROM direct_sale_amount_reconciliations UNION ALL "
+            "SELECT confirmed_allocation_amount FROM direct_sale_amount_reconciliations UNION ALL "
             "SELECT amount FROM partner_payment_events UNION ALL "
             "SELECT unapplied_amount FROM partner_payment_events UNION ALL "
             "SELECT credit_balance FROM partner_balance_summaries UNION ALL "
             "SELECT receivable_balance FROM partner_balance_summaries UNION ALL "
             "SELECT unapplied_payment_amount FROM partner_balance_summaries UNION ALL "
-            "SELECT amount_tolerance FROM partner_settlement_settings UNION ALL "
-            "SELECT coalesce(sum(line.quantity::numeric * line.unit_price),0) "
-            "FROM auction_settlements settlement "
-            "LEFT JOIN auction_settlement_lines line ON line.settlement_id=settlement.id "
-            "GROUP BY settlement.id"
+            "SELECT amount_tolerance FROM partner_settlement_settings"
             ") values",
             combined,
             BIGINT_MAX,
@@ -801,7 +829,7 @@ def choose_scaling_factors(
 def scale_business_values(cursor: Any, quantity_factor: int, price_factor: int) -> None:
     combined = quantity_factor * price_factor
     quantity_statements = (
-        "UPDATE inbound_records SET bottle_count=bottle_count*%s, estimated_quantity=estimated_quantity*%s, actual_quantity=actual_quantity*%s, tray_count=tray_count*%s",
+        "UPDATE inbound_records SET estimated_quantity=estimated_quantity*%s",
         "UPDATE orchid_groups SET quantity=quantity*%s, tray_count=tray_count*%s, reserved_quantity=reserved_quantity*%s",
         "UPDATE orchid_group_lineage SET source_quantity=source_quantity*%s, result_quantity=result_quantity*%s",
         "UPDATE work_operation_targets SET quantity_snapshot=quantity_snapshot*%s",
@@ -809,7 +837,9 @@ def scale_business_values(cursor: Any, quantity_factor: int, price_factor: int) 
         "UPDATE sales_orchid_group_snapshots SET quantity=quantity*%s, reserved_quantity=reserved_quantity*%s, allocated_quantity=allocated_quantity*%s",
         "UPDATE sales_slip_item_allocations SET allocated_quantity=allocated_quantity*%s",
         "UPDATE sales_inventory_movements SET quantity_delta=quantity_delta*%s",
-        "UPDATE auction_shipment_lots SET boxes=boxes*%s, returned_quantity=returned_quantity*%s, shipped_quantity=shipped_quantity*%s, sold_quantity=sold_quantity*%s, waiting_quantity=waiting_quantity*%s",
+        "UPDATE auction_shipment_lots SET boxes=boxes*%s, returned_quantity=returned_quantity*%s, shipped_quantity=shipped_quantity*%s, sold_quantity=sold_quantity*%s, waiting_quantity=waiting_quantity*%s, disposed_quantity=disposed_quantity*%s, inferred_return_quantity=inferred_return_quantity*%s",
+        "UPDATE auction_follow_up_decisions SET quantity=quantity*%s",
+        "UPDATE auction_return_arrivals SET quantity=quantity*%s",
     )
     for statement in quantity_statements:
         cursor.execute(statement, tuple(quantity_factor for _ in range(statement.count("%s"))))
@@ -855,39 +885,18 @@ def scale_business_values(cursor: Any, quantity_factor: int, price_factor: int) 
         """,
         (quantity_factor, price_factor, combined),
     )
-    cursor.execute(
-        """
-        UPDATE auction_settlement_lines
-        SET quantity=quantity*%s,
-            unit_price=unit_price*%s,
-            amount=quantity::bigint*unit_price*%s
-        """,
-        (quantity_factor, price_factor, combined),
-    )
+    cursor.execute("UPDATE direct_sale_prices SET priced_quantity=priced_quantity*%s,unit_price=unit_price*%s,amount=amount*%s", (quantity_factor,price_factor,combined))
+    cursor.execute("UPDATE direct_sales SET total_amount=total_amount*%s",(combined,))
+    cursor.execute("UPDATE sales_slips document SET total_amount=sale.total_amount FROM direct_sales sale WHERE document.id=sale.sales_slip_id")
+    cursor.execute("UPDATE sales_slips SET remaining_amount=greatest(0,total_amount::bigint-paid_amount)")
     for statement in (
-        "UPDATE auction_settlements SET deduction_amount=deduction_amount*%s, fee_amount=fee_amount*%s, paid_amount=paid_amount*%s",
+        "UPDATE auction_proceeds SET reported_gross_amount=reported_gross_amount*%s,receivable_amount=receivable_amount*%s",
+        "UPDATE direct_sale_amount_reconciliations SET stored_paid_amount=stored_paid_amount*%s,stored_remaining_amount=stored_remaining_amount*%s,stored_item_amount_sum=stored_item_amount_sum*%s,confirmed_allocation_amount=confirmed_allocation_amount*%s",
         "UPDATE partner_payment_events SET amount=amount*%s, unapplied_amount=unapplied_amount*%s",
         "UPDATE partner_balance_summaries SET credit_balance=credit_balance*%s, receivable_balance=receivable_balance*%s, unapplied_payment_amount=unapplied_payment_amount*%s",
         "UPDATE partner_settlement_settings SET amount_tolerance=amount_tolerance*%s",
     ):
         cursor.execute(statement, tuple(combined for _ in range(statement.count("%s"))))
-    cursor.execute(
-        """
-        UPDATE auction_settlements settlement
-        SET gross_amount=coalesce((
-          SELECT sum(line.amount) FROM auction_settlement_lines line
-          WHERE line.settlement_id=settlement.id
-        ),0)
-        """
-    )
-    cursor.execute(
-        "UPDATE auction_settlements SET expected_deposit_amount="
-        "greatest(0,gross_amount-fee_amount-deduction_amount)"
-    )
-    cursor.execute(
-        "UPDATE auction_settlements SET remaining_amount="
-        "greatest(0,expected_deposit_amount-paid_amount)"
-    )
 
 
 def sanitize_json_columns(
@@ -897,9 +906,11 @@ def sanitize_json_columns(
     price_factor: int,
     master_mapping: dict[int, CatalogPair],
     catalog: Sequence[CatalogPair],
+    date_shift_days: int = 0,
 ) -> None:
     for table, columns in JSON_COLUMNS.items():
-        rows = fetch_all(cursor, f"SELECT id, {', '.join(columns)} FROM {table} ORDER BY id")
+        primary_key = {"direct_sale_amount_reconciliations": "sales_slip_id", "sales_creation_receipts": "request_key"}.get(table, "id")
+        rows = fetch_all(cursor, f"SELECT {primary_key}, {', '.join(columns)} FROM {table} ORDER BY {primary_key}")
         if not rows:
             continue
         assignments = ", ".join(f"{column}=%s::jsonb" for column in columns)
@@ -915,6 +926,7 @@ def sanitize_json_columns(
                         price_factor=price_factor,
                         master_mapping=master_mapping,
                         catalog=catalog,
+                        date_shift_days=date_shift_days,
                     ),
                     ensure_ascii=False,
                 )
@@ -924,7 +936,7 @@ def sanitize_json_columns(
             ]
             updates.append((*values, row[0]))
         cursor.executemany(
-            f"UPDATE {table} SET {assignments} WHERE id=%s",
+            f"UPDATE {table} SET {assignments} WHERE {primary_key}=%s",
             updates,
         )
 
@@ -1117,6 +1129,7 @@ def validate_known_constraints(cursor: Any) -> None:
         ("orchid_groups", "ck_orchid_groups_reserved_quantity"),
         ("orchid_groups", "ck_orchid_groups_state_revision"),
         ("sales_slips", "ck_sales_slips_sales_status"),
+        ("sales_slip_items", "ck_sales_slip_items_amount"),
     ):
         cursor.execute(
             f"ALTER TABLE {validated_identifier(table)} VALIDATE CONSTRAINT "
@@ -1197,6 +1210,7 @@ def run() -> None:
                 price_factor,
                 master_mapping,
                 catalog,
+                date_shift_days=date_shift,
             )
             refresh_baseline_fingerprint(cursor)
             assert_original_values_removed(cursor, originals)

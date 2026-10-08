@@ -48,9 +48,9 @@ def git_value(*arguments):
 def completed_report(report, options):
     """Do not turn a partial, stale, or wrong-configuration report into a success."""
     expected = {
-        "smoke": {"settlement": 2, "ledger": 3},
-        "standard": {"settlement": 5, "ledger": 5},
-        "large": {"settlement": 2, "ledger": 4},
+        "smoke": {"ledger": 3},
+        "standard": {"ledger": 5},
+        "large": {"ledger": 4},
     }[options.profile]
     families = list(expected) if options.scenario == "all" else [options.scenario]
     if (report.get("schemaVersion") != 1 or report.get("status") != "PASSED"
@@ -67,7 +67,7 @@ def completed_report(report, options):
         selected = [s for s in scenarios if s.get("fixture", {}).get("family") == family]
         if len(selected) != expected[family]:
             return False
-        phases = {"initialize", "replay"} if family == "settlement" else {"reconcile"}
+        phases = {"reconcile"}
         for scenario in selected:
             name = scenario.get("fixture", {}).get("name")
             if not name or name in names or scenario.get("status") != "PASSED":
@@ -185,7 +185,7 @@ def run(options):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", choices=["smoke", "standard", "large"], default="standard")
-    parser.add_argument("--scenario", choices=["all", "settlement", "ledger"], default="all")
+    parser.add_argument("--scenario", choices=["all", "ledger"], default="all")
     parser.add_argument("--samples", type=bounded_integer(1, 30), default=3)
     parser.add_argument("--warmup", type=bounded_integer(0, 20), default=1)
     parser.add_argument("--heap", type=heap_size, default="2g")
