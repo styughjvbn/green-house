@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.auction;
 
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
-import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.Lot;
-import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.Shipment;
+import com.greenhouse.backend.sales.document.spi.AuctionDocumentPort.Lot;
+import com.greenhouse.backend.sales.document.spi.AuctionDocumentPort.Shipment;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
 import com.greenhouse.backend.sales.repository.auction.AuctionResultLineRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionResultReadRow;

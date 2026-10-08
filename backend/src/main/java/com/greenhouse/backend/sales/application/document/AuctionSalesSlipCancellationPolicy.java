@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.application.document;
 
+import com.greenhouse.backend.sales.document.spi.AuctionDocumentPort;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import java.util.Collection;
 import java.util.HashSet;

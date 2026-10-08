@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.application.document;
+package com.greenhouse.backend.sales.document.spi;
 
 import java.time.LocalDate;
 import java.util.Collection;

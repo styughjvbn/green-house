@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.dto.document;
 
-import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.Shipment;
+import com.greenhouse.backend.sales.document.spi.AuctionDocumentPort.Shipment;
 import java.time.LocalDate;
 import java.util.List;
 

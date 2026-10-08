@@ -642,3 +642,16 @@ Sales 4단계 검증 결과:
 
 - 초기 집중 검증의 import 정렬 오류 수정 후 전체 `clean test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 프론트 `npm run check` 통과. 임시 heap 2 GiB 사용. SPI 본문과 Adapter 실행 본문은 동일하며 다른 Java 수정은 import뿐이다.
 - reviewed inventory는 대응 FQCN만 치환하고 신규 항목은 없다. HTTP·SQL·DB/트랜잭션 경계·정책 변경이 없어 타입 재생성/`workE2eTest` 미실행. OpenAPI는 5단계 후 다시 확인한다. 전체 검증 이후에는 이 ADR 결과만 추가했다.
+
+### 2026-10-08: Sales 다섯 단계 — 5. Document 경매 SPI
+
+- 기존 `AuctionDocumentPort`와 출하/lot/생성 결과 값을 Document 소유 `sales/document/spi`로 이동한다. Document → 자신의 SPI 호출, Auction → Document SPI 구현을 유지한다. Sales 내부 계약이며 외부 최상위 모듈에 공개하지 않는다.
+- AuctionDocumentAdapter는 출하 생성·초안 삭제·결과 참조와 취소 불가 조건 결합·표시/일괄 조회를 Document에 연결하는 실제 역전 구현이므로 유지한다. Auction Entity나 저장소는 노출하지 않는다. 새 전달 Adapter/Port/integration은 없다.
+- SPI/record 검증과 collection 복사·실행 본문·잠금/트랜잭션·과거 출하 값·Mutation 단일 Writer·Receipt 지문/replay는 동일하다. reviewed inventory는 대응 FQCN만 치환한다.
+
+Sales 5단계 검증 결과:
+
+- clean 집중 검증 통과: 경매 추적·판매/재고·생성 지문·공개 값·기능 그래프·단일 Writer·정확한 inventory. 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과.
+- OpenAPI 재생성 157 operations/132 paths/292 schemas, 생성 파일 diff 없음. 타입 재생성 불필요. SPI 본문은 package 외 동일하고 다른 Java 변경은 import뿐이다. 두 SPI의 이전 FQCN 참조는 코드·리소스·스크립트에 남아 있지 않다.
+- SQL·DB/트랜잭션 경계·잠금·수량/금액 정책·HTTP 변경 없음. `workE2eTest` 미실행. 전체 검증 이후에는 이 ADR 결과만 추가했다.
+- 이번 다섯 단계 완료. 다른 최상위 모듈에서 Sales application을 직접 사용하는 프로덕션 코드는 Analytics의 PartnerBalanceService/Balance 참조 두 import가 남는다. 다음 단계는 Payment 잔액 공개 조회 및 내부 대상/배분 계약 정리다. 전체 전환·최종 문서 통합은 진행 중이므로 목표 문서의 archive 이동은 아직 하지 않는다.

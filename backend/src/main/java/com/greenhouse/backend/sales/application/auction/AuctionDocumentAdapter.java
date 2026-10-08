@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.application.auction;
 
-import com.greenhouse.backend.sales.application.document.AuctionDocumentPort;
+import com.greenhouse.backend.sales.document.spi.AuctionDocumentPort;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashSet;
