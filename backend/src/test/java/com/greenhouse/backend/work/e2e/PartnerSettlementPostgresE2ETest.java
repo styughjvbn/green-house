@@ -46,6 +46,7 @@ import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository
 import com.greenhouse.backend.sales.repository.partner.PartnerSettlementSettingsRepository;
 import com.greenhouse.backend.sales.repository.payment.PartnerBalanceSummaryRepository;
 import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -774,7 +775,9 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
             "계좌이체",
             null);
     slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
-    return salesSlipRepository.saveAndFlush(slip);
+    var saved = salesSlipRepository.saveAndFlush(slip);
+    DirectSaleFixtures.copyTerms(jdbcTemplate, saved.getId());
+    return saved;
   }
 
   private ManualPaymentCommand payment(long amount, String key) {

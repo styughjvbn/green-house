@@ -3,6 +3,7 @@ package com.greenhouse.backend.sales.application.direct;
 import com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort.FinancialSnapshot;
 import com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort.PriceSnapshot;
 import com.greenhouse.backend.sales.application.payment.PaymentAllocationReader;
+import com.greenhouse.backend.sales.domain.direct.DirectSaleAmounts;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.repository.direct.DirectSaleAmountReconciliationRepository;
 import com.greenhouse.backend.sales.repository.direct.DirectSaleRepository;
@@ -79,6 +80,7 @@ public class DirectSaleFinancialReader {
                 allocation.amount(),
                 total.subtract(allocation.amount()).max(BigDecimal.ZERO),
                 review,
+                DirectSaleAmounts.paymentStatus(sale.getTotalAmount(), allocation.amount()),
                 Map.copyOf(prices)));
       }
     }

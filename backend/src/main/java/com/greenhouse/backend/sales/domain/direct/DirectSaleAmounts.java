@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.domain.direct;
 
 import com.greenhouse.backend.common.exception.ConflictException;
+import java.math.BigDecimal;
 import java.util.Collection;
 
 /** Exact arithmetic for newly agreed direct-sale amounts; never recalculates migrated facts. */
@@ -11,6 +12,11 @@ public final class DirectSaleAmounts {
     if (reviewRequired)
       throw new ConflictException(
           "DIRECT_AMOUNT_REVIEW_REQUIRED", "과거 금액과 입금 연결의 검토가 끝나기 전에는 새 입금이나 금액 변경을 할 수 없습니다.");
+  }
+
+  public static String paymentStatus(int total, BigDecimal allocated) {
+    if (allocated.signum() == 0) return "미입금";
+    return allocated.compareTo(BigDecimal.valueOf(total)) >= 0 ? "입금 완료" : "부분입금";
   }
 
   public static int price(Integer quantity, Integer unitPrice) {

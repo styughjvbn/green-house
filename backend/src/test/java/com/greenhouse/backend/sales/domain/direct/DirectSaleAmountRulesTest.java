@@ -3,6 +3,7 @@ package com.greenhouse.backend.sales.domain.direct;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -82,5 +83,26 @@ class DirectSaleAmountRulesTest {
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> new DirectSalePrice(30L, 1, -1000))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void paymentStateComesFromExternalValidAllocationsAtTheStorageLimit() {
+    var sale =
+        new DirectSale(
+            10L, 20L, DATE, null, null, List.of(new DirectSalePrice(30L, 1, Integer.MAX_VALUE)));
+    assertThat(DirectSaleAmounts.paymentStatus(sale.getTotalAmount(), BigDecimal.ZERO))
+        .isEqualTo("미입금");
+    assertThat(DirectSaleAmounts.paymentStatus(sale.getTotalAmount(), BigDecimal.ONE))
+        .isEqualTo("부분입금");
+    sale.requirePaymentAmount(1, 2147483646L);
+    assertThat(sale.remainingAmount(2147483647L)).isZero();
+    assertThat(
+            DirectSaleAmounts.paymentStatus(sale.getTotalAmount(), BigDecimal.valueOf(2147483647L)))
+        .isEqualTo("입금 완료");
+    assertThatThrownBy(() -> sale.requirePaymentAmount(1, -1))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> sale.requirePaymentAmount(2147483647L, 1))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(sale.getTotalAmount()).isEqualTo(Integer.MAX_VALUE);
   }
 }

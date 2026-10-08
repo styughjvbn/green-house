@@ -149,17 +149,22 @@ public class SalesSlip extends BaseEntity {
     this.expectedPaymentDate = expectedPaymentDate;
   }
 
-  public void recordPayment(Long amount) {
-    validatePaymentTarget();
-    if (amount <= 0) {
-      throw new IllegalArgumentException("입금액은 0보다 커야 합니다.");
-    }
-    if (amount > getRemainingAmount()) {
-      throw new IllegalArgumentException("입금액이 현재 잔액을 초과할 수 없습니다.");
-    }
-    this.paidAmount = getPaidAmount() + amount;
-    this.remainingAmount = Math.max(0L, totalAmount.longValue() - paidAmount);
-    this.paymentStatus = remainingAmount == 0 ? "입금 완료" : "부분입금";
+  /**
+   * Compatibility query projection; Direct terms and valid Payment allocations own these values.
+   */
+  public void applyFinancialProjection(
+      Integer total,
+      LocalDate expectedDate,
+      String method,
+      Long paid,
+      Long remaining,
+      String status) {
+    this.totalAmount = total;
+    this.expectedPaymentDate = expectedDate;
+    this.paymentMethod = method;
+    this.paidAmount = paid;
+    this.remainingAmount = remaining;
+    this.paymentStatus = status;
   }
 
   public boolean canEdit(boolean hasPaymentEvent) {

@@ -32,6 +32,7 @@ import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,6 +47,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +58,7 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles("test")
 @Transactional
 class PaymentTests {
+  @Autowired JdbcTemplate jdbc;
 
   @Autowired MockMvc mockMvc;
 
@@ -177,6 +180,7 @@ class PaymentTests {
             null);
     slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
     slip = salesSlipRepository.saveAndFlush(slip);
+    DirectSaleFixtures.copyTerms(jdbc, slip.getId());
 
     mockMvc
         .perform(get("/api/sales-slips/{id}", slip.getId()))

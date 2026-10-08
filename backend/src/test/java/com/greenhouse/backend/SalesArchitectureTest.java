@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaFieldAccess;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -131,6 +132,17 @@ class SalesArchitectureTest {
       for (var contract : Class.forName(type.getName()).getGenericInterfaces()) {
         PublicApplicationContractArchitectureTest.assertValueType(contract, new HashSet<>());
       }
+    }
+  }
+
+  @Test
+  void documentPaidAmountIsOnlyInitializedOrAssignedAsAProjection() {
+    var document = CLASSES.get(ROOT + "domain.document.SalesSlip");
+    for (var access : document.getFieldAccessesFromSelf()) {
+      if (!access.getTarget().getName().equals("paidAmount")
+          || access.getAccessType() != JavaFieldAccess.AccessType.SET) continue;
+      assertThat(Set.of("<init>", "applyFinancialProjection"))
+          .contains(access.getOrigin().getName());
     }
   }
 

@@ -188,6 +188,68 @@ class DirectSaleFinancialPostgresE2ETest extends WorkE2ETestBase {
         .isEqualTo(before);
   }
 
+  @Test
+  void paymentUsesOwnedAmountsDespiteAnIncorrectDocumentSummary() throws Exception {
+    seedSale(1000, 1, 1000, 1000);
+    jdbc.execute(
+        "UPDATE sales_slips SET total_amount=1,paid_amount=1,remaining_amount=0,payment_status='입금 완료' WHERE id=900");
+    var rejected =
+        post(
+            "/api/sales-slips/900/confirm-payment",
+            "{\"amount\":1001,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"owned-too-much\"}");
+    assertThat(rejected.status()).isEqualTo(400);
+    assertThat(events.count()).isZero();
+    var paid =
+        post(
+            "/api/sales-slips/900/confirm-payment",
+            "{\"amount\":400,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"owned-cash\"}");
+    assertThat(paid.status()).as(paid.body().toString()).isEqualTo(200);
+    assertThat(paid.data().path("totalAmount").asInt()).isEqualTo(1000);
+    assertThat(paid.data().path("paidAmount").asLong()).isEqualTo(400);
+    assertThat(paid.data().path("remainingAmount").asLong()).isEqualTo(600);
+    assertThat(paid.data().path("paymentStatus").asText()).isEqualTo("부분입금");
+    assertThat(events.count()).isEqualTo(2);
+    assertThat(reader.findAll(List.of(900L)).get(900L).allocatedAmount())
+        .isEqualByComparingTo("400");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT total_amount FROM direct_sales WHERE sales_slip_id=900", Integer.class))
+        .isEqualTo(1000);
+    var replay =
+        post(
+            "/api/sales-slips/900/confirm-payment",
+            "{\"amount\":400,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"owned-cash\"}");
+    assertThat(replay.status()).isEqualTo(200);
+    assertThat(events.count()).isEqualTo(2);
+  }
+
+  @Test
+  void currentInvalidLinksBlockNewMoneyWithoutChangingTheLedger() throws Exception {
+    seedSale(1000, 1, 1000, 1000);
+    events.saveAndFlush(
+        PartnerPaymentEvent.received(
+            partnerId,
+            LocalDate.of(2026, 10, 7),
+            400L,
+            PaymentTargetType.SALES_SLIP,
+            900L,
+            null,
+            null,
+            "unlinked-cash",
+            null,
+            "기존 담당자"));
+    var before = jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id");
+    var blocked =
+        post(
+            "/api/sales-slips/900/confirm-payment",
+            "{\"amount\":100,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"invalid-link-cash\"}");
+    assertThat(blocked.status()).isEqualTo(409);
+    assertThat(blocked.body().path("error").path("code").asText())
+        .isEqualTo("DIRECT_AMOUNT_REVIEW_REQUIRED");
+    assertThat(jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id"))
+        .isEqualTo(before);
+  }
+
   private void seedSale(int total, int quantity, int unitPrice, int amount) {
     jdbc.update(
         """

@@ -125,7 +125,7 @@ class SalesWriteQueryPostgresE2ETest extends WorkE2ETestBase {
           // Direct root/price writes and review checks stay constant for 1 and 8 items.
           case "EDIT" -> 26;
           case "OUTBOUND" -> 12;
-          case "PAYMENT" -> 13;
+          case "PAYMENT" -> 22;
           case "DRAFT_CANCEL" -> 15;
           case "OUTBOUND_CANCEL" -> 20;
           case "PAYMENT_REPLAY" -> 9;

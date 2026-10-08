@@ -21,6 +21,7 @@ public class DirectDocumentAccountingAdapter implements DirectDocumentAccounting
   private final DirectSaleTermsWriter termsWriter;
   private final DirectSaleFinancialReader financials;
   private final DirectSaleReviewReader reviews;
+  private final DirectSalePaymentPolicy payments;
 
   public Set<Long> findFinancialReviewRequiredIds(Collection<Long> ids) {
     return reviews.findRequired(ids);
@@ -28,6 +29,10 @@ public class DirectDocumentAccountingAdapter implements DirectDocumentAccounting
 
   public void requireFinancialReviewCleared(Long id) {
     reviews.requireClear(id);
+  }
+
+  public void requirePaymentAmount(Long documentId, Long amount) {
+    payments.requirePaymentAmount(documentId, amount);
   }
 
   public Map<Long, FinancialSnapshot> findFinancials(Collection<Long> documentIds) {

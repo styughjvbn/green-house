@@ -15,6 +15,7 @@ import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.domain.partner.PartnerType;
 import com.greenhouse.backend.sales.domain.payment.PartnerBalanceSummary;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.Map;
@@ -298,7 +299,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
   void partnerStatsRetainCurrentBalancesAndPostgresOrderingWithoutPeriodSales() {
     var sold = partner("Old name");
     var first = slip(sold, FROM, 1, 300);
-    first.recordPayment(100L);
+    DirectSaleFixtures.projectAllocation(first, 100L);
     slip(sold, TO, 2, 100);
     slip(sold, FROM.minusDays(1), 1, 9_999);
     balance(sold, 700, 0, 0);
@@ -372,9 +373,9 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
     var to = LocalDate.of(2040, 3, 31);
     var partial = slip(partner, from, 2, 100);
     partial.addItem(new SalesSlipItem(null, "Other variety", "난", null, 3, 200, null));
-    partial.recordPayment(100L);
+    DirectSaleFixtures.projectAllocation(partial, 100L);
     var paid = slip(partner, to, 1, 100);
-    paid.recordPayment(100L);
+    DirectSaleFixtures.projectAllocation(paid, 100L);
     slip(partner, LocalDate.of(2040, 2, 29), 1, 300);
     slip(partner, LocalDate.of(2040, 2, 28), 1, 9_999);
     var draft =

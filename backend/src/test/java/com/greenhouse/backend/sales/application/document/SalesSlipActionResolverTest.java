@@ -8,6 +8,7 @@ import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipAction;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesType;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
@@ -66,7 +67,7 @@ class SalesSlipActionResolverTest {
   private SalesSlip directSalesSlip(Long id, String status, Long remainingAmount) {
     SalesSlip salesSlip = salesSlip(id, SalesType.DIRECT, status);
     if (remainingAmount < 100_000L) {
-      salesSlip.recordPayment(100_000L - remainingAmount);
+      DirectSaleFixtures.projectAllocation(salesSlip, 100_000L - remainingAmount);
     }
     return salesSlip;
   }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,13 +34,13 @@ class SalesSlipStatusRulesTest {
     SalesSlip slip = payableSlip(SalesType.DIRECT, status);
     assertThat(slip.canConfirmPayment()).isTrue();
 
-    slip.recordPayment(30_000L);
+    DirectSaleFixtures.projectAllocation(slip, 30_000L);
     assertThat(slip.getPaidAmount()).isEqualTo(30_000L);
     assertThat(slip.getRemainingAmount()).isEqualTo(70_000L);
     assertThat(slip.getPaymentStatus()).isEqualTo("부분입금");
     assertThat(slip.canConfirmPayment()).isTrue();
 
-    slip.recordPayment(70_000L);
+    DirectSaleFixtures.projectAllocation(slip, 100_000L);
     assertThat(slip.getPaidAmount()).isEqualTo(100_000L);
     assertThat(slip.getRemainingAmount()).isZero();
     assertThat(slip.getPaymentStatus()).isEqualTo("입금 완료");
@@ -62,17 +63,6 @@ class SalesSlipStatusRulesTest {
         payableSlip(SalesType.AUCTION, status), "경매 판매전표는 경매장 정산에서 입금을 확인해야 합니다.");
   }
 
-  @ParameterizedTest
-  @ValueSource(longs = {0L, -1L, 100_001L})
-  void invalidAmountDoesNotChangePaymentState(long amount) {
-    SalesSlip slip = payableSlip(SalesType.DIRECT, SalesSlip.STATUS_DRAFT);
-
-    assertThatThrownBy(() -> slip.recordPayment(amount))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertUnpaid(slip);
-    assertThat(slip.canConfirmPayment()).isTrue();
-  }
-
   @Test
   void editCapabilityAndValidationSharePaidAmountAndEventGuards() {
     var slip = payableSlip(SalesType.DIRECT, SalesSlip.STATUS_DRAFT);
@@ -81,7 +71,7 @@ class SalesSlipStatusRulesTest {
     assertThat(slip.canEdit(true)).isFalse();
     assertThatThrownBy(() -> slip.requireEditable(true))
         .isInstanceOf(IllegalArgumentException.class);
-    slip.recordPayment(1L);
+    DirectSaleFixtures.projectAllocation(slip, 1L);
     assertThat(slip.canEdit(false)).isFalse();
     assertThatThrownBy(() -> slip.requireEditable(false))
         .isInstanceOf(IllegalArgumentException.class);
@@ -90,9 +80,6 @@ class SalesSlipStatusRulesTest {
   private void assertPaymentRejected(SalesSlip slip, String message) {
     assertThat(slip.canConfirmPayment()).isFalse();
     assertThatThrownBy(slip::validatePaymentTarget)
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage(message);
-    assertThatThrownBy(() -> slip.recordPayment(30_000L))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage(message);
     assertUnpaid(slip);

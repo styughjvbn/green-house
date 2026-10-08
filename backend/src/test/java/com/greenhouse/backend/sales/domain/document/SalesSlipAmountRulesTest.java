@@ -3,6 +3,7 @@ package com.greenhouse.backend.sales.domain.document;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -81,15 +82,15 @@ class SalesSlipAmountRulesTest {
   }
 
   @Test
-  void acceptsTheMaximumTotalAndUsesExactPaymentBalances() {
+  void acceptsTheMaximumTotalAndDisplaysTheOwnedPaymentProjection() {
     var slip = slip();
     slip.addItem(item(2, 1073741823));
     slip.addItem(item(1, 1));
     assertThat(slip.getTotalAmount()).isEqualTo(Integer.MAX_VALUE);
     assertThat(slip.getRemainingAmount()).isEqualTo((long) Integer.MAX_VALUE);
-    slip.recordPayment(1L);
+    DirectSaleFixtures.projectAllocation(slip, 1L);
     assertThat(slip.getRemainingAmount()).isEqualTo(2147483646L);
-    slip.recordPayment(2147483646L);
+    DirectSaleFixtures.projectAllocation(slip, 2147483647L);
     assertThat(slip.getPaidAmount()).isEqualTo((long) Integer.MAX_VALUE);
     assertThat(slip.getRemainingAmount()).isZero();
     assertThat(slip.canConfirmPayment()).isFalse();
