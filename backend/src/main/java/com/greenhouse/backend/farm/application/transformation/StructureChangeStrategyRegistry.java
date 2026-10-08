@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.application.transformation;
 
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import com.greenhouse.backend.work.operation.domain.WorkTypeDefinition;
 import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.List;

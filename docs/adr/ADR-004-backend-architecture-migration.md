@@ -724,3 +724,11 @@ P3 완료 검증 결과:
 - P4는 업무별 패키지 배치와 기존 의존 방향 보존 범위다. Farm 내부의 기존 기능 간 저장소 조회·Entity 연관관계를 임의로 금지하거나 새 계약으로 일괄 감싸지 않는다. Mutation 내부와 CLI 진입점은 P5에 남긴다.
 
 - 프로덕션 53개·같은 패키지 테스트 2개 이동. clean 컴파일 및 품종 조회/복합키/감사·농장 구조·배치/profile/감사·architecture/public values/inventory/단일 Writer 집중 검증 통과. 전체 검증은 P4 전체 이동 후 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E 미실행.
+
+### 2026-10-08: P4 — Work 기능 우선 배치
+
+- Work operation/target/effect/correction의 구현·Entity·HTTP DTO를 기능별 application/domain/web/dto로 옮긴다. 외부 공개 API/SPI는 P2의 위치와 계약을 유지한다. 기존 aggregate 연관관계와 실행·저장 순서를 유지한다.
+- 기존 Repository 19개는 Entity/조회 생산자로 소유권을 정한다: operation 7, target 7, effect 2, correction 3. 진행·입고 참조·실행 대사 projection은 target, child count는 operation, 보정 대사 row는 correction 내부에 둔다. Spring Data Custom/Impl은 해당 Repository와 같은 패키지로 옮긴다. 세 HTTP Controller는 operation/web에 둔다.
+- Work의 Farm 직접 의존은 추가하지 않는다. 기존 Work → 공개 SPI 호출/Farm 구현, Farm → Work 공개 API 호출의 컴파일·runtime 방향을 유지한다. 최상위/MANDATORY/readOnly·Receipt 지문·snapshot·효과/보정 codec·batch flush·capability·오류 계약은 동일하다. 새 전달 Adapter/API/Port 없음.
+
+- Work 프로덕션 127개·같은 패키지 테스트 29개 이동. clean 컴파일과 Work 기능 단위 테스트·작업/입고 포트 통합·공개 값·의존 방향·inventory·단일 Writer 집중 검증 통과. Custom/Impl·JPQL constructor projection 새 FQCN과 v1 필드 fixture도 함께 갱신했다. 전체 검증은 P4 전체 이동 후 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E 미실행.

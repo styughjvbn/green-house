@@ -167,15 +167,9 @@ application|domain|repository|controller|dto/
 - DB의 `timestamp without time zone` 시점 값은 UTC로 저장한다. 업무일자는 `Asia/Seoul` 기준으로
   계산하고 API 응답의 시점 값은 UTC에서 `Asia/Seoul`로 변환한다.
 
-`work`의 `application`, `domain`, `dto` 계층은 동일한 기능별 하위 패키지로 구성한다.
+Work는 `work/{operation,target,effect,correction}/{application,domain,repository,web}`의 기능 우선 구조를 사용한다. 모듈 외부 조회/명령/값은 `work/api`, 다른 모듈이 구현하는 확장 계약은 `work/spi`로 제공한다. Entity·Repository·변환/codec·Receipt·지문·효과 저장 구현은 내부에 둔다.
 
-```text
-application|domain|dto/
- ├─ operation/   작업 계획·실행·조회·상태 전이·작업 유형
- ├─ target/      대상 선택·스냅샷·실행 상태·외부 대상 gateway
- ├─ effect/      효과 실행·감사·구조 변경과 입고 포트 계약
- └─ correction/  완료 작업의 감사 이벤트와 보정 대상 조회
-```
+공통으로 배치되었던 저장소는 소유 Entity와 조회 생산자에 맞춰 각 기능으로 이동한다. 작업/유형/생성 Receipt는 operation, 대상/실행과 진행·입고 참조 projection은 target, 적용 효과와 난 묶음 효과 연결은 effect, 보정/보정 Receipt는 correction이 소유한다. 기존 Work 내부의 aggregate 연관·조회·실행 순서는 유지하며 디렉터리 이동 때문에 새 전달 계약을 만들지 않는다. HTTP Controller는 operation/web에, 전용 DTO는 해당 기능 web/dto에 둔다.
 
 보정 유스케이스는 Work가 트랜잭션과 감사 이벤트를 소유하고, Work의 application port를 Farm adapter가 구현한다.
 보정 접수는 작업 생성 Receipt와 분리하여 요청 지문과 감사 이벤트 ID를 확정한다. 같은 키는 DB 접수 행으로

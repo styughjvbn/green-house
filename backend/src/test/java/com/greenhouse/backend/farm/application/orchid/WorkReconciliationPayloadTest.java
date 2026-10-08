@@ -25,7 +25,7 @@ import com.greenhouse.backend.work.api.effect.WorkEffectPayload;
 import com.greenhouse.backend.work.api.effect.WorkReconciliationCommand;
 import com.greenhouse.backend.work.api.operation.ImmediateWorkExecutionApi;
 import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
-import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
+import com.greenhouse.backend.work.operation.application.WorkRequestFingerprint;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;

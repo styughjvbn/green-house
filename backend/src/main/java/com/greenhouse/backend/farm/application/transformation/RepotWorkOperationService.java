@@ -8,7 +8,7 @@ import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationResponse
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.api.operation.ImmediateWorkExecutionApi;
 import com.greenhouse.backend.work.api.operation.WorkOperationQueryApi;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import com.greenhouse.backend.work.operation.domain.WorkTypeDefinition;
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;

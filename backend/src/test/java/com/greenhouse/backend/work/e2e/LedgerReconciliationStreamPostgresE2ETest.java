@@ -12,7 +12,7 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEnt
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshotFactory;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
-import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
+import com.greenhouse.backend.work.effect.application.WorkOrchidGroupLedgerRehearsalInspector;
 import jakarta.persistence.EntityManagerFactory;
 import java.time.LocalDate;
 import java.util.Comparator;

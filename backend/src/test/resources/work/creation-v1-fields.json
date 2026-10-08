@@ -1,8 +1,8 @@
 {
-  "com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest": [
+  "com.greenhouse.backend.work.operation.web.dto.WorkOperationBatchCreateRequest": [
     "operation"
   ],
-  "com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest": [
+  "com.greenhouse.backend.work.operation.web.dto.WorkOperationCreateRequest": [
     "details",
     "excludedOrchidGroupIds",
     "memo",

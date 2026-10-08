@@ -14,9 +14,9 @@ import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi.TypeCou
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
-import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.operation.application.WorkOperationMetricsReader;
+import com.greenhouse.backend.work.operation.domain.WorkOperation;
+import com.greenhouse.backend.work.operation.domain.WorkType;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.ArrayList;

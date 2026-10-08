@@ -9,7 +9,7 @@ import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import com.greenhouse.backend.farm.variety.domain.Variety;
 import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
-import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.operation.domain.WorkType;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.util.List;

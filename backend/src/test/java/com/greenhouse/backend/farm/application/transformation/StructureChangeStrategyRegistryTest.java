@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import com.greenhouse.backend.work.operation.domain.WorkTypeDefinition;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;

@@ -8,7 +8,7 @@ import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReconciliationService;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupReconciliationRequest;
 import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
-import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
+import com.greenhouse.backend.work.operation.application.WorkRequestFingerprint;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.LocalDate;

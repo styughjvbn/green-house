@@ -3,7 +3,7 @@ package com.greenhouse.backend.farm.application.transformation;
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.work.api.effect.MovementQuantityAllocator;
 import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import com.greenhouse.backend.work.operation.domain.WorkTypeDefinition;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 

@@ -14,7 +14,7 @@ import com.greenhouse.backend.work.api.effect.WorkEffectContext;
 import com.greenhouse.backend.work.api.effect.WorkEffectResults;
 import com.greenhouse.backend.work.api.effect.WorkMutationLink;
 import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
-import com.greenhouse.backend.work.application.effect.InboundPottingCommandCodec;
+import com.greenhouse.backend.work.effect.application.InboundPottingCommandCodec;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

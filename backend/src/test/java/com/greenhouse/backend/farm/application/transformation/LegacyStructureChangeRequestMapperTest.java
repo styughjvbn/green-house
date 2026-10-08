@@ -12,7 +12,7 @@ import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose;
 import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.api.effect.WorkEffectPayload;
-import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
+import com.greenhouse.backend.work.operation.application.WorkRequestFingerprint;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;

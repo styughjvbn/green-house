@@ -6,7 +6,7 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.api.effect.WorkReconciliationCommand;
 import com.greenhouse.backend.work.api.operation.ImmediateWorkExecutionApi;
 import com.greenhouse.backend.work.api.operation.WorkOperationView;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import com.greenhouse.backend.work.operation.domain.WorkTypeDefinition;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

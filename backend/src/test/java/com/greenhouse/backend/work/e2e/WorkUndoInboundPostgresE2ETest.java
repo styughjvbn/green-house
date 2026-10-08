@@ -15,9 +15,9 @@ import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberAdd
 import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberResponse;
 import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.api.effect.InboundPottingResultInput;
-import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
-import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
-import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
+import com.greenhouse.backend.work.effect.web.dto.InboundPottingPlanCreateRequest;
+import com.greenhouse.backend.work.operation.application.InboundPottingOperationService;
+import com.greenhouse.backend.work.operation.application.InboundPottingPlanService;
 import com.greenhouse.backend.work.spi.operation.InboundPottingVoidPort;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;

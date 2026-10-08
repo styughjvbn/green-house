@@ -14,9 +14,9 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import com.greenhouse.backend.work.api.correction.WorkCorrectionCommand;
-import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
-import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
-import com.greenhouse.backend.work.application.operation.WorkOperationVoidService;
+import com.greenhouse.backend.work.effect.application.WorkOrchidGroupLedgerRehearsalInspector;
+import com.greenhouse.backend.work.operation.application.WorkOperationPlanService;
+import com.greenhouse.backend.work.operation.application.WorkOperationVoidService;
 import com.greenhouse.backend.work.spi.correction.WorkCorrectionPlan;
 import com.greenhouse.backend.work.spi.correction.WorkCorrectionPort;
 import java.time.LocalDate;

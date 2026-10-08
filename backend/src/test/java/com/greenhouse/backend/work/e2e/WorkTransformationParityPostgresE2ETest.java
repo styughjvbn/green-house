@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
-import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
+import com.greenhouse.backend.work.effect.repository.WorkAppliedEffectRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;

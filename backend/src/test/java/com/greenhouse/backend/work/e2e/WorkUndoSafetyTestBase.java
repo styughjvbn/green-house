@@ -7,7 +7,7 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
-import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
+import com.greenhouse.backend.work.effect.application.WorkOrchidGroupLedgerRehearsalInspector;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;

@@ -2,8 +2,8 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
+import com.greenhouse.backend.work.operation.domain.WorkOperation;
+import com.greenhouse.backend.work.target.domain.WorkOperationTarget;
 import jakarta.persistence.EntityManagerFactory;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;

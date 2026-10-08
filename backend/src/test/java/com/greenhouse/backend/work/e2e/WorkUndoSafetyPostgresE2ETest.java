@@ -7,8 +7,8 @@ import static org.mockito.Mockito.doAnswer;
 
 import com.greenhouse.backend.support.MovementTestSupport;
 import com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest;
-import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
-import com.greenhouse.backend.work.application.operation.WorkOperationVoidService;
+import com.greenhouse.backend.work.operation.application.WorkOperationProgressService;
+import com.greenhouse.backend.work.operation.application.WorkOperationVoidService;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.Executors;

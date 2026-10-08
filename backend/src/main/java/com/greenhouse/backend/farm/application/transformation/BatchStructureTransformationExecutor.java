@@ -19,7 +19,7 @@ import com.greenhouse.backend.work.api.effect.StructureChangeSourceInput;
 import com.greenhouse.backend.work.api.effect.WorkEffectResults;
 import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.api.effect.WorkMutationLink;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import com.greenhouse.backend.work.operation.domain.WorkTypeDefinition;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;

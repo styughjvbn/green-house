@@ -5,10 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.work.application.operation.WorkCommandReceipts;
-import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
-import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
-import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
+import com.greenhouse.backend.work.operation.application.WorkCommandReceipts;
+import com.greenhouse.backend.work.operation.application.WorkOperationSupport;
+import com.greenhouse.backend.work.operation.application.WorkRequestFingerprint;
+import com.greenhouse.backend.work.operation.web.dto.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.spi.correction.WorkCorrectionPort;
 import com.greenhouse.backend.work.spi.operation.InboundPottingVoidPort;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
