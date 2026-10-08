@@ -149,7 +149,7 @@ class SalesArchitectureTest {
 
   @Test
   void documentPaidAmountIsOnlyInitializedOrAssignedAsAProjection() {
-    var document = CLASSES.get(ROOT + "domain.document.SalesSlip");
+    var document = CLASSES.get(ROOT + "document.domain.SalesSlip");
     for (var access : document.getFieldAccessesFromSelf()) {
       if (!access.getTarget().getName().equals("paidAmount")
           || access.getAccessType() != JavaFieldAccess.AccessType.SET) continue;

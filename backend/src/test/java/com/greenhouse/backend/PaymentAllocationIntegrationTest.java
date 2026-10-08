@@ -7,7 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.direct.SalesPaymentService;
-import com.greenhouse.backend.sales.domain.document.*;
+import com.greenhouse.backend.sales.document.domain.*;
+import com.greenhouse.backend.sales.document.repository.SalesSlipRepository;
 import com.greenhouse.backend.sales.partner.domain.*;
 import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.payment.api.ManualPaymentCommand;
@@ -16,7 +17,6 @@ import com.greenhouse.backend.sales.payment.application.*;
 import com.greenhouse.backend.sales.payment.domain.*;
 import com.greenhouse.backend.sales.payment.repository.PartnerPaymentEventRepository;
 import com.greenhouse.backend.sales.payment.web.dto.*;
-import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import com.greenhouse.backend.support.DirectSaleFixtures;
 import java.time.LocalDate;
 import java.util.*;

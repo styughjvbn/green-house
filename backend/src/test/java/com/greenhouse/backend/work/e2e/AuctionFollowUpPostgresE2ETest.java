@@ -9,12 +9,12 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedger
 import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.auction.*;
-import com.greenhouse.backend.sales.application.document.SalesSlipCreationService;
-import com.greenhouse.backend.sales.application.document.command.SalesSlipAllocationInput;
-import com.greenhouse.backend.sales.application.document.command.SalesSlipCommand;
-import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
+import com.greenhouse.backend.sales.document.application.SalesSlipCreationService;
+import com.greenhouse.backend.sales.document.application.command.SalesSlipAllocationInput;
+import com.greenhouse.backend.sales.document.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.document.application.command.SalesSlipItemInput;
+import com.greenhouse.backend.sales.document.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.auction.*;
-import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.repository.auction.AuctionShipmentRepository;

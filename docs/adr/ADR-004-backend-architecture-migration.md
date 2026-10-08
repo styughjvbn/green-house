@@ -681,3 +681,10 @@ P2 마무리 검증 결과:
 - 원장·CTE 집계·잔액·감사·단건/다중 입금·정정의 실행 본문, 트랜잭션·잠금 순서·멱등 namespace·금액 정책·JSON은 동일하다. Entity 이름·SQL·DB 제약을 변경하지 않는다. 소비자/QueryDSL/테스트·감사 helper FQCN을 갱신한다.
 
 - clean 컴파일과 입금·배분·원장 계약·단건 입금·아키텍처/inventory 집중 검증 통과. 전체 검증은 P3 전체 이동 후 수행한다. DB/트랜잭션 변경이 없어 이 단계 PostgreSQL E2E 미실행.
+
+### 2026-10-08: P3 — Document 기능 우선 배치
+
+- 공통 전표 기능을 `sales/document/{application,domain,repository,web}`로 이동한다. Document 소유 입금 API와 회계/경매 SPI, sales/api/document 외부 조회·값은 유지한다. 숫자 채번 저장소 테스트도 Document 소유 테스트 패키지로 옮긴다.
+- 전표 생성·예약·출고·snapshot·receipt·가격 projection·일괄 조회·금융 검토·A5 출력과 기존 트랜잭션/잠금 순서는 동일하다. 생성 v1 필드 fixture는 클래스 FQCN key만 갱신하고 필드 목록·저장 JSON·지문·replay는 변경하지 않는다.
+
+- Document 프로덕션 50개·기능 테스트 7개와 채번 테스트 1개를 이동했다. 실행 본문은 package/import 외 동일함을 대조했다. clean 컴파일과 판매·재고·snapshot·v1 생성 지문·채번·출고·값/의존 그래프/inventory 집중 검증 통과. 초기 수납액 변경 제한 검사의 하드코딩된 이전 Entity 경로를 새 경로로 갱신한 뒤 재검증했다. 전체 검증은 P3 전체 이동 후 수행한다.

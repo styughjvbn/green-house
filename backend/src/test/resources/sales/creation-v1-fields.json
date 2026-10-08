@@ -1,9 +1,9 @@
 {
-  "com.greenhouse.backend.sales.application.document.command.SalesSlipAllocationInput": [
+  "com.greenhouse.backend.sales.document.application.command.SalesSlipAllocationInput": [
     "orchidGroupId",
     "quantity"
   ],
-  "com.greenhouse.backend.sales.application.document.command.SalesSlipCommand": [
+  "com.greenhouse.backend.sales.document.application.command.SalesSlipCommand": [
     "auctionShipmentId",
     "items",
     "memo",
@@ -14,7 +14,7 @@
     "salesStatus",
     "salesType"
   ],
-  "com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput": [
+  "com.greenhouse.backend.sales.document.application.command.SalesSlipItemInput": [
     "allocations",
     "genus",
     "itemName",

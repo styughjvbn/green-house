@@ -2,7 +2,7 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.sales.repository.document.SalesSlipNumberRepository;
+import com.greenhouse.backend.sales.document.repository.SalesSlipNumberRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
