@@ -37,7 +37,7 @@
 | 거래처 | `partner.openapi.yaml` | `business-partner-controller`, `partner-settlement-settings-controller` | `com.greenhouse.backend.sales` | 거래처와 정산 설정 |
 | 판매 전표 | `sales.openapi.yaml` | `sales-controller`, `print-controller` | `com.greenhouse.backend.sales`, `print` | 판매 전표, 출력, 가능한 업무 action |
 | 분석 | `analytics.openapi.yaml` | `analytics-controller` | `com.greenhouse.backend.analytics` | 판매·거래처·작업 분석 |
-| 경매 | `auction.openapi.yaml` | `auction-tracking-controller`, `auction-settlement-controller` | `com.greenhouse.backend.sales` | lot, 결과, 반환, 수량 보정, 경매 정산 |
+| 경매 | `auction.openapi.yaml` | `auction-tracking-controller`, `auction-settlement-controller`, `auction-proceeds-controller` | `com.greenhouse.backend.sales` | lot, 결과, 반환, 수량 보정, 경매 대금과 기존 정산 |
 | 입금·정산 이벤트 | `payment.openapi.yaml` | `payment-controller` | `com.greenhouse.backend.sales` | 수동 입금, 거래처 잔액, 입금 이벤트 |
 
 ## 관련 정책 문서

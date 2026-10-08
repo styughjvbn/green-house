@@ -65,6 +65,7 @@ paths:
           enum:
           - SALES_SLIP
           - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
           - NONE
       - name: targetId
         in: query
@@ -101,6 +102,7 @@ paths:
           enum:
           - SALES_SLIP
           - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
           - NONE
       - name: targetId
         in: query
@@ -439,6 +441,7 @@ components:
           enum:
           - SALES_SLIP
           - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
           - NONE
         unappliedAmount:
           type: integer

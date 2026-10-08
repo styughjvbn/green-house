@@ -817,6 +817,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auction-proceeds/{id}/confirm-payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 자료 연결과 받을 금액이 확인된 경매 대금에 입금을 배분합니다. 같은 키·금액·입금일은 중복 수납 없이 현재 조회를 반환합니다. */
+        post: operations["confirmPayment_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auction-lots/{id}/results": {
         parameters: {
             query?: never;
@@ -1949,6 +1966,38 @@ export interface paths {
         };
         /** @description 정산 요약의 서버 페이지 목록. page는 0 이상, size는 1~100으로 보정합니다. 상세 행은 단건 API에서 조회합니다. */
         get: operations["getAuctionSettlementPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auction-proceeds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_5"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auction-proceeds/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["page"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3236,6 +3285,28 @@ export interface components {
             /** @enum {string} */
             status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
         };
+        ApiResponseAuctionProceedsResponse: {
+            data?: components["schemas"]["AuctionProceedsResponse"];
+            message?: string;
+        };
+        AuctionProceedsResponse: {
+            /** Format: int64 */
+            auctionHouseId?: number;
+            auctionHouseName?: string;
+            /** Format: int64 */
+            id?: number;
+            matchingConfirmed?: boolean;
+            paidAmount?: number;
+            paymentAllowed?: boolean;
+            /** Format: int64 */
+            receivableAmount?: number;
+            remainingAmount?: number;
+            /** Format: int64 */
+            reportedGrossAmount?: number;
+            resultIds?: number[];
+            reviewRequired?: boolean;
+            sourceReference?: string;
+        };
         AuctionLotResultLineRequest: {
             auctionGrade?: string;
             /** @enum {string} */
@@ -4143,7 +4214,7 @@ export interface components {
             /** Format: int64 */
             targetId?: number;
             /** @enum {string} */
-            targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
+            targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
             /** Format: int64 */
             unappliedAmount?: number;
         };
@@ -4841,6 +4912,21 @@ export interface components {
         };
         PageResponseAuctionSettlementListItemResponse: {
             content?: components["schemas"]["AuctionSettlementListItemResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        ApiResponsePageResponseAuctionProceedsResponse: {
+            data?: components["schemas"]["PageResponseAuctionProceedsResponse"];
+            message?: string;
+        };
+        PageResponseAuctionProceedsResponse: {
+            content?: components["schemas"]["AuctionProceedsResponse"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -6641,6 +6727,32 @@ export interface operations {
             };
         };
     };
+    confirmPayment_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualPaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionProceedsResponse"];
+                };
+            };
+        };
+    };
     addResult: {
         parameters: {
             query?: never;
@@ -7824,7 +7936,7 @@ export interface operations {
         parameters: {
             query?: {
                 partnerId?: number;
-                targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
+                targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
                 targetId?: number;
             };
             header?: never;
@@ -7848,7 +7960,7 @@ export interface operations {
         parameters: {
             query?: {
                 partnerId?: number;
-                targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
+                targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
                 targetId?: number;
                 eventType?: "PAYMENT_RECEIVED" | "PAYMENT_ALLOCATED" | "PREPAYMENT_RECEIVED" | "CREDIT_APPLIED" | "CREDIT_REFUND" | "AUTO_MATCH_CANDIDATE" | "AUTO_MATCH_CONFIRMED" | "MANUAL_MATCH_CONFIRMED" | "MATCH_REJECTED" | "PAYMENT_UNLINKED" | "ADJUSTMENT";
                 page?: number;
@@ -8531,6 +8643,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponsePageResponseAuctionSettlementListItemResponse"];
+                };
+            };
+        };
+    };
+    get_5: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionProceedsResponse"];
+                };
+            };
+        };
+    };
+    page: {
+        parameters: {
+            query?: {
+                auctionHouseId?: number;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponseAuctionProceedsResponse"];
                 };
             };
         };

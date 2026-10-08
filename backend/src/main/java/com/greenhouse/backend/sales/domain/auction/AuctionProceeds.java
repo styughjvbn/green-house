@@ -115,6 +115,18 @@ public class AuctionProceeds extends BaseEntity {
     return BigDecimal.valueOf(receivableAmount).subtract(validAllocations).max(BigDecimal.ZERO);
   }
 
+  public boolean isAllocationAllowed(BigDecimal validAllocations, boolean reviewRequired) {
+    return isPaymentTargetReady()
+        && !reviewRequired
+        && remainingAmount(validAllocations).signum() > 0;
+  }
+
+  public void requireAllocation(BigDecimal validAllocations, long amount, boolean reviewRequired) {
+    if (reviewRequired)
+      throw new ConflictException("AUCTION_PROCEEDS_ALLOCATION_REVIEW", "기존 입금 연결을 먼저 검토해야 합니다.");
+    requireAllocation(validAllocations, amount);
+  }
+
   public void requireAllocation(BigDecimal validAllocations, long amount) {
     var remaining = remainingAmount(validAllocations);
     if (amount <= 0) throw new IllegalArgumentException("입금액은 0원보다 커야 합니다.");
