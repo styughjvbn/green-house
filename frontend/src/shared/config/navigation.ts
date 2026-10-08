@@ -6,6 +6,8 @@ import {
   INVENTORY_ROUTE,
   SALES_NAV_ITEMS,
   SALES_ROUTE,
+  SALES_V2_ROUTE,
+  SALES_V2_NAV_ITEMS,
 } from "@/shared/config/routes";
 import {
   BarChart3,
@@ -68,6 +70,11 @@ export const PAGE_META = [
     description: "판매 내역과 거래 정보를 관리하세요.",
   },
   {
+    href: SALES_V2_ROUTE.root,
+    title: "판매 관리 v2",
+    description: "전표·경매·입금·거래처를 업무별로 관리하세요.",
+  },
+  {
     href: ANALYTICS_ROUTE.root,
     title: "분석",
     description: "출하, 판매, 농장 현황 데이터를 분석하세요.",
@@ -104,6 +111,13 @@ export const NAVIGATION = [
     label: "판매 관리",
     icon: ShoppingBag,
     children: SALES_NAV_ITEMS,
+  },
+  {
+    href: SALES_V2_ROUTE.tab("slips"),
+    sectionHref: SALES_V2_ROUTE.root,
+    label: "판매 관리 v2",
+    icon: ShoppingBag,
+    children: SALES_V2_NAV_ITEMS,
   },
   {
     href: ANALYTICS_ROUTE.tab("sales"),

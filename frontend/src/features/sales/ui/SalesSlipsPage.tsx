@@ -11,8 +11,10 @@ import { SalesSlipList } from "./slips/SalesSlipList";
 
 export function SalesSlipsPage({
   initialShowCreateSlip = false,
+  v2 = false,
 }: {
   initialShowCreateSlip?: boolean;
+  v2?: boolean;
 }) {
   const routeState = readSalesRouteState(useSearchParams());
   const sales = useSalesSlips({
@@ -32,6 +34,15 @@ export function SalesSlipsPage({
   return (
     <main className="h-full min-h-0">
       <TabLayout>
+        {v2 ? (
+          <section className="rounded-md border bg-white px-4 py-3">
+            <h2 className="font-bold">전표</h2>
+            <p className="mt-1 text-sm text-[#68756c]">
+              일반 판매와 경매 출하를 함께 조회합니다. 새 전표에서 판매 유형을
+              선택하세요.
+            </p>
+          </section>
+        ) : null}
         <SalesFilters
           filters={sales.filters}
           onChange={sales.updateFilters}
@@ -65,6 +76,7 @@ export function SalesSlipsPage({
 
         <TabSplit>
           <SalesSlipList
+            v2={v2}
             currentPage={sales.salesSlipCurrentPage}
             pageSize={sales.salesSlipPageSize}
             salesSlips={sales.salesSlips}
@@ -78,6 +90,7 @@ export function SalesSlipsPage({
             onPageSizeChange={sales.setSalesSlipPageSize}
           />
           <SalesSlipDetail
+            v2={v2}
             loading={sales.loadingSalesSlipDetail}
             salesSlip={sales.selectedSalesSlip}
             updatingSalesStatus={sales.updatingSlipStatus}

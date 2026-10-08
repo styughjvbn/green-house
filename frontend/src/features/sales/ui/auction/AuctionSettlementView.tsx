@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
+import type { Route } from "next";
+import { salesV2Href } from "@/shared/config/routes";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useSearchParams } from "next/navigation";
@@ -103,9 +106,12 @@ const resultColumns: ColumnDef<AuctionProceedsResult, unknown>[] = [
   },
 ];
 
-export function AuctionSettlementView() {
+export function AuctionSettlementView({ v2 = false }: { v2?: boolean }) {
   const queryClient = useQueryClient();
-  const route = readProceedsRouteState(useSearchParams());
+  const route = readProceedsRouteState(
+    useSearchParams(),
+    v2 ? "auction" : "default",
+  );
   const writeUrlParams = useUrlSearchParamsWriter();
   const pageQuery = useQuery(auctionProceedsPageQueryOptions(route));
   const selectedId =
@@ -121,19 +127,41 @@ export function AuctionSettlementView() {
       route.page >= Math.max(1, pageQuery.data.totalPages)
     ) {
       writeUrlParams((params) =>
-        params.set("page", String(Math.max(0, pageQuery.data.totalPages - 1))),
+        params.set(
+          v2 ? "proceedsPage" : "page",
+          String(Math.max(0, pageQuery.data.totalPages - 1)),
+        ),
       );
     }
-  }, [pageQuery.data, route.page, writeUrlParams]);
+  }, [pageQuery.data, route.page, writeUrlParams, v2]);
   function changePage(page: number, size = route.size) {
     writeUrlParams((params) => {
-      params.set("page", String(page));
-      params.set("size", String(size));
+      params.set(v2 ? "proceedsPage" : "page", String(page));
+      params.set(v2 ? "proceedsSize" : "size", String(size));
       params.delete("proceedsId");
       params.delete("settlementId");
       params.delete("paymentPage");
     }, "push");
   }
+  const detailColumns = v2
+    ? [
+        {
+          id: "lot",
+          header: "출하 lot",
+          cell: ({ row }: { row: { original: AuctionProceedsResult } }) => (
+            <Link
+              className="text-green-800 underline"
+              href={
+                salesV2Href("auction", { lotId: row.original.lotId }) as Route
+              }
+            >
+              LOT #{row.original.lotId}
+            </Link>
+          ),
+        },
+        ...resultColumns,
+      ]
+    : resultColumns;
   const error = pageQuery.error ?? detailQuery.error;
   return (
     <TabStack>
@@ -196,6 +224,19 @@ export function AuctionSettlementView() {
               }
             />
             <div className="space-y-2 px-4 py-3 text-sm">
+              {v2 ? (
+                <Link
+                  className="block text-green-800 underline"
+                  href={
+                    salesV2Href("payments", {
+                      view: "allocations",
+                      receiptPartnerId: selected.auctionHouseId,
+                    }) as Route
+                  }
+                >
+                  경매장 수납·배분 조회
+                </Link>
+              ) : null}
               <p>{selected.sourceReference ?? "대금 자료 확인 대기"}</p>
               <p>
                 연결된 경매 결과 {selected.resultIds.length.toLocaleString()}건
@@ -212,7 +253,7 @@ export function AuctionSettlementView() {
             </div>
             <div className="px-4 py-3">
               <DataTable
-                columns={resultColumns}
+                columns={detailColumns}
                 data={selected.resultDetails}
                 getRowId={(row) => String(row.id)}
                 title="연결된 경매 결과"

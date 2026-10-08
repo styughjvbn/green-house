@@ -3,6 +3,9 @@
 import type { SubmitEvent } from "react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import type { Route } from "next";
+import { salesV2Href } from "@/shared/config/routes";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { readBusinessPartnerRouteState } from "../lib/salesRouteParams";
 import { useBusinessPartners } from "../model/useBusinessPartners";
@@ -15,9 +18,9 @@ import { BusinessPartnerFilters } from "./partners/BusinessPartnerFilters";
 import { BusinessPartnerList } from "./partners/BusinessPartnerList";
 import { PartnerSettlementSettingsSection } from "./partners/PartnerSettlementSettingsSection";
 
-export function SalesPartnersPage() {
+export function SalesPartnersPage({ v2 = false }: { v2?: boolean }) {
   const routeState = readBusinessPartnerRouteState(useSearchParams());
-  const partners = useBusinessPartners({ routeState });
+  const partners = useBusinessPartners({ routeState, urlSelection: v2 });
   const [showCreatePartner, setShowCreatePartner] = useState(false);
   const [partnerDetailMode, setPartnerDetailMode] =
     useState<BusinessPartnerDetailMode>("read");
@@ -60,6 +63,31 @@ export function SalesPartnersPage() {
             onPageSizeChange={partners.setPageSize}
           />
           <div>
+            {v2 && partners.selectedPartner ? (
+              <div className="mb-3 flex flex-wrap gap-3 rounded-md border bg-white p-3 text-sm">
+                <Link
+                  className="text-green-800 underline"
+                  href={
+                    salesV2Href("slips", {
+                      partnerId: partners.selectedPartner.id,
+                    }) as Route
+                  }
+                >
+                  거래처 전표 조회
+                </Link>
+                <Link
+                  className="text-green-800 underline"
+                  href={
+                    salesV2Href("payments", {
+                      view: "allocations",
+                      receiptPartnerId: partners.selectedPartner.id,
+                    }) as Route
+                  }
+                >
+                  거래처 수납·배분 조회
+                </Link>
+              </div>
+            ) : null}
             <BusinessPartnerEditSection
               key={partners.selectedPartner?.id ?? "empty"}
               partner={partners.selectedPartner}

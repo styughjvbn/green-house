@@ -146,10 +146,21 @@ export function readCreateSlip(params: SearchParamReader) {
 
 export function readProceedsRouteState(
   params: SearchParamReader,
+  scope: "default" | "auction" = "default",
 ): ProceedsRouteState {
   return {
-    page: readBoundedIntegerValue(params.get("page"), 0, 0, 2_147_483_647),
-    size: readBoundedIntegerValue(params.get("size"), 10, 1, 100),
+    page: readBoundedIntegerValue(
+      params.get(scope === "auction" ? "proceedsPage" : "page"),
+      0,
+      0,
+      2_147_483_647,
+    ),
+    size: readBoundedIntegerValue(
+      params.get(scope === "auction" ? "proceedsSize" : "size"),
+      10,
+      1,
+      100,
+    ),
     selectedProceedsId: readOptionalPositiveInteger(params.get("proceedsId")),
   };
 }
@@ -220,4 +231,8 @@ export function readAllocationRouteState(params: SearchParamReader) {
       2_147_483_647,
     ),
   };
+}
+
+export function readSelectedBusinessPartnerId(params: SearchParamReader) {
+  return readOptionalPositiveInteger(params.get("partnerId"));
 }

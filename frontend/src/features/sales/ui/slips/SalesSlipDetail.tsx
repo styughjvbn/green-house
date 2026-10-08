@@ -1,4 +1,7 @@
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
+import type { Route } from "next";
+import { salesV2Href } from "@/shared/config/routes";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Ban, ChevronDown, Copy, Pencil, Printer, Truck } from "lucide-react";
 import type { SalesSlip, SalesSlipItem } from "@/entities/farm/types";
@@ -87,6 +90,7 @@ const salesSlipItemColumns: ColumnDef<SalesSlipItem, unknown>[] = [
 
 export function SalesSlipDetail({
   loading = false,
+  v2 = false,
   salesSlip,
   updatingSalesStatus,
   onCancelSalesSlip,
@@ -95,6 +99,7 @@ export function SalesSlipDetail({
   onPaymentConfirmed,
 }: {
   loading?: boolean;
+  v2?: boolean;
   salesSlip: SalesSlip | null;
   updatingSalesStatus: boolean;
   onCancelSalesSlip: (salesSlipId: number) => Promise<void>;
@@ -133,7 +138,7 @@ export function SalesSlipDetail({
           </p>
         ) : null}
         <DetailHeader
-          eyebrow={`LOT #${salesSlip.slipNumber}`}
+          eyebrow={`${v2 ? "전표" : "LOT"} #${salesSlip.slipNumber}`}
           title="전표 상세"
           summary={
             <DetailSummary
@@ -202,12 +207,41 @@ export function SalesSlipDetail({
               >
                 인쇄(미리보기)
               </DetailActionButton>
-              <DetailActionButton icon={Copy}>전표 복사</DetailActionButton>
+              {!v2 ? (
+                <DetailActionButton icon={Copy}>전표 복사</DetailActionButton>
+              ) : null}
             </>
           }
         />
 
         <div className="p-4">
+          {v2 ? (
+            <div className="mb-3 flex flex-wrap gap-3 text-sm">
+              {salesSlip.salesType === "AUCTION" && salesSlip.auctionMarket ? (
+                <Link
+                  className="text-green-800 underline"
+                  href={
+                    salesV2Href("auction", {
+                      market: salesSlip.auctionMarket,
+                    }) as Route
+                  }
+                >
+                  경매장 출하 조회
+                </Link>
+              ) : null}
+              <Link
+                className="text-green-800 underline"
+                href={
+                  salesV2Href("payments", {
+                    view: "allocations",
+                    receiptPartnerId: salesSlip.partner.id,
+                  }) as Route
+                }
+              >
+                거래처 수납·배분 조회
+              </Link>
+            </div>
+          ) : null}
           <div className="grid gap-3 lg:grid-cols-2">
             <InfoBox
               open={partnerInfoOpen}
@@ -231,14 +265,26 @@ export function SalesSlipDetail({
             >
               <Description label="경매장" value={salesSlip.auctionMarket} />
               <Description label="결제 방식" value={salesSlip.paymentMethod} />
-              <Description label="담당자" value="관리자" />
+              {!v2 ? <Description label="담당자" value="관리자" /> : null}
               <Description label="메모" value={salesSlip.memo} />
             </InfoBox>
           </div>
 
           <div className="mt-4">
             <DataTable
-              columns={salesSlipItemColumns}
+              columns={
+                v2 && salesSlip.salesType === "AUCTION"
+                  ? salesSlipItemColumns.filter(
+                      (column) =>
+                        !(
+                          "accessorKey" in column &&
+                          ["unitPrice", "amount"].includes(
+                            String(column.accessorKey),
+                          )
+                        ),
+                    )
+                  : salesSlipItemColumns
+              }
               data={salesSlip.items}
               emptyMessage="판매 품목이 없습니다."
               getRowId={(row) => String(row.id)}
@@ -250,10 +296,22 @@ export function SalesSlipDetail({
 
           <div className="mt-3 flex justify-end rounded-md border border-[#dfe5dc] bg-white p-4 text-sm">
             <div className="text-right">
-              <p className="font-semibold text-[#344138]">총 금액</p>
+              <p className="font-semibold text-[#344138]">
+                {v2
+                  ? salesSlip.salesType === "AUCTION"
+                    ? "경매 대금"
+                    : "일반 판매 거래금액"
+                  : "총 금액"}
+              </p>
               <p className="mt-1 text-3xl font-bold text-[#159447]">
-                {salesSlip.totalAmount.toLocaleString()}
-                <span className="ml-1 text-sm text-[#17251b]">원</span>
+                {v2 && salesSlip.salesType === "AUCTION" ? (
+                  "경매 화면에서 확인"
+                ) : (
+                  <>
+                    {salesSlip.totalAmount.toLocaleString()}
+                    <span className="ml-1 text-sm text-[#17251b]">원</span>
+                  </>
+                )}
               </p>
             </div>
           </div>

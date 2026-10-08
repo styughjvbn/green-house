@@ -165,6 +165,97 @@ const server = http.createServer(async (req, res) => {
     partnerType: "WHOLESALE",
     active: true,
   };
+  const partnerDetails = {
+    ...partner,
+    ownerName: null,
+    phone: null,
+    address: null,
+    memo: null,
+    creditBalance: 0,
+    receivableBalance: 0,
+  };
+  const slips = [11, 13].map((id) => ({
+    id,
+    slipNumber: `TEST-${id}`,
+    salesType: id === 11 ? "DIRECT" : "AUCTION",
+    saleDate: "2026-10-01",
+    partner: partnerDetails,
+    totalAmount: 1000,
+    paidAmount: 0,
+    remainingAmount: 1000,
+    salesStatus: "작성중",
+    paymentStatus: "미입금",
+    auctionMarket: id === 13 ? lot.auctionMarket : null,
+    auctionShipmentId: id === 13 ? 8 : null,
+    items: [],
+    memo: null,
+    paymentMethod: null,
+    expectedPaymentDate: null,
+    financialReviewRequired: false,
+    availableActions: [],
+  }));
+  const proceeds = {
+    id: 12,
+    auctionHouseId: 7,
+    auctionHouseName: lot.auctionMarket,
+    sourceReference: "대금 자료 TEST-12",
+    reportedGrossAmount: 1000,
+    receivableAmount: 900,
+    paidAmount: 0,
+    remainingAmount: 900,
+    matchingConfirmed: true,
+    reviewRequired: false,
+    paymentAllowed: true,
+    resultIds: [1],
+    resultDetails: [
+      {
+        id: 1,
+        auctionHouseId: 7,
+        lotId: 42,
+        auctionDate: "2026-10-07",
+        shipmentDate: lot.shipmentDate,
+        shipmentGrade: "A",
+        varietyName: lot.varietyName,
+        quantity: 10,
+        unitPrice: 100,
+        amount: 1000,
+      },
+    ],
+  };
+  if (url.pathname === "/api/business-partners/page")
+    return send(pageOf([partnerDetails]));
+  if (url.pathname === "/api/business-partners/7/settlement-settings")
+    return send({
+      partnerId: 7,
+      id: 1,
+      settlementUnit: "SALES_SLIP",
+      paymentDelayDays: 0,
+      paymentDayMode: "CALENDAR_DAY",
+      amountTolerance: 0,
+      autoMatchEnabled: false,
+      autoSettleEnabled: false,
+      allowPrepayment: false,
+      creditAutoApplyEnabled: false,
+      depositorAliases: [],
+      ruleJson: null,
+      capabilities: {
+        executableUnits: [],
+        autoMatching: false,
+        autoSettlement: false,
+        creditAutoApply: false,
+        prepayment: false,
+        ruleExecution: false,
+      },
+      memo: null,
+    });
+  if (url.pathname === "/api/sales-slips/page") return send(pageOf(slips));
+  if (/^\/api\/sales-slips\/(11|13)$/.test(url.pathname))
+    return send(
+      slips.find((slip) => slip.id === Number(url.pathname.split("/").at(-1))),
+    );
+  if (url.pathname === "/api/auction-proceeds/page")
+    return send(pageOf([proceeds]));
+  if (url.pathname === "/api/auction-proceeds/12") return send(proceeds);
   if (url.pathname === "/api/business-partners/options")
     return send(pageOf([partner]));
   if (url.pathname === "/api/business-partners/7/option") return send(partner);

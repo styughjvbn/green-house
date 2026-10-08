@@ -2,7 +2,10 @@
 
 import { useRef, useState, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
+import Link from "next/link";
+import type { Route } from "next";
+import { salesV2Href } from "@/shared/config/routes";
 import { ApiError } from "@/shared/api/client";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
@@ -75,6 +78,7 @@ export function PaymentAllocationWorkspace() {
   );
 }
 function AllocationPanel({ partnerId }: { partnerId: number }) {
+  const v2 = usePathname().startsWith("/sales-v2/");
   const params = useSearchParams();
   const write = useUrlSearchParamsWriter();
   const { page, receiptId, allocationPage } = readAllocationRouteState(params);
@@ -347,6 +351,27 @@ function AllocationPanel({ partnerId }: { partnerId: number }) {
                       {item.amount.toLocaleString()}원 ·{" "}
                       {item.status === "CANCELLED" ? "취소됨" : "유효 배분"}
                     </label>
+                    {v2 && item.targetId != null ? (
+                      <Link
+                        className="ml-3 text-sm text-green-800 underline"
+                        href={
+                          salesV2Href(
+                            item.targetType === "SALES_SLIP"
+                              ? "slips"
+                              : "auction",
+                            item.targetType === "SALES_SLIP"
+                              ? { slipId: item.targetId, paymentPage: 0 }
+                              : {
+                                  panel: "proceeds",
+                                  proceedsId: item.targetId,
+                                  paymentPage: 0,
+                                },
+                          ) as Route
+                        }
+                      >
+                        배분 대상 보기
+                      </Link>
+                    ) : null}
                   </li>
                 ))}
               </ul>

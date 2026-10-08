@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
+import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   BusinessPartner,
@@ -12,7 +14,10 @@ import {
   toBusinessPartnerForm,
   toCreateBusinessPartnerPayload,
 } from "../lib/salesForm";
-import type { SalesRouteState } from "../lib/salesRouteParams";
+import {
+  readSelectedBusinessPartnerId,
+  type SalesRouteState,
+} from "../lib/salesRouteParams";
 import {
   BUSINESS_PARTNER_FILTER_KEYS,
   createInitialBusinessPartnerFilters,
@@ -24,12 +29,18 @@ import type { BusinessPartnerFilterState, BusinessPartnerForm } from "./types";
 
 export function useBusinessPartners({
   routeState,
+  urlSelection = false,
 }: {
   routeState: SalesRouteState<BusinessPartnerFilterState>;
+  urlSelection?: boolean;
 }) {
   const queryClient = useQueryClient();
+  const params = useSearchParams();
+  const write = useUrlSearchParamsWriter();
+  const routePartnerId = readSelectedBusinessPartnerId(params);
   const pageQuery = useQuery(businessPartnerPageQueryOptions(routeState));
   const listState = useUrlPagedListState({
+    resetParamKeys: urlSelection ? ["partnerId"] : [],
     emptyFilters: createInitialBusinessPartnerFilters,
     filterKeys: BUSINESS_PARTNER_FILTER_KEYS,
     routeFilters: routeState.filters,
@@ -38,9 +49,7 @@ export function useBusinessPartners({
   const pageData =
     pageQuery.data ??
     createEmptyPage<BusinessPartner>(routeState.size, routeState.page);
-  const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(
-    null,
-  );
+  const [localPartnerId, setLocalPartnerId] = useState<number | null>(null);
   const [createForm, setCreateForm] = useState<BusinessPartnerForm>(
     createEmptyBusinessPartnerForm(),
   );
@@ -57,10 +66,18 @@ export function useBusinessPartners({
   const [savingEdit, setSavingEdit] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
+  const selectedPartnerId = urlSelection ? routePartnerId : localPartnerId;
+  function setSelectedPartnerId(id: number) {
+    if (urlSelection) write((p) => p.set("partnerId", String(id)), "push");
+    else setLocalPartnerId(id);
+  }
   const selectedPartner =
-    pageData.content.find((partner) => partner.id === selectedPartnerId) ??
-    pageData.content[0] ??
-    null;
+    selectedPartnerId != null && urlSelection
+      ? (pageData.content.find((partner) => partner.id === selectedPartnerId) ??
+        null)
+      : (pageData.content.find((partner) => partner.id === selectedPartnerId) ??
+        pageData.content[0] ??
+        null);
   const visibleSelectedPartnerId = selectedPartner?.id ?? null;
   const editForm =
     selectedPartner == null
@@ -100,7 +117,7 @@ export function useBusinessPartners({
       const created = await createBusinessPartner(
         toCreateBusinessPartnerPayload(createForm),
       );
-      setSelectedPartnerId(created.id);
+      if (!urlSelection) setSelectedPartnerId(created.id);
       setCreateForm(createEmptyBusinessPartnerForm());
       listState.changePage(0);
       await invalidate();

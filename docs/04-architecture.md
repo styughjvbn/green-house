@@ -497,6 +497,8 @@ src/
 - 색상, 아이콘, 문구, 배치, 확대·축소, 선택·hover, 애니메이션은 프론트 표현 책임이다. 백엔드가 CSS나 화면 문구를 제공하지 않는다.
 - API enum과 capability는 생성 OpenAPI 타입을 참조한다. API DTO와 form draft, table row, view model은 목적이 다를 때 별도 타입으로 명시적으로 변환한다.
 
+판매 관리 v2는 기존 판매 feature의 공개 RoutePage와 내부 UI·query 계약을 재사용한다. 별도 `/sales-v2` route와 탐색 메뉴를 두되 업무 API·데이터 모델을 복제하지 않는다. 경매 대금은 경매 화면에 두고 수납·배분은 입금 화면에 둔다. 출하 목록과 대금 목록의 URL 페이지 범위는 분리해 화면 전환이 기존 조회 조건을 덮어쓰지 않는다.
+
 #### Server Component와 데이터 패칭
 
 - `app` route는 params 검증과 feature RoutePage 호출만 담당한다. 현재 URL에서 바로 필요한 초기 데이터는 feature의 Server Component에서 prefetch하고 Client Component에 hydration한다.

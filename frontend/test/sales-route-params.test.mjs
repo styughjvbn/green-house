@@ -179,3 +179,21 @@ test("auction selection and arrival history survive URL reload and reject invali
     0,
   );
 });
+
+test("v2 proceeds paging is independent from lot filters and paging", () => {
+  const params = new URLSearchParams(
+    "page=3&size=20&proceedsPage=1&proceedsSize=50&lotId=42&proceedsId=12&market=서울",
+  );
+  assert.deepEqual(readProceedsRouteState(params, "auction"), {
+    page: 1,
+    size: 50,
+    selectedProceedsId: 12,
+  });
+  assert.equal(readAuctionRouteState(params).page, 3);
+  assert.equal(readAuctionRouteState(params).selectedLotId, 42);
+  assert.deepEqual(readProceedsRouteState(params), {
+    page: 3,
+    size: 20,
+    selectedProceedsId: 12,
+  });
+});

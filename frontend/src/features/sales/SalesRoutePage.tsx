@@ -30,8 +30,10 @@ import { SalesSlipsPage } from "./ui/SalesSlipsPage";
 export async function SalesRoutePage({
   activeTab,
   resolvedSearchParams,
+  v2 = false,
 }: {
   activeTab: SalesTab;
+  v2?: boolean;
   resolvedSearchParams: Record<string, string | string[] | undefined>;
 }) {
   const reader = createServerSearchParamReader(resolvedSearchParams);
@@ -53,7 +55,10 @@ export async function SalesRoutePage({
       ]);
       return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-          <SalesSlipsPage initialShowCreateSlip={readCreateSlip(reader)} />
+          <SalesSlipsPage
+            v2={v2}
+            initialShowCreateSlip={readCreateSlip(reader)}
+          />
         </HydrationBoundary>
       );
     }
@@ -94,7 +99,7 @@ export async function SalesRoutePage({
       );
       return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-          <SalesPartnersPage />
+          <SalesPartnersPage v2={v2} />
         </HydrationBoundary>
       );
     }
