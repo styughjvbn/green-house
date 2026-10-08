@@ -6,7 +6,7 @@
 CONSTRUCTOR	com.greenhouse.backend.audit.application.AuditEvent$Target.<init>(java.lang.String, java.lang.Long)
 CONSTRUCTOR	com.greenhouse.backend.audit.application.AuditEvent$Target.<init>(java.lang.String, java.lang.Long, java.lang.Long, java.lang.Long, java.lang.Long, java.lang.Long)
 CONSTRUCTOR	com.greenhouse.backend.common.application.RequestActorProvider.<init>(boolean, java.lang.String)
-CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.OrchidGroupUsage.<init>(java.lang.String, java.lang.String, long)
+CONSTRUCTOR	com.greenhouse.backend.farm.api.orchid.OrchidGroupUsage.<init>(java.lang.String, java.lang.String, long)
 CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.CompensateCreateMutationsCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand.<init>(com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource, java.lang.Long, com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails, java.time.LocalDate, java.lang.String)
@@ -390,8 +390,7 @@ TYPE	com.greenhouse.backend.audit.application.AuditEventWriter
 TYPE	com.greenhouse.backend.common.application.RequestActorProvider
 TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi
 TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupState
-TYPE	com.greenhouse.backend.farm.application.orchid.OrchidGroupUsage
-TYPE	com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector
+TYPE	com.greenhouse.backend.farm.api.orchid.OrchidGroupUsage
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.CompensateCreateMutationsCommand
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand
 TYPE	com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand
@@ -412,6 +411,7 @@ TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader
 TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader$InventorySummary
 TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader$Snapshot
 TYPE	com.greenhouse.backend.farm.application.status.FarmMetricsReader$VarietyInventory
+TYPE	com.greenhouse.backend.farm.spi.orchid.OrchidGroupUsageInspector
 TYPE	com.greenhouse.backend.sales.application.direct.SalesPaymentService
 TYPE	com.greenhouse.backend.sales.application.document.AuctionDocumentPort
 TYPE	com.greenhouse.backend.sales.application.document.AuctionDocumentPort$CreatedShipment

@@ -2,9 +2,9 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsage;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupUsage;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.spi.orchid.OrchidGroupUsageInspector;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;

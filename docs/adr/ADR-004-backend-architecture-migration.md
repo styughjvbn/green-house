@@ -515,3 +515,21 @@ Farm 조회 단계 검증 결과:
 - Reader 잠금·배치 건수 회귀, Sales allocation·출고·snapshot·Mutation 계약·공개 값·inventory·integration 집중 검증 통과. 상태 변환 본문은 이동 전과 동일하다.
 - 전체 `test spotlessCheck` 통과: 777개, 실패·오류·skip 0개. 임시 init script로 heap 2 GiB 적용. 프론트 `npm run check` 통과.
 - Controller·요청/응답 DTO 필드·schema와 SQL·트랜잭션/잠금·수량 처리 변경 없음. OpenAPI/프론트 타입 재생성과 `workE2eTest`는 실행하지 않았다. 전체 검증 이후 변경은 이 ADR의 결과 기록뿐이다.
+
+### 2026-10-08: 두 단계 진행 — Farm 조회·사용 여부의 2단계
+
+| 책임 | 변경 전 | 변경 후 | 이유 |
+|---|---|---|---|
+| 취소·보정의 외부 참조 검사 확장 | Farm application `OrchidGroupUsageInspector` | `farm/spi/orchid/OrchidGroupUsageInspector` | Farm이 검사 흐름을 소유하고 Sales가 자신의 저장소를 조회하는 실제 확장 계약 |
+| 사용 여부 차단 값 | Farm application `OrchidGroupUsage` | `farm/api/orchid/OrchidGroupUsage` | code·message·count의 기존 순수 값 공개 |
+
+- 기존 Sales inspector가 공개 Farm SPI를 직접 구현한다. Farm 내부 입고 검사와 Work 참조를 Farm 차단 값으로 해석하는 기존 구현도 동일 SPI를 사용한다. 허용 API의 단순 전달을 위한 새 Service·Adapter·Port·integration은 추가하지 않는다. 기존 Work usage adapter는 Work 참조 수/범위 밖 존재 여부를 Farm 차단 값으로 변환하는 책임을 유지한다.
+- SPI의 세 메서드와 default fallback 본문·원본 작업/일괄 작업/허용 입고 제외 의미는 동일하다. `@Order(100/200/300)`, Bean 이름, 차단 값 내용·순서·첫 사유 선택을 유지한다. Sales 저장소는 Sales 구현 내부에 남긴다.
+- reviewed inventory는 사용 여부 SPI/값의 대응 FQCN만 치환한다. SQL·트랜잭션·잠금·수량·취소/보정 유스케이스·Receipt 지문·단일 Writer는 변경하지 않는다.
+
+Farm 사용 여부 단계 검증 결과:
+
+- 첫 실행은 import 치환 오류로 컴파일 실패했으며 올바른 SPI import로 수정 후 집중 검증을 다시 통과했다. 사용 참조 수·원본 작업 제외·취소/void 제외·Sales→Work 검사 순서, command 잠금·보정·보상 Mutation·포트 계획·공개 값·inventory·integration 검증 통과. 계약과 구현의 실행 본문은 이동 전과 동일하다.
+- 전체 `clean test spotlessCheck` 통과: 777개, 실패·오류·skip 0개. 임시 init script로 heap 2 GiB 적용. 프론트 `npm run check` 통과. 이전 상태/사용 여부 값·SPI 클래스 잔존 없음.
+- Controller·HTTP DTO·schema와 SQL·DB 경계·트랜잭션/잠금·수량·업무 판단 변경 없음. OpenAPI/프론트 타입 재생성과 `workE2eTest`는 실행하지 않았다. 전체 검증 이후 변경은 이 ADR의 결과 기록뿐이다.
+- 이번 두 단계 완료. 후속 P2에서 Mutation Writer의 실제 소비 메서드, sealed 명령·정규화, 결과의 Entity factory와 원장 snapshot을 함께 검토·분리한다. Farm 운영 대사 SPI/값과 집계, Sales 공개 계약도 후속 대상이다. 전체 전환 완료 전 목표 문서 archive 이동은 수행하지 않는다.

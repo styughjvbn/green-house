@@ -310,6 +310,8 @@ Farm의 즉시 작업 이력 생성과 작업 단건 조회는 Work 공개 API�
 
 구조 변경 계보는 Work 공개 조회 API의 저장 효과·원본/결과 값으로 조합한다. 저장 handler 별칭의 해석은 Work 내부 정의 한 곳에서 수행하고 Farm에는 유형 코드만 전달한다. Work 저장소·codec·정책 enum은 공개 값에서 노출하지 않으며, 기존 계보 JSON·두 번의 일괄 조회·역사 시점 해석을 유지한다.
 
+Farm의 취소·보정 사용 여부 확장 계약은 `farm/spi/orchid`, 차단 결과 값은 `farm/api/orchid`에 둔다. Sales가 기존 구현으로 이 SPI를 직접 구현하며, 입고·판매·작업 검사 순서와 제외 대상 의미를 유지한다.
+
 Farm 원장 대사는 Work 공개 조회 API와 결과 값을 직접 사용한다. 진행 상태·효과 연결·보정 참조의 저장소 조회와 JSON 해석은 Work 내부 구현이 담당하며, Farm 대사의 기존 readOnly·REPEATABLE_READ 트랜잭션에 참여한다. 모듈 간 대사는 상태를 자동 보정하지 않는다.
 
 #### integration 생성 기준

@@ -2,7 +2,6 @@ package com.greenhouse.backend.farm.transformation.integration;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
 import com.greenhouse.backend.farm.application.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
@@ -13,6 +12,7 @@ import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidStockCountRepository;
+import com.greenhouse.backend.farm.spi.orchid.OrchidGroupUsageInspector;
 import com.greenhouse.backend.work.api.correction.OrchidGroupCorrectionInput;
 import com.greenhouse.backend.work.api.correction.StructureChangeReferenceApi;
 import com.greenhouse.backend.work.api.correction.WorkCorrectionCommand;

@@ -1,5 +1,6 @@
-package com.greenhouse.backend.farm.application.orchid;
+package com.greenhouse.backend.farm.spi.orchid;
 
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupUsage;
 import java.util.List;
 import java.util.Set;
 

@@ -1,7 +1,7 @@
 package com.greenhouse.backend.sales.application.document;
 
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsage;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupUsage;
+import com.greenhouse.backend.farm.spi.orchid.OrchidGroupUsageInspector;
 import com.greenhouse.backend.sales.repository.document.SalesInventoryMovementRepository;
 import com.greenhouse.backend.sales.repository.document.SalesSlipItemAllocationRepository;
 import java.util.List;
