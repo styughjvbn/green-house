@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.application.document.command;
 
-import com.greenhouse.backend.sales.domain.document.SalesType;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
 import com.greenhouse.backend.sales.application.auction.RecordAuctionResultCommand;
@@ -15,7 +16,6 @@ import com.greenhouse.backend.sales.domain.auction.AuctionAttemptStatus;
 import com.greenhouse.backend.sales.domain.auction.AuctionResultLineInput;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipment;
 import com.greenhouse.backend.sales.domain.auction.AuctionShipmentLot;
-import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;

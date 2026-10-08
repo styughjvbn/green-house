@@ -113,6 +113,8 @@ METHOD	com.greenhouse.backend.farm.api.status.FarmMetricsApi$VarietyInventory.va
 METHOD	com.greenhouse.backend.farm.api.status.FarmMetricsApi$VarietyInventory.warningGroupCount()
 METHOD	com.greenhouse.backend.farm.api.status.FarmMetricsApi.getInventorySummary()
 METHOD	com.greenhouse.backend.farm.api.status.FarmMetricsApi.getSnapshot()
+METHOD	com.greenhouse.backend.sales.api.document.SalesDocumentQueryApi.getSalesSlip(java.lang.Long)
+METHOD	com.greenhouse.backend.sales.api.document.SalesDocumentQueryApi.getSalesSlipPage(java.lang.Long, java.time.LocalDate, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.String, int, int)
 METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$NamedAmount.amount()
 METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$NamedAmount.name()
 METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales.latestSaleDate()
@@ -188,8 +190,6 @@ METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.p
 METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.recordPayment(java.lang.Long, java.lang.Long, java.lang.String, java.time.LocalDateTime)
 METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.response(java.lang.Long)
 METHOD	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget.updateBalance(java.lang.Long, java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.document.SalesQueryService.getSalesSlip(java.lang.Long)
-METHOD	com.greenhouse.backend.sales.application.document.SalesQueryService.getSalesSlipPage(java.lang.Long, java.time.LocalDate, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.String, int, int)
 METHOD	com.greenhouse.backend.sales.application.payment.ManualPaymentService.confirm(java.lang.Long, com.greenhouse.backend.sales.domain.payment.PaymentTargetType, com.greenhouse.backend.sales.application.payment.ManualPaymentCommand, com.greenhouse.backend.sales.application.payment.PaymentTargetPort)
 METHOD	com.greenhouse.backend.sales.application.payment.PartnerBalanceService$Balance.creditBalance()
 METHOD	com.greenhouse.backend.sales.application.payment.PartnerBalanceService$Balance.hasPositiveBalance()
@@ -415,11 +415,14 @@ TYPE	com.greenhouse.backend.farm.api.status.FarmMetricsApi$Snapshot
 TYPE	com.greenhouse.backend.farm.api.status.FarmMetricsApi$VarietyInventory
 TYPE	com.greenhouse.backend.farm.spi.orchid.OrchidGroupLedgerRehearsalInspector
 TYPE	com.greenhouse.backend.farm.spi.orchid.OrchidGroupUsageInspector
+TYPE	com.greenhouse.backend.sales.api.document.SalesDocumentQueryApi
 TYPE	com.greenhouse.backend.sales.api.document.SalesMetricsApi
 TYPE	com.greenhouse.backend.sales.api.document.SalesMetricsApi$NamedAmount
 TYPE	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales
 TYPE	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary
 TYPE	com.greenhouse.backend.sales.api.document.SalesPaymentCategory
+TYPE	com.greenhouse.backend.sales.api.document.SalesSlipDocument
+TYPE	com.greenhouse.backend.sales.api.document.SalesSlipSummary
 TYPE	com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo
 TYPE	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi
 TYPE	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi$Identity
@@ -440,9 +443,6 @@ TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingP
 TYPE	com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort$Terms
 TYPE	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget
 TYPE	com.greenhouse.backend.sales.application.document.DocumentPaymentTarget$PaymentOption
-TYPE	com.greenhouse.backend.sales.application.document.SalesQueryService
-TYPE	com.greenhouse.backend.sales.application.document.SalesSlipDocument
-TYPE	com.greenhouse.backend.sales.application.document.SalesSlipSummary
 TYPE	com.greenhouse.backend.sales.application.payment.ManualPaymentCommand
 TYPE	com.greenhouse.backend.sales.application.payment.ManualPaymentService
 TYPE	com.greenhouse.backend.sales.application.payment.PartnerBalanceService

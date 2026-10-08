@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.direct;
 
 import com.greenhouse.backend.common.api.PageResponse;
+import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.application.document.DocumentPaymentTarget;
-import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.application.payment.PaymentAllocationTargetPort;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.dto.payment.PaymentAllocationTargetOption;

@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.document;
 
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
-import com.greenhouse.backend.sales.domain.document.SalesType;
 import java.time.LocalDate;
 import java.util.List;
 

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.application.direct;
 
-import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
 import com.greenhouse.backend.sales.application.payment.ManualPaymentService;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;

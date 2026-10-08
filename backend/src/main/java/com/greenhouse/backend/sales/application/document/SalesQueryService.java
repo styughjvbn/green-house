@@ -3,6 +3,9 @@ package com.greenhouse.backend.sales.application.document;
 import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.sales.api.document.SalesDocumentQueryApi;
+import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.api.document.SalesSlipSummary;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.api.partner.PartnerTextMatch;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
@@ -26,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-public class SalesQueryService {
+public class SalesQueryService implements SalesDocumentQueryApi {
 
   private static final int LEGACY_LIST_LIMIT = 500;
 
@@ -51,6 +54,7 @@ public class SalesQueryService {
     return assembleSalesSlips(salesSlipRepository.search(partnerId, from, to, LEGACY_LIST_LIMIT));
   }
 
+  @Override
   public PageResponse<SalesSlipSummary> getSalesSlipPage(
       Long partnerId,
       LocalDate from,
@@ -84,6 +88,7 @@ public class SalesQueryService {
     return PageResponse.from(responseAssembler.assemblePage(result));
   }
 
+  @Override
   public SalesSlipDocument getSalesSlip(Long salesSlipId) {
     var salesSlip =
         salesSlipRepository

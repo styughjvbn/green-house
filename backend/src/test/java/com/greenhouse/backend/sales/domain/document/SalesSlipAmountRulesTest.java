@@ -3,6 +3,7 @@ package com.greenhouse.backend.sales.domain.document;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.support.DirectSaleFixtures;
 import java.time.LocalDate;
 import java.util.List;

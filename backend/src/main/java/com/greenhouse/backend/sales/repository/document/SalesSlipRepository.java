@@ -18,7 +18,7 @@ public interface SalesSlipRepository
     extends JpaRepository<SalesSlip, Long>, SalesSlipRepositoryCustom {
 
   @Query(
-      "select s.id as id, s.partnerId as partnerId from SalesSlip s where s.id in :ids and s.salesType = com.greenhouse.backend.sales.domain.document.SalesType.DIRECT")
+      "select s.id as id, s.partnerId as partnerId from SalesSlip s where s.id in :ids and s.salesType = com.greenhouse.backend.sales.api.document.SalesType.DIRECT")
   List<PaymentOwner> findPaymentOwners(Collection<Long> ids);
 
   interface PaymentOwner {
@@ -31,7 +31,7 @@ public interface SalesSlipRepository
   Optional<Long> findPartnerId(@Param("id") Long id);
 
   @Query(
-      "select s from SalesSlip s where s.partnerId = :partnerId and s.salesType = com.greenhouse.backend.sales.domain.document.SalesType.DIRECT and s.salesStatus <> '취소' and (:keyword = '' or lower(s.slipNumber) like lower(concat('%', :keyword, '%')))")
+      "select s from SalesSlip s where s.partnerId = :partnerId and s.salesType = com.greenhouse.backend.sales.api.document.SalesType.DIRECT and s.salesStatus <> '취소' and (:keyword = '' or lower(s.slipNumber) like lower(concat('%', :keyword, '%')))")
   Page<SalesSlip> findPaymentTargets(Long partnerId, String keyword, Pageable pageable);
 
   boolean existsByAuctionShipmentId(Long auctionShipmentId);
@@ -64,7 +64,7 @@ public interface SalesSlipRepository
 			select coalesce(sum(coalesce(s.remainingAmount, s.totalAmount)), 0)
 			from SalesSlip s
 			where s.partnerId = :partnerId
-			  and (s.salesType is null or s.salesType = com.greenhouse.backend.sales.domain.document.SalesType.DIRECT)
+			  and (s.salesType is null or s.salesType = com.greenhouse.backend.sales.api.document.SalesType.DIRECT)
 			  and s.salesStatus <> '취소'
 			""")
   Long sumDirectReceivableByPartnerId(@Param("partnerId") Long partnerId);

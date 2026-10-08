@@ -1,37 +1,12 @@
 package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.sales.api.document.SalesOrchidGroupSnapshotData;
 import com.greenhouse.backend.sales.domain.document.SalesOrchidGroupSnapshot;
-import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotSource;
-import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotType;
-import io.swagger.v3.oas.annotations.media.Schema;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
-@Schema(name = "SalesOrchidGroupSnapshotResponse")
-public record SalesOrchidGroupSnapshotData(
-    SalesOrchidSnapshotType snapshotType,
-    SalesOrchidSnapshotSource captureSource,
-    LocalDateTime capturedAt,
-    Long orchidGroupId,
-    Long varietyId,
-    String varietyName,
-    String genus,
-    Integer ageYear,
-    String potSizeCode,
-    String potSize,
-    Integer quantity,
-    Integer reservedQuantity,
-    String status,
-    Integer allocatedQuantity,
-    Long houseId,
-    Integer houseNumber,
-    Long physicalBedId,
-    Integer physicalBedNumber,
-    Long bedZoneId,
-    String bedZoneName,
-    BigDecimal startPosition,
-    BigDecimal endPosition) {
+final class SalesOrchidGroupSnapshotDataFactory {
+
+  private SalesOrchidGroupSnapshotDataFactory() {}
 
   public static SalesOrchidGroupSnapshotData from(SalesOrchidGroupSnapshot snapshot) {
     if (snapshot == null) {

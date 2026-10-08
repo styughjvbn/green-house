@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.domain.document;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

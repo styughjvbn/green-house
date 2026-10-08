@@ -11,12 +11,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.document.SalesSlipCreationService;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipAllocationInput;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
-import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
 import java.time.LocalDate;

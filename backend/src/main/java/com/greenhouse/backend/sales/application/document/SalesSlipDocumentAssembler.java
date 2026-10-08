@@ -2,11 +2,13 @@ package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi;
+import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.api.document.SalesSlipSummary;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
-import com.greenhouse.backend.sales.domain.document.SalesType;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,7 +36,7 @@ public class SalesSlipDocumentAssembler {
     var financials = financials(page.getContent());
     return page.map(
         slip ->
-            SalesSlipSummary.from(
+            SalesSlipSummaryFactory.from(
                 slip,
                 partners.get(slip.getPartnerId()),
                 slip.getAuctionShipmentId() == null
@@ -76,7 +78,7 @@ public class SalesSlipDocumentAssembler {
     return salesSlips.stream()
         .map(
             salesSlip ->
-                SalesSlipDocument.from(
+                SalesSlipDocumentFactory.from(
                     salesSlip,
                     partners.get(salesSlip.getPartnerId()),
                     salesSlip.getAuctionShipmentId() == null

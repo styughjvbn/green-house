@@ -1,9 +1,9 @@
 package com.greenhouse.backend.print.application;
 
 import com.greenhouse.backend.common.api.PageResponse;
-import com.greenhouse.backend.sales.application.document.SalesQueryService;
-import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
-import com.greenhouse.backend.sales.application.document.SalesSlipSummary;
+import com.greenhouse.backend.sales.api.document.SalesDocumentQueryApi;
+import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.api.document.SalesSlipSummary;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PrintQueryService {
 
-  private final SalesQueryService salesQueryService;
+  private final SalesDocumentQueryApi salesQueryService;
 
   public PageResponse<SalesSlipSummary> getPrintableSalesSlips(int page, int size) {
     return salesQueryService.getSalesSlipPage(null, null, null, null, null, null, page, size);

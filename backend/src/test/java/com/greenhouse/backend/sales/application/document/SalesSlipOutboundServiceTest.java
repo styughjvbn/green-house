@@ -8,13 +8,13 @@ import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
+import com.greenhouse.backend.sales.api.document.SalesOrchidSnapshotType;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.CreatedShipment;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.LotDraft;
-import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
-import com.greenhouse.backend.sales.domain.document.SalesType;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;

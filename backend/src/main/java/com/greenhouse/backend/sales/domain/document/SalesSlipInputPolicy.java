@@ -1,5 +1,7 @@
 package com.greenhouse.backend.sales.domain.document;
 
+import com.greenhouse.backend.sales.api.document.SalesType;
+
 /** Shared input rules; edit eligibility and stock allocation remain separate policies. */
 public final class SalesSlipInputPolicy {
 

@@ -23,6 +23,7 @@ import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.variety.VarietyUpdateRequest;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.document.SalesSlipCreationService;
 import com.greenhouse.backend.sales.application.document.SalesSlipStatusService;
@@ -32,7 +33,6 @@ import com.greenhouse.backend.sales.application.document.command.SalesSlipComman
 import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.domain.document.SalesInventoryMovementType;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
-import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.dto.document.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.document.SalesInventoryMovementRepository;

@@ -5,11 +5,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
-import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotType;
+import com.greenhouse.backend.sales.api.document.SalesOrchidSnapshotType;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
-import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.support.DirectSaleFixtures;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

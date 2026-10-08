@@ -621,3 +621,14 @@ Sales 2단계 검증 결과:
 - clean 집중 검증의 집계·응답/조회 건수·공개 값·기능 그래프·단일 Writer 통과. 기존 분류 enum TYPE 한 항목만 reviewed inventory에 추가 후 전체 검사 통과.
 - 전체 `test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 임시 heap 2 GiB 사용. 프론트 `npm run check` 통과. HTTP DTO/schema 변경 없음.
 - SQL·DB/트랜잭션 경계·정책 변경 없음. OpenAPI는 출력 값 이동 후 다시 확인하며 이번 단계에는 타입 재생성/`workE2eTest` 미실행. 전체 검증 후에는 이 ADR 결과만 추가했다.
+
+### 2026-10-08: Sales 다섯 단계 — 3. Print 전표 조회·공개 값
+
+- Print의 concrete SalesQueryService 참조를 `sales/api/document/SalesDocumentQueryApi`로 바꾼다. 실제 사용하는 page/단건 두 메서드만 공개하고 기존 readOnly service가 직접 구현한다. 호환 전체 목록과 출하 선택 HTTP 값은 내부 기존 service에 유지한다. 전달 Adapter 없음.
+- 전표·목록·품목·배분·과거 snapshot record와 필요한 enum을 `sales/api/document`로 이동한다. Entity factory 다섯 개는 내부 application으로 옮기며 기존 변환 본문·금융 검토/가격 누락 조건·현재 값과 과거 snapshot 조합·시간대 변환·capability/JSON Schema 이름/필드/순서·Receipt 지문/replay는 유지한다. 공개 멤버는 Entity·Repository projection·HTTP DTO를 받지 않는다.
+- 유스케이스·일괄 조회·잠금/트랜잭션·SQL·수량/금액 정책·A5 출력 흐름 변경 없음. reviewed inventory는 대응 FQCN과 기존 domain enum 접근만 검토한다. DB 저장 enum 이름·JSON은 동일하며 Enum/값 Java FQCN이 저장되는 경로도 확인한다.
+
+Sales 3단계 검증 결과:
+
+- clean 집중 검증과 전체 백엔드 테스트 778개 통과, 실패·오류·skip 0개. 프론트 `npm run check` 통과. 초기 Spotless 검사 실패 후 `spotlessApply spotlessCheck --rerun-tasks` 통과; 이후 변경은 포맷과 검증 기록뿐이다.
+- OpenAPI 재생성 157 operations/132 paths/292 schemas, 생성 파일 diff 없음. 타입 재생성 불필요. HTTP·SQL·DB/트랜잭션 경계·정책 변경이 없어 `workE2eTest` 미실행.

@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.domain.document;
+package com.greenhouse.backend.sales.api.document;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

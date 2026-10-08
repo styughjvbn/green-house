@@ -1,5 +1,7 @@
 package com.greenhouse.backend.sales.domain.document;
 
+import com.greenhouse.backend.sales.api.document.SalesOrchidSnapshotSource;
+import com.greenhouse.backend.sales.api.document.SalesOrchidSnapshotType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.*;
 
 import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.auction.AuctionProceedsReader;
 import com.greenhouse.backend.sales.application.auction.AuctionProceedsService;

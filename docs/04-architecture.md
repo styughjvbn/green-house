@@ -339,6 +339,7 @@ Farm 원장 대사는 Work 공개 조회 API와 결과 값을 직접 사용한�
 - Entity, Repository, DB table은 각각 하나의 업무 모듈이 소유한다. 소유 모듈 밖에서는 해당 Repository나 internal 구현을 직접 참조하지 않는다.
 - 다른 모듈의 기능이 필요하면 제공 모듈의 application API를 호출한다. 호출 측의 도메인 흐름에 필요한 조회 계약은 호출 측에 port를 두고 소유 모듈이 구현할 수 있다.
 - 모듈 간 계약은 필요한 값만 전달한다. 외부 모듈 Entity를 장기간 보관하거나 응답 조립 편의를 위해 aggregate 전체를 넘기지 않는다.
+- Print의 전표 페이지·단건 조회는 `sales/api/document`의 공개 조회 API와 전표/품목/배분/과거 snapshot 값·enum을 사용한다. Entity와 금융/현재 재고/저장 snapshot을 조합하는 factory는 Document 내부에 유지하며 기존 JSON schema·시간대 변환·snapshot 캡처와 Receipt replay를 보존한다.
 - Partner 조회는 `sales/api/partner`의 공개 조회 API와 현재 기준 값·검색 값·enum을 사용한다. 기존 Reader가 API를 직접 구현하고 Entity 변환은 내부 factory에 둔다. Sales 내부 잠금·예정일 계산은 `sales/partner/api`로 제한하며 기존 구현의 readOnly·MANDATORY·호출자 트랜잭션 참여를 유지한다. Document·Direct·Auction·Payment는 거래처 ID로 연결하며 기존 DB 외래키를 유지한다. Entity를 반환하는 호환 조회는 제거했다. 판매 응답의 연락처를 포함한 현재 거래처 정보와 경매장 이름은 ID를 모아 일괄 조회한다.
 - Sales는 난 묶음 Entity 대신 ID와 Farm application의 현재 상태 값을 사용한다. 배분·재고 이동의 기존 DB 외래키는 유지하며, 상세 응답은 Sales의 배분·보존 스냅샷과 Farm의 상태 값을 따로 일괄 조회해 조립한다. 현재 상태 조회는 500개 ID씩 처리한다.
 - Farm의 외부 난 묶음 조회는 `farm/api/orchid`의 공개 API와 상태 값을 사용한다. 기존 Reader가 API를 직접 구현하며 Entity → 상태 값 factory는 application 내부에 둔다. 조회 계약은 상태 값·판매 선택·호출 트랜잭션 내 잠금으로 제한한다. Entity가 필요한 Farm 내부 유스케이스는 소유 Repository를 사용한다. 공개 Reader의 반환값·입력과 중첩 collection/record에 Entity를 추가하면 architecture 검증이 실패한다.

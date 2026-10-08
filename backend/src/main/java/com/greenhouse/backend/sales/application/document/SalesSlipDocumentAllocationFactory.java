@@ -1,22 +1,13 @@
 package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
-import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotType;
+import com.greenhouse.backend.sales.api.document.SalesOrchidSnapshotType;
+import com.greenhouse.backend.sales.api.document.SalesSlipDocumentAllocation;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
-import io.swagger.v3.oas.annotations.media.Schema;
 
-@Schema(name = "SalesSlipItemAllocationResponse")
-public record SalesSlipDocumentAllocation(
-    Long id,
-    Long orchidGroupId,
-    String varietyName,
-    Integer allocatedQuantity,
-    Integer availableQuantity,
-    Integer houseNumber,
-    Integer physicalBedNumber,
-    String bedZoneName,
-    SalesOrchidGroupSnapshotData creationSnapshot,
-    SalesOrchidGroupSnapshotData outboundSnapshot) {
+final class SalesSlipDocumentAllocationFactory {
+
+  private SalesSlipDocumentAllocationFactory() {}
 
   public static SalesSlipDocumentAllocation from(
       SalesSlipItemAllocation allocation, OrchidGroupState group) {
@@ -29,9 +20,9 @@ public record SalesSlipDocumentAllocation(
         group.houseNumber(),
         group.physicalBedNumber(),
         group.bedZoneName(),
-        SalesOrchidGroupSnapshotData.from(
+        SalesOrchidGroupSnapshotDataFactory.from(
             allocation.findSnapshot(SalesOrchidSnapshotType.CREATION)),
-        SalesOrchidGroupSnapshotData.from(
+        SalesOrchidGroupSnapshotDataFactory.from(
             allocation.findSnapshot(SalesOrchidSnapshotType.OUTBOUND)));
   }
 }

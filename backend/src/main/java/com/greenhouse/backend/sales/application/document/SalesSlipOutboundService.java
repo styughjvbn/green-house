@@ -2,10 +2,10 @@ package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi;
+import com.greenhouse.backend.sales.api.document.SalesOrchidSnapshotType;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.application.document.AuctionDocumentPort.LotDraft;
-import com.greenhouse.backend.sales.domain.document.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
-import com.greenhouse.backend.sales.domain.document.SalesType;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

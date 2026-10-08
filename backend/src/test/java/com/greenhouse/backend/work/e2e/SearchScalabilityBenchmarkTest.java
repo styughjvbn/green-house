@@ -3,9 +3,9 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.common.api.PageResponse;
+import com.greenhouse.backend.sales.api.document.SalesSlipSummary;
 import com.greenhouse.backend.sales.application.auction.AuctionTrackingService;
 import com.greenhouse.backend.sales.application.document.SalesQueryService;
-import com.greenhouse.backend.sales.application.document.SalesSlipSummary;
 import com.greenhouse.backend.sales.dto.auction.AuctionLotResponse;
 import com.greenhouse.backend.support.JdbcMeasurement;
 import com.sun.management.ThreadMXBean;

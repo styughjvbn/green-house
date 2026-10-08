@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.domain.document;
+package com.greenhouse.backend.sales.api.document;
 
 public enum SalesType {
   DIRECT("미입금", null),

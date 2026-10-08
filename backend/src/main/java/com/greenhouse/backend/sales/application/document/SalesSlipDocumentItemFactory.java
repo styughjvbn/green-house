@@ -1,24 +1,15 @@
 package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
+import com.greenhouse.backend.sales.api.document.SalesSlipDocumentItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
 
-@Schema(name = "SalesSlipItemResponse")
-public record SalesSlipDocumentItem(
-    Long id,
-    Long auctionShipmentLotId,
-    String itemName,
-    String genus,
-    String spec,
-    Integer quantity,
-    Integer unitPrice,
-    Integer amount,
-    String memo,
-    List<SalesSlipDocumentAllocation> allocations) {
+final class SalesSlipDocumentItemFactory {
+
+  private SalesSlipDocumentItemFactory() {}
 
   public static SalesSlipDocumentItem from(
       SalesSlipItem item,
@@ -38,7 +29,7 @@ public record SalesSlipDocumentItem(
         allocations.stream()
             .map(
                 allocation ->
-                    SalesSlipDocumentAllocation.from(
+                    SalesSlipDocumentAllocationFactory.from(
                         allocation, states.get(allocation.getOrchidGroupId())))
             .toList());
   }

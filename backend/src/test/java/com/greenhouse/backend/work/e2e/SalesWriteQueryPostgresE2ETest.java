@@ -7,11 +7,12 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
+import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.direct.SalesPaymentService;
 import com.greenhouse.backend.sales.application.document.SalesQueryService;
 import com.greenhouse.backend.sales.application.document.SalesSlipCreationService;
-import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.application.document.SalesSlipDocumentAssembler;
 import com.greenhouse.backend.sales.application.document.SalesSlipStatusService;
 import com.greenhouse.backend.sales.application.document.SalesSlipUpdateService;
@@ -20,7 +21,6 @@ import com.greenhouse.backend.sales.application.document.command.SalesSlipComman
 import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
-import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.dto.document.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;

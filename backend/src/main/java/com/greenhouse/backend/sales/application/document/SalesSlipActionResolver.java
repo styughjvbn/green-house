@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.document;
 
+import com.greenhouse.backend.sales.api.document.SalesSlipAction;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
-import com.greenhouse.backend.sales.domain.document.SalesSlipAction;
-import com.greenhouse.backend.sales.domain.document.SalesType;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;

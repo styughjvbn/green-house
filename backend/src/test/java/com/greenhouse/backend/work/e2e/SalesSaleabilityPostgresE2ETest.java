@@ -15,6 +15,7 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
 import com.greenhouse.backend.farm.orchid.integration.FarmWorkTargetResolver;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.document.SalesOrchidGroupQueryService;
 import com.greenhouse.backend.sales.application.document.SalesQueryService;
@@ -25,7 +26,6 @@ import com.greenhouse.backend.sales.application.document.command.SalesSlipAlloca
 import com.greenhouse.backend.sales.application.document.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
-import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.sales.domain.partner.BusinessPartner;
 import com.greenhouse.backend.sales.dto.document.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.partner.BusinessPartnerRepository;
