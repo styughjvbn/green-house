@@ -5,6 +5,7 @@ import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

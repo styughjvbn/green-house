@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.application.direct;
 
-import com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort;
+import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import com.greenhouse.backend.sales.domain.direct.DirectSale;
 import com.greenhouse.backend.sales.domain.direct.DirectSaleAmounts;
 import com.greenhouse.backend.sales.domain.direct.DirectSalePrice;

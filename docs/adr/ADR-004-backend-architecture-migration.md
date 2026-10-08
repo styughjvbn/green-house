@@ -632,3 +632,13 @@ Sales 3단계 검증 결과:
 
 - clean 집중 검증과 전체 백엔드 테스트 778개 통과, 실패·오류·skip 0개. 프론트 `npm run check` 통과. 초기 Spotless 검사 실패 후 `spotlessApply spotlessCheck --rerun-tasks` 통과; 이후 변경은 포맷과 검증 기록뿐이다.
 - OpenAPI 재생성 157 operations/132 paths/292 schemas, 생성 파일 diff 없음. 타입 재생성 불필요. HTTP·SQL·DB/트랜잭션 경계·정책 변경이 없어 `workE2eTest` 미실행.
+
+### 2026-10-08: Sales 다섯 단계 — 4. Document 회계 SPI
+
+- Document 소유 기존 `DirectDocumentAccountingPort`와 중첩 순수 값을 `sales/document/spi`로 이동한다. Document → 소유 SPI 호출, Direct → Document SPI 구현의 의존 방향을 유지한다. Sales 내부 기능 계약이므로 다른 최상위 모듈에는 공개하지 않는다.
+- 기존 DirectDocumentAccountingAdapter는 Direct 가격/조건/검토와 Payment 잔액/입금·Partner 예정일을 Document 계약에 연결하는 실제 역전 구현이므로 유지한다. 구현·호출 순서·잠금·트랜잭션·값 변환 변경이나 새 전달 Adapter/Port/integration은 없다. reviewed inventory는 대응 FQCN만 치환한다.
+
+Sales 4단계 검증 결과:
+
+- 초기 집중 검증의 import 정렬 오류 수정 후 전체 `clean test spotlessCheck` 778개 통과, 실패·오류·skip 0개. 프론트 `npm run check` 통과. 임시 heap 2 GiB 사용. SPI 본문과 Adapter 실행 본문은 동일하며 다른 Java 수정은 import뿐이다.
+- reviewed inventory는 대응 FQCN만 치환하고 신규 항목은 없다. HTTP·SQL·DB/트랜잭션 경계·정책 변경이 없어 타입 재생성/`workE2eTest` 미실행. OpenAPI는 5단계 후 다시 확인한다. 전체 검증 이후에는 이 ADR 결과만 추가했다.

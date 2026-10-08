@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application.direct;
 
-import com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort.FinancialSnapshot;
-import com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort.PriceSnapshot;
 import com.greenhouse.backend.sales.application.payment.PaymentAllocationReader;
+import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort.FinancialSnapshot;
+import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort.PriceSnapshot;
 import com.greenhouse.backend.sales.domain.direct.DirectSaleAmounts;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.repository.direct.DirectSaleAmountReconciliationRepository;

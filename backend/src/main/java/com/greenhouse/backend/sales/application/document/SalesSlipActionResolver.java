@@ -2,6 +2,7 @@ package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.sales.api.document.SalesSlipAction;
 import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;

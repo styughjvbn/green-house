@@ -2,6 +2,7 @@ package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.api.document.SalesSlipDocumentItem;
+import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
 import java.util.List;

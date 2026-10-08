@@ -1,7 +1,7 @@
 package com.greenhouse.backend.sales.application.direct;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort.FinancialSnapshot;
+import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort.FinancialSnapshot;
 import com.greenhouse.backend.sales.domain.direct.DirectSaleAmounts;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

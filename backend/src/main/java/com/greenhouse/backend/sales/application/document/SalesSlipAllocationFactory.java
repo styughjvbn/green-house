@@ -6,6 +6,7 @@ import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.api.document.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipAllocationInput;
 import com.greenhouse.backend.sales.application.document.command.SalesSlipItemInput;
+import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;

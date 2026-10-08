@@ -3,7 +3,7 @@ package com.greenhouse.backend.sales.application.direct;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.greenhouse.backend.sales.application.document.DirectDocumentAccountingPort.Price;
+import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort.Price;
 import com.greenhouse.backend.sales.repository.direct.DirectSaleRepository;
 import java.util.List;
 import org.junit.jupiter.api.Test;

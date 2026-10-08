@@ -2,6 +2,7 @@ package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.sales.api.document.SalesSlipSummary;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo;
+import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
 
 final class SalesSlipSummaryFactory {
