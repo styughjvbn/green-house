@@ -346,3 +346,25 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - `clean test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 이전 FQCN 클래스 잔존 없음. 프론트엔드 `npm run check` 통과.
 - OpenAPI 재생성 성공: 157 operations, 132 paths, 292 schemas; 생성 명세 차이 없음. 프론트 타입은 계약 차이가 없어 재생성하지 않았다. 설정·저장용 FQCN 문자열은 main/resources와 scripts에서 발견되지 않았다.
 - SQL·트랜잭션·잠금·DB 제약·업무 계산이 동일해 `workE2eTest`는 실행하지 않았다. E2E 소스의 import 전환은 `compileTestJava`로 검증했다. 전체 검증 이후에는 이 ADR의 검증 기록만 추가했다.
+
+
+### 2026-10-08: 두 단계 진행 — 2단계 입고 작업 lifecycle API
+
+| 소비자 | 변경 전 | 변경 후 | 필요한 경계 |
+|---|---|---|---|
+| Farm 입고 변경/취소 유스케이스 | Work application lifecycle service 직접 참조 | `work/api/operation/InboundWorkOperationLifecycleApi` | Work의 연결 작업·대상 실행·효과 저장소와 취소 구현을 감춤 |
+| Farm 입고 응답 조립 | 같은 구현의 취소 가능 포트 조회 | 같은 API 직접 조회 | 입고 ID 집합만 공개, Work 저장소 접근 없음 |
+| Farm 포트 취소 SPI 구현 | 같은 구현의 선잠금·포트 되돌리기 | 같은 API 직접 호출 | 기존 Work → Farm → Work 재진입과 트랜잭션 순서 보존 |
+
+- 외부에서 이미 사용하는 메서드 5개를 공개 API로 추출했다. 기존 Work lifecycle service가 API를 직접 구현하며 별도 facade·전달 Adapter·Port·integration 패키지는 추가하지 않는다.
+- Work의 연결 작업 잠금 → 대상 실행 잠금 → 취소/효과 상태 변경 순서와 Farm 입고 검증·보상 Mutation·감사 흐름은 동일하다. 기존 class `@Transactional`, 조회 메서드 `readOnly = true`, Farm SPI 구현 `MANDATORY`와 Bean 이름을 유지한다.
+- runtime 재진입의 책임이나 트랜잭션 경계를 재배치하지 않는다. 기존 private Entity 처리·업무일 시점·단일 Writer·멱등 접수·취소 가능한 상태 조건·잠금/SQL 본문은 그대로 유지한다.
+- reviewed inventory는 기존 service TYPE 1개와 METHOD 5개의 FQCN을 API로 치환한다. 새 업무 메서드·외부 의존·HTTP 계약 변경 없음.
+
+2단계 검증 결과:
+
+- 입고 감사·다중 입고 포트 계획·입고 취소/되돌리기·Mutation·작업 취소·API/SPI/integration/Writer 집중 테스트 통과. Spring 통합 테스트로 공개 API 주입 후 기존 lifecycle 구현 연결도 확인했다.
+- 전체 `test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 프론트엔드 `npm run check` 통과.
+- 기존 메서드 본문과 트랜잭션 annotation이 동일하며, reviewed inventory도 기존 lifecycle 참조의 API 치환 외 차이가 없다. HTTP Controller·DTO·validation·schema가 동일하여 1단계에서 확인한 OpenAPI를 다시 생성하지 않았다.
+- SQL·DB 제약·트랜잭션 경계·잠금·수량/상태 처리 변경이 없어 `workE2eTest`는 실행하지 않았다. 전체 검증 이후에는 이 ADR의 검증 기록만 추가했다.
+- 이번 요청의 두 단계 완료. 남은 Work 외부 참조는 입고 실행/기록·즉시 실행·계보·대사·codec/계산 계약을 각각 확인하며 후속 두 단계 작업으로 나눈다.

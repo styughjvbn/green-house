@@ -8,7 +8,7 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEnt
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
-import com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService;
+import com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +25,7 @@ public class InboundRecordResponseAssembler {
 
   private final OrchidGroupMutationEntryRepository mutationEntryRepository;
 
-  private final InboundWorkOperationLifecycleService lifecycle;
+  private final InboundWorkOperationLifecycleApi lifecycle;
 
   public InboundRecordResponse assemble(InboundRecord record) {
     var dates = pottingDatesByInboundRecordId(List.of(record));

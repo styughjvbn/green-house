@@ -304,6 +304,8 @@ Farm에서 필요한 구조 변경 참조·과거 수량 수지 조회와 보정
 
 작업 대상 해석은 Work 소유 `work/spi/target`과 `farm/orchid/integration`의 기존 구현으로 연결한다. 선택·포함 출처 값은 `work/api/target`에 두고 대상 조건 snapshot·정렬된 선잠금·활성 대상 검증을 유지한다. Farm에서 Work 사용 여부를 확인할 때는 `work/api/target`을 직접 호출하며 Work 저장소 구현은 내부에 둔다.
 
+입고에 연결된 Work의 선잠금·취소 가능 조회·포트 되돌리기·입고 기록 취소는 `work/api/operation`의 lifecycle API를 통해 직접 호출한다. Work의 기존 lifecycle service가 API를 구현하며, Farm 취소 유스케이스와 같은 트랜잭션 참여 및 조회 메서드의 readOnly 설정을 유지한다.
+
 #### integration 생성 기준
 
 `integration`은 선택적인 연동 구현 위치다. 모든 기능에 생성하거나 application·domain·repository·web와 함께 필수 계층으로 취급하지 않는다.

@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi;
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
@@ -21,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class InboundWorkOperationLifecycleService {
+public class InboundWorkOperationLifecycleService implements InboundWorkOperationLifecycleApi {
 
   private final WorkTargetExecutionRepository workTargetExecutionRepository;
 
@@ -33,11 +34,13 @@ public class InboundWorkOperationLifecycleService {
 
   private final WorkOperationLockService operationLocks;
 
+  @Override
   public void lockForInboundChange(Long inboundRecordId) {
     operationLocks.lockAll(
         workTargetExecutionRepository.findOperationIdsForInbound(inboundRecordId));
   }
 
+  @Override
   @Transactional(readOnly = true)
   public Set<Long> findInboundIdsWithUndoablePotting(Collection<Long> inboundIds) {
     if (inboundIds.isEmpty()) return Set.of();
@@ -51,6 +54,7 @@ public class InboundWorkOperationLifecycleService {
         WorkOperationStatus.COMPLETED, WorkOperationStatus.IN_PROGRESS, WorkOperationStatus.PAUSED);
   }
 
+  @Override
   public Long voidPottingForInboundRecord(Long inboundRecordId, String requestKey, String reason) {
     WorkOperation operation =
         findSingleCompletedOperation(inboundRecordId, WorkTypeDefinition.POTTING);
@@ -59,6 +63,7 @@ public class InboundWorkOperationLifecycleService {
     return operation.getId();
   }
 
+  @Override
   public void voidInboundRegistrationForCancellation(
       Long inboundRecordId, String requestKey, String reason) {
     WorkOperation operation =
@@ -67,6 +72,7 @@ public class InboundWorkOperationLifecycleService {
         operation.getId(), new WorkOperationCancellationRequest(requestKey, reason));
   }
 
+  @Override
   public void cancelForInboundRecord(Long inboundRecordId) {
     operationLocks.lockAll(
         workTargetExecutionRepository.findOperationIdsForInbound(inboundRecordId));

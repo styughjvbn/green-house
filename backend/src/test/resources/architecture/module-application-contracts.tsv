@@ -301,6 +301,11 @@ METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.actualSt
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.actualStatus()
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.reason()
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.workDate()
+METHOD	com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi.cancelForInboundRecord(java.lang.Long)
+METHOD	com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi.findInboundIdsWithUndoablePotting(java.util.Collection)
+METHOD	com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi.lockForInboundChange(java.lang.Long)
+METHOD	com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi.voidInboundRegistrationForCancellation(java.lang.Long, java.lang.String, java.lang.String)
+METHOD	com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi.voidPottingForInboundRecord(java.lang.Long, java.lang.String, java.lang.String)
 METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi$WorkOperationMetadata.id()
 METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi$WorkOperationMetadata.title()
 METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi$WorkOperationMetadata.workType()
@@ -363,11 +368,6 @@ METHOD	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionS
 METHOD	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService.getStructureChangeResultOrchidGroupIds(java.lang.Long, java.lang.String)
 METHOD	com.greenhouse.backend.work.application.operation.InboundPottingOperationService.executeNow(com.greenhouse.backend.work.api.effect.InboundPottingCommand)
 METHOD	com.greenhouse.backend.work.application.operation.InboundPottingOperationService.voidForInbound(java.lang.Long, java.lang.String, java.lang.String)
-METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.cancelForInboundRecord(java.lang.Long)
-METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.findInboundIdsWithUndoablePotting(java.util.Collection)
-METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.lockForInboundChange(java.lang.Long)
-METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.voidInboundRegistrationForCancellation(java.lang.Long, java.lang.String, java.lang.String)
-METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService.voidPottingForInboundRecord(java.lang.Long, java.lang.String, java.lang.String)
 METHOD	com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder.record(com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand, com.greenhouse.backend.work.api.effect.WorkMutationLink)
 METHOD	com.greenhouse.backend.work.application.operation.WorkOperationQueryService.get(java.lang.Long)
 METHOD	com.greenhouse.backend.work.application.operation.WorkOperationView.details()
@@ -474,6 +474,7 @@ TYPE	com.greenhouse.backend.work.api.effect.WorkEffectResults$Transformation
 TYPE	com.greenhouse.backend.work.api.effect.WorkExecutionResult
 TYPE	com.greenhouse.backend.work.api.effect.WorkMutationLink
 TYPE	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand
+TYPE	com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi
 TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi
 TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi$WorkOperationMetadata
 TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi
@@ -496,7 +497,6 @@ TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehears
 TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference
 TYPE	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService
 TYPE	com.greenhouse.backend.work.application.operation.InboundPottingOperationService
-TYPE	com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService
 TYPE	com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder
 TYPE	com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand
 TYPE	com.greenhouse.backend.work.application.operation.WorkOperationQueryService
