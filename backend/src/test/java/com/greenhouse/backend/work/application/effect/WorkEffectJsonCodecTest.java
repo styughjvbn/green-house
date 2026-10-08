@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.application.operation.WorkOperationViewFactory;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import java.math.BigDecimal;
@@ -46,7 +46,7 @@ class WorkEffectJsonCodecTest {
     assertThat(WorkEffectJsonCodec.resultQuantities(details)).containsExactlyEntriesOf(quantities);
     var execution = mock(WorkTargetExecution.class);
     when(execution.getResultDetails()).thenReturn(details);
-    var target = WorkOperationTargetView.from(mock(WorkOperationTarget.class), execution);
+    var target = WorkOperationViewFactory.from(mock(WorkOperationTarget.class), execution);
     assertThat(target.resultOrchidGroupIds()).containsExactlyElementsOf(targetIds);
     assertThat(target.resultDetails()).isSameAs(details);
   }

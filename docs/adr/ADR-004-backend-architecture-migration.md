@@ -387,3 +387,29 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - 전체 `test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 프론트엔드 `npm run check` 통과.
 - 명령 record와 기록 서비스 본문·트랜잭션 annotation이 동일함을 확인했다. Controller·DTO·validation·schema 변경이 없어 OpenAPI·프론트 타입은 재생성하지 않았다. SQL·트랜잭션 경계·잠금·수량 계산 변경이 없어 `workE2eTest`는 실행하지 않았다.
 - 전체 검증 이후 변경은 이 ADR의 검증 기록뿐이다.
+
+
+### 2026-10-08: 두 단계 진행 — 입고 기록·즉시 실행의 2단계
+
+| 소비자·책임 | 변경 전 | 변경 후 | 판단 |
+|---|---|---|---|
+| Farm 분갈이·난 묶음 실사 이력 | `work/application/operation/ImmediateWorkExecutionService` | `work/api/operation/ImmediateWorkExecutionApi` | 외부 사용 메서드 2개만 공개. 기존 즉시 실행 service가 직접 구현 |
+| Farm 분갈이 작업 단건 표시 | `work/application/operation/WorkOperationQueryService.get` | `work/api/operation/WorkOperationQueryApi` | 외부 사용 단건 조회만 공개. 목록·preview 등 내부 조합은 기존 구현 유지 |
+| 공개 작업·진행·대상 값 | Work application operation/target | `work/api/{operation,target}` | 중첩 값까지 공개 경계에 두고 Entity를 시그니처에서 제거 |
+| 값 계약의 operation action/relation/workflow, target action/execution status enum | Work domain operation/target | `work/api/{operation,target}` | enum literal·schema·업무 의미 그대로 이동 |
+| Entity/입고/저장 JSON → 작업·대상 값 변환 | 공개 값의 `from(Entity, ...)` factory | 내부 `WorkOperationViewFactory` | 공개 API가 Entity·codec에 의존하지 않도록 실제 변환 책임만 내부 추출 |
+
+- 기존 Work service가 API를 직접 구현하며 Farm은 허용 API를 직접 호출한다. 새 위임 Service·Adapter·Port·integration 패키지는 없다. 내부 factory는 위임 계층이 아니라 기존 필드·snapshot 변환 본문을 소유한다.
+- 기존 내부 `execute(...)` overload와 query의 다른 메서드는 공개 API에 추가하지 않는다. Bean 이름·트랜잭션 annotation·최상위 모듈 방향은 그대로다.
+- 작업/대상 factory의 UTC → 농장 시간 변환, 활성 포트의 현재 입고 값 조합, 저장 result ID 해석·unknown JSON 보존, progress 계산·capability/action 판단은 동일하다. 순수 값 preview도 그대로 유지한다.
+- 즉시 작업의 IMMEDIATE namespace·private receipt command 구조·key 정규화·지문·replay → 단건 응답 흐름·효과 실행/저장 순서·Mutation 단일 Writer와 SQL/잠금 순서는 변경하지 않는다.
+- 기존 DTO schema 이름과 record 필드/생성자·enum을 보존한다. 검토된 inventory는 실제 이동 및 구현 → API의 FQCN만 대응 치환한다.
+
+즉시 실행 단계 검증 결과:
+
+- 공개 값·모듈 inventory·integration·단일 Writer·즉시 실행·분갈이·실사 payload·작업 상세·저장 JSON·포트 계획 집중 검증 통과. Entity factory를 내부로 옮긴 후 기존 값/JSON 테스트의 진입점도 함께 전환했다.
+- `clean test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 프론트엔드 `npm run check` 통과. 이전 값·enum FQCN 클래스 잔존 없음.
+- 이동한 값·enum·progress/preview 본문, 추출한 factory 본문, 즉시 실행·단건 조회 service 본문과 트랜잭션 annotation이 동일함을 확인했다. Work 공개 API의 application/domain/DTO/Repository import 없음. 설정·저장용 FQCN 문자열은 main/resources와 scripts에서 발견되지 않았다.
+- OpenAPI 재생성 성공: 157 operations, 132 paths, 292 schemas; 생성 명세 차이 없음. 프론트 타입은 계약 차이가 없어 재생성하지 않았다.
+- SQL·DB 제약·트랜잭션 경계·잠금·수량/상태 처리 변경이 없어 `workE2eTest`는 실행하지 않았다. E2E 소스의 import 전환은 `compileTestJava`로 검증했다. 전체 검증 이후에는 이 ADR의 검증 기록만 추가했다.
+- 이번 두 단계 완료. 남은 Work 외부 참조는 입고 포트 실행·계보·운영 대사·codec/계산 계약이다. 각 반환 값과 책임을 확인해 후속 두 단계로 진행한다.

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.work.api.effect.WorkEffectKind;
 import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.api.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
 import java.util.Arrays;
 import java.util.List;

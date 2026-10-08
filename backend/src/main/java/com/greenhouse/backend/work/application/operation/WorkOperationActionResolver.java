@@ -1,13 +1,14 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationAction;
+import com.greenhouse.backend.work.api.operation.WorkOperationProgress;
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.api.operation.WorkTypeWorkflow;
+import com.greenhouse.backend.work.api.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.api.target.WorkTargetAction;
+import com.greenhouse.backend.work.api.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationAction;
-import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
-import com.greenhouse.backend.work.domain.target.WorkTargetAction;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;

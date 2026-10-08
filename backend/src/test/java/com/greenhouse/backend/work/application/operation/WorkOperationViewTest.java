@@ -4,11 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationProgress;
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.api.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +28,8 @@ class WorkOperationViewTest {
     when(operation.getStatus()).thenReturn(WorkOperationStatus.VOIDED);
     var canceledProgress = new WorkOperationProgress(1, 0, 0, 0, 1, 0, 0, 0, 0);
 
-    var response = WorkOperationView.from(operation, canceledProgress, List.of(), List.of(), 0);
+    var response =
+        WorkOperationViewFactory.from(operation, canceledProgress, List.of(), List.of(), 0);
 
     assertThat(response.progress().progressPercent()).isZero();
   }

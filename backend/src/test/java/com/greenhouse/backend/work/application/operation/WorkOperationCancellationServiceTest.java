@@ -9,13 +9,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationRequest;

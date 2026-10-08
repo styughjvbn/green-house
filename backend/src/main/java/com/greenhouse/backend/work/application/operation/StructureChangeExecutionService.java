@@ -6,6 +6,7 @@ import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.application.effect.WorkEffectStore;

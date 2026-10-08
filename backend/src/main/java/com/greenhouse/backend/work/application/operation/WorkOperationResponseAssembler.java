@@ -1,13 +1,15 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationProgress;
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
+import com.greenhouse.backend.work.api.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.api.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
-import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
@@ -95,7 +97,7 @@ class WorkOperationResponseAssembler {
                                     : currentInbound.currentQuantity(target.getQuantitySnapshot());
                             int remainingQuantity =
                                 Math.max(0, currentQuantity - execution.getProcessedQuantity());
-                            return WorkOperationTargetView.from(
+                            return WorkOperationViewFactory.from(
                                 target,
                                 execution,
                                 currentInbound,
@@ -105,7 +107,7 @@ class WorkOperationResponseAssembler {
                       .toList();
               WorkOperationProgress progress =
                   WorkOperationProgress.from(targetResponses).forStatus(operation.getStatus());
-              return WorkOperationView.from(
+              return WorkOperationViewFactory.from(
                   operation,
                   progress,
                   targetResponses,

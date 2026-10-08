@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.domain.target;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
+import com.greenhouse.backend.work.api.target.WorkTargetExecutionStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

@@ -1,13 +1,13 @@
 package com.greenhouse.backend.work.dto.operation;
 
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.work.api.operation.WorkOperationAction;
+import com.greenhouse.backend.work.api.operation.WorkOperationProgress;
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
-import com.greenhouse.backend.work.application.operation.WorkOperationProgress;
+import com.greenhouse.backend.work.api.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationAction;
-import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;

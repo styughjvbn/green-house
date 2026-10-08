@@ -23,8 +23,8 @@ import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.api.effect.WorkEffectContext;
 import com.greenhouse.backend.work.api.effect.WorkEffectPayload;
 import com.greenhouse.backend.work.api.effect.WorkReconciliationCommand;
+import com.greenhouse.backend.work.api.operation.ImmediateWorkExecutionApi;
 import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
-import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -107,7 +107,7 @@ class WorkReconciliationPayloadTest {
   }
 
   private WorkReconciliationCommand capturedCommand(OrchidGroupReconciliationRequest request) {
-    var immediate = mock(ImmediateWorkExecutionService.class);
+    var immediate = mock(ImmediateWorkExecutionApi.class);
     var groups = mock(OrchidGroupRepository.class);
     var group = mock(OrchidGroup.class);
     when(group.getVarietyName()).thenReturn("기존 품종");

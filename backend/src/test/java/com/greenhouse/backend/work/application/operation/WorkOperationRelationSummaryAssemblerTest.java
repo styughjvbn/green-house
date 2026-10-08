@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkCommandReceipt;
 import com.greenhouse.backend.work.domain.operation.WorkCommandReceiptMembership;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationOriginType;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptMembershipRepository;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptRepository;

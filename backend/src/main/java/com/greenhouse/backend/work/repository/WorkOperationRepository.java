@@ -1,7 +1,7 @@
 package com.greenhouse.backend.work.repository;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;

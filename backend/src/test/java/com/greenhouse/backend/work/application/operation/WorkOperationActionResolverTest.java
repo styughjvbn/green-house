@@ -4,16 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationAction;
+import com.greenhouse.backend.work.api.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.api.operation.WorkTypeWorkflow;
+import com.greenhouse.backend.work.api.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.api.target.WorkTargetAction;
+import com.greenhouse.backend.work.api.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationAction;
-import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
-import com.greenhouse.backend.work.domain.target.WorkTargetAction;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

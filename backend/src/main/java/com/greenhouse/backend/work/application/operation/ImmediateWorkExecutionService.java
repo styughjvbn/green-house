@@ -4,6 +4,8 @@ import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.api.effect.WorkEffectPayload;
+import com.greenhouse.backend.work.api.operation.ImmediateWorkExecutionApi;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.api.target.WorkTargetSelection;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
@@ -26,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class ImmediateWorkExecutionService {
+public class ImmediateWorkExecutionService implements ImmediateWorkExecutionApi {
 
   private final WorkTypeService workTypeService;
 
@@ -49,6 +51,7 @@ public class ImmediateWorkExecutionService {
   private final WorkCommandReceipts receipts;
 
   /** Creates the automatic history title from the caller's source variety snapshot. */
+  @Override
   public WorkOperationView executeVarietyHistoryForTarget(
       String requestKey,
       String workTypeCode,
@@ -173,6 +176,7 @@ public class ImmediateWorkExecutionService {
   }
 
   @Transactional(readOnly = true)
+  @Override
   public List<Long> getStructureChangeResultOrchidGroupIds(Long operationId, String workTypeCode) {
     validateWorkType(operationId, workTypeCode, "요청한 구조 변경 작업 유형과 일치하지 않습니다.");
     return effectOrchidGroupRepository

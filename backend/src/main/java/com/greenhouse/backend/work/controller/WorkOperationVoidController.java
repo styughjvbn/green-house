@@ -1,7 +1,7 @@
 package com.greenhouse.backend.work.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.operation.WorkOperationVoidService;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCancellationResponse;

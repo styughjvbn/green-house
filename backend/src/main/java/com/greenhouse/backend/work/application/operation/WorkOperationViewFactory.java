@@ -1,68 +1,60 @@
-package com.greenhouse.backend.work.application.target;
+package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.work.api.target.WorkTargetInclusionSource;
-import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
+import com.greenhouse.backend.work.api.operation.WorkOperationAction;
+import com.greenhouse.backend.work.api.operation.WorkOperationProgress;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
+import com.greenhouse.backend.work.api.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.api.target.WorkTargetAction;
 import com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
-import com.greenhouse.backend.work.domain.target.WorkTargetAction;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.spi.target.InboundPottingPlanTarget;
-import com.greenhouse.backend.work.spi.target.ResolvedWorkTarget;
-import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@Schema(name = "WorkOperationTargetResponse")
-public record WorkOperationTargetView(
-    Long id,
-    WorkTargetReferenceType targetReferenceType,
-    Long orchidGroupId,
-    Long inboundRecordId,
-    WorkTargetInclusionSource inclusionSource,
-    String varietyName,
-    Integer quantitySnapshot,
-    Integer ageYearSnapshot,
-    String potSizeCodeSnapshot,
-    String potSizeSnapshot,
-    Map<String, Object> locationSnapshot,
-    Integer processedQuantity,
-    Integer remainingQuantity,
-    WorkTargetExecutionStatus executionStatus,
-    LocalDateTime startedAt,
-    LocalDateTime completedAt,
-    LocalDateTime effectAppliedAt,
-    String worker,
-    Map<String, Object> resultDetails,
-    List<Long> resultOrchidGroupIds,
-    List<WorkTargetAction> availableActions) {
+/** Internal Entity and snapshot conversion for public Work values. */
+public final class WorkOperationViewFactory {
 
-  public static WorkOperationTargetView preview(ResolvedWorkTarget target) {
-    return new WorkOperationTargetView(
-        null,
-        WorkTargetReferenceType.ORCHID_GROUP,
-        target.orchidGroupId(),
-        null,
-        null,
-        target.varietyName(),
-        target.quantity(),
-        target.ageYear(),
-        target.potSizeCode(),
-        target.potSize(),
-        target.location(),
-        0,
-        target.quantity(),
-        WorkTargetExecutionStatus.PENDING,
-        null,
-        null,
-        null,
-        null,
-        null,
-        List.of(),
-        List.of());
+  private WorkOperationViewFactory() {}
+
+  public static WorkOperationView from(
+      WorkOperation operation,
+      WorkOperationProgress progress,
+      List<WorkOperationTargetView> targets,
+      List<WorkOperationAction> availableActions,
+      long correctionCount) {
+    return new WorkOperationView(
+        operation.getId(),
+        operation.getWorkType().getId(),
+        operation.getWorkType().getCode(),
+        operation.getWorkType().getName(),
+        operation.getWorkType().getTemplate(),
+        operation.getWorkType().workflow(),
+        operation.getTitle(),
+        operation.getStatus(),
+        operation.getPlannedStartDate(),
+        operation.getPlannedEndDate(),
+        TimeConfig.toFarmTime(operation.getActualStartAt()),
+        TimeConfig.toFarmTime(operation.getActualEndAt()),
+        operation.getSourceScopeType(),
+        operation.getSourceScopeId(),
+        operation.getSourceConditionSnapshot(),
+        TimeConfig.toFarmTime(operation.getTargetSnapshotAt()),
+        operation.getDetails(),
+        operation.getWorker(),
+        operation.getMemo(),
+        operation.getParentOperation() == null ? null : operation.getParentOperation().getId(),
+        operation.getRelationType(),
+        TimeConfig.toFarmTime(operation.getVoidedAt()),
+        operation.getVoidReason(),
+        operation.getVoidMutationId(),
+        progress,
+        targets,
+        availableActions,
+        correctionCount);
   }
 
   public static WorkOperationTargetView from(

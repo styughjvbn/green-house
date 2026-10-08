@@ -1,4 +1,4 @@
-package com.greenhouse.backend.work.domain.operation;
+package com.greenhouse.backend.work.api.operation;
 
 public enum WorkTypeWorkflow {
   GENERIC,

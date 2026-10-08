@@ -301,6 +301,8 @@ METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.actualSt
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.actualStatus()
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.reason()
 METHOD	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand.workDate()
+METHOD	com.greenhouse.backend.work.api.operation.ImmediateWorkExecutionApi.executeVarietyHistoryForTarget(java.lang.String, java.lang.String, java.lang.String, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.Long, java.util.Map, com.greenhouse.backend.work.api.effect.WorkEffectPayload)
+METHOD	com.greenhouse.backend.work.api.operation.ImmediateWorkExecutionApi.getStructureChangeResultOrchidGroupIds(java.lang.Long, java.lang.String)
 METHOD	com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi.cancelForInboundRecord(java.lang.Long)
 METHOD	com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi.findInboundIdsWithUndoablePotting(java.util.Collection)
 METHOD	com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi.lockForInboundChange(java.lang.Long)
@@ -332,6 +334,10 @@ METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$TypeCou
 METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$TypeCount.name()
 METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi.getLatestWorkDates(java.util.Collection)
 METHOD	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi.getSummary(java.time.LocalDate, java.time.LocalDate)
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationQueryApi.get(java.lang.Long)
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationView.details()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationView.id()
+METHOD	com.greenhouse.backend.work.api.operation.WorkOperationView.sourceScopeId()
 METHOD	com.greenhouse.backend.work.api.operation.WorkSourceScopeType.ordinal()
 METHOD	com.greenhouse.backend.work.api.operation.WorkSourceScopeType.values()
 METHOD	com.greenhouse.backend.work.api.target.WorkOrchidGroupUsageApi.countOtherOperations(java.util.Set, java.lang.Long)
@@ -365,14 +371,8 @@ METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehea
 METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.incompleteMutationLinkEffectIds()
 METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.invalidExecutionIds()
 METHOD	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport.targetOrchidGroupIds()
-METHOD	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService.executeVarietyHistoryForTarget(java.lang.String, java.lang.String, java.lang.String, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.Long, java.util.Map, com.greenhouse.backend.work.api.effect.WorkEffectPayload)
-METHOD	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService.getStructureChangeResultOrchidGroupIds(java.lang.Long, java.lang.String)
 METHOD	com.greenhouse.backend.work.application.operation.InboundPottingOperationService.executeNow(com.greenhouse.backend.work.api.effect.InboundPottingCommand)
 METHOD	com.greenhouse.backend.work.application.operation.InboundPottingOperationService.voidForInbound(java.lang.Long, java.lang.String, java.lang.String)
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationQueryService.get(java.lang.Long)
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationView.details()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationView.id()
-METHOD	com.greenhouse.backend.work.application.operation.WorkOperationView.sourceScopeId()
 METHOD	com.greenhouse.backend.work.spi.correction.WorkCorrectionPlan.adjustments()
 METHOD	com.greenhouse.backend.work.spi.correction.WorkCorrectionPlan.mutationReferences()
 METHOD	com.greenhouse.backend.work.spi.operation.PottingVoidPort$Effect.inboundRecordId()
@@ -474,6 +474,7 @@ TYPE	com.greenhouse.backend.work.api.effect.WorkEffectResults$Transformation
 TYPE	com.greenhouse.backend.work.api.effect.WorkExecutionResult
 TYPE	com.greenhouse.backend.work.api.effect.WorkMutationLink
 TYPE	com.greenhouse.backend.work.api.effect.WorkReconciliationCommand
+TYPE	com.greenhouse.backend.work.api.operation.ImmediateWorkExecutionApi
 TYPE	com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi
 TYPE	com.greenhouse.backend.work.api.operation.InboundWorkOperationRecordingApi
 TYPE	com.greenhouse.backend.work.api.operation.RecordInboundWorkCommand
@@ -483,7 +484,9 @@ TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi
 TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$RecentRecord
 TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$Summary
 TYPE	com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi$TypeCount
+TYPE	com.greenhouse.backend.work.api.operation.WorkOperationQueryApi
 TYPE	com.greenhouse.backend.work.api.operation.WorkOperationStatus
+TYPE	com.greenhouse.backend.work.api.operation.WorkOperationView
 TYPE	com.greenhouse.backend.work.api.operation.WorkSourceScopeType
 TYPE	com.greenhouse.backend.work.api.operation.WorkTypeTemplate
 TYPE	com.greenhouse.backend.work.api.target.WorkOrchidGroupUsageApi
@@ -497,10 +500,7 @@ TYPE	com.greenhouse.backend.work.application.effect.StructureChangeLineageQueryS
 TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector
 TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport
 TYPE	com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalReport$CorrectionReference
-TYPE	com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService
 TYPE	com.greenhouse.backend.work.application.operation.InboundPottingOperationService
-TYPE	com.greenhouse.backend.work.application.operation.WorkOperationQueryService
-TYPE	com.greenhouse.backend.work.application.operation.WorkOperationView
 TYPE	com.greenhouse.backend.work.spi.correction.WorkCorrectionPlan
 TYPE	com.greenhouse.backend.work.spi.correction.WorkCorrectionPort
 TYPE	com.greenhouse.backend.work.spi.effect.WorkEffectHandler

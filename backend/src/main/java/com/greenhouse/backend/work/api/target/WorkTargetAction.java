@@ -1,4 +1,4 @@
-package com.greenhouse.backend.work.domain.target;
+package com.greenhouse.backend.work.api.target;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

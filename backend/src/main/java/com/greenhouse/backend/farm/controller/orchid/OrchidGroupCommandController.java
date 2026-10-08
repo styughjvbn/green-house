@@ -12,7 +12,7 @@ import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidStockCountContext;
 import com.greenhouse.backend.farm.dto.orchid.OrchidStockCountRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidStockCountResponse;
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

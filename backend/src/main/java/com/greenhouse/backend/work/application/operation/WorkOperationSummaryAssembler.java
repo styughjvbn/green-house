@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationProgress;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;

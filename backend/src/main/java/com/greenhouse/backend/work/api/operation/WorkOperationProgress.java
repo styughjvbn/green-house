@@ -1,8 +1,7 @@
-package com.greenhouse.backend.work.application.operation;
+package com.greenhouse.backend.work.api.operation;
 
-import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
-import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
+import com.greenhouse.backend.work.api.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.api.target.WorkTargetExecutionStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 

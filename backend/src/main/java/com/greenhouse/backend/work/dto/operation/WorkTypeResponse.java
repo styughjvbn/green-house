@@ -1,10 +1,10 @@
 package com.greenhouse.backend.work.dto.operation;
 
 import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.api.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.api.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.domain.operation.WorkRegistrationMode;
 import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import java.util.List;
 
 public record WorkTypeResponse(

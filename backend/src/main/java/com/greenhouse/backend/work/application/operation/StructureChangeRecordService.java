@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;

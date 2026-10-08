@@ -6,9 +6,9 @@ import static com.greenhouse.backend.work.domain.target.QWorkOperationTarget.wor
 import static com.greenhouse.backend.work.domain.target.QWorkTargetExecution.workTargetExecution;
 
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.NumberExpression;

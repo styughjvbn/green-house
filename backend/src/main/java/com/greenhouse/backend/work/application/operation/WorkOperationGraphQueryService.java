@@ -1,8 +1,8 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.api.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.dto.operation.WorkOperationGraphDetail;
 import com.greenhouse.backend.work.dto.operation.WorkOperationGraphEdgeResponse;

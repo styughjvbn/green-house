@@ -1,8 +1,8 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.api.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkCommandReceipt;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationOriginType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationRelationSummaryResponse;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptMembershipRepository;

@@ -306,6 +306,8 @@ Farm에서 필요한 구조 변경 참조·과거 수량 수지 조회와 보정
 
 입고에 연결된 Work의 선잠금·취소 가능 조회·포트 되돌리기·입고 기록 취소는 `work/api/operation`의 lifecycle API를 통해 직접 호출한다. Work의 기존 lifecycle service가 API를 구현하며, Farm 취소 유스케이스와 같은 트랜잭션 참여 및 조회 메서드의 readOnly 설정을 유지한다. 입고 작업 기록도 Work 공개 API를 직접 호출한다. Farm이 생성 시점의 명령 snapshot과 Mutation 연결 값을 전달하고, 기존 Work 기록 서비스가 같은 트랜잭션에서 대상·효과·작업 이력을 저장한다.
 
+Farm의 즉시 작업 이력 생성과 작업 단건 조회는 Work 공개 API를 직접 호출한다. 공개 작업·대상·진행 값과 상태/action/workflow enum은 `work/api/{operation,target}`에 두며, Entity·현재 입고 값·저장 JSON을 조합하는 factory는 Work application 내부에 둔다. 응답 schema·시간대 변환·capability 판단·진행 계산·Receipt 지문과 replay는 기존 규칙을 유지한다.
+
 #### integration 생성 기준
 
 `integration`은 선택적인 연동 구현 위치다. 모든 기능에 생성하거나 application·domain·repository·web와 함께 필수 계층으로 취급하지 않는다.

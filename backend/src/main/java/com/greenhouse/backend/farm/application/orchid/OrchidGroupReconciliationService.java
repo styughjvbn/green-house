@@ -4,8 +4,8 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupReconciliationRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.api.effect.WorkReconciliationCommand;
-import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
+import com.greenhouse.backend.work.api.operation.ImmediateWorkExecutionApi;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrchidGroupReconciliationService {
 
-  private final ImmediateWorkExecutionService immediateWorkExecutionService;
+  private final ImmediateWorkExecutionApi immediateWorkExecutionService;
 
   private final OrchidGroupRepository orchidGroupRepository;
 

@@ -5,7 +5,9 @@ import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.api.QueryLimits;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.api.operation.WorkOperationQueryApi;
 import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.api.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
@@ -35,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-public class WorkOperationQueryService {
+public class WorkOperationQueryService implements WorkOperationQueryApi {
 
   private final WorkOperationRepository operationRepository;
 
@@ -51,6 +53,7 @@ public class WorkOperationQueryService {
 
   private final Clock clock;
 
+  @Override
   public WorkOperationView get(Long operationId) {
     return responseAssembler.assemble(
         operationRepository

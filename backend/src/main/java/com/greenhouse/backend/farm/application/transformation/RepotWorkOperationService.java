@@ -6,8 +6,8 @@ import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationResponse;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
-import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
+import com.greenhouse.backend.work.api.operation.ImmediateWorkExecutionApi;
+import com.greenhouse.backend.work.api.operation.WorkOperationQueryApi;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.time.Clock;
 import java.util.LinkedHashMap;
@@ -25,15 +25,15 @@ public class RepotWorkOperationService {
 
   private final LegacyStructureChangeRequestMapper legacyRequestMapper;
 
-  private final ImmediateWorkExecutionService immediateWorkExecutionService;
+  private final ImmediateWorkExecutionApi immediateWorkExecutionService;
 
-  private final WorkOperationQueryService queryService;
+  private final WorkOperationQueryApi queryService;
 
   private final OrchidGroupRepository orchidGroupRepository;
 
   public RepotWorkOperationService(
-      ImmediateWorkExecutionService immediateWorkExecutionService,
-      WorkOperationQueryService queryService,
+      ImmediateWorkExecutionApi immediateWorkExecutionService,
+      WorkOperationQueryApi queryService,
       OrchidGroupRepository orchidGroupRepository,
       Clock clock,
       LegacyStructureChangeRequestMapper legacyRequestMapper) {
