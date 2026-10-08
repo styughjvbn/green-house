@@ -34,8 +34,6 @@ class ModularArchitectureTests {
   private static final Set<String> LAYERED_MODULES =
       Set.of("audit", "farm", "work", "sales", "dashboard", "print", "analytics");
 
-  private static final Set<String> STANDARD_LAYERS =
-      Set.of("domain", "repository", "application", "controller", "dto");
   static final Map<String, Set<String>> ALLOWED_DEPENDENCIES =
       Map.ofEntries(
           Map.entry("common", Set.of()),
@@ -54,7 +52,7 @@ class ModularArchitectureTests {
 
   private static final Pattern REPOSITORY_IMPORT =
       Pattern.compile(
-          "\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.repository\\.");
+          "\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.(?:[a-z]+\\.)?repository\\.");
 
   @Test
   void moduleRootsAndLayersAreExplicit() throws IOException {
@@ -73,7 +71,11 @@ class ModularArchitectureTests {
                     path -> {
                       Path relative = moduleRoot.relativize(path);
                       return relative.getNameCount() < 2
-                          || !STANDARD_LAYERS.contains(relative.getName(0).toString());
+                          || !ArchitecturePackages.isValidLayout(
+                              "com.greenhouse.backend."
+                                  + module
+                                  + "."
+                                  + relative.getParent().toString().replace('/', '.'));
                     })
                 .toList();
         assertThat(misplaced).as("Files outside standard layers in %s", module).isEmpty();
@@ -207,16 +209,18 @@ class ModularArchitectureTests {
     }
   }
 
-  private void assertNoImports(String layer, String... forbiddenFragments) throws IOException {
-    for (String module : MODULES) {
-      Path layerRoot = SOURCE_ROOT.resolve(module).resolve(layer);
-      if (!Files.isDirectory(layerRoot)) continue;
-      for (Path source : javaSources(layerRoot)) {
-        String content = Files.readString(source);
+  private void assertNoImports(String layer, String... forbiddenFragments) {
+    for (var origin : ModuleBoundaryInventoryTest.CLASSES) {
+      String role = ArchitecturePackages.role(origin.getPackageName());
+      if (!role.equals(layer) && !(layer.equals("controller") && role.equals("web"))) continue;
+      for (var dependency : origin.getDirectDependenciesFromSelf()) {
+        String targetRole = ArchitecturePackages.role(dependency.getTargetClass().getPackageName());
         for (String fragment : forbiddenFragments) {
-          assertThat(content)
-              .as("Forbidden %s dependency in %s", fragment, source)
-              .doesNotContain(fragment);
+          String forbidden = fragment.replace(".", "");
+          boolean matches =
+              targetRole.equals(forbidden)
+                  || (forbidden.equals("controller") && targetRole.equals("web"));
+          assertThat(matches).as("Forbidden %s dependency: %s", forbidden, dependency).isFalse();
         }
       }
     }
@@ -225,10 +229,11 @@ class ModularArchitectureTests {
   private void assertFeaturePackages(String module, String layer, String... expectedPackages)
       throws IOException {
     Path layerRoot = SOURCE_ROOT.resolve(module).resolve(layer);
+    if (!Files.isDirectory(layerRoot)) return;
     try (Stream<Path> entries = Files.list(layerRoot)) {
       assertThat(entries.map(path -> path.getFileName().toString()).toList())
-          .as("Unexpected package in %s/%s", module, layer)
-          .containsExactlyInAnyOrder(expectedPackages);
+          .as("Unexpected legacy package in %s/%s", module, layer)
+          .isSubsetOf(expectedPackages);
     }
   }
 

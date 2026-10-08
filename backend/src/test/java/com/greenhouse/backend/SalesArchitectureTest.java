@@ -46,7 +46,7 @@ class SalesArchitectureTest {
         if (owner.isEmpty() || owner.equals(feature(origin))) continue;
         boolean storage =
             target.isAnnotatedWith("jakarta.persistence.Entity")
-                || target.getPackageName().startsWith(ROOT + "repository.")
+                || ArchitecturePackages.role(target.getPackageName()).equals("repository")
                 || (target.getSimpleName().startsWith("Q")
                     && target.isAssignableTo("com.querydsl.core.types.EntityPath"));
         assertThat(storage)
@@ -64,7 +64,7 @@ class SalesArchitectureTest {
     for (JavaClass origin : CLASSES) {
       String owner = feature(origin);
       // HTTP controllers compose public contracts; they never own storage or transactions.
-      if (owner.isEmpty() || origin.getPackageName().startsWith(ROOT + "controller.")) continue;
+      if (owner.isEmpty() || ArchitecturePackages.isWeb(origin.getPackageName())) continue;
       for (var dependency : origin.getDirectDependenciesFromSelf()) {
         String target = feature(dependency.getTargetClass());
         if (target.isEmpty() || owner.equals(target)) continue;
@@ -79,7 +79,7 @@ class SalesArchitectureTest {
   void documentDoesNotCallConcreteDirectAuctionOrPaymentServices() {
     for (JavaClass origin : CLASSES) {
       if (!feature(origin).equals("document")
-          || origin.getPackageName().startsWith(ROOT + "controller.")) continue;
+          || ArchitecturePackages.isWeb(origin.getPackageName())) continue;
       for (var dependency : origin.getDirectDependenciesFromSelf()) {
         JavaClass target = dependency.getTargetClass();
         if (!Set.of("direct", "auction", "payment").contains(feature(target))) continue;
@@ -160,8 +160,7 @@ class SalesArchitectureTest {
 
   private static String feature(JavaClass type) {
     if (!type.getPackageName().startsWith(ROOT)) return "";
-    String[] parts = type.getPackageName().substring(ROOT.length()).split("\\.");
-    return parts.length > 1 ? parts[1] : "";
+    return ArchitecturePackages.feature(type.getPackageName());
   }
 
   private boolean reaches(String current, String target, Set<String> visited) {

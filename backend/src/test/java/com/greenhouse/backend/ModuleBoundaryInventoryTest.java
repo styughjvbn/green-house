@@ -141,8 +141,8 @@ class ModuleBoundaryInventoryTest {
     if (target.isAnnotatedWith("jakarta.persistence.Entity")) return "ENTITY";
     if (isQueryType(target)) return "QUERY_TYPE";
     if (target.getPackageName().contains(".repository")) return "REPOSITORY";
-    if (target.getPackageName().contains(".dto")) return "HTTP_DTO";
-    if (target.getPackageName().contains(".controller")) return "CONTROLLER";
+    if (ArchitecturePackages.isHttpDto(target.getPackageName())) return "HTTP_DTO";
+    if (ArchitecturePackages.isWeb(target.getPackageName())) return "CONTROLLER";
     return null;
   }
 

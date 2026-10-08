@@ -6,7 +6,6 @@ import java.util.Set;
 import java.util.TreeSet;
 
 final class CrossModuleApplicationApiInspection {
-  private static final String ROOT = "com.greenhouse.backend.";
 
   private CrossModuleApplicationApiInspection() {}
 
@@ -41,13 +40,13 @@ final class CrossModuleApplicationApiInspection {
     return !module(origin).isEmpty()
         && !module(target).isEmpty()
         && !module(origin).equals(module(target))
-        && (target.getPackageName().endsWith(".application")
-            || target.getPackageName().contains(".application."));
+        && (ArchitecturePackages.role(target.getPackageName()).equals("application")
+            || (Set.of("farm", "work", "sales")
+                    .contains(ArchitecturePackages.module(target.getPackageName()))
+                && ArchitecturePackages.isExplicitContract(target.getPackageName())));
   }
 
   private static String module(JavaClass type) {
-    if (!type.getPackageName().startsWith(ROOT)) return "";
-    String[] parts = type.getPackageName().substring(ROOT.length()).split("\\.");
-    return parts[0].equals("sales") && parts.length > 2 ? "sales." + parts[2] : parts[0];
+    return ArchitecturePackages.contractOwner(type.getPackageName());
   }
 }

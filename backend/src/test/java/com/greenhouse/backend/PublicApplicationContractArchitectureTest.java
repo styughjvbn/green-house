@@ -10,6 +10,7 @@ import com.greenhouse.backend.work.application.operation.InboundPottingVoidPort;
 import com.greenhouse.backend.work.application.operation.WorkCommandReceipts;
 import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
 import com.greenhouse.backend.work.application.operation.WorkRequestFingerprint;
+import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import jakarta.persistence.Entity;
@@ -69,6 +70,48 @@ class PublicApplicationContractArchitectureTest {
   }
 
   @Test
+  void explicitBusinessApisAndSpisExposeOnlyValuesInEveryPublicMember()
+      throws ClassNotFoundException {
+    for (var type : ModuleBoundaryInventoryTest.CLASSES) {
+      if (!Set.of("farm", "work", "sales")
+              .contains(ArchitecturePackages.module(type.getPackageName()))
+          || !ArchitecturePackages.isExplicitContract(type.getPackageName())) continue;
+      var reflected = Class.forName(type.getName());
+      assertValueType(reflected, new HashSet<>(), true);
+      for (var method : reflected.getDeclaredMethods()) {
+        if (!Modifier.isPublic(method.getModifiers())) continue;
+        var visited = new HashSet<Type>();
+        assertValueType(method.getGenericReturnType(), visited, true);
+        for (Type parameter : method.getGenericParameterTypes())
+          assertValueType(parameter, visited, true);
+      }
+      for (var constructor : reflected.getConstructors()) {
+        for (Type parameter : constructor.getGenericParameterTypes())
+          assertValueType(parameter, new HashSet<>(), true);
+      }
+      for (var field : reflected.getFields())
+        assertValueType(field.getGenericType(), new HashSet<>(), true);
+    }
+  }
+
+  @Test
+  void internalFeatureApisAreNotVisibleToOtherTopLevelModules() {
+    for (var origin : ModuleBoundaryInventoryTest.CLASSES) {
+      for (var dependency : origin.getDirectDependenciesFromSelf()) {
+        var target = dependency.getTargetClass();
+        if (!Set.of("farm", "work", "sales")
+                .contains(ArchitecturePackages.module(target.getPackageName()))
+            || !ArchitecturePackages.isExplicitContract(target.getPackageName())
+            || ArchitecturePackages.module(origin.getPackageName())
+                .equals(ArchitecturePackages.module(target.getPackageName()))) continue;
+        assertThat(ArchitecturePackages.isModuleContract(target.getPackageName()))
+            .as("Top-level consumers require a module API/SPI: %s", dependency)
+            .isTrue();
+      }
+    }
+  }
+
+  @Test
   void nestedEntityAndCallbackContractsAreRejected() {
     Assertions.assertThatThrownBy(() -> assertValueType(EntityLeak.class, new HashSet<>()))
         .isInstanceOf(AssertionError.class)
@@ -81,6 +124,15 @@ class PublicApplicationContractArchitectureTest {
   private record EntityLeak(List<OrchidGroup> groups) {}
 
   private record CallbackLeak(Supplier<Long> storage) {}
+
+  private record HttpLeak(List<WorkOperationCreateRequest> requests) {}
+
+  @Test
+  void explicitContractsRejectNestedHttpDtos() {
+    Assertions.assertThatThrownBy(() -> assertValueType(HttpLeak.class, new HashSet<>(), true))
+        .isInstanceOf(AssertionError.class)
+        .hasMessageContaining("HTTP type in a public value contract");
+  }
 
   @Test
   void orchidGroupReaderExposesValuesInsteadOfEntitiesIncludingNestedContainers() {
@@ -171,6 +223,10 @@ class PublicApplicationContractArchitectureTest {
   }
 
   static void assertValueType(Type type, Set<Type> visited) {
+    assertValueType(type, visited, false);
+  }
+
+  private static void assertValueType(Type type, Set<Type> visited, boolean rejectHttp) {
     if (!visited.add(type)) return;
     if (type instanceof Class<?> value) {
       assertThat(value.getPackageName())
@@ -179,27 +235,31 @@ class PublicApplicationContractArchitectureTest {
       assertThat(value.getPackageName())
           .as("Repository projection in a public contract: %s", value.getName())
           .doesNotContain(".repository");
+      if (rejectHttp)
+        assertThat(ArchitecturePackages.isWeb(value.getPackageName()))
+            .as("HTTP type in a public value contract: %s", value.getName())
+            .isFalse();
       assertThat(value.isAnnotationPresent(Entity.class))
           .as("Entity in a public value contract: %s", value.getName())
           .isFalse();
-      if (value.isArray()) assertValueType(value.getComponentType(), visited);
+      if (value.isArray()) assertValueType(value.getComponentType(), visited, rejectHttp);
       if (value.isRecord()) {
         for (var component : value.getRecordComponents()) {
-          assertValueType(component.getGenericType(), visited);
+          assertValueType(component.getGenericType(), visited, rejectHttp);
         }
       }
     } else if (type instanceof ParameterizedType container) {
-      assertValueType(container.getRawType(), visited);
+      assertValueType(container.getRawType(), visited, rejectHttp);
       for (Type argument : container.getActualTypeArguments()) {
-        assertValueType(argument, visited);
+        assertValueType(argument, visited, rejectHttp);
       }
     } else if (type instanceof GenericArrayType array) {
-      assertValueType(array.getGenericComponentType(), visited);
+      assertValueType(array.getGenericComponentType(), visited, rejectHttp);
     } else if (type instanceof TypeVariable<?> variable) {
-      for (Type bound : variable.getBounds()) assertValueType(bound, visited);
+      for (Type bound : variable.getBounds()) assertValueType(bound, visited, rejectHttp);
     } else if (type instanceof WildcardType wildcard) {
-      for (Type bound : wildcard.getUpperBounds()) assertValueType(bound, visited);
-      for (Type bound : wildcard.getLowerBounds()) assertValueType(bound, visited);
+      for (Type bound : wildcard.getUpperBounds()) assertValueType(bound, visited, rejectHttp);
+      for (Type bound : wildcard.getLowerBounds()) assertValueType(bound, visited, rejectHttp);
     }
   }
 }
