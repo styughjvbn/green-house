@@ -235,13 +235,22 @@ Sales 내부는 document/direct/auction/payment/partner의 소유권을 유지�
 
 ## 4. 계층 구조
 
+Farm·Work·Sales는 업무 기능 아래 역할을 배치한다. Audit·Dashboard·Analytics·Print 등 지원 모듈의 기존 계층 배치는 유지한다.
+
 ```text
-controller
-service/application
-domain/entity
-repository
-dto
+{module}/
+  api[/feature]       다른 최상위 모듈에 공개하는 명령·조회·값
+  spi[/feature]       다른 모듈이 구현하는 공개 확장 계약
+  {feature}/
+    application       업무 실행·조율과 트랜잭션
+    api / spi         같은 모듈의 허용된 다른 기능에 제공하는 계약
+    domain            소유 Entity·업무 규칙·값
+    repository        저장소·QueryDSL·projection
+    web[/dto]         HTTP 진입점·전용 요청/응답
+    integration       실제 Port/SPI 구현이나 기술 격리가 필요한 경우만
 ```
+
+실제 책임이 있는 패키지만 만든다. `farm/mutation`의 engine/ledger/query/verification/config는 단일 Writer 서브시스템의 책임별 배치다. Farm·Work·Sales의 이전 application/domain/repository/controller/dto 루트는 허용하지 않는다. 기능에 속하지 않는 새 조율 계층이 필요하면 현재 허용 방향과 완료 책임을 먼저 검토하고 별도 구조 결정으로 기록한다.
 
 원칙:
 
@@ -251,9 +260,9 @@ dto
 - Repository는 데이터 접근만 담당한다.
 - 다른 모듈의 Repository를 직접 참조하지 않고 해당 모듈의 application API 또는 port를 사용한다.
 - 외부로 노출되는 구조는 DTO로 제한한다.
-- `ModularArchitectureTests`는 `analytics`, `auth`, `demo`를 포함한 실제 13개 모듈의 선언 의존성, 순환, 타 모듈 Repository 직접 접근을 검사한다. 계층형 업무 모듈은 표준 레이어 규칙도 검사한다.
+- `ModularArchitectureTests`는 `analytics`, `auth`, `demo`를 포함한 실제 10개 모듈의 선언 의존성, 순환, 타 모듈 Repository 직접 접근을 검사한다. 계층형 업무 모듈은 표준 레이어 규칙도 검사한다.
 - `ModuleBoundaryInventoryTest`는 컴파일된 의존성과 `@Query`를 추가 검사한다. Entity·Q 타입·HTTP DTO 결합과 직접 시간 조회의 예외는 `backend/src/test/resources/architecture/`에서 정확한 호출자별로 추적한다. 별도 application 계약 목록은 모듈 밖에서 사용하는 타입·정확한 메서드/생성자를 검토 대상으로 고정하며 타입 승인만으로 새 public helper 사용을 허용하지 않는다. 신규 우회와 불필요하게 남은 항목 모두 실패 조건이다. 공개 값 계약의 generic/record·사용한 method/constructor·구현 port 안의 Entity·Repository projection·저장 callback도 검사한다. query root는 schema/FQCN·quoted 이름을 정규화하지만 별칭·comma join·동적 쿼리는 별도 코드 검토가 필요하다.
-- OrchidGroup writer 검사는 이름 목록 대신 bytecode 필드 쓰기와 내부 위임을 찾아 engine·복구 writer 경계를 검사한다. 외부 필드 쓰기·메서드/생성자 참조도 포함한다. reflection·raw SQL·연관 객체 변경·transaction 안전성은 구조 검사만으로 증명하지 않으며 PostgreSQL write fence·rollback·경쟁 회귀와 함께 판단한다.
+- OrchidGroup writer 검사는 이름 목록 대신 bytecode 필드 쓰기와 내부 위임을 찾아 Engine 단일 Writer 경계를 검사한다. 외부 필드 쓰기·메서드/생성자 참조도 포함한다. reflection·raw SQL·연관 객체 변경·transaction 안전성은 구조 검사만으로 증명하지 않으며 PostgreSQL write fence·rollback·경쟁 회귀와 함께 판단한다.
 - 분석 Repository는 조회 행 타입만 반환하며 API 응답 DTO 조립은 application 계층에서 담당한다.
 
 Persistence 조회 규칙:
@@ -274,7 +283,48 @@ Persistence 조회 규칙:
 
 ### 4.1 백엔드 구현 기준
 
-[ADR-004](adr/ADR-004-backend-architecture-migration.md)에 따라 기존 소유권과 허용 의존 방향을 유지하며 공개 API·SPI 정리부터 점진적으로 전환한다. Sales·Farm·Work 구현은 기능 우선 배치로 전환했다. Mutation 내부도 책임별 경로로 전환했으며 이전 계층 루트는 허용하지 않는다. 작업 상세 참조·Mutation 그래프의 공개 확장 계약은 `work/spi/{target,operation}`, Farm 구현은 `farm/orchid/integration`으로 전환했다. Work가 SPI를 소유하고 Farm이 구현하므로 기존 `Farm → Work` 컴파일 의존과 Work에서 Farm 구현을 호출하는 런타임 흐름은 유지한다. 아키텍처 검사는 이행 중 기능 우선 배치도 동일한 소유권·계층 규칙으로 검사한다. 새 Farm/Work/Sales의 `api`·`spi`는 모든 public 값 계약에서 Entity·저장소 projection·HTTP 타입 누출을 금지하고, 기능 내부 API·SPI의 최상위 모듈 외 접근을 차단한다. 기존 application 계약은 검토된 타입·메서드 inventory로 계속 추적한다. Sales의 최상위 공개 API/SPI도 기능 소유권을 식별해 기존 기능 의존 그래프를 검사하며, 최상위 모듈 공개 여부와 기능 소유권을 별도로 판단한다.
+[ADR-004](adr/ADR-004-backend-architecture-migration.md)의 P0~P6 전환을 완료했다. 현행 구조와 신규 개발의 기준은 이 문서이며 이전 목표 설계는 [보관 문서](archive/plans/green-house-backend-architecture-final.md)로 남긴다. Sales·Farm·Work의 기능 우선 배치와 Mutation 내부 책임별 배치를 사용하며 이전 계층 루트는 허용하지 않는다.
+
+소유권, 컴파일 의존, 런타임 호출을 구분한다. 공개 SPI 구현으로 컴파일 방향을 유지해도 런타임 재진입·트랜잭션·잠금 안전성은 별도로 검토한다. 실제 모듈 허용 컴파일 의존은 다음과 같다. 표에 없는 방향과 순환 의존은 허용하지 않는다.
+
+| 호출 모듈 | 허용하는 다른 모듈 |
+|---|---|
+| common | 없음 |
+| audit | common |
+| farm | common, work, audit |
+| work | common |
+| sales | common, audit, farm |
+| dashboard | common, farm |
+| print | common, sales |
+| analytics | common, farm, sales, work |
+| auth | common, demo |
+| demo | common |
+
+Sales 내부 구현의 허용 방향도 고정한다. 다른 기능의 application 구현·Entity·Repository·projection에는 접근하지 않고 제공 기능의 API/SPI를 사용한다. 최상위 `sales/api/{feature}` 계약도 해당 기능 소유권으로 검사한다. HTTP Controller는 공개 계약을 조합하지만 저장소·트랜잭션을 소유하지 않는다.
+
+| Sales 기능 | 허용하는 다른 기능 |
+|---|---|
+| partner | 없음 |
+| payment | partner |
+| document | partner, payment 계약 |
+| direct | document, payment, partner |
+| auction | document, payment, partner |
+
+Document의 Payment 접근은 기존 인터페이스 제한을 유지한다. Document 소유 SPI를 Direct·Auction이, Payment 소유 SPI를 Direct·Auction이 구현하는 역방향 협력도 유지한다. Farm·Work 내부의 기존 aggregate 연관과 기능 간 저장소 조회는 이 전환에서 바꾸지 않았으며, 모든 하위 기능에 Sales와 같은 별도 그래프를 새로 강제하지 않는다. Mutation의 OrchidGroup 저장소 접근은 Farm 소유 내부 접근이다.
+
+계약 선택과 배치 기준:
+
+- 허용된 방향으로 호출할 때는 제공 측 API를 직접 사용한다. 같은 모듈의 허용 API도 전달 Adapter로 감싸지 않는다. 기존 구현이 계약을 직접 제공할 수 있으면 구현과 계약 사이에 별도 위임 service를 만들지 않는다.
+- 외부 기술을 격리하거나 의존성을 역전해야 할 때만 호출 측 Outbound Port를 둔다. 다른 모듈이 구현체를 공급하면 요청 측의 공개 SPI로 제공한다. `integration`은 이런 구현이 실제로 필요할 때만 사용하며 Port·Interface·Gateway를 디렉터리 정리 목적으로 만들지 않는다.
+- 유스케이스는 호출하는 기능 수가 아니라 업무 완료·실패·멱등성·트랜잭션 책임을 가진 기능의 application에 둔다. Controller는 HTTP 처리를 맡는다. Mutation은 공통 물리 상태 불변식과 상태 쓰기를 맡고 Work·Sales의 업무 완료 판정을 가져오지 않는다.
+- 모듈 밖 계약은 `{module}/api`·`spi`, 기능 간 계약은 `{module}/{feature}/api`·`spi`로 구분한다. 모든 공개 메서드·중첩 값·generic에서 Entity·Repository projection·HTTP 타입 누출을 검사한다. 기능 내부 API/SPI는 최상위 모듈 밖에 공개하지 않는다.
+- HTTP 전용 값은 web/dto, 내부 Command/Result는 application, 도메인 값은 domain, 저장소 Row/Projection은 repository에 둔다. DTO라는 이유만으로 같은 폴더에 모으지 않는다. 기존 HTTP 입력과 application 명령의 의미·validation이 같으면 중복 래퍼를 강제하지 않는다.
+- 패키지는 소문자의 구체적인 업무·역할 명사로 정한다. Service는 유스케이스 조율, Policy는 규칙, Assembler는 결과 조립, Adapter는 실제 Port/SPI 구현처럼 책임에 맞춰 이름을 붙인다. 새 범용 util/helper/manager/support 패키지를 만들지 않는다. 기존 AuditSupport의 snapshot·변경 사실 기록, WorkOperationSupport의 내부 시간·actor·제목 조립은 실제 책임을 가지므로 이름만을 이유로 분해하지 않는다.
+- Mutation은 `farm/api/orchid`의 typed Writer를 통해 호출한다. Engine만 OrchidGroup을 생성·변경·저장하고 같은 트랜잭션에서 원장을 기록한다. Engine이 Orchid application이나 Work application에 재진입하지 않는다. Recorder는 Mutation 내부로 제한한다.
+- Mutation/Entry는 Farm의 상태·revision 원장, Work Effect는 실행 효과, Audit는 실행자·업무 변경 사실이다. 각 사실과 연결 식별자를 유지하며 서로 합치거나 현재 Entity로 과거 snapshot을 재구성하지 않는다.
+- 디렉터리 이동으로 지문·schema version·canonical snapshot·replay·revision·write fence·잠금 순서·최상위 트랜잭션을 바꾸지 않는다. 예약과 실제 출고를 구분하고 원자적으로 반영해야 하는 재고·전표·작업 효과를 비동기 이벤트로 분리하지 않는다. 외부 연동이나 메시징은 실제 요구가 있을 때만 도입한다.
+
+작업 상세 참조·Mutation 그래프의 확장 계약은 `work/spi/{target,operation}`, Farm 구현은 `farm/orchid/integration`이다. Work가 SPI를 소유하고 Farm이 구현하므로 `Farm → Work` 컴파일 의존과 Work에서 Farm 구현을 호출하는 런타임 흐름을 유지한다. 아키텍처 검사는 새 배치만 허용하며 기존 지원 모듈의 검토된 application 계약은 정확한 타입·메서드 inventory로 추적한다. 새 위반을 일괄 승인하거나 기존 경로·모듈 전체를 예외 처리하지 않는다.
 
 입고 대상 계획·포트 취소·구조 변경 취소·구조 변경 선잠금의 확장 계약도 `work/spi/{target,operation}`에서 Work가 소유한다. Farm 구현은 `farm/inbound/integration`과 `farm/transformation/integration`에 두며, 기존 application 유스케이스와 같은 트랜잭션에서 처리한다. 구조 변경·포트 취소의 보상 Mutation과 이력·접수 소유권, 잠금 순서는 유지한다.
 

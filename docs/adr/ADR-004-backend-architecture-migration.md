@@ -1,12 +1,12 @@
 # ADR-004: 공개 API·SPI 경계와 기능 우선 패키지로 백엔드를 점진적으로 전환한다
 
-- 상태: 승인 — 기존 소유권·의존 방향 유지, 단계적 전환 진행 중
+- 상태: 승인 — P0~P6 구현·검증·현행 문서 통합 완료
 - 작성일: 2026-10-08, Asia/Seoul
 - 범위: 백엔드 패키지 배치, 공개 계약, 아키텍처 테스트 및 문서 전환
-- 진행: P2 공개 계약·P3 Sales·P4 Farm/Work 기능 우선 배치·P5 Mutation 내부 분리 완료. P6 최종 통합은 후속 작업.
-- 관련 문서: [목표 설계](../green-house-backend-architecture-final.md), [현행 아키텍처](../04-architecture.md), [Sales 소유권 결정](ADR-003-sales-document-information-architecture.md)
+- 진행: P0~P6 완료. 공개 API·SPI, 기능 우선 배치, Mutation 내부 분리와 최종 경계·문서 통합을 적용했다.
+- 관련 문서: [보관된 최초 목표 설계](../archive/plans/green-house-backend-architecture-final.md), [현행 아키텍처](../04-architecture.md), [Sales 소유권 결정](ADR-003-sales-document-information-architecture.md)
 
-실제 소스와 아키텍처 테스트를 기준으로 전환 방향과 이유를 기록한다. 구현 완료를 의미하지 않는다.
+실제 소스와 아키텍처 테스트를 기준으로 결정 이유와 완료된 전환·검증을 기록한다. 현행 구현과 신규 작업의 기준은 `docs/04-architecture.md`다.
 
 ## 1. 배경과 결정
 
@@ -777,3 +777,27 @@ P5 완료 검증 결과:
 - Farm/Work/Sales 이전 계층의 프로덕션 소스와 Mutation 이전 FQCN 참조는 제거했다. 단일 Writer·트랜잭션·잠금·지문·snapshot·replay·revision·write fence와 기존 API/DB 정책은 유지한다. 새 integration/위임 Adapter/Port 없음.
 - OpenAPI 재생성 결과 157 operations/132 paths/292 schemas이며 전체 명세·slice 차이 0. 프론트 생성 타입 갱신은 필요하지 않다.
 - 전체 검증 이후 변경은 문서 완료 기록과 소스 링크뿐이다. 사용자 요청 범위인 P5까지 완료하며 P6 최종 문서 통합·archive 이동은 후속 작업으로 남긴다.
+
+### 2026-10-08: P6 — 최종 경계·문서 통합
+
+- 소유권 판별기의 이행용 role-first 기능 경로 지원을 제거했다. Farm/Work/Sales는 기능 우선 구조와 최상위 API/SPI만 허용하고, 지원 모듈의 기존 계층은 유지한다. 음성 fixture도 현재 기능별 내부 application으로 이동해 직접 호출·메서드 참조 우회 검출을 유지한다. 기존 경로를 허용하던 fixture는 거절 사례로 전환했다.
+- integration 3개 패키지·9개 구현을 재검토했다. 이전 감사의 7개에 추가된 FarmWorkTargetResolver는 Work target SPI의 선택·대상 해석·정렬 잠금/활성 검증을, FarmWorkCorrectionAdapter는 Work correction SPI의 원본 참조·사용 여부·수량 검증과 잠금·Mutation 보정을 수행한다. 모두 실제 Work 공개 SPI 공급자다. 유지 9개, 추가 제거 0개이며 허용 API를 장식하는 새 Adapter/Port는 없다.
+- 전후 관계는 동일하다: 컴파일 Farm 구현 → Work 공개 SPI ← Work application, 런타임 Work → SPI의 Farm 구현 → Farm 소유 조회/정책/잠금/Mutation. Farm 안에서 허용된 Work API 호출은 직접 유지한다. Work의 Farm 직접 의존을 새로 허용하지 않는다.
+- 명명 검토: Gateway 두 계약은 Work가 요청하는 Farm 참조/입고 계획 경계이므로 유지한다. 기존 기능별 AuditSupport는 snapshot·변경 사실 기록, WorkOperationSupport는 내부 Clock/actor·제목 조립을 담당하므로 기계적 개명·추가 추상화를 하지 않는다. 완료된 importer/cutover runtime은 재도입하지 않는다.
+- 현행 아키텍처에 실제 모듈·Sales 기능 허용표, 완료 책임, 공개 범위, 선택적 Port/SPI/integration, DTO·명명, Mutation/Effect/Audit 구분과 보존 원칙을 통합했다. 가상 slip/settlement 모델이나 Work → Farm 컴파일 방향을 적용하지 않는다. 최초 목표 설계는 archive/plans로 옮기고 현행 기준·ADR 링크를 명시한다.
+- CI는 기존 Verify의 backend check/bootJar, PostgreSQL E2E/benchmark, frontend, OpenAPI drift 구성을 유지한다. 새 경계 검사는 기존 test/check, P5 CLI 회귀는 기존 workE2eTest에서 실행되므로 별도 중복 job을 추가하지 않는다.
+
+P6 검증 중 발견한 기존 벤치마크 fixture 누락:
+
+- 첫 `workBenchmark`의 검색 테스트가 `DIRECT_AMOUNT_SOURCE_MISSING`으로 실패했다. 수만 건의 DIRECT 전표만 SQL로 생성하고 V43 이후 Direct 소유 금액 행을 생성하지 않아 첫 목록 조회에서 정합성 검증이 실패한 것이다. Work 벤치마크와 PostgreSQL 전체 E2E는 통과했다.
+- 검색 fixture에 동일 전표의 원문 금액을 가진 direct_sales 행을 추가했다. 한 행짜리 마지막 페이지에서 기존 Direct 가격·Payment 유효 배분·대사 evidence의 일괄 조회 3회를 포함하도록 판매 쿼리 기대값을 `count / 500 + 4`에서 `count / 500 + 7`로 수정했다. 경매 기대값 `count / 500 + 6`, bind 상한 500, 총건수·페이지 크기·501/5001/70001건·keyword 공백 1/20 검증은 유지한다. 프로덕션 조회·업무 정책은 변경하지 않는다.
+- 두 벤치마크 재실행 통과. 501/5001/70001건의 판매 쿼리는 8/17/147회, 경매 쿼리는 7/16/146회로 정확한 일괄 조회 식과 일치하며, 공백 수에 따라 쿼리가 추가되지 않는다.
+
+P6 완료 검증 결과:
+
+- 아키텍처 집중 검증 후 clean `check bootJar`와 백엔드 전체 `test` 779개 통과. 벤치마크 fixture 보완 뒤 `check bootJar`를 다시 실행해 최종 `test` 779개·`spotlessCheck`·패키징 성공을 확인했다. 실패·오류·skip 0.
+- 전체 `workE2eTest` 818개 통과. Flyway·DB constraint·write fence·원장/Mutation·생성/취소/보정·예약/출고·정산/입금·잠금/경쟁·Receipt/재전송·rollback·일괄 조회 및 두 운영 CLI 회귀를 실제 Testcontainers PostgreSQL에서 검증했다. `workBenchmark -PworkBenchmarkEnforce=true` 2개도 fixture 보완 후 통과했고 결과 JSON의 queryLimitsEnforced=true를 확인했다. E2E 성공 이후 변경은 work-benchmark 태그의 독립 fixture와 문서뿐이므로 818개 전체 E2E를 반복하지 않았다.
+- 프론트 `npm run check`의 포맷·생성 타입·테스트·lint·build 통과. OpenAPI 생성 안정성 3개 통과. OpenAPI 157 operations/132 paths/292 schemas와 프론트 타입 재생성 후 명세·slice·생성 타입 차이 0. 이후 변경은 API에 영향을 주지 않는 벤치마크 fixture와 문서다.
+- Verify workflow의 검사 항목을 로컬에서 실행했다. 기존 임시 init script의 테스트 heap 2 GiB를 사용했으며 저장소 heap/CI 설정은 변경하지 않았다. 검토된 4개 inventory는 생성 보고서와 일치하고 승인 항목을 추가하지 않았다. clean 후 Farm/Work/Sales 이전 계층 소스·main/test class artifact 0. 수정 문서의 상대 Markdown 링크 모두 정상.
+- P6 프로덕션 실행 코드·DB/Flyway·업무 정책·API·트랜잭션·잠금·저장 형식 변경 없음. 실제 운영 백업 복원·재배포는 이번 로컬 검증 범위가 아니며 기존 배포 절차를 따른다.
+- 목표 설계의 확정된 규칙을 현행 아키텍처에 통합했고 최초 목표 문서는 `docs/archive/plans/green-house-backend-architecture-final.md`에 보관했다. 목차·features·archive 안내와 ADR 링크를 갱신했으며 이 ADR은 결정·검증 기록으로 유지한다. P0~P6 전환 완료. 최종 검증 이후 변경은 이 완료 기록뿐이다.

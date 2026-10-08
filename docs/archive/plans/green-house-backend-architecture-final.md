@@ -1,6 +1,8 @@
 # Green-house 백엔드 아키텍처 설계
 
-> **문서 상태:** 목표 아키텍처 설계안 (구현 완료 보고서가 아님)  
+> **문서 상태:** 보관된 최초 목표 설계 — ADR-004 P0~P6 전환 완료 (2026-10-08)
+> **현행 기준:** [04-architecture.md](../../04-architecture.md). 이 문서의 가상 예시·초기 미확정 방향은 신규 작업의 기준이 아니다.
+> **결정과 검증:** [ADR-004](../../adr/ADR-004-backend-architecture-migration.md). 실제 Sales 소유권과 Farm → Work 방향을 보존해 구현했다.  
 > **작성 기준일:** 2026-10-08  
 > **적용 범위:** `backend/src/main/java/com/greenhouse/backend` 및 관련 아키텍처 테스트  
 > **핵심 원칙:** 높은 응집도, 낮은 결합도, 명확한 소유권, 최소한의 추상화
@@ -11,7 +13,7 @@
 
 ### 기존 구현과의 관계
 
-> 2026-10-08 착수 확인: 현재 Sales 통합과 이관 전용 CLI 제거는 완료되어 있다. Sales 소유권은 `document/direct/auction/payment/partner`, 컴파일 의존은 `Farm → Work`로 유지한다. 아래 초기 현황·목표 트리의 `slip/settlement` 및 `Work → Farm` 예시는 현재 전환의 확정 방향이 아니다. 실제 적용 결정과 현행 허용표는 [ADR-004](adr/ADR-004-backend-architecture-migration.md)를 따른다.
+> 2026-10-08 착수 확인: 현재 Sales 통합과 이관 전용 CLI 제거는 완료되어 있다. Sales 소유권은 `document/direct/auction/payment/partner`, 컴파일 의존은 `Farm → Work`로 유지한다. 아래 초기 현황·목표 트리의 `slip/settlement` 및 `Work → Farm` 예시는 현재 전환의 확정 방향이 아니다. 실제 적용 결정과 현행 허용표는 [ADR-004](../../adr/ADR-004-backend-architecture-migration.md)를 따른다.
 
 - **현재 구현에서 확인한 사실:** 기존 소스 트리는 `farm`, `work`, `sales`, `partner`, `auction`, `settlement` 등 최상위 패키지와 계층 우선 디렉터리가 공존한다. `farm/application/orchid/mutation`에는 명령, 엔진, 원장·조회, 검증 및 전환 관련 클래스가 혼재한다.
 - **이번에 결정한 목표:** 주요 업무 모듈은 `farm`, `work`, `sales`로 정리한다. `partner`, `auction`, `settlement` 등의 판매 관련 기능은 `sales` 내부로 통합한다. 기존 Sales 하위 기능 사이에 정의된 **허용 의존 방향은 유지**한다.

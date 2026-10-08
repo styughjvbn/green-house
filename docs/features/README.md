@@ -7,7 +7,7 @@
 - [작업 실행·난 그룹](work-operation-and-orchid-collection.md)
 - [난 묶음 Mutation Engine 전환 코드 수명](orchid-group-mutation-transition.md)
 - [전체 백엔드 리팩터링 계획](backend-refactoring-plan.md) — 13개 모듈의 책임·확장 경계와 단계별 검증 기준
-- [ADR-004: 백엔드 아키텍처 전환](../adr/ADR-004-backend-architecture-migration.md) — 공개 API·SPI 경계, 기능 우선 패키지 전환 결정과 검증 순서
+- [ADR-004: 백엔드 아키텍처 전환](../adr/ADR-004-backend-architecture-migration.md) — 완료된 공개 API·SPI·기능 우선 패키지 전환의 결정·검증 기록
 - [Mutation Engine 리팩터링 상세](orchid-group-mutation-refactoring-detail.md) — 전체 계획의 하위 상세
 - [데모 환경 운영](demo-operations.md)
 
@@ -15,3 +15,5 @@
 [`../06-api-guide.md`](../06-api-guide.md)와 `../api/`를 기준으로 확인한다.
 
 - [2026-09-08 Engine 전환 검증](../archive/plans/orchid-engine-cutover-20260908.md) — 완료된 과거 이관의 복원·ACTIVE·멱등성·API smoke 기록
+
+백엔드 구조의 현행 기준은 [아키텍처](../04-architecture.md)다. [최초 목표 설계](../archive/plans/green-house-backend-architecture-final.md)는 보관된 참고 자료다.
