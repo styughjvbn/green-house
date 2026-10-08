@@ -3,7 +3,6 @@ package com.greenhouse.backend.work.application.operation;
 import static com.greenhouse.backend.work.application.effect.WorkEffectJsonCodec.map;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.work.application.target.WorkExecutionReferenceGateway;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
@@ -14,6 +13,8 @@ import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.spi.target.WorkExecutionLocation;
+import com.greenhouse.backend.work.spi.target.WorkExecutionReferenceGateway;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;

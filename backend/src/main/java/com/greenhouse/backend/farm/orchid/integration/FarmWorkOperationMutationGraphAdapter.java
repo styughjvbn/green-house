@@ -1,4 +1,4 @@
-package com.greenhouse.backend.farm.application.orchid.mutation;
+package com.greenhouse.backend.farm.orchid.integration;
 
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
@@ -6,7 +6,7 @@ import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutatio
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneLocationRow;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
-import com.greenhouse.backend.work.application.operation.WorkOperationMutationGraphPort;
+import com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;

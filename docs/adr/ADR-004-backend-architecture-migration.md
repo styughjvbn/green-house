@@ -171,3 +171,27 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - 백엔드 전체 `test` 및 `spotlessCheck` 통과. 기본 테스트 JVM heap에서는 OOM으로 중단되어, 저장소 설정 변경 없이 임시 Gradle init script로 테스트 heap을 2 GiB로 늘려 재검증했다.
 - 프론트엔드 `npm run check` 통과.
 - 전체 검증 이후 변경은 이 ADR의 실행·검증 기록뿐이다.
+
+### 2026-10-08: P2 조회용 Work SPI 1차 전환
+
+작업 상세 참조와 Mutation 그래프의 계약·구현·소비자를 하나의 변경 단위로 전환한다. 아래 이동 대상에 대한 소유권·runtime 경로·FQCN 사용을 확인했다. 나머지 공개 계약의 이동표 확정은 후속 작업으로 남는다.
+
+| 기존 위치 | 확정 위치 | 이유 |
+|---|---|---|
+| `work/application/target/WorkExecutionReferenceGateway` | `work/spi/target` | Farm이 공급하는 품종명·위치 참조 조회를 Work가 정의 |
+| `work/application/operation/WorkExecutionLocation` | `work/spi/target` | 해당 SPI가 반환하는 불변 값. 기존 HTTP schema 이름 유지 |
+| `work/application/operation/WorkOperationMutationGraphPort` | `work/spi/operation` | Farm이 공급하는 Mutation 그래프를 Work가 정의. 중첩 값도 함께 이동 |
+| Farm의 위 두 계약 구현 | `farm/orchid/integration` | Work의 공개 SPI를 구현하는 Farm 소유 조회 adapter |
+
+- runtime: Work 상세/그래프 조회 → Work SPI → Farm 구현 → Farm 소유 저장소. 기존 `readOnly` 트랜잭션·쿼리·그래프 상한·현재 위치 해석은 유지한다.
+- 이동한 타입명의 문자열 참조를 main/resources/scripts에서 확인했다. 공개 위치 값의 `@Schema(name = "WorkExecutionLocationResponse")` 외에 reflection·설정·저장 JSON용 FQCN 문자열은 발견되지 않았다. Bean 이름과 클래스명은 유지한다.
+- Work와 Farm 소비자 및 graph adapter 테스트의 import·위치를 전환하고, 검토된 계약 inventory는 해당 FQCN만 치환했다. 계약의 메서드·생성자를 새로 승인하지 않았다.
+- 클래스·메서드명 변경, 쓰기 유스케이스, DB·원장·지문·잠금 순서 변경은 이번 단계에 포함하지 않는다.
+
+검증 결과:
+
+- 관련 architecture·상세 계약·그래프·Farm adapter 테스트 통과.
+- `clean test spotlessCheck` 통과: 774개, 실패·오류·skip 0개. 앞 단계와 동일하게 임시 Gradle init script로 테스트 heap 2 GiB를 적용했으며 저장소 설정은 변경하지 않았다. 이전 FQCN의 `.class` 파일은 clean 빌드 후 남아 있지 않다.
+- `python3 scripts/generate_openapi.py` 재생성 후 전체 명세·slice diff 없음. 공개 schema가 동일하므로 TypeScript 타입 재생성은 필요하지 않았다.
+- 프론트엔드 `npm run check` 통과.
+- DB·트랜잭션·잠금·멱등 처리 변경이 없는 구조 이동이므로 `workE2eTest` 미실행. 전체 검증 이후 변경은 이 ADR의 검증 기록뿐이다.

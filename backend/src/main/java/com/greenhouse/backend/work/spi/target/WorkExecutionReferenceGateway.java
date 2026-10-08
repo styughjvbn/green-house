@@ -1,6 +1,5 @@
-package com.greenhouse.backend.work.application.target;
+package com.greenhouse.backend.work.spi.target;
 
-import com.greenhouse.backend.work.application.operation.WorkExecutionLocation;
 import java.util.Collection;
 import java.util.Map;
 

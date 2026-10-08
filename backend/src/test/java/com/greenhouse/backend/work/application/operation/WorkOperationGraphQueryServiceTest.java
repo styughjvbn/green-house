@@ -31,6 +31,7 @@ import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
+import com.greenhouse.backend.work.spi.operation.WorkOperationMutationGraphPort;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;

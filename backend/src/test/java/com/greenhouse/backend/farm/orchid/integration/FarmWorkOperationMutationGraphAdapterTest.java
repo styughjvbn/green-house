@@ -1,4 +1,4 @@
-package com.greenhouse.backend.farm.application.orchid.mutation;
+package com.greenhouse.backend.farm.orchid.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;

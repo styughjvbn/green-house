@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.greenhouse.backend.work.application.target.WorkExecutionReferenceGateway;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
@@ -19,6 +18,7 @@ import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.spi.target.WorkExecutionReferenceGateway;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;

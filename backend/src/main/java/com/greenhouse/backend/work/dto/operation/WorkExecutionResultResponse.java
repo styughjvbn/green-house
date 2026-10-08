@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.dto.operation;
 
-import com.greenhouse.backend.work.application.operation.WorkExecutionLocation;
+import com.greenhouse.backend.work.spi.target.WorkExecutionLocation;
 import java.math.BigDecimal;
 
 public record WorkExecutionResultResponse(

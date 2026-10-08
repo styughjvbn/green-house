@@ -16,6 +16,7 @@ import com.greenhouse.backend.work.dto.operation.WorkCorrectionAdjustmentRespons
 import com.greenhouse.backend.work.dto.operation.WorkExecutionDetailResponse;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionResultResponse;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionSourceResponse;
+import com.greenhouse.backend.work.spi.target.WorkExecutionLocation;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
