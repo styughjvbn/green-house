@@ -158,7 +158,7 @@
 
 ### 입금 이벤트 명령
 
-대상 미지정 수동 수납과 미배분 원본의 오입력 취소는 Payment slice의 거래처 수납 API로 구현했다. 아래 과거 초안 endpoint와 다중 배분·예치금·은행 수집은 여전히 미구현이다.
+대상 미지정 수동 수납과 미배분 원본의 오입력 취소는 Payment slice의 거래처 수납 API로 구현했다. 다중 배분·배분 정정은 거래처의 `payment-allocations`·`payment-allocation-corrections` API로 구현했다. 아래 과거 초안 URL은 사용하지 않으며 예치금·은행 수집·자동 매칭은 여전히 미구현이다.
 
 - `POST /api/partner-payment-events/import-bank-csv`
 - `POST /api/partner-payment-events/manual-payment`

@@ -38,7 +38,7 @@
 | 판매 전표 | `sales.openapi.yaml` | `sales-controller`, `print-controller` | `com.greenhouse.backend.sales`, `print` | 판매 전표, 출력, 가능한 업무 action |
 | 분석 | `analytics.openapi.yaml` | `analytics-controller` | `com.greenhouse.backend.analytics` | 판매·거래처·작업 분석 |
 | 경매 | `auction.openapi.yaml` | `auction-tracking-controller`, `auction-proceeds-controller` | `com.greenhouse.backend.sales` | lot, 결과, 반환, 수량 보정, 경매 대금 |
-| 입금·정산 이벤트 | `payment.openapi.yaml` | `payment-controller` | `com.greenhouse.backend.sales` | 수동 입금, 거래처 잔액, 입금 이벤트 |
+| 입금·정산 이벤트 | `payment.openapi.yaml` | `payment-controller` | `com.greenhouse.backend.sales` | 수동 수납, 다중 배분·정정, 거래처 잔액, 입금 이벤트 |
 
 ## 관련 정책 문서
 

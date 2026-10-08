@@ -12,7 +12,6 @@ import { useSearchParams } from "next/navigation";
 import { ApiError } from "@/shared/api/client";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
-import { createUuid } from "@/shared/lib/id";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
 import {
   Dialog,
@@ -24,19 +23,13 @@ import { BusinessPartnerSelect } from "../common/BusinessPartnerSelect";
 import {
   getUnassignedReceiptPage,
   getPaymentBalance,
-  receiveUnassignedPayment,
-  cancelUnassignedPayment,
+  submitPaymentRequest,
 } from "../../api/salesApi";
 import { readReceiptRouteState } from "../../lib/salesRouteParams";
 import { salesQueryKeys } from "../../model/salesQueryKeys";
-import {
-  createReceiptRequests,
-  type ReceiptRequest,
-} from "../../lib/receiptRequest";
+import { type ReceiptRequest } from "../../lib/receiptRequest";
 
-const requests = createReceiptRequests(createUuid, () =>
-  typeof window === "undefined" ? null : window.sessionStorage,
-);
+import { paymentRequests as requests } from "../../model/paymentRequests";
 const inputClass =
   "mt-1 h-10 w-full rounded border border-[#d7ddd8] bg-white px-3";
 
@@ -53,7 +46,12 @@ export function UnassignedReceiptView() {
           write((p) => {
             if (value) p.set("receiptPartnerId", value);
             else p.delete("receiptPartnerId");
-            p.delete("receiptPage");
+            [
+              "receiptPage",
+              "sourcePage",
+              "receiptId",
+              "allocationPage",
+            ].forEach((key) => p.delete(key));
           }, "push")
         }
       />
@@ -108,14 +106,7 @@ function ReceiptPanel({ partnerId }: { partnerId: number }) {
     setSaving(true);
     setError(null);
     try {
-      if (request.operation === "RECEIVE")
-        await receiveUnassignedPayment(partnerId, request.payload);
-      else
-        await cancelUnassignedPayment(
-          partnerId,
-          request.receiptId,
-          request.payload,
-        );
+      await submitPaymentRequest(partnerId, request);
       requests.complete(partnerId, request.payload.idempotencyKey);
       setCancelId(null);
       setReason("");
@@ -129,6 +120,21 @@ function ReceiptPanel({ partnerId }: { partnerId: number }) {
           queryKey: salesQueryKeys.payments.balance(partnerId),
         }),
         cache.invalidateQueries({ queryKey: salesQueryKeys.partners.all }),
+        cache.invalidateQueries({
+          queryKey: ["sales", "allocationWorkspace", partnerId],
+        }),
+        ...(request.operation === "ALLOCATE" || request.operation === "CORRECT"
+          ? [
+              cache.invalidateQueries({ queryKey: salesQueryKeys.slips.all }),
+              cache.invalidateQueries({
+                queryKey: salesQueryKeys.auction.proceedsPages,
+              }),
+              cache.invalidateQueries({
+                queryKey: ["sales", "auctionProceeds", "detail"],
+              }),
+              cache.invalidateQueries({ queryKey: ["sales", "paymentEvents"] }),
+            ]
+          : []),
       ]);
     } catch (failure) {
       if (

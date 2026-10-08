@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -200,7 +201,12 @@ public class PartnerPaymentEvent extends BaseEntity {
   }
 
   public boolean isUnassignedCancellationAllowed() {
-    return eventType == PaymentEventType.PAYMENT_RECEIVED
+    return isUnassignedCancellationAllowed(false);
+  }
+
+  public boolean isUnassignedCancellationAllowed(boolean reviewRequired) {
+    return !reviewRequired
+        && eventType == PaymentEventType.PAYMENT_RECEIVED
         && targetType == PaymentTargetType.NONE
         && targetId == null
         && status == PaymentEventStatus.UNAPPLIED
@@ -252,6 +258,120 @@ public class PartnerPaymentEvent extends BaseEntity {
         || !Objects.equals(memo, reason)) {
       throw new ConflictException("IDEMPOTENCY_KEY_REUSED", "같은 정정 키의 입력을 변경할 수 없습니다.");
     }
+  }
+
+  public static PartnerPaymentEvent allocated(
+      PartnerPaymentEvent receipt,
+      PaymentTargetType type,
+      Long targetId,
+      long amount,
+      LocalDate date,
+      String actor,
+      String externalUid) {
+    requireAllocationTarget(type, targetId);
+    receipt.consumeAllocationAmount(amount);
+    return new PartnerPaymentEvent(
+        receipt.getPartnerId(),
+        PaymentEventType.PAYMENT_ALLOCATED,
+        date,
+        amount,
+        type,
+        targetId,
+        receipt,
+        receipt.getPaymentMethod(),
+        receipt.getDepositorName(),
+        "수납 배분",
+        externalUid,
+        PaymentEventStatus.CONFIRMED,
+        null,
+        actor);
+  }
+
+  public boolean isAllocation() {
+    return eventType == PaymentEventType.PAYMENT_ALLOCATED
+        || eventType == PaymentEventType.MANUAL_MATCH_CONFIRMED;
+  }
+
+  public PartnerPaymentEvent cancelAllocation(LocalDate date, String reason, String actor) {
+    if (!isAllocation()
+        || status != PaymentEventStatus.CONFIRMED
+        || parentEvent == null
+        || amount <= 0) {
+      throw new ConflictException("PAYMENT_ALLOCATION_CANCELLATION_BLOCKED", "유효한 배분만 취소할 수 있습니다.");
+    }
+    if (reason == null || reason.isBlank()) throw new IllegalArgumentException("배분 정정 사유가 필요합니다.");
+    status = PaymentEventStatus.CANCELLED;
+    parentEvent.restoreAllocatedAmount(amount);
+    return new PartnerPaymentEvent(
+        partnerId,
+        PaymentEventType.PAYMENT_UNLINKED,
+        date,
+        amount,
+        targetType,
+        targetId,
+        this,
+        paymentMethod,
+        depositorName,
+        "배분 취소",
+        "ALLOCATION_CANCEL:" + id,
+        PaymentEventStatus.CONFIRMED,
+        reason.trim(),
+        actor);
+  }
+
+  public void consumeAllocationAmount(long amount) {
+    requireLiveReceipt();
+    if (amount <= 0 || amount > unappliedAmount)
+      throw new ConflictException("PAYMENT_RECEIPT_OVERALLOCATED", "수납의 사용 가능액을 초과하여 배분할 수 없습니다.");
+    unappliedAmount -= amount;
+    refreshUsageStatus();
+  }
+
+  public void restoreAllocatedAmount(long amount) {
+    requireLiveReceipt();
+    if (amount <= 0 || amount > this.amount - unappliedAmount)
+      throw new ConflictException("PAYMENT_RECEIPT_REVIEW_REQUIRED", "수납과 배분 합계를 확인해야 합니다.");
+    unappliedAmount = Math.addExact(unappliedAmount, amount);
+    refreshUsageStatus();
+  }
+
+  public boolean isReceiptUsable(boolean reviewRequired) {
+    return !reviewRequired
+        && eventType == PaymentEventType.PAYMENT_RECEIVED
+        && amount > 0
+        && Set.of(
+                PaymentEventStatus.UNAPPLIED,
+                PaymentEventStatus.PARTIALLY_APPLIED,
+                PaymentEventStatus.FULLY_APPLIED)
+            .contains(status);
+  }
+
+  public boolean isReceiptAllocationAllowed(boolean reviewRequired) {
+    return isReceiptUsable(reviewRequired) && unappliedAmount > 0;
+  }
+
+  public boolean isReceiptCorrectionAllowed(boolean reviewRequired) {
+    return isReceiptUsable(reviewRequired) && unappliedAmount < amount;
+  }
+
+  private void requireLiveReceipt() {
+    if (!isReceiptUsable(false))
+      throw new ConflictException("PAYMENT_RECEIPT_REVIEW_REQUIRED", "유효한 수납만 배분하거나 정정할 수 있습니다.");
+  }
+
+  private void refreshUsageStatus() {
+    status =
+        unappliedAmount == 0
+            ? PaymentEventStatus.FULLY_APPLIED
+            : unappliedAmount.equals(amount)
+                ? PaymentEventStatus.UNAPPLIED
+                : PaymentEventStatus.PARTIALLY_APPLIED;
+  }
+
+  public static void requireAllocationTarget(PaymentTargetType type, Long id) {
+    if ((type != PaymentTargetType.SALES_SLIP && type != PaymentTargetType.AUCTION_PROCEEDS)
+        || id == null
+        || id <= 0) throw new IllegalArgumentException("일반 판매 전표 또는 경매 대금에만 배분할 수 있습니다.");
   }
 
   public static PartnerPaymentEvent manualMatch(PartnerPaymentEvent receivedEvent) {

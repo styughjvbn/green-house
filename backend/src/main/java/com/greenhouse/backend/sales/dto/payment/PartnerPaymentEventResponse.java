@@ -25,6 +25,11 @@ public record PartnerPaymentEventResponse(
     String createdBy,
     boolean unassignedCancellationAllowed) {
   public static PartnerPaymentEventResponse from(PartnerPaymentEvent event, String partnerName) {
+    return from(event, partnerName, false);
+  }
+
+  public static PartnerPaymentEventResponse from(
+      PartnerPaymentEvent event, String partnerName, boolean reviewRequired) {
     return new PartnerPaymentEventResponse(
         event.getId(),
         event.getPartnerId(),
@@ -42,6 +47,6 @@ public record PartnerPaymentEventResponse(
         event.getStatus(),
         event.getMemo(),
         event.getCreatedBy(),
-        event.isUnassignedCancellationAllowed());
+        event.isUnassignedCancellationAllowed(reviewRequired));
   }
 }

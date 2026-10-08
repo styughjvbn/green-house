@@ -135,3 +135,23 @@ export type CancelUnassignedReceiptPayload =
 export type PartnerPaymentBalance = Required<
   components["schemas"]["PartnerBalanceSummaryResponse"]
 >;
+
+export type PaymentReceipt = Required<
+  components["schemas"]["PaymentReceiptResponse"]
+>;
+export type PaymentAllocation = Required<
+  components["schemas"]["PaymentAllocationResponse"]
+>;
+export type AllocationTarget = Required<
+  components["schemas"]["PaymentAllocationTargetOption"]
+>;
+export type AllocationMetadata = Required<
+  components["schemas"]["PaymentAllocationMetadata"]
+>;
+export type AllocationPayload =
+  components["schemas"]["PaymentAllocationRequest"];
+export type AllocationCorrectionPayload =
+  components["schemas"]["PaymentAllocationCorrectionRequest"];
+export type AllocationResult =
+  components["schemas"]["PaymentAllocationChangeResponse"];
+export type AllocationTargetType = AllocationTarget["targetType"];

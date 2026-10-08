@@ -6,6 +6,8 @@ import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -14,6 +16,23 @@ import org.springframework.data.repository.query.Param;
 
 public interface SalesSlipRepository
     extends JpaRepository<SalesSlip, Long>, SalesSlipRepositoryCustom {
+
+  @Query(
+      "select s.id as id, s.partnerId as partnerId from SalesSlip s where s.id in :ids and s.salesType = com.greenhouse.backend.sales.domain.document.SalesType.DIRECT")
+  List<PaymentOwner> findPaymentOwners(Collection<Long> ids);
+
+  interface PaymentOwner {
+    Long getId();
+
+    Long getPartnerId();
+  }
+
+  @Query("select slip.partnerId from SalesSlip slip where slip.id = :id")
+  Optional<Long> findPartnerId(@Param("id") Long id);
+
+  @Query(
+      "select s from SalesSlip s where s.partnerId = :partnerId and s.salesType = com.greenhouse.backend.sales.domain.document.SalesType.DIRECT and s.salesStatus <> '취소' and (:keyword = '' or lower(s.slipNumber) like lower(concat('%', :keyword, '%')))")
+  Page<SalesSlip> findPaymentTargets(Long partnerId, String keyword, Pageable pageable);
 
   boolean existsByAuctionShipmentId(Long auctionShipmentId);
 

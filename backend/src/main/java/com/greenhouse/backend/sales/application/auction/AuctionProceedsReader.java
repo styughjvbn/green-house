@@ -7,6 +7,7 @@ import com.greenhouse.backend.sales.application.payment.PaymentAllocationReader;
 import com.greenhouse.backend.sales.domain.auction.AuctionProceeds;
 import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.dto.auction.AuctionProceedsResponse;
+import com.greenhouse.backend.sales.dto.payment.PaymentAllocationTargetOption;
 import com.greenhouse.backend.sales.repository.auction.AuctionProceedsRepository;
 import java.math.BigDecimal;
 import java.util.Collection;
@@ -52,6 +53,31 @@ public class AuctionProceedsReader {
         roots.getSize(),
         roots.getTotalElements(),
         roots.getTotalPages());
+  }
+
+  public PageResponse<PaymentAllocationTargetOption> allocationOptions(
+      Long partnerId, String keyword, int page, int size) {
+    var roots =
+        repository.findPaymentTargets(
+            partnerId, keyword, PageRequest.of(page, size, Sort.by("id").descending()));
+    var values =
+        assemble(roots.getContent()).stream()
+            .collect(Collectors.toMap(AuctionProceedsResponse::id, value -> value));
+    return PageResponse.from(
+        roots.map(
+            root -> {
+              var value = values.get(root.getId());
+              return new PaymentAllocationTargetOption(
+                  root.getId(),
+                  PaymentTargetType.AUCTION_PROCEEDS,
+                  root.getSourceReference(),
+                  root.getReceivableAmount(),
+                  value.paidAmount(),
+                  value.remainingAmount(),
+                  value.paymentAllowed(),
+                  root.isAllocationAllowed(BigDecimal.ZERO, value.reviewRequired()),
+                  value.reviewRequired());
+            }));
   }
 
   private List<AuctionProceedsResponse> assemble(List<AuctionProceeds> roots) {

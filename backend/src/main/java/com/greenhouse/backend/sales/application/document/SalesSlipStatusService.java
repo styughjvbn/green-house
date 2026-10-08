@@ -5,7 +5,6 @@ import com.greenhouse.backend.sales.domain.document.SalesSlip;
 import com.greenhouse.backend.sales.domain.document.SalesType;
 import com.greenhouse.backend.sales.dto.document.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.document.SalesSlipRepository;
-import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -61,9 +60,6 @@ public class SalesSlipStatusService {
   }
 
   private void cancel(SalesSlip salesSlip) {
-    if (salesSlip.getSalesType() == SalesType.DIRECT) {
-      accounting.lockPartners(List.of(salesSlip.getPartnerId()));
-    }
     if (salesSlip.getSalesType() == SalesType.DIRECT
         && accounting.existsPayment(salesSlip.getId())) {
       throw new IllegalArgumentException("입금 이력이 있는 판매 전표는 취소할 수 없습니다.");

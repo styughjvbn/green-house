@@ -763,7 +763,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["receiptPage"];
         put?: never;
         /** @description 대상 미지정 수동 수납. 유효 배분과 전표 입금액은 변경하지 않습니다. */
         post: operations["receiveUnassignedPayment"];
@@ -784,6 +784,38 @@ export interface paths {
         put?: never;
         /** @description 미배분 수납의 오입력 취소. 실제 환불을 기록하지 않습니다. */
         post: operations["cancelUnassignedPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["allocate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-allocation-corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["correctAllocations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1466,6 +1498,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/payment-allocation-metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPaymentAllocationMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/partner-payment-events": {
         parameters: {
             query?: never;
@@ -1756,6 +1804,54 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-receipts/{receiptId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["receipt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-receipts/{receiptId}/allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["receiptAllocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-allocation-targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["allocationTargets"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3189,6 +3285,40 @@ export interface components {
             idempotencyKey: string;
             reason: string;
         };
+        PaymentAllocationLine: {
+            /** Format: int64 */
+            amount: number;
+            /** Format: int64 */
+            receiptId: number;
+            /** Format: int64 */
+            targetId: number;
+            /** @enum {string} */
+            targetType: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
+        };
+        PaymentAllocationRequest: {
+            /** Format: date */
+            allocationDate: string;
+            allocations: components["schemas"]["PaymentAllocationLine"][];
+            idempotencyKey: string;
+            worker?: string;
+        };
+        ApiResponsePaymentAllocationChangeResponse: {
+            data?: components["schemas"]["PaymentAllocationChangeResponse"];
+            message?: string;
+        };
+        PaymentAllocationChangeResponse: {
+            allocationIds?: number[];
+            cancellationIds?: number[];
+        };
+        PaymentAllocationCorrectionRequest: {
+            allocations: components["schemas"]["PaymentAllocationLine"][];
+            cancellationIds: number[];
+            /** Format: date */
+            correctionDate: string;
+            idempotencyKey: string;
+            reason: string;
+            worker?: string;
+        };
         ApiResponseVoid: {
             data?: unknown;
             message?: string;
@@ -4129,6 +4259,13 @@ export interface components {
             data?: components["schemas"]["PhysicalBedResponse"];
             message?: string;
         };
+        ApiResponsePaymentAllocationMetadata: {
+            data?: components["schemas"]["PaymentAllocationMetadata"];
+            message?: string;
+        };
+        PaymentAllocationMetadata: {
+            targetTypes?: ("SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE")[];
+        };
         ApiResponseListPartnerPaymentEventResponse: {
             data?: components["schemas"]["PartnerPaymentEventResponse"][];
             message?: string;
@@ -4697,6 +4834,109 @@ export interface components {
         ApiResponseListBusinessPartnerResponse: {
             data?: components["schemas"]["BusinessPartnerResponse"][];
             message?: string;
+        };
+        ApiResponsePageResponsePaymentReceiptResponse: {
+            data?: components["schemas"]["PageResponsePaymentReceiptResponse"];
+            message?: string;
+        };
+        PageResponsePaymentReceiptResponse: {
+            content?: components["schemas"]["PaymentReceiptResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PaymentReceiptResponse: {
+            allocationAllowed?: boolean;
+            /** Format: int64 */
+            amount?: number;
+            /** Format: int64 */
+            availableAmount?: number;
+            correctionAllowed?: boolean;
+            depositorName?: string | null;
+            /** Format: int64 */
+            id?: number;
+            memo?: string | null;
+            /** Format: int64 */
+            originalTargetId?: number | null;
+            /** @enum {string|null} */
+            originalTargetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE" | null;
+            /** Format: int64 */
+            partnerId?: number;
+            /** Format: date */
+            paymentDate?: string;
+            reviewRequired?: boolean;
+            /** @enum {string} */
+            status?: "UNAPPLIED" | "PARTIALLY_APPLIED" | "FULLY_APPLIED" | "CANDIDATE" | "CONFIRMED" | "REJECTED" | "CANCELLED";
+        };
+        ApiResponsePaymentReceiptResponse: {
+            data?: components["schemas"]["PaymentReceiptResponse"];
+            message?: string;
+        };
+        ApiResponsePageResponsePaymentAllocationResponse: {
+            data?: components["schemas"]["PageResponsePaymentAllocationResponse"];
+            message?: string;
+        };
+        PageResponsePaymentAllocationResponse: {
+            content?: components["schemas"]["PaymentAllocationResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PaymentAllocationResponse: {
+            /** Format: date */
+            allocationDate?: string;
+            /** Format: int64 */
+            amount?: number;
+            cancellationAllowed?: boolean;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            receiptId?: number;
+            /** @enum {string} */
+            status?: "UNAPPLIED" | "PARTIALLY_APPLIED" | "FULLY_APPLIED" | "CANDIDATE" | "CONFIRMED" | "REJECTED" | "CANCELLED";
+            /** Format: int64 */
+            targetId?: number;
+            /** @enum {string} */
+            targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
+        };
+        ApiResponsePageResponsePaymentAllocationTargetOption: {
+            data?: components["schemas"]["PageResponsePaymentAllocationTargetOption"];
+            message?: string;
+        };
+        PageResponsePaymentAllocationTargetOption: {
+            content?: components["schemas"]["PaymentAllocationTargetOption"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PaymentAllocationTargetOption: {
+            allocationAllowed?: boolean;
+            availableAmount?: number | null;
+            correctionAllowed?: boolean;
+            /** Format: int64 */
+            id?: number;
+            paidAmount?: number | null;
+            /** Format: int64 */
+            receivableAmount?: number | null;
+            reviewRequired?: boolean;
+            sourceReference?: string | null;
+            /** @enum {string} */
+            targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
         };
         ApiResponseBusinessPartnerOptionResponse: {
             data?: components["schemas"]["BusinessPartnerOptionResponse"];
@@ -6512,6 +6752,31 @@ export interface operations {
             };
         };
     };
+    receiptPage: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponsePaymentReceiptResponse"];
+                };
+            };
+        };
+    };
     receiveUnassignedPayment: {
         parameters: {
             query?: never;
@@ -6561,6 +6826,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponsePartnerPaymentEventResponse"];
+                };
+            };
+        };
+    };
+    allocate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentAllocationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePaymentAllocationChangeResponse"];
+                };
+            };
+        };
+    };
+    correctAllocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentAllocationCorrectionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePaymentAllocationChangeResponse"];
                 };
             };
         };
@@ -7823,6 +8140,26 @@ export interface operations {
             };
         };
     };
+    getPaymentAllocationMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePaymentAllocationMetadata"];
+                };
+            };
+        };
+    };
     getEvents: {
         parameters: {
             query?: {
@@ -8234,6 +8571,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseDashboardSummaryResponse"];
+                };
+            };
+        };
+    };
+    receipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+                receiptId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePaymentReceiptResponse"];
+                };
+            };
+        };
+    };
+    receiptAllocations: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                partnerId: number;
+                receiptId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponsePaymentAllocationResponse"];
+                };
+            };
+        };
+    };
+    allocationTargets: {
+        parameters: {
+            query: {
+                targetType: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
+                keyword?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponsePaymentAllocationTargetOption"];
                 };
             };
         };

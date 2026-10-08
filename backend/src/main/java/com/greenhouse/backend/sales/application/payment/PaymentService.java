@@ -25,6 +25,7 @@ public class PaymentService {
   private final PartnerPaymentEventRepository eventRepository;
 
   private final BusinessPartnerReader partnerReader;
+  private final PaymentReceiptIntegrity integrity;
 
   @Transactional(readOnly = true)
   public List<PartnerPaymentEventResponse> getEvents(
@@ -52,8 +53,17 @@ public class PaymentService {
   private Page<PartnerPaymentEventResponse> eventResponses(Page<PartnerPaymentEvent> events) {
     var partners =
         partnerReader.getAllInfo(events.stream().map(PartnerPaymentEvent::getPartnerId).toList());
+    var states =
+        integrity.findAll(
+            events.stream()
+                .filter(event -> event.getEventType() == PaymentEventType.PAYMENT_RECEIVED)
+                .map(PartnerPaymentEvent::getId)
+                .toList());
     return events.map(
         event ->
-            PartnerPaymentEventResponse.from(event, partners.get(event.getPartnerId()).name()));
+            PartnerPaymentEventResponse.from(
+                event,
+                partners.get(event.getPartnerId()).name(),
+                states.containsKey(event.getId()) && states.get(event.getId()).reviewRequired()));
   }
 }

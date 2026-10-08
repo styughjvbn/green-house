@@ -16,22 +16,28 @@ public class PaymentAllocationQueryRepository {
   private final EntityManager entityManager;
   private static final String QUERY =
       """
-      WITH targets(target_id, partner_id) AS (VALUES %s), scoped AS (
-              SELECT id, event_type, status, amount, partner_id, target_type, target_id, parent_event_id
-              FROM partner_payment_events WHERE target_type = :targetType AND target_id IN (SELECT target_id FROM targets)
-      ), eligible AS (
-          SELECT matched.id, matched.target_id, matched.parent_event_id, matched.amount
-          FROM scoped matched JOIN partner_payment_events received ON received.id = matched.parent_event_id
-          JOIN targets owner ON owner.target_id = matched.target_id
-          WHERE matched.event_type = 'MANUAL_MATCH_CONFIRMED' AND matched.status = 'CONFIRMED'
-              AND matched.amount > 0 AND received.event_type = 'PAYMENT_RECEIVED'
-              AND received.status = 'FULLY_APPLIED' AND received.unapplied_amount = 0
-              AND received.target_type = matched.target_type AND received.target_id = matched.target_id
-              AND received.partner_id = matched.partner_id AND received.amount = matched.amount
-              AND (NOT :validateOwner OR received.partner_id = owner.partner_id)
+      WITH targets(target_id, partner_id) AS (VALUES /*TARGET_VALUES*/), scoped AS (
+          SELECT id, event_type, status, amount, partner_id, target_type, target_id, parent_event_id
+          FROM partner_payment_events WHERE target_type = :targetType AND target_id IN (SELECT target_id FROM targets)
+      ), roots AS (
+          SELECT * FROM partner_payment_events WHERE id IN (
+            SELECT id FROM scoped WHERE event_type = 'PAYMENT_RECEIVED'
+            UNION SELECT parent_event_id FROM scoped WHERE event_type IN ('MANUAL_MATCH_CONFIRMED', 'PAYMENT_ALLOCATED'))
+      )
+      """
+          + PaymentAllocationSql.CASH
+          + """
+      , eligible AS (
+          SELECT link.id, link.target_id, link.parent_event_id, link.amount, link.event_type
+          FROM cash_children link JOIN cash_states cash ON cash.id = link.parent_event_id
+          JOIN targets owner ON owner.target_id = link.target_id
+          WHERE link.target_type = :targetType AND link.shape_valid = 1 AND link.status = 'CONFIRMED'
+            AND cash.balance_valid = 1 AND (NOT :validateOwner OR link.partner_id = owner.partner_id)
       ), unique_links AS (
-          SELECT target_id, parent_event_id, MAX(amount) AS amount, COUNT(*) AS matches
-          FROM eligible GROUP BY target_id, parent_event_id
+          SELECT target_id, parent_event_id, MAX(CAST(amount AS NUMERIC)) AS amount, COUNT(*) AS matches
+          FROM eligible WHERE event_type = 'MANUAL_MATCH_CONFIRMED' GROUP BY target_id, parent_event_id
+          UNION ALL
+          SELECT target_id, parent_event_id, CAST(amount AS NUMERIC), 1 FROM eligible WHERE event_type = 'PAYMENT_ALLOCATED'
       ), allocated AS (
           SELECT target_id, SUM(amount) AS amount, MAX(CASE WHEN matches <> 1 THEN 1 ELSE 0 END) AS duplicate_match
           FROM unique_links GROUP BY target_id
@@ -39,17 +45,23 @@ public class PaymentAllocationQueryRepository {
           SELECT event.target_id, MIN(event.partner_id) AS partner_id,
               CASE WHEN MIN(event.partner_id) <> MAX(event.partner_id) THEN 1 ELSE 0 END AS partner_mismatch,
               MAX(CASE
-              WHEN event.event_type = 'PAYMENT_RECEIVED' AND EXISTS (
-                  SELECT 1 FROM eligible valid WHERE valid.parent_event_id = event.id) THEN 0
-              WHEN event.event_type = 'MANUAL_MATCH_CONFIRMED' AND EXISTS (
-                  SELECT 1 FROM eligible valid WHERE valid.id = event.id) THEN 0
-              ELSE 1 END) AS required
+                WHEN event.event_type = 'PAYMENT_RECEIVED' AND EXISTS (
+                  SELECT 1 FROM cash_states cash WHERE cash.id = event.id AND cash.balance_valid = 1 AND cash.child_review = 0) THEN 0
+                WHEN event.event_type IN ('MANUAL_MATCH_CONFIRMED', 'PAYMENT_ALLOCATED') AND event.status = 'CONFIRMED' AND EXISTS (
+                  SELECT 1 FROM eligible valid JOIN cash_states cash ON cash.id = valid.parent_event_id
+                  WHERE valid.id = event.id AND cash.child_review = 0) THEN 0
+                WHEN event.event_type IN ('MANUAL_MATCH_CONFIRMED', 'PAYMENT_ALLOCATED') AND event.status = 'CANCELLED' AND EXISTS (
+                  SELECT 1 FROM cash_children child JOIN cash_states cash ON cash.id = child.parent_event_id
+                  WHERE child.id = event.id AND child.shape_valid = 1 AND child.canceled_proven = 1 AND cash.balance_valid = 1 AND cash.child_review = 0) THEN 0
+                WHEN event.event_type = 'PAYMENT_UNLINKED' AND EXISTS (
+                  SELECT 1 FROM cancellation_proofs proof WHERE proof.id = event.id) THEN 0
+                ELSE 1 END) AS required
           FROM scoped event GROUP BY event.target_id
       )
       SELECT review.target_id AS targetId, review.partner_id AS partnerId, COALESCE(allocated.amount, 0) AS amount,
           (review.required <> 0 OR review.partner_mismatch <> 0 OR COALESCE(allocated.duplicate_match, 0) <> 0) AS reviewRequired
       FROM review LEFT JOIN allocated ON allocated.target_id = review.target_id
-            """;
+      """;
 
   public List<PaymentAllocationTotals> find(
       String targetType, List<Long> ids, Map<Long, Long> owners, boolean validateOwner) {
@@ -58,7 +70,8 @@ public class PaymentAllocationQueryRepository {
     for (int i = 0; i < ids.size(); i++)
       values.add("(CAST(:id" + i + " AS BIGINT), CAST(:partner" + i + " AS BIGINT))");
     var query =
-        entityManager.createNativeQuery(QUERY.formatted(String.join(",", values)), Tuple.class);
+        entityManager.createNativeQuery(
+            QUERY.replace("/*TARGET_VALUES*/", String.join(",", values)), Tuple.class);
     query.setParameter("targetType", targetType);
     query.setParameter("validateOwner", validateOwner);
     for (int i = 0; i < ids.size(); i++) {
@@ -74,7 +87,7 @@ public class PaymentAllocationQueryRepository {
                   new Row(
                       ((Number) row.get(0)).longValue(),
                       row.get(1) == null ? null : ((Number) row.get(1)).longValue(),
-                      new BigDecimal(row.get(2).toString()),
+                      new BigDecimal(row.get(2).toString()).setScale(0),
                       (Boolean) row.get(3));
             })
         .toList();

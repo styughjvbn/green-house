@@ -508,3 +508,85 @@ export function cancelUnassignedPayment(
     "수납 입력을 취소하지 못했습니다.",
   );
 }
+
+export function getAllocationReceipts(
+  partnerId: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<
+    import("@/shared/api/page").Page<import("./types").PaymentReceipt>
+  >(`/business-partners/${partnerId}/payment-receipts?page=${page}&size=10`, {
+    signal,
+  });
+}
+export function getAllocationReceipt(
+  partnerId: number,
+  id: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<import("./types").PaymentReceipt>(
+    `/business-partners/${partnerId}/payment-receipts/${id}`,
+    { signal },
+  );
+}
+export function getReceiptAllocations(
+  partnerId: number,
+  id: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<
+    import("@/shared/api/page").Page<import("./types").PaymentAllocation>
+  >(
+    `/business-partners/${partnerId}/payment-receipts/${id}/allocations?page=${page}&size=10`,
+    { signal },
+  );
+}
+export function getAllocationMetadata(signal?: AbortSignal) {
+  return fetchApi<import("./types").AllocationMetadata>(
+    "/payment-allocation-metadata",
+    { signal },
+  );
+}
+export function getAllocationTargets(
+  partnerId: number,
+  type: import("./types").AllocationTargetType,
+  keyword: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  const query = new URLSearchParams({
+    targetType: type,
+    keyword,
+    page: String(page),
+    size: "10",
+  });
+  return fetchApi<
+    import("@/shared/api/page").Page<import("./types").AllocationTarget>
+  >(`/business-partners/${partnerId}/payment-allocation-targets?${query}`, {
+    signal,
+  });
+}
+export function submitPaymentRequest(
+  partnerId: number,
+  request: import("../lib/receiptRequest").ReceiptRequest,
+) {
+  if (request.operation === "RECEIVE")
+    return receiveUnassignedPayment(partnerId, request.payload);
+  if (request.operation === "CANCEL")
+    return cancelUnassignedPayment(
+      partnerId,
+      request.receiptId,
+      request.payload,
+    );
+  return requestJson<import("./types").AllocationResult>(
+    `/business-partners/${partnerId}/${request.operation === "ALLOCATE" ? "payment-allocations" : "payment-allocation-corrections"}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request.payload),
+    },
+    "배분을 저장하지 못했습니다.",
+  );
+}

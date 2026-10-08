@@ -13,6 +13,8 @@ public interface DirectDocumentAccountingPort {
 
   void requirePaymentAmount(Long documentId, Long expectedPartnerId, Long amount);
 
+  void lockPaymentTargets(Collection<Long> documentIds);
+
   void lockPartners(Collection<Long> ids);
 
   void updateReceivable(Long partnerId, Long amount, Long eventId);
@@ -40,6 +42,7 @@ public interface DirectDocumentAccountingPort {
       boolean reviewRequired,
       String paymentStatus,
       boolean paymentAllowed,
+      boolean allocationCorrectionAllowed,
       Map<Long, PriceSnapshot> prices) {}
 
   record QuotedPrices(Integer totalAmount, List<PriceSnapshot> prices) {}

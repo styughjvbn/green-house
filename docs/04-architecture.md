@@ -194,9 +194,9 @@ Sales 내부는 기존 계층을 유지한 `sales/{application,domain,repository
 - Payment의 유효 배분 조회는 대상 ID·소유 거래처를 bound parameter로 전달하는 CTE 집계로 수납 원문을 중복 합산하지 않는다. 동일한 조회를 H2와 PostgreSQL에서 검증하며, 같은 transaction의 아직 flush되지 않은 원장 기록도 반영한다. 대상은 500개씩 처리하고 다른 내부 경계의 테이블을 읽지 않는다.
 - Direct의 이전 시점 대사 검토는 Direct가 판정한다. Document는 내부 port의 검토 결과로 수정·수납 경로를 차단하고 서버 업무 capability와 상세 상태를 조립한다. 대사 근거는 변경하지 않으며 성공한 원래 입금 재전송은 먼저 확인한다. 검토 조회는 대상 ID를 모아 일괄 처리하므로 품목 수에 비례하는 조회를 추가하지 않는다.
 - Document는 구체적인 Direct/Auction/Payment 서비스를 호출하지 않는다. 필요한 출하 생성·취소 보호·표시 조회는 Document 소유 `AuctionDocumentPort`, 일반 판매의 예상일·입금 이력·잔액 연결은 `DirectDocumentAccountingPort`로 요청하고 소유자 adapter가 처리한다. 기존 출하 값 계약은 port로 이동하며 복제하지 않는다.
-- Payment가 정의한 `PaymentTargetPort`를 Document와 경매 대금이 구현한다. Payment는 Entity를 받지 않고, 대상 잠금·유효성 검증 뒤 원장 멱등 확인→대상 금액 반영→입금/연결 원장→잔액→감사→응답을 조율한다. 유스케이스 진입점이 트랜잭션을 열고 대상 port와 원장 writer는 기존 트랜잭션에 반드시 참여한다.
+- Payment가 정의한 단건 대상 port와 배분 대상 port를 Direct·Auction adapter가 구현한다. Direct adapter는 Document 소유 application 계약으로 전표를 처리한다. Payment는 Entity를 받지 않고, 대상 잠금·유효성 검증 뒤 원장 멱등 확인→대상 금액 반영→입금/연결 원장→잔액→감사→응답을 조율한다. 유스케이스 진입점이 트랜잭션을 열고 대상 port와 원장 writer는 기존 트랜잭션에 반드시 참여한다.
 - Auction 후속 결정·실제 도착은 lot 선잠금과 receipt 확인 후 Farm 생성/생성 보상을 최상위 application transaction에서 조율한다. 결정과 실제 도착 이력은 분리하며, 도착은 새 묶음·생성/보상 Mutation ID만 연결한다. Farm에는 안정적인 `AUCTION_RETURN_ARRIVAL` 출처를 사용하고 기존 InboundRecord와 Work 포트 흐름을 거치지 않는다.
-- 저장소·Entity·QueryDSL EntityPath는 내부 소유 경계 밖으로 노출하지 않는다. application 공개 멤버의 중첩 값 계약 검사와 내부 의존 그래프 검사를 함께 실행한다. 구현 의존은 `Direct/Auction → Document/Payment/Partner`, `Document → Payment port/Partner`, `Payment → Partner`이며 역방향 구현 의존을 허용하지 않는다.
+- 저장소·Entity·QueryDSL EntityPath는 내부 소유 경계 밖으로 노출하지 않는다. application 공개 멤버의 중첩 값 계약 검사와 내부 의존 그래프 검사를 함께 실행한다. 구현 의존은 `Direct/Auction → Document/Payment/Partner`, `Document → Partner`, `Payment → Partner`이며 역방향 구현 의존을 허용하지 않는다.
 
 - 판매 전표
 - 판매 품목
@@ -356,7 +356,7 @@ Persistence 조회 규칙:
 - Partner 잠금 API는 호출자의 트랜잭션을 필수로 요구하고 거래처 ID 오름차순으로 잠근다. 잠금 획득만 하는 호출이 독립 트랜잭션을 열고 즉시 반환하는 방식은 허용하지 않는다. 잔액 생성·갱신은 거래처 잠금 후 잔액 행 잠금 순서를 유지한다.
 - 판매 예약·해제·출고·복구의 수량 불변식은 Farm Entity가 적용한다. Farm Mutation Engine은 typed command를 받고 호출자의 트랜잭션을 필수로 요구하며 실제 재고 변경을 소유한다. Sales는 유스케이스 순서와 배분별 재고 이동·Mutation 연결을 저장한다. 판매 수정은 ORM 버전과 별도의 변경 식별자를 사용해 해제·재예약을 같은 변경에 연결하며, Mutation replay 때 이동 이력을 중복 저장하지 않는다. Legacy 직접 writer는 제거된 상태다.
 - Sales의 키가 있는 생성은 Sales 소유 접수 PK의 원자 claim → 접수 root 잠금 → 기존 거래처·일별 번호·난 묶음 순으로 처리한다. 최초 응답을 보존하고 완료 접수는 최신 상태 조회나 Mutation을 재실행하지 않는다. 접수·전표·예약·출고/출하·snapshot·잔액·감사는 최상위 생성 application 트랜잭션에서 함께 확정/rollback한다. 키 없는 기존 생성은 이 접수를 만들지 않는다. Work의 접수·membership을 공유하지 않으며, 영속 요청 지문·응답 schema 변경은 과거 replay 호환을 검토한다.
-- 판매 수정은 전표 → 이전·신규 거래처 ID 순 → 기존·신규 allocation 묶음 합집합 ID 순으로 잠근 뒤 기존 예약을 해제한다. Farm application의 잠금 API가 전체 ID를 중복 제거·정렬한 다음 500개씩 취득하고 호출자의 트랜잭션 종료까지 유지한다. 사전 잠금에서 DTO·연관 상태 snapshot을 만들지 않으며 새 allocation의 `CREATION` snapshot은 기존 예약 해제 후, 새 예약 전 값으로 저장한다. 후속 Mutation이 자기 대상만 정렬하는 것으로 유스케이스 전체 잠금 순서를 대체하지 않는다.
+- 판매 수정은 이전·신규 거래처 ID 순 → 전표 → 기존·신규 allocation 묶음 합집합 ID 순으로 잠근 뒤 기존 예약을 해제한다. Farm application의 잠금 API가 전체 ID를 중복 제거·정렬한 다음 500개씩 취득하고 호출자의 트랜잭션 종료까지 유지한다. 사전 잠금에서 DTO·연관 상태 snapshot을 만들지 않으며 새 allocation의 `CREATION` snapshot은 기존 예약 해제 후, 새 예약 전 값으로 저장한다. 후속 Mutation이 자기 대상만 정렬하는 것으로 유스케이스 전체 잠금 순서를 대체하지 않는다.
 - 신규 판매 예약은 난 묶음 잠금 안에서 Farm 상태 정책을 검증한다. 판매 선택 조회와 집계는 그 정책의 상태 목록을 DB 조건으로 전달하고, Work·자동 그룹 조회는 같은 정책의 비활성 목록을 사용한다. 경고 상태와 전량 예약을 Work 대상으로 유지하며 판매 제한을 작업 제한으로 복제하지 않는다. 기존 예약 해제·출고·복구와 이미 적용한 Mutation replay는 신규 예약 자격 검증과 구분한다.
 - 경매 전표 취소는 Auction의 실제 시도·처리 이력과 수량을 기준으로 판정하며 현재 lot 상태만으로 과거 기록의 존재를 대체하지 않는다. Auction은 출하의 lot를 ID 순서로 잠근 뒤 삭제 가능 여부를 재검증한다. 결과·반환·보정·상태 writer도 shipment fetch graph 없이 lot root를 먼저 잠그며, 이력이 없는 출하의 삭제·Sales 연결 해제·재고 복구·취소 감사는 Sales의 최상위 트랜잭션에서 함께 반영하거나 rollback한다.
 - Auction의 결과·반환 접수는 lot root 잠금 후 같은 lot·업무·요청 키의 receipt를 먼저 확인한다. 최초 요청은 시도·결과·상태 이력을 flush해 ID를 확정하고 최초 응답·입력 지문과 함께 같은 트랜잭션에 저장한다. replay는 현재 상태 전이를 다시 실행하지 않는다. 요청/응답 schema 변경 시 영속 지문과 기존 응답 snapshot 호환을 함께 검토하며 receipt를 임의 만료시키지 않는다.
@@ -368,7 +368,9 @@ Persistence 조회 규칙:
 - Snapshot에서 누락과 명시적 null은 미상 값으로 보존하고 0·false·현재 Entity 값으로 채우지 않는다. canonical 위치는 소수 둘째 자리까지 정확히 표현하며 초과 정밀도를 반올림하지 않는다. Farm의 기존 scale 기반 지문과 Work의 숫자 정규화 지문은 서로 다른 영속 계약이다. 공통 JSON 설정으로 임의 통합하지 않는다. 필드 확장 배포·구버전 writer·rollback 정책은 `07-deployment.md`의 저장 지문·스냅샷 형식 변경 기준을 따른다.
 - 정산 설정의 최초 조회도 기본값 생성이 가능한 쓰기 유스케이스다. 거래처를 먼저 잠그고 설정을 다시 조회해 동시 최초 조회의 중복 생성을 막는다. 설정 변경도 같은 거래처 잠금 안에서 변경 전후 감사 값을 저장한다.
 - 수동 입금 원장 API는 거래처 ID와 application 명령을 받고 입금 이벤트 식별자만 반환한다. 원장·잔액 Entity는 Payment 안에서 관리한다. 원장 처리는 호출 트랜잭션을 필수로 요구해 대상 입금 상태·입금/연결 이벤트·잔액·감사가 함께 반영되거나 rollback되게 한다.
-- 대상 미지정 수납·오입력 취소는 Payment의 최상위 쓰기 유스케이스에서 거래처 잠금 → 원장 검증/변경 → 미배분 잔액 → 감사 순서로 수행한다. 동일 거래처 요청을 직렬화하며 기존 전표·대금 잠금 경로를 추가 호출하지 않는다. 미배분 잔액은 Payment 원장에서 정밀 집계한 뒤 bigint 저장 한도를 확인한다. 수납 키와 정정 키를 분리하고 원본의 금액·날짜·메모를 보존한다. 다중 대상 배분의 전체 잠금 순서 전환은 별도 기능 단위다.
+- 대상 미지정 수납·오입력 취소는 Payment의 최상위 쓰기 유스케이스에서 거래처 잠금 → 원장 검증/변경 → 미배분 잔액 → 감사 순서로 수행한다. 동일 거래처 요청을 직렬화하며 기존 전표·대금 잠금 경로를 추가 호출하지 않는다. 미배분 잔액은 Payment 원장에서 정밀 집계한 뒤 bigint 저장 한도를 확인한다. 수납 키와 정정 키를 분리하고 원본의 금액·날짜·메모를 보존한다. 미배분 잔액은 대상이 없는 수납뿐 아니라 배분 정정으로 복구된 기존 수납의 남은 금액도 포함한다.
+- 다중 배분·정정은 Payment의 최상위 유스케이스가 조율한다. Payment 소유 대상 port를 Direct·Auction adapter가 구현하고 Document는 자신의 application 값 계약만 공개한다. 거래처 → 모든 전표 ID 순 → Direct 금액 ID 순 → 경매 대금 ID 순 → 수납 원본 ID 순으로 잠그며, 기존 판매 수정·상태 변경·단건 입금도 거래처를 먼저 잠근다. 거래처 변경은 이전·신규 거래처 합집합을 선잠금하고 전표 잠금 뒤 소유자가 변경되었으면 재요청 오류를 반환한다.
+- 배분 취소·연결 해제 증거·새 배분·수납 사용액·대상 projection·거래처 잔액·감사·완료 접수는 같은 트랜잭션에 참여한다. 수납·배분의 유효성 SQL은 Payment Repository 내부에서 공유하며 대상 소유권은 소유 모듈의 일괄 scalar application 계약으로 확인한다. 완료 접수의 결과 ID replay는 현재 대상을 다시 변경하지 않는다. UI는 현재 상태를 재조회한다.
 - 일반 판매의 입금 대상 조건은 전표 도메인이 소유하며 실제 입금과 `CONFIRM_PAYMENT` 판단이 이를 공유한다. application은 대상 검증 후 기존 입금 키를 확인하고 새 입금에만 잔액 검사를 적용해 완납 후 재요청도 재처리 없이 응답한다.
 - 대금 모델은 제공 금액과 원본 결과 연결을 보존한다. 원본 결과의 표시를 위해 결과 application 값을 조회하되 제공 지급 금액을 결과 합계로 덮어쓰지 않는다. 일반 판매 예상일 계산은 거래처 설정 정책을 사용한다.
 
@@ -584,6 +586,7 @@ cd backend
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
 - `FarmQueryPostgresE2ETest`는 다이 1·10·50개와 다이별 복수 구역에서 전체 구조·맵 SQL 3회, 다이·구역 목록 SQL 2회와 맵의 난 묶음·품종 Entity 로딩 0건을 검증한다. Work 정형 상세는 보정 0·1·10·50건에서 SQL 4회로 고정한다.
 - 거래처 검색 경계를 거치는 판매 검색은 1·10·50행에서 SQL 4회, 품종과 경매장 이름에 걸친 경매 문구 검색은 6회 이내다. 기존 3회·5회에 scalar 검색이 추가되며 경매의 다중 검색은 일괄 처리해 행별 반복 조회를 피한다. 검색 없는 경매 페이지의 기존 5회 상한은 유지한다.
+- 판매 쓰기는 거래처 선조회·선잠금을 추가하며 이전 전표 잠금 뒤의 중복 거래처 잠금은 제거한다. 품목 1·8개에서 조회 수가 동일한 회귀를 유지한다. 수정·취소·입금에는 기존보다 고정 조회 1회, 상태 변경과 변경 없는 요청에는 2회가 추가된다. 조회 상한의 변경은 이 잠금 순서 전환을 반영하며 품목별 조회 증가는 허용하지 않는다.
 - `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 8회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
 - 사용자 그룹 목록은 1·10·50개에서 SQL 3회, 난 묶음별 소속 그룹 조회는 5회 이내인지 검증한다. 보관·탈퇴 제외와 소속 순서도 함께 확인한다.
 - CI의 기본 job은 `check`와 `bootJar`, `backend-postgres` job은 Docker 확인 후 `workE2eTest`와 `workBenchmark -PworkBenchmarkEnforce=true`를 각각 실행한다. Docker가 없으면 PostgreSQL 검사는 실패하며 조용히 건너뛰지 않는다. 검사별 결과는 Actions Summary에 기록하고 테스트·벤치마크 보고서는 14일간 artifact로 보관한다. 기본 architecture 검사도 테스트 비활성화와 모듈 내부·직접 시간 조회 예외의 재도입을 막는다.

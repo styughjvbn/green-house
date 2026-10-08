@@ -4,6 +4,8 @@ import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.sales.application.payment.ManualPaymentCommand;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
+import com.greenhouse.backend.sales.application.payment.PaymentAllocationService;
+import com.greenhouse.backend.sales.application.payment.PaymentReceiptReader;
 import com.greenhouse.backend.sales.application.payment.PaymentService;
 import com.greenhouse.backend.sales.application.payment.UnassignedReceiptService;
 import com.greenhouse.backend.sales.domain.payment.PaymentEventType;
@@ -11,6 +13,13 @@ import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.dto.payment.CancelUnassignedReceiptRequest;
 import com.greenhouse.backend.sales.dto.payment.PartnerBalanceSummaryResponse;
 import com.greenhouse.backend.sales.dto.payment.PartnerPaymentEventResponse;
+import com.greenhouse.backend.sales.dto.payment.PaymentAllocationChangeResponse;
+import com.greenhouse.backend.sales.dto.payment.PaymentAllocationCorrectionRequest;
+import com.greenhouse.backend.sales.dto.payment.PaymentAllocationMetadata;
+import com.greenhouse.backend.sales.dto.payment.PaymentAllocationRequest;
+import com.greenhouse.backend.sales.dto.payment.PaymentAllocationResponse;
+import com.greenhouse.backend.sales.dto.payment.PaymentAllocationTargetOption;
+import com.greenhouse.backend.sales.dto.payment.PaymentReceiptResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -27,6 +36,61 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class PaymentController {
+
+  private final PaymentAllocationService allocations;
+  private final PaymentReceiptReader receipts;
+
+  @GetMapping("/payment-allocation-metadata")
+  @Operation(operationId = "getPaymentAllocationMetadata")
+  public ApiResponse<PaymentAllocationMetadata> allocationMetadata() {
+    return ApiResponse.ok(receipts.metadata());
+  }
+
+  @PostMapping("/business-partners/{partnerId}/payment-allocations")
+  public ApiResponse<PaymentAllocationChangeResponse> allocate(
+      @PathVariable Long partnerId, @Valid @RequestBody PaymentAllocationRequest request) {
+    return ApiResponse.ok(allocations.allocate(partnerId, request));
+  }
+
+  @PostMapping("/business-partners/{partnerId}/payment-allocation-corrections")
+  public ApiResponse<PaymentAllocationChangeResponse> correctAllocations(
+      @PathVariable Long partnerId,
+      @Valid @RequestBody PaymentAllocationCorrectionRequest request) {
+    return ApiResponse.ok(allocations.correct(partnerId, request));
+  }
+
+  @GetMapping("/business-partners/{partnerId}/payment-receipts")
+  public ApiResponse<PageResponse<PaymentReceiptResponse>> receiptPage(
+      @PathVariable Long partnerId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+    return ApiResponse.ok(receipts.page(partnerId, page, size));
+  }
+
+  @GetMapping("/business-partners/{partnerId}/payment-receipts/{receiptId}")
+  public ApiResponse<PaymentReceiptResponse> receipt(
+      @PathVariable Long partnerId, @PathVariable Long receiptId) {
+    return ApiResponse.ok(receipts.get(partnerId, receiptId));
+  }
+
+  @GetMapping("/business-partners/{partnerId}/payment-receipts/{receiptId}/allocations")
+  public ApiResponse<PageResponse<PaymentAllocationResponse>> receiptAllocations(
+      @PathVariable Long partnerId,
+      @PathVariable Long receiptId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+    return ApiResponse.ok(receipts.allocations(partnerId, receiptId, page, size));
+  }
+
+  @GetMapping("/business-partners/{partnerId}/payment-allocation-targets")
+  public ApiResponse<PageResponse<PaymentAllocationTargetOption>> allocationTargets(
+      @PathVariable Long partnerId,
+      @RequestParam PaymentTargetType targetType,
+      @RequestParam(defaultValue = "") String keyword,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+    return ApiResponse.ok(receipts.options(partnerId, targetType, keyword, page, size));
+  }
 
   private final PaymentService paymentService;
   private final UnassignedReceiptService unassignedReceiptService;

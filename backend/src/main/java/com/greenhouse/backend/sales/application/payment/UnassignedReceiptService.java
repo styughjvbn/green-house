@@ -5,7 +5,6 @@ import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.application.partner.BusinessPartnerLock;
 import com.greenhouse.backend.sales.domain.payment.PartnerPaymentEvent;
-import com.greenhouse.backend.sales.domain.payment.PaymentEventStatus;
 import com.greenhouse.backend.sales.dto.payment.CancelUnassignedReceiptRequest;
 import com.greenhouse.backend.sales.dto.payment.PartnerPaymentEventResponse;
 import com.greenhouse.backend.sales.repository.payment.PartnerPaymentEventRepository;
@@ -24,6 +23,7 @@ public class UnassignedReceiptService {
   private final PartnerBalanceService balances;
   private final RequestActorProvider actors;
   private final PaymentAuditSupport audit;
+  private final PaymentReceiptIntegrity cash;
 
   public PartnerPaymentEventResponse receive(Long partnerId, ManualPaymentCommand command) {
     var partner = partners.lockAll(List.of(partnerId)).getFirst();
@@ -71,7 +71,12 @@ public class UnassignedReceiptService {
             .findById(receiptId)
             .filter(event -> partnerId.equals(event.getPartnerId()))
             .orElseThrow(() -> new NotFoundException("거래처의 수납을 찾을 수 없습니다."));
-    if (events.existsByParentEventIdAndStatusNot(receiptId, PaymentEventStatus.CANCELLED)) {
+    var state = cash.findAll(List.of(receiptId)).get(receiptId);
+    if (state == null || state.reviewRequired()) {
+      throw new ConflictException(
+          "PAYMENT_RECEIPT_CANCELLATION_BLOCKED", "수납과 배분 이력을 먼저 확인하거나 정정해야 합니다.");
+    }
+    if (events.hasActiveAllocations(receiptId)) {
       throw new ConflictException(
           "PAYMENT_RECEIPT_CANCELLATION_BLOCKED", "후속 기록이 있는 수납은 먼저 배분을 정정해야 합니다.");
     }

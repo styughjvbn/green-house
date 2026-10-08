@@ -12,8 +12,22 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 public interface AuctionProceedsRepository extends JpaRepository<AuctionProceeds, Long> {
+  @Query(
+      "select p.id as id, p.auctionHouseId as partnerId from AuctionProceeds p where p.id in :ids")
+  List<PaymentOwner> findPaymentOwners(Collection<Long> ids);
+
+  interface PaymentOwner {
+    Long getId();
+
+    Long getPartnerId();
+  }
+
   @Query("select p.auctionHouseId from AuctionProceeds p where p.id = :id")
   Optional<Long> findAuctionHouseId(Long id);
+
+  @Query(
+      "select p from AuctionProceeds p where p.auctionHouseId = :partnerId and (:keyword = '' or lower(coalesce(p.sourceReference, '')) like lower(concat('%', :keyword, '%')))")
+  Page<AuctionProceeds> findPaymentTargets(Long partnerId, String keyword, Pageable pageable);
 
   @Query("select p from AuctionProceeds p where (:houseId is null or p.auctionHouseId = :houseId)")
   Page<AuctionProceeds> findByAuctionHouseIdFilter(Long houseId, Pageable pageable);

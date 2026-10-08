@@ -3,6 +3,7 @@ package com.greenhouse.backend.sales.application.auction;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.sales.application.partner.BusinessPartnerLock;
 import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.domain.auction.AuctionInspectionStatus;
 import com.greenhouse.backend.sales.domain.auction.AuctionProceeds;
@@ -25,6 +26,7 @@ public class AuctionProceedsService {
   private final AuctionResultLineRepository resultRepository;
   private final BusinessPartnerReader partners;
   private final Clock clock;
+  private final BusinessPartnerLock partnerLock;
 
   @Transactional
   public Long record(
@@ -37,6 +39,7 @@ public class AuctionProceedsService {
       throw new IllegalArgumentException("경매 대금 자료에는 경매장 유형 거래처가 필요합니다.");
     if (resultIds == null || resultIds.isEmpty() || resultIds.size() > 500)
       throw new IllegalArgumentException("대금 자료에는 1개 이상 500개 이하의 결과 참조가 필요합니다.");
+    partnerLock.lockAll(List.of(auctionHouseId));
     var proceeds =
         new AuctionProceeds(
             auctionHouseId, sourceReference, reportedGrossAmount, receivableAmount, resultIds);
@@ -46,6 +49,11 @@ public class AuctionProceedsService {
 
   @Transactional
   public void confirm(Long id, String worker) {
+    Long partnerId =
+        proceedsRepository
+            .findAuctionHouseId(id)
+            .orElseThrow(() -> new NotFoundException("경매 대금 자료를 찾을 수 없습니다."));
+    partnerLock.lockAll(List.of(partnerId));
     var proceeds =
         proceedsRepository
             .findForUpdate(id)

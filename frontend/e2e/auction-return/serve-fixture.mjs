@@ -76,7 +76,14 @@ const bed = {
   memo: null,
   bedZones: [zone],
 };
-let summary, arrivals, calls, receipts, fail, rejectCancel, cashEvents;
+let summary,
+  arrivals,
+  calls,
+  receipts,
+  fail,
+  rejectCancel,
+  cashEvents,
+  allocationEvents;
 function reset() {
   summary = {
     lotId: 42,
@@ -93,6 +100,7 @@ function reset() {
   arrivals = [];
   calls = [];
   cashEvents = [];
+  allocationEvents = [];
   receipts = new Map();
   fail = false;
   rejectCancel = false;
@@ -118,6 +126,31 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === "/__control") {
     if (body.reset) reset();
+    if (body.allocationSeed)
+      cashEvents = [
+        {
+          id: 101,
+          partnerId: 7,
+          eventType: "PAYMENT_RECEIVED",
+          eventDate: "2026-10-08",
+          amount: 1500,
+          unappliedAmount: 1500,
+          status: "UNAPPLIED",
+          targetType: "NONE",
+          targetId: null,
+        },
+        {
+          id: 102,
+          partnerId: 7,
+          eventType: "PAYMENT_RECEIVED",
+          eventDate: "2026-10-08",
+          amount: 500,
+          unappliedAmount: 500,
+          status: "UNAPPLIED",
+          targetType: "NONE",
+          targetId: null,
+        },
+      ];
     if (body.loseNextResponse) fail = true;
     if (body.rejectCancel != null) rejectCancel = body.rejectCancel;
     return send({ calls });
@@ -145,8 +178,145 @@ const server = http.createServer(async (req, res) => {
         .filter(
           (e) => e.eventType === "PAYMENT_RECEIVED" && e.status !== "CANCELLED",
         )
-        .reduce((sum, e) => sum + e.amount, 0),
+        .reduce((sum, e) => sum + e.unappliedAmount, 0),
     });
+
+  function receiptResponse(event) {
+    return {
+      id: event.id,
+      partnerId: 7,
+      paymentDate: event.eventDate,
+      amount: event.amount,
+      availableAmount: event.unappliedAmount,
+      status: event.status,
+      originalTargetType: event.targetType,
+      originalTargetId: event.targetId,
+      allocationAllowed:
+        event.status !== "CANCELLED" && event.unappliedAmount > 0,
+      correctionAllowed:
+        event.status !== "CANCELLED" && event.unappliedAmount < event.amount,
+      reviewRequired: false,
+      depositorName: null,
+      memo: null,
+    };
+  }
+  if (url.pathname === "/api/payment-allocation-metadata")
+    return send({ targetTypes: ["SALES_SLIP", "AUCTION_PROCEEDS"] });
+  if (
+    req.method === "GET" &&
+    url.pathname === "/api/business-partners/7/payment-receipts"
+  )
+    return send(
+      pageOf(
+        cashEvents
+          .filter((e) => e.eventType === "PAYMENT_RECEIVED")
+          .map(receiptResponse),
+        Number(url.searchParams.get("page") ?? 0),
+      ),
+    );
+  if (
+    req.method === "GET" &&
+    /^\/api\/business-partners\/7\/payment-receipts\/\d+$/.test(url.pathname)
+  )
+    return send(
+      receiptResponse(
+        cashEvents.find((e) => e.id === Number(url.pathname.split("/").at(-1))),
+      ),
+    );
+  if (req.method === "GET" && url.pathname.endsWith("/allocations")) {
+    const id = Number(url.pathname.split("/").at(-2));
+    return send(
+      pageOf(
+        allocationEvents.filter((e) => e.receiptId === id),
+        Number(url.searchParams.get("page") ?? 0),
+      ),
+    );
+  }
+  if (
+    req.method === "GET" &&
+    url.pathname === "/api/business-partners/7/payment-allocation-targets"
+  ) {
+    const type = url.searchParams.get("targetType");
+    return send(
+      pageOf(
+        [11, 12]
+          .map((id) => {
+            const paid = allocationEvents
+              .filter(
+                (e) =>
+                  e.targetId === id &&
+                  e.targetType === type &&
+                  e.status === "CONFIRMED",
+              )
+              .reduce((total, e) => total + e.amount, 0);
+            return {
+              id,
+              targetType: type,
+              sourceReference: `전표-${id}`,
+              receivableAmount: 1000,
+              paidAmount: paid,
+              availableAmount: 1000 - paid,
+              allocationAllowed: paid < 1000,
+              correctionAllowed: true,
+              reviewRequired: false,
+            };
+          })
+          .filter((e) =>
+            e.sourceReference.includes(url.searchParams.get("keyword") ?? ""),
+          ),
+        Number(url.searchParams.get("page") ?? 0),
+      ),
+    );
+  }
+  if (
+    req.method === "POST" &&
+    [
+      "/api/business-partners/7/payment-allocations",
+      "/api/business-partners/7/payment-allocation-corrections",
+    ].includes(url.pathname)
+  ) {
+    calls.push({ path: url.pathname, body });
+    if (receipts.has(body.idempotencyKey))
+      return send(receipts.get(body.idempotencyKey));
+    const canceled = [];
+    for (const id of body.cancellationIds ?? []) {
+      const event = allocationEvents.find((e) => e.id === id);
+      event.status = "CANCELLED";
+      event.cancellationAllowed = false;
+      cashEvents.find((e) => e.id === event.receiptId).unappliedAmount +=
+        event.amount;
+      canceled.push(1000 + id);
+    }
+    const added = body.allocations.map((line) => {
+      const event = {
+        ...line,
+        id: allocationEvents.length + 1,
+        allocationDate: body.allocationDate ?? body.correctionDate,
+        status: "CONFIRMED",
+        cancellationAllowed: true,
+      };
+      allocationEvents.push(event);
+      cashEvents.find((e) => e.id === line.receiptId).unappliedAmount -=
+        line.amount;
+      return event.id;
+    });
+    for (const event of cashEvents)
+      if (event.eventType === "PAYMENT_RECEIVED")
+        event.status =
+          event.unappliedAmount === 0
+            ? "FULLY_APPLIED"
+            : event.unappliedAmount === event.amount
+              ? "UNAPPLIED"
+              : "PARTIALLY_APPLIED";
+    const result = { allocationIds: added, cancellationIds: canceled };
+    receipts.set(body.idempotencyKey, structuredClone(result));
+    if (fail) {
+      fail = false;
+      req.socket.destroy();
+      return;
+    }
+    return send(result);
+  }
   if (url.pathname === "/api/partner-payment-events/page")
     return send(
       pageOf(

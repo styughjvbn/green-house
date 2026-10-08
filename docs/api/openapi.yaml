@@ -1566,6 +1566,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseBusinessPartnerResponse'
   /api/business-partners/{partnerId}/payment-receipts:
+    get:
+      tags:
+      - payment-controller
+      operationId: receiptPage
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponsePaymentReceiptResponse'
     post:
       tags:
       - payment-controller
@@ -1623,6 +1655,56 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePartnerPaymentEventResponse'
+  /api/business-partners/{partnerId}/payment-allocations:
+    post:
+      tags:
+      - payment-controller
+      operationId: allocate
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentAllocationRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentAllocationChangeResponse'
+  /api/business-partners/{partnerId}/payment-allocation-corrections:
+    post:
+      tags:
+      - payment-controller
+      operationId: correctAllocations
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentAllocationCorrectionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentAllocationChangeResponse'
   /api/auth/logout:
     post:
       tags:
@@ -2851,6 +2933,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePhysicalBedResponse'
+  /api/payment-allocation-metadata:
+    get:
+      tags:
+      - payment-controller
+      operationId: getPaymentAllocationMetadata
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentAllocationMetadata'
   /api/partner-payment-events:
     get:
       tags:
@@ -3381,6 +3475,119 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseDashboardSummaryResponse'
+  /api/business-partners/{partnerId}/payment-receipts/{receiptId}:
+    get:
+      tags:
+      - payment-controller
+      operationId: receipt
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentReceiptResponse'
+  /api/business-partners/{partnerId}/payment-receipts/{receiptId}/allocations:
+    get:
+      tags:
+      - payment-controller
+      operationId: receiptAllocations
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponsePaymentAllocationResponse'
+  /api/business-partners/{partnerId}/payment-allocation-targets:
+    get:
+      tags:
+      - payment-controller
+      operationId: allocationTargets
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: targetType
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponsePaymentAllocationTargetOption'
   /api/business-partners/{partnerId}/option:
     get:
       tags:
@@ -6537,6 +6744,111 @@ components:
       - correctionDate
       - idempotencyKey
       - reason
+    PaymentAllocationLine:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        receiptId:
+          type: integer
+          format: int64
+        targetId:
+          type: integer
+          format: int64
+        targetType:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+      required:
+      - amount
+      - receiptId
+      - targetId
+      - targetType
+    PaymentAllocationRequest:
+      type: object
+      properties:
+        allocationDate:
+          type: string
+          format: date
+        allocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentAllocationLine'
+          maxItems: 100
+          minItems: 0
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - allocationDate
+      - allocations
+      - idempotencyKey
+    ApiResponsePaymentAllocationChangeResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PaymentAllocationChangeResponse'
+        message:
+          type: string
+    PaymentAllocationChangeResponse:
+      type: object
+      properties:
+        allocationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        cancellationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+    PaymentAllocationCorrectionRequest:
+      type: object
+      properties:
+        allocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentAllocationLine'
+          maxItems: 100
+          minItems: 0
+        cancellationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          maxItems: 100
+          minItems: 0
+        correctionDate:
+          type: string
+          format: date
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - allocations
+      - cancellationIds
+      - correctionDate
+      - idempotencyKey
+      - reason
     ApiResponseVoid:
       type: object
       properties:
@@ -8603,6 +8915,25 @@ components:
           $ref: '#/components/schemas/PhysicalBedResponse'
         message:
           type: string
+    ApiResponsePaymentAllocationMetadata:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PaymentAllocationMetadata'
+        message:
+          type: string
+    PaymentAllocationMetadata:
+      type: object
+      properties:
+        targetTypes:
+          type: array
+          items:
+            type: string
+            enum:
+            - SALES_SLIP
+            - AUCTION_SETTLEMENT
+            - AUCTION_PROCEEDS
+            - NONE
     ApiResponseListPartnerPaymentEventResponse:
       type: object
       properties:
@@ -9708,6 +10039,220 @@ components:
             $ref: '#/components/schemas/BusinessPartnerResponse'
         message:
           type: string
+    ApiResponsePageResponsePaymentReceiptResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponsePaymentReceiptResponse'
+        message:
+          type: string
+    PageResponsePaymentReceiptResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentReceiptResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PaymentReceiptResponse:
+      type: object
+      properties:
+        allocationAllowed:
+          type: boolean
+        amount:
+          type: integer
+          format: int64
+        availableAmount:
+          type: integer
+          format: int64
+        correctionAllowed:
+          type: boolean
+        depositorName:
+          type:
+          - string
+          - 'null'
+        id:
+          type: integer
+          format: int64
+        memo:
+          type:
+          - string
+          - 'null'
+        originalTargetId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        originalTargetType:
+          type:
+          - string
+          - 'null'
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+        partnerId:
+          type: integer
+          format: int64
+        paymentDate:
+          type: string
+          format: date
+        reviewRequired:
+          type: boolean
+        status:
+          type: string
+          enum:
+          - UNAPPLIED
+          - PARTIALLY_APPLIED
+          - FULLY_APPLIED
+          - CANDIDATE
+          - CONFIRMED
+          - REJECTED
+          - CANCELLED
+    ApiResponsePaymentReceiptResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PaymentReceiptResponse'
+        message:
+          type: string
+    ApiResponsePageResponsePaymentAllocationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponsePaymentAllocationResponse'
+        message:
+          type: string
+    PageResponsePaymentAllocationResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentAllocationResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PaymentAllocationResponse:
+      type: object
+      properties:
+        allocationDate:
+          type: string
+          format: date
+        amount:
+          type: integer
+          format: int64
+        cancellationAllowed:
+          type: boolean
+        id:
+          type: integer
+          format: int64
+        receiptId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - UNAPPLIED
+          - PARTIALLY_APPLIED
+          - FULLY_APPLIED
+          - CANDIDATE
+          - CONFIRMED
+          - REJECTED
+          - CANCELLED
+        targetId:
+          type: integer
+          format: int64
+        targetType:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+    ApiResponsePageResponsePaymentAllocationTargetOption:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponsePaymentAllocationTargetOption'
+        message:
+          type: string
+    PageResponsePaymentAllocationTargetOption:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentAllocationTargetOption'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PaymentAllocationTargetOption:
+      type: object
+      properties:
+        allocationAllowed:
+          type: boolean
+        availableAmount:
+          type:
+          - number
+          - 'null'
+        correctionAllowed:
+          type: boolean
+        id:
+          type: integer
+          format: int64
+        paidAmount:
+          type:
+          - number
+          - 'null'
+        receivableAmount:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        reviewRequired:
+          type: boolean
+        sourceReference:
+          type:
+          - string
+          - 'null'
+        targetType:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
     ApiResponseBusinessPartnerOptionResponse:
       type: object
       properties:

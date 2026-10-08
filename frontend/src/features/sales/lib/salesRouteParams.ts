@@ -202,3 +202,22 @@ function readOptionalPositiveInteger(value: string | null) {
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
+
+export function readAllocationRouteState(params: SearchParamReader) {
+  return {
+    partnerId: readOptionalPositiveInteger(params.get("receiptPartnerId")),
+    receiptId: readOptionalPositiveInteger(params.get("receiptId")),
+    page: readBoundedIntegerValue(
+      params.get("sourcePage"),
+      0,
+      0,
+      2_147_483_647,
+    ),
+    allocationPage: readBoundedIntegerValue(
+      params.get("allocationPage"),
+      0,
+      0,
+      2_147_483_647,
+    ),
+  };
+}

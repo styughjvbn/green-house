@@ -84,6 +84,7 @@ public class DirectSaleFinancialReader {
                     sale.getTotalAmount(), allocation.amount(), sale.getUnpaidPaymentLabel()),
                 DirectSaleAmounts.isPaymentAllowed(
                     sale.getTotalAmount(), allocation.amount(), review),
+                DirectSaleAmounts.isPaymentAllowed(sale.getTotalAmount(), BigDecimal.ZERO, review),
                 Map.copyOf(prices)));
       }
     }

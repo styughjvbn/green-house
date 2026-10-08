@@ -3,16 +3,22 @@ package com.greenhouse.backend.sales.application.auction;
 import com.greenhouse.backend.audit.application.AuditEventWriter;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
+import com.greenhouse.backend.common.api.PageResponse;
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.application.partner.BusinessPartnerLock;
 import com.greenhouse.backend.sales.application.payment.PartnerBalanceService;
-import com.greenhouse.backend.sales.application.payment.PaymentTargetPort;
+import com.greenhouse.backend.sales.application.payment.PaymentAllocationTargetPort;
+import com.greenhouse.backend.sales.domain.payment.PaymentTargetType;
 import com.greenhouse.backend.sales.dto.auction.AuctionProceedsResponse;
+import com.greenhouse.backend.sales.dto.payment.PaymentAllocationTargetOption;
 import com.greenhouse.backend.sales.repository.auction.AuctionProceedsRepository;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -21,12 +27,39 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @RequiredArgsConstructor
 @Transactional(propagation = Propagation.MANDATORY)
-public class AuctionProceedsPaymentTarget implements PaymentTargetPort<AuctionProceedsResponse> {
+public class AuctionProceedsPaymentTarget
+    implements PaymentAllocationTargetPort<AuctionProceedsResponse> {
   private final AuctionProceedsRepository repository;
   private final BusinessPartnerLock partners;
   private final PartnerBalanceService balances;
   private final AuctionProceedsReader reader;
   private final AuditEventWriter audit;
+
+  public PaymentTargetType targetType() {
+    return PaymentTargetType.AUCTION_PROCEEDS;
+  }
+
+  public Map<Long, Long> findTargetOwners(Collection<Long> ids) {
+    if (ids.isEmpty()) return Map.of();
+    return repository.findPaymentOwners(ids).stream()
+        .collect(Collectors.toMap(row -> row.getId(), row -> row.getPartnerId()));
+  }
+
+  public void lockAllocationTarget(Long id, Long partnerId) {
+    var target =
+        repository
+            .findForUpdate(id)
+            .orElseThrow(() -> new NotFoundException("경매 대금 자료를 찾을 수 없습니다."));
+    if (!partnerId.equals(target.getAuctionHouseId()))
+      throw new ConflictException("PAYMENT_TARGET_PARTNER_MISMATCH", "같은 거래처의 경매 대금에만 배분할 수 있습니다.");
+  }
+
+  public void lockAllocationAmounts(Collection<Long> ids) {}
+
+  public PageResponse<PaymentAllocationTargetOption> allocationOptions(
+      Long partnerId, String keyword, int page, int size) {
+    return reader.allocationOptions(partnerId, keyword, page, size);
+  }
 
   public Long lockAndValidate(Long id) {
     var partnerId =

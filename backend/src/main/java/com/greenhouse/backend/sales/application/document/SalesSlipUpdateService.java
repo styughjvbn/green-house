@@ -39,7 +39,9 @@ public class SalesSlipUpdateService {
   private final SalesSlipDocumentAssembler responseAssembler;
 
   public SalesSlipDocument update(Long salesSlipId, SalesSlipCommand request) {
-    SalesSlip salesSlip = aggregateLoader.getForUpdate(salesSlipId);
+    SalesSlip salesSlip =
+        aggregateLoader.getForUpdate(
+            salesSlipId, request.partnerId() == null ? List.of() : List.of(request.partnerId()));
     Long previousPartnerId = salesSlip.getPartnerId();
     Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
@@ -51,7 +53,6 @@ public class SalesSlipUpdateService {
     var partner = businessPartnerReader.getActiveInfo(request.partnerId());
     SalesSlipInputPolicy.requirePartnerType(
         SalesType.DIRECT, partner.partnerType() == PartnerType.AUCTION_HOUSE);
-    accounting.lockPartners(List.of(previousPartnerId, partner.id()));
     var expectedPaymentDate = accounting.calculate(partner.id(), request.saleDate());
 
     // Lock old/new allocations together before releasing stock. Per-mutation sorting is too late.

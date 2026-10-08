@@ -44,6 +44,10 @@ public class DirectDocumentAccountingAdapter implements DirectDocumentAccounting
     termsWriter.store(terms);
   }
 
+  public void lockPaymentTargets(Collection<Long> ids) {
+    payments.lockTargets(ids);
+  }
+
   public void lockPartners(Collection<Long> ids) {
     balances.lockPartners(ids);
   }

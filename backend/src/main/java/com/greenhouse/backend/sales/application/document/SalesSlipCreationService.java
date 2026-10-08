@@ -106,9 +106,7 @@ public class SalesSlipCreationService {
     var partner = partnerReader.getActiveInfo(request.partnerId());
     SalesSlipInputPolicy.requirePartnerType(
         type, partner.partnerType() == PartnerType.AUCTION_HOUSE);
-    if (type == SalesType.DIRECT) {
-      accounting.lockPartners(List.of(partner.id()));
-    }
+    accounting.lockPartners(List.of(partner.id()));
 
     var salesSlip =
         new SalesSlip(

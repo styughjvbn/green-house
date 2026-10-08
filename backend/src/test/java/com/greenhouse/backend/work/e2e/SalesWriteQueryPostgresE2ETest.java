@@ -122,19 +122,20 @@ class SalesWriteQueryPostgresE2ETest extends WorkE2ETestBase {
     assertThat(stats.getCollectionFetchCount()).isEqualTo(1);
     long queryLimit =
         switch (action) {
-          // Direct root/price writes and review checks stay constant for 1 and 8 items.
-          case "EDIT" -> 32;
-          case "OUTBOUND" -> 14;
-          case "PAYMENT" -> 24;
-          case "DRAFT_CANCEL" -> 17;
-          case "OUTBOUND_CANCEL" -> 22;
-          case "PAYMENT_REPLAY" -> 11;
-          case "UNCHANGED" -> 9;
+          // Partner discovery and the mandatory partner-before-document lock stay constant
+          // for 1 and 8 items. Existing explicit duplicate partner locks were removed.
+          case "EDIT" -> 33;
+          case "OUTBOUND" -> 16;
+          case "PAYMENT" -> 25;
+          case "DRAFT_CANCEL" -> 18;
+          case "OUTBOUND_CANCEL" -> 23;
+          case "PAYMENT_REPLAY" -> 12;
+          case "UNCHANGED" -> 11;
           default -> throw new IllegalArgumentException(action);
         };
     assertThat(stats.getQueryExecutionCount()).isLessThanOrEqualTo(queryLimit);
-    if (action.equals("UNCHANGED")) assertThat(stats.getPrepareStatementCount()).isEqualTo(10);
-    if (action.equals("PAYMENT_REPLAY")) assertThat(stats.getPrepareStatementCount()).isEqualTo(12);
+    if (action.equals("UNCHANGED")) assertThat(stats.getPrepareStatementCount()).isEqualTo(12);
+    if (action.equals("PAYMENT_REPLAY")) assertThat(stats.getPrepareStatementCount()).isEqualTo(13);
     assertThat(response).isEqualTo(queries.getSalesSlip(first.id()));
     assertThat(response.items()).hasSize(size);
     assertThat(response.items())

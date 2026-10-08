@@ -1,9 +1,19 @@
 import type {
+  AllocationPayload,
+  AllocationCorrectionPayload,
   ManualPaymentPayload,
   CancelUnassignedReceiptPayload,
 } from "../api/types";
 
-type Input =
+export type ReceiptInput =
+  | {
+      operation: "ALLOCATE";
+      payload: Omit<AllocationPayload, "idempotencyKey">;
+    }
+  | {
+      operation: "CORRECT";
+      payload: Omit<AllocationCorrectionPayload, "idempotencyKey">;
+    }
   | {
       operation: "RECEIVE";
       payload: Omit<ManualPaymentPayload, "idempotencyKey">;
@@ -14,6 +24,8 @@ type Input =
       payload: Omit<CancelUnassignedReceiptPayload, "idempotencyKey">;
     };
 export type ReceiptRequest =
+  | { operation: "ALLOCATE"; payload: AllocationPayload }
+  | { operation: "CORRECT"; payload: AllocationCorrectionPayload }
   | { operation: "RECEIVE"; payload: ManualPaymentPayload }
   | {
       operation: "CANCEL";
@@ -38,7 +50,9 @@ export function createReceiptRequests(
       const value = JSON.parse(raw) as ReceiptRequest;
       if (
         !value.payload?.idempotencyKey ||
-        !["RECEIVE", "CANCEL"].includes(value.operation) ||
+        !["RECEIVE", "CANCEL", "ALLOCATE", "CORRECT"].includes(
+          value.operation,
+        ) ||
         (value.operation === "CANCEL" && !Number.isSafeInteger(value.receiptId))
       )
         return null;
@@ -56,7 +70,7 @@ export function createReceiptRequests(
         listeners.delete(listener);
       };
     },
-    prepare(partnerId: number, input: Input): ReceiptRequest {
+    prepare(partnerId: number, input: ReceiptInput): ReceiptRequest {
       const existing = read(partnerId);
       if (existing) return existing;
       const request = structuredClone({
