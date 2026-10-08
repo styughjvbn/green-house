@@ -9,13 +9,12 @@ import {
   readBusinessPartnerRouteState,
   readCreateSlip,
   readSalesRouteState,
-  readSettlementRouteState,
+  readProceedsRouteState,
 } from "./lib/salesRouteParams";
 import {
   auctionLotPageQueryOptions,
-  auctionSettlementPageQueryOptions,
-  auctionSettlementSummaryQueryOptions,
-  auctionSettlementDetailQueryOptions,
+  auctionProceedsPageQueryOptions,
+  auctionProceedsDetailQueryOptions,
   auctionSummaryQueryOptions,
   businessPartnerOptionsQueryOptions,
   businessPartnerPageQueryOptions,
@@ -72,15 +71,14 @@ export async function SalesRoutePage({
       );
     }
     case "settlement": {
-      const state = readSettlementRouteState(reader);
+      const state = readProceedsRouteState(reader);
       await Promise.all([
-        queryClient.prefetchQuery(auctionSettlementPageQueryOptions(state)),
-        queryClient.prefetchQuery(auctionSettlementSummaryQueryOptions()),
-        ...(state.selectedSettlementId == null
+        queryClient.prefetchQuery(auctionProceedsPageQueryOptions(state)),
+        ...(state.selectedProceedsId == null
           ? []
           : [
               queryClient.prefetchQuery(
-                auctionSettlementDetailQueryOptions(state.selectedSettlementId),
+                auctionProceedsDetailQueryOptions(state.selectedProceedsId),
               ),
             ]),
       ]);

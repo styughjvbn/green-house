@@ -6,7 +6,7 @@ import {
   readBusinessPartnerRouteState,
   readCreateSlip,
   readSalesRouteState,
-  readSettlementRouteState,
+  readProceedsRouteState,
   readPaymentHistoryPage,
 } from "../src/features/sales/lib/salesRouteParams.ts";
 
@@ -38,15 +38,15 @@ test("sales route state reads filters, paging, and create request", () => {
   assert.equal(readCreateSlip(params), true);
 });
 
-test("settlement pages and detail selection have the same server and browser URL state", () => {
-  const values = { page: "2", size: "20", settlementId: "42" };
-  const expected = { page: 2, size: 20, selectedSettlementId: 42 };
+test("proceeds pages and detail selection have the same server and browser URL state", () => {
+  const values = { page: "2", size: "20", proceedsId: "42" };
+  const expected = { page: 2, size: 20, selectedProceedsId: 42 };
   assert.deepEqual(
-    readSettlementRouteState(createServerSearchParamReader(values)),
+    readProceedsRouteState(createServerSearchParamReader(values)),
     expected,
   );
   assert.deepEqual(
-    readSettlementRouteState(new URLSearchParams(values)),
+    readProceedsRouteState(new URLSearchParams(values)),
     expected,
   );
 });
@@ -68,40 +68,39 @@ test("payment history URL distinguishes closed, first, and later pages", () => {
   );
 });
 
-test("settlement URLs normalize page bounds and reject invalid detail identifiers", () => {
-  assert.deepEqual(readSettlementRouteState(new URLSearchParams()), {
+test("proceeds URLs normalize page bounds and reject invalid detail identifiers", () => {
+  assert.deepEqual(readProceedsRouteState(new URLSearchParams()), {
     page: 0,
     size: 10,
-    selectedSettlementId: null,
+    selectedProceedsId: null,
   });
   assert.deepEqual(
-    readSettlementRouteState(
-      new URLSearchParams("page=-1&size=200&settlementId=-2"),
+    readProceedsRouteState(
+      new URLSearchParams("page=-1&size=200&proceedsId=-2"),
     ),
     {
       page: 0,
       size: 100,
-      selectedSettlementId: null,
+      selectedProceedsId: null,
     },
   );
   for (const value of ["NaN", "Infinity", "1.5", "not-a-number"]) {
     assert.deepEqual(
-      readSettlementRouteState(
-        new URLSearchParams({ page: value, size: value, settlementId: value }),
+      readProceedsRouteState(
+        new URLSearchParams({ page: value, size: value, proceedsId: value }),
       ),
       {
         page: 0,
         size: 10,
-        selectedSettlementId: null,
+        selectedProceedsId: null,
       },
     );
   }
   assert.equal(
-    readSettlementRouteState(new URLSearchParams("page=9999999999&size=0"))
-      .page,
+    readProceedsRouteState(new URLSearchParams("page=9999999999&size=0")).page,
     2_147_483_647,
   );
-  assert.equal(readSettlementRouteState(new URLSearchParams("size=0")).size, 1);
+  assert.equal(readProceedsRouteState(new URLSearchParams("size=0")).size, 1);
 });
 
 test("sales route state ignores invalid selected slip identifiers", () => {
@@ -150,4 +149,12 @@ test("partner and auction route state reject unsupported enum values", () => {
     page: 0,
     size: 100,
   });
+});
+
+test("legacy settlement identifiers do not select a proceeds target", () => {
+  assert.equal(
+    readProceedsRouteState(new URLSearchParams("settlementId=123"))
+      .selectedProceedsId,
+    null,
+  );
 });

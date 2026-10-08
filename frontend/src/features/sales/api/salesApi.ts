@@ -16,9 +16,8 @@ import type {
   AuctionLotPage,
   AuctionTrackingSummary,
   AuctionShipmentOption,
-  AuctionSettlement,
-  AuctionSettlementPage,
-  AuctionSettlementSummary,
+  AuctionProceeds,
+  AuctionProceedsPage,
 } from "@/entities/farm/types";
 import type {
   AuctionFilterState,
@@ -165,7 +164,7 @@ export function getAuctionTrackingSummary() {
   return fetchApi<AuctionTrackingSummary>("/auction-tracking/summary");
 }
 
-export function getAuctionSettlementPage(
+export function getAuctionProceedsPage(
   page: number,
   size: number,
   signal?: AbortSignal,
@@ -174,45 +173,23 @@ export function getAuctionSettlementPage(
     page: String(page),
     size: String(size),
   });
-  return fetchApi<AuctionSettlementPage>(
-    `/auction-settlements/page?${params}`,
-    { signal },
-  );
-}
-
-export function getAuctionSettlementSummary(signal?: AbortSignal) {
-  return fetchApi<AuctionSettlementSummary>("/auction-settlements/summary", {
+  return fetchApi<AuctionProceedsPage>(`/auction-proceeds/page?${params}`, {
     signal,
   });
 }
 
-export function getAuctionSettlement(id: number, signal?: AbortSignal) {
-  return fetchApi<AuctionSettlement>(`/auction-settlements/${id}`, { signal });
-}
-
-export function rebuildAuctionSettlement(
-  auctionHouseId: number,
-  auctionDate: string,
-) {
-  const params = new URLSearchParams({
-    auctionHouseId: String(auctionHouseId),
-    auctionDate,
-  });
-  return requestJson<AuctionSettlement>(
-    `/auction-settlements/rebuild?${params}`,
-    { method: "POST" },
-    "경매 정산을 다시 계산하지 못했습니다.",
-  );
+export function getAuctionProceeds(id: number, signal?: AbortSignal) {
+  return fetchApi<AuctionProceeds>(`/auction-proceeds/${id}`, { signal });
 }
 
 export type { ManualPaymentPayload } from "./types";
 
-export function confirmAuctionSettlementPayment(
-  settlementId: number,
+export function confirmAuctionProceedsPayment(
+  id: number,
   payload: ManualPaymentPayload,
 ) {
-  return requestJson<AuctionSettlement>(
-    `/auction-settlements/${settlementId}/confirm-payment`,
+  return requestJson<AuctionProceeds>(
+    `/auction-proceeds/${id}/confirm-payment`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

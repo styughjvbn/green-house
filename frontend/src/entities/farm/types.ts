@@ -693,50 +693,19 @@ export type AuctionTrackingSummary = {
   totalAmount: number;
 };
 
-export type AuctionSettlementStatus = NonNullable<
-  ApiSchemas["AuctionSettlementResponse"]["status"]
->;
-
-export type AuctionSettlementListItem = Required<
-  ApiSchemas["AuctionSettlementListItemResponse"]
->;
-export type AuctionSettlementPage = Page<AuctionSettlementListItem>;
-export type AuctionSettlementSummary = Required<
-  ApiSchemas["AuctionSettlementSummaryResponse"]
->;
-
-export type AuctionSettlementLine = {
-  id: number;
-  auctionResultLineId: number;
-  auctionShipmentLotId: number;
-  shipmentDate: string;
-  varietyName: string;
-  shipmentGrade: string | null;
-  quantity: number;
-  unitPrice: number;
-  amount: number;
-  status: "UNPAID" | "PAID" | "PARTIALLY_PAID" | "EXCLUDED" | "REVIEW_REQUIRED";
+export type AuctionProceeds = Omit<
+  Required<ApiSchemas["AuctionProceedsResponse"]>,
+  | "sourceReference"
+  | "reportedGrossAmount"
+  | "receivableAmount"
+  | "remainingAmount"
+> & {
+  sourceReference: string | null;
+  reportedGrossAmount: number | null;
+  receivableAmount: number | null;
+  remainingAmount: number | null;
 };
-
-export type AuctionSettlement = {
-  id: number;
-  auctionHouseId: number;
-  auctionHouseName: string;
-  auctionDate: string;
-  resultReceivedAt: string | null;
-  expectedPaymentDate: string | null;
-  grossAmount: number;
-  feeAmount: number;
-  deductionAmount: number;
-  expectedDepositAmount: number;
-  paidAmount: number;
-  remainingAmount: number;
-  status: AuctionSettlementStatus;
-  memo: string | null;
-  confirmedAt: string | null;
-  confirmedBy: string | null;
-  lines: AuctionSettlementLine[];
-};
+export type AuctionProceedsPage = Page<AuctionProceeds>;
 
 export type PaymentTargetType = NonNullable<
   ApiSchemas["PartnerPaymentEventResponse"]["targetType"]

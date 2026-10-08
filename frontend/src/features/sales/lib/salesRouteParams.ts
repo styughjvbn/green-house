@@ -19,10 +19,10 @@ export type SalesSlipsRouteState = SalesRouteState<SalesFilterState> & {
   selectedSlipId: number | null;
 };
 
-export type SettlementRouteState = {
+export type ProceedsRouteState = {
   page: number;
   size: number;
-  selectedSettlementId: number | null;
+  selectedProceedsId: number | null;
 };
 
 export type SearchParamReader = {
@@ -132,15 +132,13 @@ export function readCreateSlip(params: SearchParamReader) {
   return params.get("createSlip") === "1";
 }
 
-export function readSettlementRouteState(
+export function readProceedsRouteState(
   params: SearchParamReader,
-): SettlementRouteState {
+): ProceedsRouteState {
   return {
     page: readBoundedIntegerValue(params.get("page"), 0, 0, 2_147_483_647),
     size: readBoundedIntegerValue(params.get("size"), 10, 1, 100),
-    selectedSettlementId: readOptionalPositiveInteger(
-      params.get("settlementId"),
-    ),
+    selectedProceedsId: readOptionalPositiveInteger(params.get("proceedsId")),
   };
 }
 

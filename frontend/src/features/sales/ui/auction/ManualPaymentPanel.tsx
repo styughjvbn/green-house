@@ -19,13 +19,15 @@ export function ManualPaymentPanel({
   targetId,
   remainingAmount,
   expectedPaymentDate,
+  paymentAllowed = true,
   onConfirm,
 }: {
   targetType: Exclude<PaymentTargetType, "NONE">;
   targetId: number;
-  remainingAmount: number;
+  remainingAmount: number | null;
   expectedPaymentDate: string | null;
-  onConfirm: (payload: ManualPaymentPayload) => Promise<number>;
+  paymentAllowed?: boolean;
+  onConfirm: (payload: ManualPaymentPayload) => Promise<number | null>;
 }) {
   const { businessDate } = useRuntimeContext();
   const queryClient = useQueryClient();
@@ -37,7 +39,7 @@ export function ManualPaymentPanel({
     enabled: open,
   });
   const events = eventsQuery.data;
-  const [amount, setAmount] = useState(String(remainingAmount));
+  const [amount, setAmount] = useState(String(remainingAmount ?? ""));
   const [paymentDate, setPaymentDate] = useState(businessDate);
   const [paymentMethod, setPaymentMethod] = useState("계좌이체");
   const [depositorName, setDepositorName] = useState("");
@@ -62,7 +64,7 @@ export function ManualPaymentPanel({
   }, [historyPage, events, writeUrlParams]);
 
   function toggle() {
-    if (!open) setAmount(String(remainingAmount));
+    if (!open) setAmount(String(remainingAmount ?? ""));
     writeUrlParams((params) => {
       if (open) params.delete("paymentPage");
       else params.set("paymentPage", "0");
@@ -84,7 +86,7 @@ export function ManualPaymentPanel({
         memo: memo.trim() || null,
       });
       setMessage("입금 확인 완료");
-      setAmount(String(remaining));
+      setAmount(String(remaining ?? ""));
       setMemo("");
       setIdempotencyKey(createPaymentIdempotencyKey());
       const queryKey = salesQueryKeys.payments.target(targetType, targetId);
@@ -121,11 +123,16 @@ export function ManualPaymentPanel({
       {open ? (
         <div className="space-y-3 border-t border-[#edf0ec] px-4 py-3">
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-[#68756c]">
-            <span>현재 잔액 {remainingAmount.toLocaleString()}원</span>
+            <span>
+              현재 잔액{" "}
+              {remainingAmount == null
+                ? "미확인"
+                : `${remainingAmount.toLocaleString()}원`}
+            </span>
             <span>입금 예정일 {formatShortDate(expectedPaymentDate)}</span>
           </div>
 
-          {remainingAmount > 0 ? (
+          {paymentAllowed && remainingAmount != null && remainingAmount > 0 ? (
             <form onSubmit={submit}>
               <fieldset disabled={saving} className="grid gap-2 sm:grid-cols-2">
                 <Field label="입금액">
@@ -197,7 +204,11 @@ export function ManualPaymentPanel({
               </fieldset>
             </form>
           ) : (
-            <p className="text-xs font-semibold text-[#158442]">입금 완료</p>
+            <p className="text-xs font-semibold">
+              {!paymentAllowed || remainingAmount == null
+                ? "현재 새 입금을 확인할 수 없습니다."
+                : "입금 완료"}
+            </p>
           )}
 
           {message ? <p className="text-xs font-semibold">{message}</p> : null}

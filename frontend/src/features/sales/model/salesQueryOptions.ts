@@ -2,9 +2,8 @@ import type { PaymentTargetType } from "@/entities/farm/types";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import {
   getAuctionLots,
-  getAuctionSettlement,
-  getAuctionSettlementPage,
-  getAuctionSettlementSummary,
+  getAuctionProceeds,
+  getAuctionProceedsPage,
   getAuctionTrackingSummary,
   getBusinessPartnerPage,
   getBusinessPartnerOptions,
@@ -15,7 +14,7 @@ import {
 } from "../api/salesApi";
 import type {
   SalesRouteState,
-  SettlementRouteState,
+  ProceedsRouteState,
 } from "../lib/salesRouteParams";
 import type {
   AuctionFilterState,
@@ -127,25 +126,18 @@ export function auctionSummaryQueryOptions() {
   });
 }
 
-export function auctionSettlementPageQueryOptions(state: SettlementRouteState) {
+export function auctionProceedsPageQueryOptions(state: ProceedsRouteState) {
   return queryOptions({
-    queryKey: salesQueryKeys.auction.settlementPage(state.page, state.size),
+    queryKey: salesQueryKeys.auction.proceedsPage(state.page, state.size),
     queryFn: ({ signal }) =>
-      getAuctionSettlementPage(state.page, state.size, signal),
+      getAuctionProceedsPage(state.page, state.size, signal),
   });
 }
 
-export function auctionSettlementSummaryQueryOptions() {
+export function auctionProceedsDetailQueryOptions(id: number) {
   return queryOptions({
-    queryKey: salesQueryKeys.auction.settlementSummary,
-    queryFn: ({ signal }) => getAuctionSettlementSummary(signal),
-  });
-}
-
-export function auctionSettlementDetailQueryOptions(id: number) {
-  return queryOptions({
-    queryKey: salesQueryKeys.auction.settlementDetail(id),
-    queryFn: ({ signal }) => getAuctionSettlement(id, signal),
+    queryKey: salesQueryKeys.auction.proceedsDetail(id),
+    queryFn: ({ signal }) => getAuctionProceeds(id, signal),
   });
 }
 

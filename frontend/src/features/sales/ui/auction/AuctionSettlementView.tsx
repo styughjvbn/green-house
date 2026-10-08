@@ -1,365 +1,204 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
-import type {
-  AuctionSettlement,
-  AuctionSettlementLine,
-  AuctionSettlementListItem,
-} from "@/entities/farm/types";
-import { formatShortDate } from "@/shared/lib/dateFormat";
-import { DataTable } from "@/shared/ui/DataTable";
-import {
-  confirmAuctionSettlementPayment,
-  rebuildAuctionSettlement,
-} from "../../api/salesApi";
-import {
-  auctionSettlementPageQueryOptions,
-  auctionSettlementSummaryQueryOptions,
-  auctionSettlementDetailQueryOptions,
-} from "../../model/salesQueryOptions";
+import type { ColumnDef } from "@tanstack/react-table";
 import { useSearchParams } from "next/navigation";
-import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
-import { readSettlementRouteState } from "../../lib/salesRouteParams";
-import { salesQueryKeys } from "../../model/salesQueryKeys";
-import { ManualPaymentPanel } from "./ManualPaymentPanel";
-import { TabError, TabSplit, TabStack } from "@/shared/ui/TabLayout";
+import type { AuctionProceeds } from "@/entities/farm/types";
+import { DataTable } from "@/shared/ui/DataTable";
 import {
   DetailCard,
   DetailEmpty,
   DetailHeader,
   DetailSummary,
 } from "@/shared/ui/DetailCard";
-import { AuctionSettlementStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
+import { TabError, TabSplit, TabStack } from "@/shared/ui/TabLayout";
+import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
+import { confirmAuctionProceedsPayment } from "../../api/salesApi";
+import { readProceedsRouteState } from "../../lib/salesRouteParams";
+import {
+  auctionProceedsPageQueryOptions,
+  auctionProceedsDetailQueryOptions,
+} from "../../model/salesQueryOptions";
+import { salesQueryKeys } from "../../model/salesQueryKeys";
+import { ManualPaymentPanel } from "./ManualPaymentPanel";
 
-const settlementLineColumns: ColumnDef<AuctionSettlementLine, unknown>[] = [
+const money = (value: number | null) =>
+  value == null ? "미확인" : `${value.toLocaleString()}원`;
+const columns: ColumnDef<AuctionProceeds, unknown>[] = [
   {
-    accessorKey: "shipmentDate",
-    header: "출하일",
-    cell: ({ row }) => formatShortDate(row.original.shipmentDate),
-    size: 100,
+    accessorKey: "auctionHouseName",
+    header: "경매장",
     meta: { hideable: false },
   },
   {
-    id: "varietyGrade",
-    header: "품종·등급",
-    cell: ({ row }) =>
-      `${row.original.varietyName} · ${row.original.shipmentGrade || "-"}`,
-    size: 180,
-    meta: { cellClassName: "font-semibold" },
+    accessorKey: "sourceReference",
+    header: "대금 자료",
+    cell: ({ row }) => row.original.sourceReference ?? "자료 확인 대기",
   },
   {
-    accessorKey: "quantity",
-    header: "수량",
-    cell: ({ row }) => `${row.original.quantity.toLocaleString()}분`,
-    size: 90,
+    accessorKey: "reportedGrossAmount",
+    header: "제공 낙찰액",
+    cell: ({ row }) => money(row.original.reportedGrossAmount),
     meta: { align: "right" },
   },
   {
-    accessorKey: "unitPrice",
-    header: "단가",
-    cell: ({ row }) => `${row.original.unitPrice.toLocaleString()}원`,
-    size: 110,
+    accessorKey: "receivableAmount",
+    header: "받을 금액",
+    cell: ({ row }) => money(row.original.receivableAmount),
     meta: { align: "right" },
   },
   {
-    accessorKey: "amount",
-    header: "금액",
-    cell: ({ row }) => `${row.original.amount.toLocaleString()}원`,
-    size: 120,
-    meta: { align: "right", cellClassName: "font-semibold" },
+    accessorKey: "paidAmount",
+    header: "입금액",
+    cell: ({ row }) => money(row.original.paidAmount),
+    meta: { align: "right" },
+  },
+  {
+    accessorKey: "remainingAmount",
+    header: "잔액",
+    cell: ({ row }) => money(row.original.remainingAmount),
+    meta: { align: "right" },
   },
 ];
 
 export function AuctionSettlementView() {
   const queryClient = useQueryClient();
-  const route = readSettlementRouteState(useSearchParams());
+  const route = readProceedsRouteState(useSearchParams());
   const writeUrlParams = useUrlSearchParamsWriter();
-  const settlementsQuery = useQuery(auctionSettlementPageQueryOptions(route));
-  const summaryQuery = useQuery(auctionSettlementSummaryQueryOptions());
-  const pageData = settlementsQuery.data;
+  const pageQuery = useQuery(auctionProceedsPageQueryOptions(route));
   const selectedId =
-    route.selectedSettlementId ?? pageData?.content[0]?.id ?? null;
+    route.selectedProceedsId ?? pageQuery.data?.content[0]?.id ?? null;
   const detailQuery = useQuery({
-    ...auctionSettlementDetailQueryOptions(selectedId ?? 0),
+    ...auctionProceedsDetailQueryOptions(selectedId ?? 0),
     enabled: selectedId != null,
   });
   const selected = detailQuery.data ?? null;
-  const [mutating, setMutating] = useState(false);
-  const [mutationError, setMutationError] = useState<string | null>(null);
-  const totalPages = Math.max(1, pageData?.totalPages ?? 1);
-
   useEffect(() => {
-    if (pageData && route.page >= Math.max(1, pageData.totalPages)) {
+    if (
+      pageQuery.data &&
+      route.page >= Math.max(1, pageQuery.data.totalPages)
+    ) {
       writeUrlParams((params) =>
-        params.set("page", String(Math.max(0, pageData.totalPages - 1))),
+        params.set("page", String(Math.max(0, pageQuery.data.totalPages - 1))),
       );
     }
-  }, [pageData, route.page, writeUrlParams]);
-
+  }, [pageQuery.data, route.page, writeUrlParams]);
   function changePage(page: number, size = route.size) {
     writeUrlParams((params) => {
       params.set("page", String(page));
       params.set("size", String(size));
+      params.delete("proceedsId");
       params.delete("settlementId");
       params.delete("paymentPage");
     }, "push");
   }
-  const columns = useMemo<ColumnDef<AuctionSettlementListItem, unknown>[]>(
-    () => [
-      {
-        accessorKey: "auctionHouseName",
-        header: "경매장",
-        size: 180,
-        meta: { hideable: false, cellClassName: "font-semibold" },
-      },
-      {
-        accessorKey: "auctionDate",
-        header: "경매일",
-        cell: ({ row }) => formatShortDate(row.original.auctionDate),
-        size: 110,
-      },
-      {
-        accessorKey: "grossAmount",
-        header: "총 낙찰액",
-        cell: ({ row }) => `${row.original.grossAmount.toLocaleString()}원`,
-        size: 130,
-        meta: { align: "right" },
-      },
-      {
-        accessorKey: "expectedDepositAmount",
-        header: "예상 입금액",
-        cell: ({ row }) =>
-          `${row.original.expectedDepositAmount.toLocaleString()}원`,
-        size: 140,
-        meta: { align: "right" },
-      },
-      {
-        accessorKey: "remainingAmount",
-        header: "잔액",
-        cell: ({ row }) => row.original.remainingAmount.toLocaleString() + "원",
-        size: 120,
-        meta: { align: "right", cellClassName: "font-semibold" },
-      },
-      {
-        accessorKey: "status",
-        header: "상태",
-        cell: ({ row }) => (
-          <AuctionSettlementStatusBadge status={row.original.status} />
-        ),
-        size: 110,
-        meta: { align: "center" },
-      },
-    ],
-    [],
-  );
-
-  async function rebuildSelected() {
-    if (!selected) return;
-    setMutating(true);
-    setMutationError(null);
-    try {
-      const rebuilt = await rebuildAuctionSettlement(
-        selected.auctionHouseId,
-        selected.auctionDate,
-      );
-      await updateSettlement(rebuilt);
-    } catch (requestError) {
-      setMutationError(
-        requestError instanceof Error
-          ? requestError.message
-          : "정산을 다시 계산하지 못했습니다.",
-      );
-    } finally {
-      setMutating(false);
-    }
-  }
-
-  async function updateSettlement(updated: AuctionSettlement) {
-    const queryKey = salesQueryKeys.auction.settlementDetail(updated.id);
-    await queryClient.cancelQueries({ queryKey, exact: true });
-    queryClient.setQueryData(queryKey, updated);
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: salesQueryKeys.auction.settlementPages,
-      }),
-      queryClient.invalidateQueries({
-        queryKey: salesQueryKeys.auction.settlementSummary,
-      }),
-    ]);
-  }
-
-  const loading =
-    settlementsQuery.isFetching || detailQuery.isFetching || mutating;
-  const queryError =
-    settlementsQuery.error ?? summaryQuery.error ?? detailQuery.error;
-  const error =
-    mutationError ?? (queryError instanceof Error ? queryError.message : null);
-
+  const error = pageQuery.error ?? detailQuery.error;
   return (
     <TabStack>
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[#dfe5dc] bg-white px-4 py-3 shadow-sm">
-        <div>
-          <h2 className="text-base font-bold">경매장 정산</h2>
-          <p className="mt-0.5 text-xs text-[#68756c]">
-            경매장과 경매일 기준으로 낙찰 결과를 묶어 관리합니다.
-          </p>
-        </div>
-        <div className="flex items-center gap-5 text-right">
-          <Summary
-            label="예상 입금액"
-            value={summaryQuery.data?.expectedDepositAmount}
-          />
-          <Summary
-            label="미입금 잔액"
-            value={summaryQuery.data?.remainingAmount}
-          />
-          <button
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#ccd6ca] px-3 text-xs font-semibold disabled:opacity-50"
-            type="button"
-            disabled={!selected || loading}
-            onClick={rebuildSelected}
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
-            />
-            정산 다시 계산
-          </button>
-        </div>
+      <section className="rounded-md border bg-white px-4 py-3">
+        <h2 className="text-base font-bold">경매 대금</h2>
+        <p className="mt-1 text-sm text-[#68756c]">
+          경매장 대금 자료와 실제 입금을 확인합니다. 받을 금액이 미확인인 자료는
+          입금 확인을 기다립니다.
+        </p>
       </section>
-
-      <TabError message={error} />
-
+      <TabError message={error instanceof Error ? error.message : null} />
       <TabSplit
         columns="lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)]"
         gap="gap-3"
       >
         <DataTable
           columns={columns}
-          data={pageData?.content ?? []}
-          isLoading={settlementsQuery.isPending}
-          emptyMessage="생성된 경매 정산이 없습니다."
+          data={pageQuery.data?.content ?? []}
+          isLoading={pageQuery.isPending}
+          emptyMessage="등록된 경매 대금 자료가 없습니다."
           getRowId={(row) => String(row.id)}
           pageIndex={route.page}
           pageSize={route.size}
           pageSizeOptions={[10, 20, 50]}
-          selectedRowId={selected?.id == null ? null : String(selected.id)}
-          settingsKey="sales.settlements"
-          title="정산 목록"
-          totalLabel={`총 ${(pageData?.totalElements ?? 0).toLocaleString()}건`}
-          totalPages={totalPages}
+          selectedRowId={selectedId == null ? null : String(selectedId)}
+          settingsKey="sales.proceeds"
+          title="대금 목록"
+          totalLabel={`총 ${(pageQuery.data?.totalElements ?? 0).toLocaleString()}건`}
+          totalPages={Math.max(1, pageQuery.data?.totalPages ?? 1)}
           onPageChange={(page) => changePage(page)}
           onPageSizeChange={(size) => changePage(0, size)}
           onRowClick={(row) =>
             writeUrlParams((params) => {
-              params.set("settlementId", String(row.id));
+              params.set("proceedsId", String(row.id));
+              params.delete("settlementId");
               params.delete("paymentPage");
             }, "push")
           }
         />
-
-        {detailQuery.isFetching && !selected ? (
-          <DetailEmpty>정산 상세를 불러오는 중입니다.</DetailEmpty>
+        {selected ? (
+          <DetailCard>
+            <DetailHeader
+              eyebrow="경매 대금"
+              title={selected.auctionHouseName}
+              summary={
+                <DetailSummary
+                  items={[
+                    {
+                      label: "제공 낙찰액",
+                      value: money(selected.reportedGrossAmount),
+                    },
+                    {
+                      label: "받을 금액",
+                      value: money(selected.receivableAmount),
+                    },
+                    { label: "입금액", value: money(selected.paidAmount) },
+                    { label: "잔액", value: money(selected.remainingAmount) },
+                  ]}
+                />
+              }
+            />
+            <div className="space-y-2 px-4 py-3 text-sm">
+              <p>{selected.sourceReference ?? "대금 자료 확인 대기"}</p>
+              <p>
+                연결된 경매 결과 {selected.resultIds.length.toLocaleString()}건
+              </p>
+              {selected.reviewRequired ? (
+                <p role="status">
+                  입금 연결 검토가 필요합니다. 검토 전에는 새 입금을 확인할 수
+                  없습니다.
+                </p>
+              ) : null}
+              {!selected.matchingConfirmed ? (
+                <p>대금 자료와 경매 결과 연결 확인을 기다립니다.</p>
+              ) : null}
+            </div>
+            <ManualPaymentPanel
+              key={selected.id}
+              targetType="AUCTION_PROCEEDS"
+              targetId={selected.id}
+              remainingAmount={selected.remainingAmount}
+              expectedPaymentDate={null}
+              paymentAllowed={selected.paymentAllowed}
+              onConfirm={async (payload) => {
+                const updated = await confirmAuctionProceedsPayment(
+                  selected.id,
+                  payload,
+                );
+                const key = salesQueryKeys.auction.proceedsDetail(updated.id);
+                await queryClient.cancelQueries({ queryKey: key, exact: true });
+                queryClient.setQueryData(key, updated);
+                await queryClient.invalidateQueries({
+                  queryKey: salesQueryKeys.auction.proceedsPages,
+                });
+                return updated.remainingAmount;
+              }}
+            />
+          </DetailCard>
         ) : (
-          <SettlementDetail settlement={selected} onUpdate={updateSettlement} />
+          <DetailEmpty>
+            {detailQuery.isFetching
+              ? "대금 상세를 불러오는 중입니다."
+              : "확인할 대금 자료를 선택하세요."}
+          </DetailEmpty>
         )}
       </TabSplit>
     </TabStack>
-  );
-}
-
-function SettlementDetail({
-  settlement,
-  onUpdate,
-}: {
-  settlement: AuctionSettlement | null;
-  onUpdate: (settlement: AuctionSettlement) => Promise<void>;
-}) {
-  if (!settlement) {
-    return <DetailEmpty>확인할 정산을 선택하세요.</DetailEmpty>;
-  }
-
-  return (
-    <DetailCard>
-      <DetailHeader
-        eyebrow={`정산 #${settlement.id}`}
-        eyebrowAside={
-          <AuctionSettlementStatusBadge
-            size="compact"
-            status={settlement.status}
-          />
-        }
-        title={`${settlement.auctionHouseName} · ${formatShortDate(settlement.auctionDate)}`}
-        summary={
-          <DetailSummary
-            items={[
-              {
-                label: "총 낙찰액",
-                value: `${settlement.grossAmount.toLocaleString()}원`,
-              },
-              {
-                label: "예상 입금액",
-                value: `${settlement.expectedDepositAmount.toLocaleString()}원`,
-              },
-              {
-                label: "입금액",
-                value: `${settlement.paidAmount.toLocaleString()}원`,
-              },
-              {
-                label: "잔액",
-                value: `${settlement.remainingAmount.toLocaleString()}원`,
-              },
-            ]}
-          />
-        }
-      />
-
-      <div className="px-4 py-3">
-        <DataTable
-          columns={settlementLineColumns}
-          data={settlement.lines}
-          emptyMessage="포함된 경매 결과가 없습니다."
-          getRowId={(row) => String(row.id)}
-          settingsKey="sales.settlementDetail.lines"
-          title="포함 경매 결과"
-          totalLabel={`총 ${settlement.lines.length.toLocaleString()}건`}
-        />
-      </div>
-
-      <ManualPaymentPanel
-        key={settlement.id}
-        targetType="AUCTION_SETTLEMENT"
-        targetId={settlement.id}
-        remainingAmount={settlement.remainingAmount}
-        expectedPaymentDate={settlement.expectedPaymentDate}
-        onConfirm={async (payload) => {
-          const updated = await confirmAuctionSettlementPayment(
-            settlement.id,
-            payload,
-          );
-          await onUpdate(updated);
-          return updated.remainingAmount;
-        }}
-      />
-    </DetailCard>
-  );
-}
-
-function Summary({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | undefined;
-}) {
-  return (
-    <div>
-      <p className="text-[11px] text-[#68756c]">{label}</p>
-      <p className="text-sm font-bold">
-        {value == null ? "-" : `${value.toLocaleString()}원`}
-      </p>
-    </div>
   );
 }
