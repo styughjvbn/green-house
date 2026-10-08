@@ -37,6 +37,8 @@ docs/
   adr/
     ADR-001-orchid-group-mutation-engine.md
     ADR-002-orchid-group-historical-migration.md
+    ADR-003-sales-document-information-architecture.md
+    ADR-004-backend-architecture-migration.md
 
   api/
     openapi.yaml
@@ -64,6 +66,8 @@ docs/
 | `08-roadmap.md` | 이후 확장 후보와 우선순위 |
 | `adr/ADR-001-orchid-group-mutation-engine.md` | OrchidGroup 단일 쓰기 엔진, complete state-chain과 전환 원칙 |
 | `adr/ADR-002-orchid-group-historical-migration.md` | cutover 이전 이력의 complete state-chain 이관 원칙 |
+| `adr/ADR-003-sales-document-information-architecture.md` | Sales 내부 업무 경계와 거래·물량·대금 소유권 |
+| `adr/ADR-004-backend-architecture-migration.md` | 공개 API·SPI 경계와 기능 우선 패키지 전환 결정·검증 계획 |
 | `api/API_INDEX.md` | 도메인별 OpenAPI slice와 endpoint 위치 |
 | `api/DOMAIN_RULES.md` | API만으로 판단하기 어려운 도메인 규칙 |
 | `api/API_GAP_ANALYSIS.md` | 과거 초안과 현재 구현 API의 차이 |

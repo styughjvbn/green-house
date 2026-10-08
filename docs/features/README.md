@@ -7,6 +7,7 @@
 - [작업 실행·난 그룹](work-operation-and-orchid-collection.md)
 - [난 묶음 Mutation Engine 전환 코드 수명](orchid-group-mutation-transition.md)
 - [전체 백엔드 리팩터링 계획](backend-refactoring-plan.md) — 13개 모듈의 책임·확장 경계와 단계별 검증 기준
+- [ADR-004: 백엔드 아키텍처 전환](../adr/ADR-004-backend-architecture-migration.md) — 공개 API·SPI 경계, 기능 우선 패키지 전환 결정과 검증 순서
 - [Mutation Engine 리팩터링 상세](orchid-group-mutation-refactoring-detail.md) — 전체 계획의 하위 상세
 - [데모 환경 운영](demo-operations.md)
 
