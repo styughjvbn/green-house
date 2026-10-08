@@ -69,7 +69,7 @@ OCP는 모든 미래 요구를 기존 코드 수정 없이 처리한다는 뜻�
 - [AuctionShipmentCreator](../../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionShipmentCreator.java)는 외부에서 만든 `AuctionShipment`를 받아 저장만 한다.
 - `AuctionShipmentMaterializer`(이후 리팩터링에서 제거)와 `AuctionShipmentLotFactory`는 Sales에서 Auction Entity를 생성한다.
 - [AuctionDataReader](../../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionDataReader.java)는 정산에 `AuctionResultLine` 등 Entity를 제공한다.
-- [OrchidGroupReader](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupReader.java)와 Work handler 계약에도 유사한 의존이 있다.
+- [OrchidGroupReader](../../backend/src/main/java/com/greenhouse/backend/farm/orchid/application/OrchidGroupReader.java)와 Work handler 계약에도 유사한 의존이 있다.
 
 Repository import를 금지하는 것만으로는 확장 시 변경 전파를 막을 수 없다. Entity 생성·변경·조회의 최종 소유권과 공개 application 계약을 함께 고쳐야 한다.
 
@@ -93,8 +93,8 @@ Repository projection을 그대로 외부 계약으로 공개하지 않는다.
 
 ### 2.4 확장 registry와 분산된 조건문이 공존
 
-[WorkEffectProcessor](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkEffectProcessor.java)와 `StructureChangeStrategyRegistry`는 구현 목록을 등록하고 중복을 검사한다. 유지할 좋은 기반이다.
-하지만 [WorkType](../../backend/src/main/java/com/greenhouse/backend/work/domain/operation/WorkType.java)의 workflow·등록 허용·handler 선택과 여러 실행 service의 지원 코드 목록은 분리되어 있다.
+[WorkEffectProcessor](../../backend/src/main/java/com/greenhouse/backend/work/effect/application/WorkEffectProcessor.java)와 `StructureChangeStrategyRegistry`는 구현 목록을 등록하고 중복을 검사한다. 유지할 좋은 기반이다.
+하지만 [WorkType](../../backend/src/main/java/com/greenhouse/backend/work/operation/domain/WorkType.java)의 workflow·등록 허용·handler 선택과 여러 실행 service의 지원 코드 목록은 분리되어 있다.
 새 시스템 작업을 추가할 때 여러 조건문을 함께 수정해야 한다.
 
 반대로 유한한 상태 전이의 `switch`까지 없앨 필요는 없다. **확장 가능한 작업 정의와 닫힌 lifecycle 규칙을 구분**한다.

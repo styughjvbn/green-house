@@ -77,7 +77,7 @@ Work의 작업 진행, Sales의 예약·출고 업무, Inbound의 입고 lifecyc
 
 ### F2. 배치 생성의 조회·저장 순서가 JPA 자동 flush에 의존 — P0 확인, P1 개선
 
-근거: [MutationEngine](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEngine.java) `createMany:97`, `createFromInbound:138`, `createGroup:825`, `saveMutation:742`와 [OrchidPlacementPolicy](../../backend/src/main/java/com/greenhouse/backend/farm/application/structure/OrchidPlacementPolicy.java).
+근거: [MutationEngine](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEngine.java) `createMany:97`, `createFromInbound:138`, `createGroup:825`, `saveMutation:742`와 [OrchidPlacementPolicy](../../backend/src/main/java/com/greenhouse/backend/farm/structure/application/OrchidPlacementPolicy.java).
 
 - 결과를 순회하며 기존 배치를 조회하고 그룹을 `save`한다. Mutation 저장과 fence context 설정은 루프 뒤의 `recordCreated`에서 수행한다.
 - 다음 결과의 배치 검증이 이전 결과 INSERT를 자동 flush하면 `ACTIVE` fence context 설정보다 실제 쓰기가 앞설 가능성이 있다.
@@ -88,7 +88,7 @@ Work의 작업 진행, Sales의 예약·출고 업무, Inbound의 입고 lifecyc
 
 ### F3. 전환 분기가 업무 데이터 변환까지 복제함 — P1
 
-근거: [BatchStructureTransformationExecutor](../../backend/src/main/java/com/greenhouse/backend/farm/application/transformation/BatchStructureTransformationExecutor.java) `execute`, `mutationCommand`, `executeWithEngine`와 [SalesSlipInventoryService](../../backend/src/main/java/com/greenhouse/backend/sales/document/application/SalesSlipInventoryService.java).
+근거: [BatchStructureTransformationExecutor](../../backend/src/main/java/com/greenhouse/backend/farm/transformation/application/BatchStructureTransformationExecutor.java) `execute`, `mutationCommand`, `executeWithEngine`와 [SalesSlipInventoryService](../../backend/src/main/java/com/greenhouse/backend/sales/document/application/SalesSlipInventoryService.java).
 
 - 구조 변경 결과의 속성 상속, purpose→상태 변환, 결과 details 조립이 Legacy/Engine 양쪽에 있다.
 - Sales의 예약·해제·출고·복구마다 command 생성, 모드 확인, 직접 변경, movement 연결 패턴이 반복된다.
@@ -103,7 +103,7 @@ Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각
 
 ### F4. application Reader를 거쳐도 타 모듈 Entity가 노출됨 — P1
 
-근거: [OrchidGroupReader](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupReader.java), [SalesSlipAllocationBatch](../../backend/src/main/java/com/greenhouse/backend/sales/document/application/SalesSlipAllocationBatch.java), [SalesSlipItemAllocation](../../backend/src/main/java/com/greenhouse/backend/sales/document/domain/SalesSlipItemAllocation.java), [SalesInventoryMovement](../../backend/src/main/java/com/greenhouse/backend/sales/document/domain/SalesInventoryMovement.java).
+근거: [OrchidGroupReader](../../backend/src/main/java/com/greenhouse/backend/farm/orchid/application/OrchidGroupReader.java), [SalesSlipAllocationBatch](../../backend/src/main/java/com/greenhouse/backend/sales/document/application/SalesSlipAllocationBatch.java), [SalesSlipItemAllocation](../../backend/src/main/java/com/greenhouse/backend/sales/document/domain/SalesSlipItemAllocation.java), [SalesInventoryMovement](../../backend/src/main/java/com/greenhouse/backend/sales/document/domain/SalesInventoryMovement.java).
 
 초기 진단이며, 아래 14·15차 이식 기록에 현재 상태를 정리한다.
 
@@ -133,7 +133,7 @@ Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각
 
 ### F6. Work 효과의 Map 계약 때문에 읽기와 쓰기가 강하게 결합됨 — P1, 18차 정리
 
-기준 코드의 근거: [WorkExecutionResult](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkExecutionResult.java), [WorkOperationDetailService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationDetailService.java) 408줄.
+기준 코드의 근거: [WorkExecutionResult](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkExecutionResult.java), [WorkOperationDetailService](../../backend/src/main/java/com/greenhouse/backend/work/operation/application/WorkOperationDetailService.java) 408줄.
 
 - 실행 결과는 `Map<String, Object>`이고 읽기는 `sources`, `results`, `adjustments` 등 문자열 키와 다중 fallback으로 형태를 추론한다.
 - 상세 서비스에 DB 조회, 구형 JSON 호환, 수치 파싱, 화면용 label/문자열 변환이 함께 있다.
@@ -147,7 +147,7 @@ Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각
 
 ### F7. 작업 보정 상세에서 명확한 반복 조회가 남아 있음 — P1, 18차 해결
 
-기준 코드의 근거: [WorkOperationDetailService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationDetailService.java) `corrections:298`.
+기준 코드의 근거: [WorkOperationDetailService](../../backend/src/main/java/com/greenhouse/backend/work/operation/application/WorkOperationDetailService.java) `corrections:298`.
 
 보정 목록의 `.map()` 내부에서 매번 `findByWorkOperationIdAndEffectKey(..., "OPERATION")`를 호출한다.
 보정 건수에 비례해 효과 조회가 늘어난다. Repository에는 이미 `findByWorkOperationIdInAndEffectKey`가 있다.
@@ -175,7 +175,7 @@ correction operation의 lazy loading도 함께 계측한다. 단순히 effect �
 
 ### F9. Work 멱등성의 목표 계약과 현재 구현 사이에 간극 — P0 판단, 별도 계약 보강
 
-근거: [ADR-001의 요청·효과 멱등성](../adr/ADR-001-orchid-group-mutation-engine.md), [StructureChangeExecutionService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/StructureChangeExecutionService.java) `execute`, [InboundPottingOperationService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/InboundPottingOperationService.java) `validatedOperationId`, [WorkAppliedEffect](../../backend/src/main/java/com/greenhouse/backend/work/domain/effect/WorkAppliedEffect.java), [WorkAppliedEffectRepository](../../backend/src/main/java/com/greenhouse/backend/work/repository/WorkAppliedEffectRepository.java).
+근거: [ADR-001의 요청·효과 멱등성](../adr/ADR-001-orchid-group-mutation-engine.md), [StructureChangeExecutionService](../../backend/src/main/java/com/greenhouse/backend/work/operation/application/StructureChangeExecutionService.java) `execute`, [InboundPottingOperationService](../../backend/src/main/java/com/greenhouse/backend/work/operation/application/InboundPottingOperationService.java) `validatedOperationId`, [WorkAppliedEffect](../../backend/src/main/java/com/greenhouse/backend/work/effect/domain/WorkAppliedEffect.java), [WorkAppliedEffectRepository](../../backend/src/main/java/com/greenhouse/backend/work/effect/repository/WorkAppliedEffectRepository.java).
 
 - 구조 변경 실행은 진행 상태를 먼저 검증하고 기존 effect key가 있으면 payload 비교 없이 반환한다.
 - 포트 실행은 기존 command 내용까지 비교한다. 재시도 규칙이 유스케이스별로 다르다.
