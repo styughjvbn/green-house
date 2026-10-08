@@ -5,6 +5,8 @@ import com.greenhouse.backend.work.api.effect.WorkEffectKind;
 import com.greenhouse.backend.work.api.effect.WorkEffectResults;
 import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.api.effect.WorkMutationLink;
+import com.greenhouse.backend.work.api.operation.InboundWorkOperationRecordingApi;
+import com.greenhouse.backend.work.api.operation.RecordInboundWorkCommand;
 import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.application.effect.WorkEffectStore;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
@@ -26,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class InboundWorkOperationRecorder {
+public class InboundWorkOperationRecorder implements InboundWorkOperationRecordingApi {
 
   private final WorkTypeService workTypeService;
 
@@ -44,6 +46,7 @@ public class InboundWorkOperationRecorder {
     record(request, null);
   }
 
+  @Override
   public void record(RecordInboundWorkCommand request, WorkMutationLink mutationLink) {
     WorkType workType = workTypeService.getByCode(WorkTypeDefinition.INBOUND.name());
     if (!workType.isActive()) {

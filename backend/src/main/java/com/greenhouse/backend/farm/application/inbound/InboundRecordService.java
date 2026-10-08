@@ -31,8 +31,8 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.work.api.effect.WorkMutationLink;
 import com.greenhouse.backend.work.api.operation.InboundWorkOperationLifecycleApi;
+import com.greenhouse.backend.work.api.operation.InboundWorkOperationRecordingApi;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
-import com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
@@ -68,7 +68,7 @@ public class InboundRecordService {
 
   private final OrchidGroupRepository orchidGroupRepository;
 
-  private final InboundWorkOperationRecorder inboundWorkOperationRecorder;
+  private final InboundWorkOperationRecordingApi inboundWorkOperationRecorder;
 
   private final InboundWorkOperationLifecycleApi inboundWorkOperationLifecycleService;
 

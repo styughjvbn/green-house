@@ -368,3 +368,22 @@ Document의 Payment 참조는 기존 인터페이스 제한도 유지한다. Doc
 - 기존 메서드 본문과 트랜잭션 annotation이 동일하며, reviewed inventory도 기존 lifecycle 참조의 API 치환 외 차이가 없다. HTTP Controller·DTO·validation·schema가 동일하여 1단계에서 확인한 OpenAPI를 다시 생성하지 않았다.
 - SQL·DB 제약·트랜잭션 경계·잠금·수량/상태 처리 변경이 없어 `workE2eTest`는 실행하지 않았다. 전체 검증 이후에는 이 ADR의 검증 기록만 추가했다.
 - 이번 요청의 두 단계 완료. 남은 Work 외부 참조는 입고 실행/기록·즉시 실행·계보·대사·codec/계산 계약을 각각 확인하며 후속 두 단계 작업으로 나눈다.
+
+
+### 2026-10-08: 두 단계 진행 — 입고 기록·즉시 실행의 1단계
+
+| 소비자·책임 | 변경 전 | 변경 후 | 이유 |
+|---|---|---|---|
+| Farm 입고 생성 → Work 기록 | `work/application/operation/InboundWorkOperationRecorder` | `work/api/operation/InboundWorkOperationRecordingApi` | Work의 작업·대상·효과 저장소와 생성 흐름은 내부 유지 |
+| Farm 입고 snapshot 명령 생성 | `work/application/operation/RecordInboundWorkCommand` | `work/api/operation` | Farm Entity 대신 생성 시점의 값과 생성된 난 묶음 ID만 전달 |
+
+- 실제 외부 호출인 `record(command, mutationLink)`만 API로 공개했다. 기존 단일 인자 overload는 Work 내부에서 유지하며 공개 범위를 늘리지 않는다. 기존 service가 API를 직접 구현하고 추가 전달 계층은 없다.
+- Farm의 snapshot factory와 Mutation 생성 → Work 기록 → 입고 감사 순서, Work의 작업/대상/실행/효과 생성·완료 처리와 기존 트랜잭션 annotation은 동일하다. snapshot 시점·JSON 필드·Mutation 연결·원장 단일 Writer·Bean 이름을 유지한다.
+- 명령 record는 package만 이동하며 필드·생성자·map/list 의미는 그대로다. reviewed inventory의 명령 TYPE/CONSTRUCTOR와 기록 TYPE/METHOD만 대응 FQCN으로 치환한다.
+
+입고 기록 단계 검증 결과:
+
+- 입고 감사·입고 Mutation·포트 계획과 공개 값·inventory·integration·단일 Writer 집중 테스트 통과. API 주입 후 기존 Work 기록 service 연결을 Spring 통합 테스트로 확인했다.
+- 전체 `test spotlessCheck` 통과: 776개, 실패·오류·skip 0개. 기존 임시 Gradle init script로 테스트 heap 2 GiB를 적용했다. 프론트엔드 `npm run check` 통과.
+- 명령 record와 기록 서비스 본문·트랜잭션 annotation이 동일함을 확인했다. Controller·DTO·validation·schema 변경이 없어 OpenAPI·프론트 타입은 재생성하지 않았다. SQL·트랜잭션 경계·잠금·수량 계산 변경이 없어 `workE2eTest`는 실행하지 않았다.
+- 전체 검증 이후 변경은 이 ADR의 검증 기록뿐이다.

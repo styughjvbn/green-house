@@ -5,7 +5,7 @@ import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand;
+import com.greenhouse.backend.work.api.operation.RecordInboundWorkCommand;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
