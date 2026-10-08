@@ -3,10 +3,10 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.farm.application.BoundaryFarmProbe;
+import com.greenhouse.backend.farm.orchid.application.BoundaryFarmProbe;
 import com.greenhouse.backend.farm.orchid.integration.BoundaryWorkAdapterProbe;
 import com.greenhouse.backend.work.api.BoundaryWorkApiProbe;
-import com.greenhouse.backend.work.application.BoundaryWorkProbe;
+import com.greenhouse.backend.work.operation.application.BoundaryWorkProbe;
 import com.greenhouse.backend.work.spi.BoundaryWorkSpiProbe;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import java.util.Set;

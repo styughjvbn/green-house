@@ -1,6 +1,6 @@
-package com.greenhouse.backend.farm.application;
+package com.greenhouse.backend.farm.orchid.application;
 
-import com.greenhouse.backend.work.application.BoundaryWorkProbe;
+import com.greenhouse.backend.work.operation.application.BoundaryWorkProbe;
 
 public class BoundaryFarmProbe {
   public void bypass(BoundaryWorkProbe work) {

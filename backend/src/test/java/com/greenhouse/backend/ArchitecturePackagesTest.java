@@ -8,9 +8,9 @@ class ArchitecturePackagesTest {
   private static final String ROOT = "com.greenhouse.backend.";
 
   @Test
-  void ownershipSurvivesAFeatureFirstMove() {
+  void ownershipDistinguishesModuleContractsFromFeatureContracts() {
     for (String feature : new String[] {"document", "direct", "auction", "payment", "partner"}) {
-      assertThat(ArchitecturePackages.contractOwner(ROOT + "sales.application." + feature))
+      assertThat(ArchitecturePackages.contractOwner(ROOT + "sales." + feature + ".application"))
           .isEqualTo("sales." + feature);
       assertThat(ArchitecturePackages.contractOwner(ROOT + "sales." + feature + ".api"))
           .isEqualTo("sales." + feature);
@@ -34,7 +34,6 @@ class ArchitecturePackagesTest {
         .isEqualTo("repository");
     assertThat(ArchitecturePackages.role(ROOT + "farm.mutation.ledger.domain")).isEqualTo("domain");
     assertThat(ArchitecturePackages.isHttpDto(ROOT + "work.operation.web.dto")).isTrue();
-    assertThat(ArchitecturePackages.isHttpDto(ROOT + "work.dto.operation")).isTrue();
     assertThat(ArchitecturePackages.isHttpDto(ROOT + "work.operation.web")).isFalse();
   }
 
@@ -50,7 +49,8 @@ class ArchitecturePackagesTest {
           "farm.mutation.verification",
           "farm.api.orchid.command",
           "work.spi.effect",
-          "farm.application.orchid.mutation"
+          "audit.application",
+          "analytics.repository"
         }) {
       assertThat(ArchitecturePackages.isValidLayout(ROOT + name)).as(name).isTrue();
     }
@@ -60,7 +60,16 @@ class ArchitecturePackagesTest {
           "sales.settlement.domain",
           "farm.mutation.unknown",
           "work.effect",
-          "sales.document.helper"
+          "sales.document.helper",
+          "farm.application.orchid.mutation",
+          "farm.application",
+          "farm.domain.orchid",
+          "work.repository.target",
+          "work.dto.operation",
+          "sales.application.document",
+          "sales.controller",
+          "farm.web",
+          "work.integration"
         }) {
       assertThat(ArchitecturePackages.isValidLayout(ROOT + name)).as(name).isFalse();
     }

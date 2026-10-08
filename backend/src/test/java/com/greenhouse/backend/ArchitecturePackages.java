@@ -3,7 +3,7 @@ package com.greenhouse.backend;
 import java.util.Map;
 import java.util.Set;
 
-/** Ownership and roles for the legacy and feature-first layouts during ADR-004 migration. */
+/** Ownership and roles for feature-first business modules and layered support modules. */
 final class ArchitecturePackages {
   private static final String ROOT = "com.greenhouse.backend.";
   private static final Set<String> ROLES =
@@ -47,10 +47,8 @@ final class ArchitecturePackages {
     if (parts.length < 2) return "";
     Set<String> features = FEATURES.getOrDefault(parts[0], Set.of());
     if (features.contains(parts[1])) return parts[1];
-    if (parts.length > 2
-        && Set.of("application", "domain", "repository", "controller", "dto", "api", "spi")
-            .contains(parts[1])
-        && features.contains(parts[2])) return parts[2];
+    if (parts.length > 2 && Set.of("api", "spi").contains(parts[1]) && features.contains(parts[2]))
+      return parts[2];
     return "";
   }
 
@@ -94,13 +92,8 @@ final class ArchitecturePackages {
     String[] parts = parts(name);
     if (parts.length < 2 || role(name).isEmpty()) return false;
     if (ROLES.contains(parts[1])) {
-      // Keep support modules layered; migrated modules retain only known legacy feature paths.
-      if (!FEATURES.containsKey(parts[0])
-          || isModuleContract(name)
-          || Set.of("web", "integration").contains(parts[1])) return true;
-      if (Set.of("application", "repository", "controller").contains(parts[1]) && parts.length == 2)
-        return true;
-      return !feature(name).isEmpty();
+      // Only public module contracts remain at the root of feature-first modules.
+      return !FEATURES.containsKey(parts[0]) || isModuleContract(name);
     }
     if (feature(name).isEmpty()) return false;
     if (parts[1].equals("mutation")) return parts.length > 2 && MUTATION_PARTS.contains(parts[2]);
