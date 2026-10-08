@@ -17,6 +17,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/shared/ui/primitives/dialog";
+import { FilterPanel } from "@/shared/ui/FilterControls";
+import { PaymentAllocationPanels } from "./PaymentAllocationPanels";
 import { BusinessPartnerSelect } from "../common/BusinessPartnerSelect";
 import {
   getAllocationReceipts,
@@ -38,8 +40,10 @@ import type { ReceiptRequest } from "../../lib/receiptRequest";
 import { salesQueryKeys } from "../../model/salesQueryKeys";
 
 const base = ["sales", "allocationWorkspace"] as const;
-const inputClass = "mt-1 w-full rounded border bg-white p-2";
-const buttonClass = "rounded border px-3 py-2 disabled:opacity-40";
+const inputClass =
+  "mt-1 w-full rounded-md border border-[#cfd8cc] bg-white px-3 py-2 text-sm";
+const buttonClass =
+  "inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d7ded5] bg-white px-3 text-xs font-semibold text-[#344138] disabled:opacity-40";
 const typeLabel = (type: AllocationTargetType) =>
   type === "SALES_SLIP"
     ? "일반 판매 전표"
@@ -49,26 +53,37 @@ const typeLabel = (type: AllocationTargetType) =>
 
 export function PaymentAllocationWorkspace() {
   const params = useSearchParams();
+  const v2 = usePathname()?.startsWith("/sales-v2") ?? false;
   const write = useUrlSearchParamsWriter();
   const { partnerId } = readAllocationRouteState(params);
   return (
-    <div className="min-h-0 flex-1 space-y-4 overflow-auto">
-      <BusinessPartnerSelect
-        label="배분 거래처"
-        value={partnerId ? String(partnerId) : ""}
-        onChange={(value) =>
-          write((p) => {
-            if (value) p.set("receiptPartnerId", value);
-            else p.delete("receiptPartnerId");
-            [
-              "receiptPage",
-              "sourcePage",
-              "receiptId",
-              "allocationPage",
-            ].forEach((key) => p.delete(key));
-          }, "push")
-        }
-      />
+    <div
+      className={
+        v2
+          ? "flex min-h-0 flex-1 flex-col gap-3 overflow-auto"
+          : "min-h-0 flex-1 space-y-4 overflow-auto"
+      }
+    >
+      <FilterPanel>
+        <div className="max-w-sm">
+          <BusinessPartnerSelect
+            label="배분 거래처"
+            value={partnerId ? String(partnerId) : ""}
+            onChange={(value) =>
+              write((p) => {
+                if (value) p.set("receiptPartnerId", value);
+                else p.delete("receiptPartnerId");
+                [
+                  "receiptPage",
+                  "sourcePage",
+                  "receiptId",
+                  "allocationPage",
+                ].forEach((key) => p.delete(key));
+              }, "push")
+            }
+          />
+        </div>
+      </FilterPanel>
       {partnerId ? (
         <AllocationPanel key={partnerId} partnerId={partnerId} />
       ) : (
@@ -130,7 +145,7 @@ function AllocationPanel({ partnerId }: { partnerId: number }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const opener = useRef<HTMLButtonElement | null>(null);
-  const heading = useRef<HTMLHeadingElement | null>(null);
+  const heading = useRef<HTMLElement | null>(null);
   function addRow() {
     setRows((current) => [
       ...current,
@@ -207,11 +222,13 @@ function AllocationPanel({ partnerId }: { partnerId: number }) {
     }
   }
   return (
-    <div className="space-y-4">
-      <p>
-        기록된 수납을 여러 전표·경매 대금에 배분합니다. 정정은 기존 배분을
-        취소하며 원래 입금은 유지합니다.
-      </p>
+    <div className={v2 ? "flex min-h-0 flex-1 flex-col gap-3" : "space-y-4"}>
+      {!v2 ? (
+        <p>
+          기록된 수납을 여러 전표·경매 대금에 배분합니다. 정정은 기존 배분을
+          취소하며 원래 입금은 유지합니다.
+        </p>
+      ) : null}
       {pending && (
         <div role="status" className="rounded border p-3">
           처리 결과 확인이 필요합니다.{" "}
@@ -229,163 +246,234 @@ function AllocationPanel({ partnerId }: { partnerId: number }) {
           {error}
         </p>
       )}
-      <h2 className="font-bold">수납 선택</h2>
-      {source.isError ? (
-        <p role="alert">
-          수납을 불러오지 못했습니다.{" "}
-          <button onClick={() => void source.refetch()}>다시 조회</button>
-        </p>
-      ) : source.isPending ? (
-        <p>수납 확인 중</p>
+      {v2 ? (
+        <PaymentAllocationPanels
+          sources={source}
+          receipt={selected}
+          allocations={history}
+          receiptId={receiptId}
+          page={page}
+          allocationPage={allocationPage}
+          checked={eligibleIds}
+          disabled={saving || !!pending}
+          addDisabled={
+            saving ||
+            !!pending ||
+            !selected.data?.allocationAllowed ||
+            !metadata.data
+          }
+          correctionDisabled={
+            saving ||
+            !!pending ||
+            !selected.data?.correctionAllowed ||
+            !eligibleIds.length ||
+            !metadata.data
+          }
+          headingRef={heading}
+          onSelect={(id) => {
+            setChecked([]);
+            write((p) => {
+              p.set("receiptId", String(id));
+              p.delete("allocationPage");
+            }, "push");
+          }}
+          onPage={(next) =>
+            write((p) => p.set("sourcePage", String(next)), "push")
+          }
+          onAllocationPage={(next) => {
+            setChecked([]);
+            write((p) => p.set("allocationPage", String(next)), "push");
+          }}
+          onCheck={(id, checked) =>
+            setChecked((ids) =>
+              checked ? [...ids, id] : ids.filter((value) => value !== id),
+            )
+          }
+          onAdd={(button) => open("ALLOCATE", button)}
+          onCorrect={(button) => open("CORRECT", button)}
+        />
       ) : (
         <>
-          {!source.data.content.length && <p>수납 내역이 없습니다.</p>}
-          <ul className="divide-y rounded border">
-            {source.data.content.map((item) => (
-              <li key={item.id} className="p-3">
-                <button
-                  type="button"
-                  aria-pressed={receiptId === item.id}
-                  className={buttonClass}
-                  onClick={() => {
-                    setChecked([]);
-                    write((p) => {
-                      p.set("receiptId", String(item.id));
-                      p.delete("allocationPage");
-                    }, "push");
-                  }}
-                >
-                  수납 #{item.id} · {item.paymentDate} ·{" "}
-                  {item.amount.toLocaleString()}원 · 미배분{" "}
-                  {item.availableAmount.toLocaleString()}원
-                  {item.reviewRequired ? " · 검토 필요" : ""}
-                  {item.status === "CANCELLED" ? " · 취소됨" : ""}
-                </button>
-              </li>
-            ))}
-          </ul>
-          <PaginationControls
-            pageIndex={page}
-            pageCount={source.data.totalPages}
-            onPageChange={(next) =>
-              write((p) => p.set("sourcePage", String(next)), "push")
-            }
-          />
-        </>
-      )}
-      {receiptId && (
-        <section className="space-y-3">
-          <h2 ref={heading} tabIndex={-1} className="font-bold">
-            선택 수납 #{receiptId}의 배분 내역
-          </h2>
-          {selected.isError && (
-            <p role="alert">
-              선택 수납을 불러오지 못했습니다.{" "}
-              <button onClick={() => void selected.refetch()}>다시 조회</button>
-            </p>
-          )}
-          {selected.data && (
-            <p>
-              입금 {selected.data.amount.toLocaleString()}원 / 미배분{" "}
-              {selected.data.availableAmount.toLocaleString()}원
-              {selected.data.reviewRequired ? " · 원장 검토가 필요합니다." : ""}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button
-              className={buttonClass}
-              disabled={
-                saving ||
-                !!pending ||
-                !selected.data?.allocationAllowed ||
-                !metadata.data
-              }
-              onClick={(e) => open("ALLOCATE", e.currentTarget)}
-            >
-              배분 추가
-            </button>
-            <button
-              className={buttonClass}
-              disabled={
-                saving ||
-                !!pending ||
-                !selected.data?.correctionAllowed ||
-                !eligibleIds.length ||
-                !metadata.data
-              }
-              onClick={(e) => open("CORRECT", e.currentTarget)}
-            >
-              선택 배분 정정
-            </button>
-          </div>
-          {history.isError ? (
-            <p role="alert">
-              배분 내역을 불러오지 못했습니다.{" "}
-              <button onClick={() => void history.refetch()}>다시 조회</button>
-            </p>
-          ) : history.isPending ? (
-            <p>배분 확인 중</p>
-          ) : (
-            <>
-              {!history.data.content.length && <p>배분 내역이 없습니다.</p>}
-              <ul className="divide-y rounded border">
-                {history.data.content.map((item) => (
-                  <li key={item.id} className="p-3">
-                    <label>
-                      <input
-                        type="checkbox"
-                        aria-label={`배분 #${item.id} 선택`}
-                        checked={eligibleIds.includes(item.id)}
-                        disabled={
-                          saving || !!pending || !item.cancellationAllowed
-                        }
-                        onChange={(e) =>
-                          setChecked((ids) =>
-                            e.target.checked
-                              ? [...ids, item.id]
-                              : ids.filter((id) => id !== item.id),
-                          )
-                        }
-                      />{" "}
-                      {typeLabel(item.targetType)} #{item.targetId} ·{" "}
-                      {item.amount.toLocaleString()}원 ·{" "}
-                      {item.status === "CANCELLED" ? "취소됨" : "유효 배분"}
-                    </label>
-                    {v2 && item.targetId != null ? (
-                      <Link
-                        className="ml-3 text-sm text-green-800 underline"
-                        href={
-                          salesV2Href(
-                            item.targetType === "SALES_SLIP"
-                              ? "slips"
-                              : "auction",
-                            item.targetType === "SALES_SLIP"
-                              ? { slipId: item.targetId, paymentPage: 0 }
-                              : {
-                                  panel: "proceeds",
-                                  proceedsId: item.targetId,
-                                  paymentPage: 0,
-                                },
-                          ) as Route
-                        }
+          {" "}
+          <section className="space-y-3">
+            <h2 className="font-bold">수납 선택</h2>
+            {source.isError ? (
+              <p role="alert">
+                수납을 불러오지 못했습니다.{" "}
+                <button onClick={() => void source.refetch()}>다시 조회</button>
+              </p>
+            ) : source.isPending ? (
+              <p>수납 확인 중</p>
+            ) : (
+              <>
+                {!source.data.content.length && <p>수납 내역이 없습니다.</p>}
+                <ul className="divide-y rounded border">
+                  {source.data.content.map((item) => (
+                    <li key={item.id} className="p-3">
+                      <button
+                        type="button"
+                        aria-pressed={receiptId === item.id}
+                        className={buttonClass}
+                        onClick={() => {
+                          setChecked([]);
+                          write((p) => {
+                            p.set("receiptId", String(item.id));
+                            p.delete("allocationPage");
+                          }, "push");
+                        }}
                       >
-                        배분 대상 보기
-                      </Link>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-              <PaginationControls
-                pageIndex={allocationPage}
-                pageCount={history.data.totalPages}
-                onPageChange={(next) => {
-                  setChecked([]);
-                  write((p) => p.set("allocationPage", String(next)), "push");
+                        <>
+                          {" "}
+                          수납 #{item.id} · {item.paymentDate} ·{" "}
+                          {item.amount.toLocaleString()}원 · 미배분{" "}
+                          {item.availableAmount.toLocaleString()}원
+                          {item.reviewRequired ? " · 검토 필요" : ""}
+                          {item.status === "CANCELLED" ? " · 취소됨" : ""}
+                        </>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <PaginationControls
+                  pageIndex={page}
+                  pageCount={source.data.totalPages}
+                  onPageChange={(next) =>
+                    write((p) => p.set("sourcePage", String(next)), "push")
+                  }
+                />
+              </>
+            )}
+          </section>
+          {receiptId && (
+            <section className="space-y-3">
+              <h2
+                ref={(node) => {
+                  heading.current = node;
                 }}
-              />
-            </>
+                tabIndex={-1}
+                className="font-bold"
+              >
+                선택 수납 #{receiptId}의 배분 내역
+              </h2>
+              {selected.isError && (
+                <p role="alert">
+                  선택 수납을 불러오지 못했습니다.{" "}
+                  <button onClick={() => void selected.refetch()}>
+                    다시 조회
+                  </button>
+                </p>
+              )}
+              {selected.data && (
+                <p>
+                  입금 {selected.data.amount.toLocaleString()}원 / 미배분{" "}
+                  {selected.data.availableAmount.toLocaleString()}원
+                  {selected.data.reviewRequired
+                    ? " · 원장 검토가 필요합니다."
+                    : ""}
+                </p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  className={buttonClass}
+                  disabled={
+                    saving ||
+                    !!pending ||
+                    !selected.data?.allocationAllowed ||
+                    !metadata.data
+                  }
+                  onClick={(e) => open("ALLOCATE", e.currentTarget)}
+                >
+                  배분 추가
+                </button>
+                <button
+                  className={buttonClass}
+                  disabled={
+                    saving ||
+                    !!pending ||
+                    !selected.data?.correctionAllowed ||
+                    !eligibleIds.length ||
+                    !metadata.data
+                  }
+                  onClick={(e) => open("CORRECT", e.currentTarget)}
+                >
+                  선택 배분 정정
+                </button>
+              </div>
+              {history.isError ? (
+                <p role="alert">
+                  배분 내역을 불러오지 못했습니다.{" "}
+                  <button onClick={() => void history.refetch()}>
+                    다시 조회
+                  </button>
+                </p>
+              ) : history.isPending ? (
+                <p>배분 확인 중</p>
+              ) : (
+                <>
+                  {!history.data.content.length && <p>배분 내역이 없습니다.</p>}
+                  <ul className="divide-y rounded border">
+                    {history.data.content.map((item) => (
+                      <li key={item.id} className="p-3">
+                        <label>
+                          <input
+                            type="checkbox"
+                            aria-label={`배분 #${item.id} 선택`}
+                            checked={eligibleIds.includes(item.id)}
+                            disabled={
+                              saving || !!pending || !item.cancellationAllowed
+                            }
+                            onChange={(e) =>
+                              setChecked((ids) =>
+                                e.target.checked
+                                  ? [...ids, item.id]
+                                  : ids.filter((id) => id !== item.id),
+                              )
+                            }
+                          />{" "}
+                          {typeLabel(item.targetType)} #{item.targetId} ·{" "}
+                          {item.amount.toLocaleString()}원 ·{" "}
+                          {item.status === "CANCELLED" ? "취소됨" : "유효 배분"}
+                        </label>
+                        {v2 && item.targetId != null ? (
+                          <Link
+                            className="ml-3 text-sm text-green-800 underline"
+                            href={
+                              salesV2Href(
+                                item.targetType === "SALES_SLIP"
+                                  ? "slips"
+                                  : "auction",
+                                item.targetType === "SALES_SLIP"
+                                  ? { slipId: item.targetId, paymentPage: 0 }
+                                  : {
+                                      panel: "proceeds",
+                                      proceedsId: item.targetId,
+                                      paymentPage: 0,
+                                    },
+                              ) as Route
+                            }
+                          >
+                            배분 대상 보기
+                          </Link>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                  <PaginationControls
+                    pageIndex={allocationPage}
+                    pageCount={history.data.totalPages}
+                    onPageChange={(next) => {
+                      setChecked([]);
+                      write(
+                        (p) => p.set("allocationPage", String(next)),
+                        "push",
+                      );
+                    }}
+                  />
+                </>
+              )}
+            </section>
           )}
-        </section>
+        </>
       )}
       {metadata.isError && (
         <p role="alert">
@@ -401,7 +489,7 @@ function AllocationPanel({ partnerId }: { partnerId: number }) {
       >
         <DialogContent
           showCloseButton={false}
-          className="max-h-[90vh] overflow-auto sm:max-w-3xl"
+          className="max-h-[90vh] overflow-auto rounded-md border border-[#dfe5dc] p-5 sm:max-w-3xl"
           onCloseAutoFocus={(e) => {
             e.preventDefault();
             if (opener.current?.isConnected && !opener.current.disabled)

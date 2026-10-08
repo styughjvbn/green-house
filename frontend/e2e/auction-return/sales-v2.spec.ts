@@ -23,7 +23,7 @@ test("v2 menus and cleaned documents coexist with the legacy screen", async ({
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "전표", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(page.getByText("전표 #TEST-11", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "전표 복사", exact: true }),
@@ -132,4 +132,33 @@ test("partner selection reload and links keep the selected partner", async ({
   await expect(
     page.getByRole("button", { name: "수납 #101", exact: false }),
   ).toBeVisible();
+});
+
+test("payment workspace uses separate panels on desktop and stacks without overflow on mobile", async ({
+  page,
+}) => {
+  await page.goto(
+    "/sales-v2/payments?view=allocations&receiptPartnerId=7&receiptId=101",
+  );
+  const sources = page.locator('[data-sales-payment-panel="sources"]');
+  const allocation = page.locator('[data-sales-payment-panel="allocation"]');
+  await expect(
+    page.getByRole("button", { name: "배분 추가", exact: true }),
+  ).toBeEnabled();
+  const left = await sources.boundingBox();
+  const right = await allocation.boundingBox();
+  expect(right!.x).toBeGreaterThanOrEqual(left!.x + left!.width);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const top = await sources.boundingBox();
+  const bottom = await allocation.boundingBox();
+  expect(bottom!.y).toBeGreaterThanOrEqual(top!.y + top!.height);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+  await page
+    .getByRole("button", { name: "수납 조회·배분·정정", exact: true })
+    .focus();
+  await expect(
+    page.getByRole("button", { name: "수납 조회·배분·정정", exact: true }),
+  ).toBeFocused();
 });

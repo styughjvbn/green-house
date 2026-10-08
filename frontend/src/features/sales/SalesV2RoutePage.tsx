@@ -8,8 +8,11 @@ import { SalesRoutePage } from "./SalesRoutePage";
 import {
   createServerSearchParamReader,
   readProceedsRouteState,
+  readAuctionRouteState,
 } from "./lib/salesRouteParams";
 import {
+  auctionLotPageQueryOptions,
+  auctionSummaryQueryOptions,
   auctionProceedsPageQueryOptions,
   auctionProceedsDetailQueryOptions,
 } from "./model/salesQueryOptions";
@@ -34,13 +37,17 @@ export async function SalesV2RoutePage({
   if (activeTab === "payments") return <SalesV2PaymentsPage />;
   const reader = createServerSearchParamReader(resolvedSearchParams);
   if (reader.get("panel") !== "proceeds") {
+    const cache = new QueryClient();
+    await Promise.all([
+      cache.prefetchQuery(
+        auctionLotPageQueryOptions(readAuctionRouteState(reader)),
+      ),
+      cache.prefetchQuery(auctionSummaryQueryOptions()),
+    ]);
     return (
-      <SalesV2AuctionPage>
-        <SalesRoutePage
-          activeTab="auction"
-          resolvedSearchParams={resolvedSearchParams}
-        />
-      </SalesV2AuctionPage>
+      <HydrationBoundary state={dehydrate(cache)}>
+        <SalesV2AuctionPage />
+      </HydrationBoundary>
     );
   }
   const state = readProceedsRouteState(reader, "auction");

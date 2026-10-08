@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { TabError, TabLayout, TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import { readAuctionRouteState } from "../lib/salesRouteParams";
@@ -8,7 +9,7 @@ import { AuctionFilters } from "./auction/AuctionFilters";
 import { AuctionLotDetail } from "./auction/AuctionLotDetail";
 import { AuctionLotList } from "./auction/AuctionLotList";
 
-export function SalesAuctionPage() {
+export function SalesAuctionPage({ actions }: { actions?: ReactNode }) {
   const routeState = readAuctionRouteState(useSearchParams());
   const tracking = useAuctionTracking({ routeState });
 
@@ -17,6 +18,7 @@ export function SalesAuctionPage() {
       <TabLayout>
         <TabStack>
           <AuctionFilters
+            actions={actions}
             filters={tracking.filters}
             loading={tracking.loading}
             summary={tracking.summary}

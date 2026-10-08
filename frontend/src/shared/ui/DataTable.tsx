@@ -43,7 +43,7 @@ type DataTableProps<TData> = {
   selectedRowId?: string | null;
   settingsKey: string;
   sorting?: SortingState;
-  title: string;
+  title: ReactNode;
   totalLabel?: string;
   totalPages?: number;
   onPageChange?: (pageIndex: number) => void;
@@ -195,11 +195,7 @@ export function DataTable<TData>({
   }
 
   const hasPagination =
-    pageIndex != null &&
-    pageSize != null &&
-    totalPages != null &&
-    onPageChange &&
-    onPageSizeChange;
+    pageIndex != null && pageSize != null && totalPages != null && onPageChange;
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col rounded-md border border-[#dfe5dc] bg-white shadow-sm">

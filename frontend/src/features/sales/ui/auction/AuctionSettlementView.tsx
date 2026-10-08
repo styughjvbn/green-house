@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { salesV2Href } from "@/shared/config/routes";
@@ -106,7 +106,13 @@ const resultColumns: ColumnDef<AuctionProceedsResult, unknown>[] = [
   },
 ];
 
-export function AuctionSettlementView({ v2 = false }: { v2?: boolean }) {
+export function AuctionSettlementView({
+  v2 = false,
+  actions,
+}: {
+  v2?: boolean;
+  actions?: ReactNode;
+}) {
   const queryClient = useQueryClient();
   const route = readProceedsRouteState(
     useSearchParams(),
@@ -165,19 +171,22 @@ export function AuctionSettlementView({ v2 = false }: { v2?: boolean }) {
   const error = pageQuery.error ?? detailQuery.error;
   return (
     <TabStack>
-      <section className="rounded-md border bg-white px-4 py-3">
-        <h2 className="text-base font-bold">경매 대금</h2>
-        <p className="mt-1 text-sm text-[#68756c]">
-          경매장 대금 자료와 실제 입금을 확인합니다. 받을 금액이 미확인인 자료는
-          입금 확인을 기다립니다.
-        </p>
-      </section>
+      {!v2 ? (
+        <section className="rounded-md border bg-white px-4 py-3">
+          <h2 className="text-base font-bold">경매 대금</h2>
+          <p className="mt-1 text-sm text-[#68756c]">
+            경매장 대금 자료와 실제 입금을 확인합니다. 받을 금액이 미확인인
+            자료는 입금 확인을 기다립니다.
+          </p>
+        </section>
+      ) : null}
       <TabError message={error instanceof Error ? error.message : null} />
       <TabSplit
         columns="lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)]"
         gap="gap-3"
       >
         <DataTable
+          actions={actions}
           columns={columns}
           data={pageQuery.data?.content ?? []}
           isLoading={pageQuery.isPending}

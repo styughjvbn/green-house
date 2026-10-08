@@ -64,7 +64,7 @@ export function SalesSlipList({
       },
       {
         accessorKey: "totalAmount",
-        header: v2 ? "일반 판매 거래금액" : "총 금액",
+        header: v2 ? "일반 거래금액" : "총 금액",
         cell: ({ row }) =>
           v2 && row.original.salesType === "AUCTION"
             ? "경매에서 확인"
@@ -78,7 +78,7 @@ export function SalesSlipList({
         cell: ({ row }) => (
           <SalesSlipStatusBadge value={row.original.paymentStatus} />
         ),
-        size: 10,
+        size: v2 ? 80 : 10,
       },
       {
         accessorKey: "salesStatus",

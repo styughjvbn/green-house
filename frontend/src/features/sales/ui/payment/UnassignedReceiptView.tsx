@@ -19,6 +19,12 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/shared/ui/primitives/dialog";
+import type { ColumnDef } from "@tanstack/react-table";
+import { DataTable } from "@/shared/ui/DataTable";
+import { FilterPanel } from "@/shared/ui/FilterControls";
+import { TabSplit } from "@/shared/ui/TabLayout";
+import { DetailCard, DetailHeader } from "@/shared/ui/DetailCard";
+import { Button } from "@/shared/ui/primitives/button";
 import { BusinessPartnerSelect } from "../common/BusinessPartnerSelect";
 import {
   getUnassignedReceiptPage,
@@ -31,32 +37,42 @@ import { type ReceiptRequest } from "../../lib/receiptRequest";
 
 import { paymentRequests as requests } from "../../model/paymentRequests";
 const inputClass =
-  "mt-1 h-10 w-full rounded border border-[#d7ddd8] bg-white px-3";
+  "mt-1 h-10 w-full rounded border border-[#cfd8cc] bg-white px-3";
 
-export function UnassignedReceiptView() {
+export function UnassignedReceiptView({ v2 = false }: { v2?: boolean }) {
   const params = useSearchParams();
   const write = useUrlSearchParamsWriter();
   const { partnerId: selectedId } = readReceiptRouteState(params);
   return (
-    <div className="min-h-0 flex-1 space-y-4 overflow-auto">
-      <BusinessPartnerSelect
-        label="수납 거래처"
-        value={selectedId ? String(selectedId) : ""}
-        onChange={(value) =>
-          write((p) => {
-            if (value) p.set("receiptPartnerId", value);
-            else p.delete("receiptPartnerId");
-            [
-              "receiptPage",
-              "sourcePage",
-              "receiptId",
-              "allocationPage",
-            ].forEach((key) => p.delete(key));
-          }, "push")
-        }
-      />
+    <div
+      className={
+        v2
+          ? "flex min-h-0 flex-1 flex-col gap-3 overflow-auto"
+          : "min-h-0 flex-1 space-y-4 overflow-auto"
+      }
+    >
+      <FilterPanel>
+        <div className="max-w-sm">
+          <BusinessPartnerSelect
+            label="수납 거래처"
+            value={selectedId ? String(selectedId) : ""}
+            onChange={(value) =>
+              write((p) => {
+                if (value) p.set("receiptPartnerId", value);
+                else p.delete("receiptPartnerId");
+                [
+                  "receiptPage",
+                  "sourcePage",
+                  "receiptId",
+                  "allocationPage",
+                ].forEach((key) => p.delete(key));
+              }, "push")
+            }
+          />
+        </div>
+      </FilterPanel>
       {selectedId ? (
-        <ReceiptPanel key={selectedId} partnerId={selectedId} />
+        <ReceiptPanel key={selectedId} partnerId={selectedId} v2={v2} />
       ) : (
         <p>수납할 거래처를 선택하세요.</p>
       )}
@@ -64,7 +80,7 @@ export function UnassignedReceiptView() {
   );
 }
 
-function ReceiptPanel({ partnerId }: { partnerId: number }) {
+function ReceiptPanel({ partnerId, v2 }: { partnerId: number; v2: boolean }) {
   const params = useSearchParams();
   const write = useUrlSearchParamsWriter();
   const { page } = readReceiptRouteState(params);
@@ -90,7 +106,7 @@ function ReceiptPanel({ partnerId }: { partnerId: number }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const returnFocus = useRef<HTMLButtonElement | null>(null);
-  const historyTitle = useRef<HTMLHeadingElement | null>(null);
+  const historyTitle = useRef<HTMLElement | null>(null);
   const [cancelId, setCancelId] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [correctionDate, setCorrectionDate] = useState(businessDate);
@@ -173,13 +189,123 @@ function ReceiptPanel({ partnerId }: { partnerId: number }) {
       }),
     );
   }
+  const receiptForm = (
+    <form onSubmit={receive}>
+      <fieldset
+        disabled={saving || !!pending}
+        className="grid gap-3 sm:grid-cols-2"
+      >
+        <label>
+          입금액
+          <input
+            className={inputClass}
+            type="number"
+            min="1"
+            max={Number.MAX_SAFE_INTEGER}
+            step="1"
+            required
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </label>
+        <label>
+          입금일
+          <input
+            className={inputClass}
+            type="date"
+            required
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </label>
+        <label>
+          입금자
+          <input
+            className={inputClass}
+            maxLength={100}
+            value={depositor}
+            onChange={(e) => setDepositor(e.target.value)}
+          />
+        </label>
+        <label>
+          메모
+          <input
+            className={inputClass}
+            maxLength={1000}
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+          />
+        </label>
+        <Button type="submit">{saving ? "저장 중" : "수납 기록"}</Button>
+      </fieldset>
+    </form>
+  );
+  type Event = Awaited<
+    ReturnType<typeof getUnassignedReceiptPage>
+  >["content"][number];
+  const historyColumns: ColumnDef<Event, unknown>[] = [
+    { accessorKey: "eventDate", header: "날짜", size: 100 },
+    {
+      id: "type",
+      header: "구분",
+      size: 100,
+      cell: ({ row }) =>
+        row.original.eventType === "ADJUSTMENT" ? "오입력 취소" : "수납",
+    },
+    {
+      accessorKey: "amount",
+      header: "금액",
+      size: 110,
+      meta: { align: "right" },
+      cell: ({ row }) => `${row.original.amount.toLocaleString()}원`,
+    },
+    {
+      id: "status",
+      header: "상태",
+      size: 80,
+      cell: ({ row }) =>
+        row.original.status === "CANCELLED" ? "취소됨" : "유효",
+    },
+    { accessorKey: "memo", header: "메모", size: 160 },
+    {
+      id: "original",
+      header: "원본",
+      size: 80,
+      cell: ({ row }) =>
+        row.original.parentEventId ? `#${row.original.parentEventId}` : "-",
+    },
+    {
+      id: "actions",
+      header: "정정",
+      size: 110,
+      cell: ({ row }) => (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={
+            saving || !!pending || !row.original.unassignedCancellationAllowed
+          }
+          onClick={(event) => {
+            returnFocus.current = event.currentTarget;
+            setReason("");
+            setCorrectionDate(businessDate);
+            setCancelId(row.original.id);
+          }}
+        >
+          오입력 취소
+        </Button>
+      ),
+    },
+  ];
   return (
-    <div className="space-y-4">
-      <p className="text-sm">
-        대상 미지정 수납을 기록합니다. 전표의 입금액에는 배분 후 반영됩니다.
-      </p>
+    <div className={v2 ? "flex min-h-0 flex-1 flex-col gap-3" : "space-y-4"}>
+      {!v2 ? (
+        <p className="text-sm">
+          대상 미지정 수납을 기록합니다. 전표의 입금액에는 배분 후 반영됩니다.
+        </p>
+      ) : null}
       {balance.data ? (
-        <p className="font-bold">
+        <p data-sales-balance={v2 || undefined} className="font-bold">
           미배분 수납 {balance.data.unappliedPaymentAmount.toLocaleString()}원
         </p>
       ) : (
@@ -205,117 +331,144 @@ function ReceiptPanel({ partnerId }: { partnerId: number }) {
           {error}
         </p>
       ) : null}
-      <form onSubmit={receive}>
-        <fieldset
-          disabled={saving || !!pending}
-          className="grid gap-3 sm:grid-cols-2"
+      {v2 ? (
+        <TabSplit
+          columns="lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+          gap="gap-3"
         >
-          <label>
-            입금액
-            <input
-              className={inputClass}
-              type="number"
-              min="1"
-              max={Number.MAX_SAFE_INTEGER}
-              step="1"
-              required
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </label>
-          <label>
-            입금일
-            <input
-              className={inputClass}
-              type="date"
-              required
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </label>
-          <label>
-            입금자
-            <input
-              className={inputClass}
-              maxLength={100}
-              value={depositor}
-              onChange={(e) => setDepositor(e.target.value)}
-            />
-          </label>
-          <label>
-            메모
-            <input
-              className={inputClass}
-              maxLength={1000}
-              value={memo}
-              onChange={(e) => setMemo(e.target.value)}
-            />
-          </label>
-          <button
-            type="submit"
-            className="rounded bg-[#159447] px-4 py-2 font-bold text-white"
-          >
-            {saving ? "저장 중" : "수납 기록"}
-          </button>
-        </fieldset>
-      </form>
-      <h2 ref={historyTitle} tabIndex={-1} className="font-bold">
-        수납·정정 내역
-      </h2>
-      {history.isError ? (
-        <p role="alert">
-          내역을 불러오지 못했습니다.{" "}
-          <button onClick={() => void history.refetch()}>다시 조회</button>
-        </p>
-      ) : history.isPending ? (
-        <p>내역 확인 중</p>
-      ) : (
-        <>
-          {history.data.content.length === 0 ? (
-            <p>수납 내역이 없습니다.</p>
-          ) : (
-            <ul className="divide-y rounded border">
-              {history.data.content.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex flex-wrap items-center gap-3 p-3"
+          <DetailCard>
+            <DetailHeader title="새 입금 기록" />
+            <div className="p-4">{receiptForm}</div>
+          </DetailCard>
+          <DataTable
+            title={
+              <span ref={historyTitle} tabIndex={-1}>
+                수납·정정 내역
+              </span>
+            }
+            columns={historyColumns}
+            data={history.data?.content ?? []}
+            settingsKey="sales.v2.unassignedReceipts"
+            getRowId={(item) => String(item.id)}
+            emptyMessage="수납 내역이 없습니다."
+            isLoading={history.isPending}
+            errorMessage={
+              history.isError ? "내역을 불러오지 못했습니다." : null
+            }
+            actions={
+              history.isError ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void history.refetch()}
                 >
-                  <span>{item.eventDate}</span>
-                  <span>
-                    {item.eventType === "ADJUSTMENT" ? "오입력 취소" : "수납"}{" "}
-                    {item.amount.toLocaleString()}원
-                    {item.status === "CANCELLED" ? " (취소됨)" : ""}
-                  </span>
-                  <span>{item.memo}</span>
-                  {item.parentEventId ? (
-                    <span>원본 #{item.parentEventId}</span>
-                  ) : null}
-                  <button
-                    disabled={
-                      saving || !!pending || !item.unassignedCancellationAllowed
-                    }
-                    type="button"
-                    className="ml-auto rounded border px-3 py-2 disabled:opacity-40"
-                    onClick={(event) => {
-                      returnFocus.current = event.currentTarget;
-                      setReason("");
-                      setCorrectionDate(businessDate);
-                      setCancelId(item.id);
-                    }}
-                  >
-                    오입력 취소
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <PaginationControls
+                  다시 조회
+                </Button>
+              ) : undefined
+            }
             pageIndex={page}
-            pageCount={history.data.totalPages}
+            pageSize={10}
+            totalPages={history.data?.totalPages ?? 0}
             onPageChange={(next) =>
               write((p) => p.set("receiptPage", String(next)), "push")
             }
           />
+        </TabSplit>
+      ) : (
+        <>
+          {" "}
+          <section
+            data-sales-payment-panel={v2 ? "new-receipt" : undefined}
+            className="space-y-3"
+          >
+            {v2 ? (
+              <>
+                <h2>새 입금 기록</h2>
+                <p>
+                  입금액과 날짜를 입력하세요.
+                  <br />
+                  저장한 입금은 배분·정정에서 연결할 수 있습니다.
+                </p>
+              </>
+            ) : null}
+            {receiptForm}
+          </section>
+          <section
+            data-sales-payment-panel={v2 ? "history" : undefined}
+            className="space-y-3"
+          >
+            <h2
+              ref={(node) => {
+                historyTitle.current = node;
+              }}
+              tabIndex={-1}
+              className="font-bold"
+            >
+              수납·정정 내역
+            </h2>
+            {history.isError ? (
+              <p role="alert">
+                내역을 불러오지 못했습니다.{" "}
+                <button onClick={() => void history.refetch()}>
+                  다시 조회
+                </button>
+              </p>
+            ) : history.isPending ? (
+              <p>내역 확인 중</p>
+            ) : (
+              <>
+                {history.data.content.length === 0 ? (
+                  <p>수납 내역이 없습니다.</p>
+                ) : (
+                  <ul className="divide-y rounded border">
+                    {history.data.content.map((item) => (
+                      <li
+                        key={item.id}
+                        className="flex flex-wrap items-center gap-3 p-3"
+                      >
+                        <span>{item.eventDate}</span>
+                        <span>
+                          {item.eventType === "ADJUSTMENT"
+                            ? "오입력 취소"
+                            : "수납"}{" "}
+                          {item.amount.toLocaleString()}원
+                          {item.status === "CANCELLED" ? " (취소됨)" : ""}
+                        </span>
+                        <span>{item.memo}</span>
+                        {item.parentEventId ? (
+                          <span>원본 #{item.parentEventId}</span>
+                        ) : null}
+                        <button
+                          disabled={
+                            saving ||
+                            !!pending ||
+                            !item.unassignedCancellationAllowed
+                          }
+                          type="button"
+                          className="ml-auto rounded border px-3 py-2 disabled:opacity-40"
+                          onClick={(event) => {
+                            returnFocus.current = event.currentTarget;
+                            setReason("");
+                            setCorrectionDate(businessDate);
+                            setCancelId(item.id);
+                          }}
+                        >
+                          오입력 취소
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <PaginationControls
+                  pageIndex={page}
+                  pageCount={history.data.totalPages}
+                  onPageChange={(next) =>
+                    write((p) => p.set("receiptPage", String(next)), "push")
+                  }
+                />
+              </>
+            )}
+          </section>
         </>
       )}
       <Dialog
@@ -326,6 +479,7 @@ function ReceiptPanel({ partnerId }: { partnerId: number }) {
       >
         <DialogContent
           showCloseButton={false}
+          className="max-h-[90vh] overflow-auto rounded-md border border-[#dfe5dc] p-5"
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             const target = returnFocus.current;
@@ -339,8 +493,10 @@ function ReceiptPanel({ partnerId }: { partnerId: number }) {
             if (saving) e.preventDefault();
           }}
         >
-          <DialogTitle>수납 오입력 취소</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-base font-bold">
+            수납 오입력 취소
+          </DialogTitle>
+          <DialogDescription className="text-sm text-[#647268]">
             입력 실수를 정정합니다. 실제 돈을 돌려준 기록은 별도입니다.
           </DialogDescription>
           <form

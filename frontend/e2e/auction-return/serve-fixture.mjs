@@ -471,7 +471,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === "/api/auction-lots" && req.method === "GET")
     return send(pageOf([lot]));
-  if (url.pathname === "/api/auction-lots/summary")
+  if (url.pathname === "/api/auction-tracking/summary")
     return send({
       lotCount: 1,
       shippedQuantity: 30,

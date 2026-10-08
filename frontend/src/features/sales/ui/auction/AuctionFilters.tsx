@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { AuctionTrackingSummary } from "@/entities/farm/types";
 import { auctionStatusOptions } from "../../lib/auctionDisplay";
 import type { AuctionFilterState } from "../../model/types";
@@ -13,6 +14,7 @@ import {
 } from "@/shared/ui/FilterControls";
 
 export function AuctionFilters({
+  actions,
   filters,
   loading,
   summary,
@@ -20,6 +22,7 @@ export function AuctionFilters({
   onSearch,
   onReset,
 }: {
+  actions?: ReactNode;
   filters: AuctionFilterState;
   loading: boolean;
   summary: AuctionTrackingSummary;
@@ -44,6 +47,7 @@ export function AuctionFilters({
             checked={filters.waitingOnly}
             onChange={(checked) => onChange("waitingOnly", checked)}
           />
+          {actions ? <div className="ml-auto">{actions}</div> : null}
         </>
       }
     >
