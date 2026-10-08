@@ -29,7 +29,9 @@ public record SalesSlipDocument(
     String paymentMethod,
     String memo,
     List<SalesSlipDocumentItem> items,
-    List<SalesSlipAction> availableActions) {
+    List<SalesSlipAction> availableActions,
+    @Schema(nullable = true, description = "현재 금액 검토 필요 여부. 과거 생성 응답에는 미상일 수 있습니다.")
+        Boolean financialReviewRequired) {
 
   public static SalesSlipDocument from(
       SalesSlip salesSlip,
@@ -37,7 +39,8 @@ public record SalesSlipDocument(
       String auctionMarket,
       Map<Long, List<SalesSlipItemAllocation>> allocationsByItemId,
       Map<Long, OrchidGroupState> states,
-      List<SalesSlipAction> availableActions) {
+      List<SalesSlipAction> availableActions,
+      boolean financialReviewRequired) {
     return new SalesSlipDocument(
         salesSlip.getId(),
         salesSlip.getSlipNumber(),
@@ -60,6 +63,7 @@ public record SalesSlipDocument(
                     SalesSlipDocumentItem.from(
                         item, allocationsByItemId.getOrDefault(item.getId(), List.of()), states))
             .toList(),
-        availableActions);
+        availableActions,
+        financialReviewRequired);
   }
 }

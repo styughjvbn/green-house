@@ -20,15 +20,18 @@ public class SalesSlipActionResolver {
   private final AuctionSalesSlipCancellationPolicy auctionCancellationPolicy;
 
   public List<SalesSlipAction> resolve(SalesSlip salesSlip) {
-    return resolveAll(List.of(salesSlip)).getOrDefault(salesSlip.getId(), List.of());
+    return resolveAll(List.of(salesSlip))
+        .getOrDefault(salesSlip.getId(), new Actions(List.of(), false))
+        .availableActions();
   }
 
-  public Map<Long, List<SalesSlipAction>> resolveAll(List<SalesSlip> salesSlips) {
+  public Map<Long, Actions> resolveAll(List<SalesSlip> salesSlips) {
     List<Long> directSalesSlipIds =
         salesSlips.stream()
             .filter(salesSlip -> salesSlip.getSalesType() == SalesType.DIRECT)
             .map(SalesSlip::getId)
             .toList();
+    Set<Long> reviews = accounting.findFinancialReviewRequiredIds(directSalesSlipIds);
     Set<Long> paidSalesSlipIds = accounting.findPaidDocumentIds(directSalesSlipIds);
     List<Long> auctionShipmentIds =
         salesSlips.stream()
@@ -39,16 +42,26 @@ public class SalesSlipActionResolver {
     Set<Long> nonCancelableShipmentIds =
         auctionCancellationPolicy.findNonCancelableShipmentIds(auctionShipmentIds);
 
-    Map<Long, List<SalesSlipAction>> actionsBySalesSlipId = new LinkedHashMap<>();
+    Map<Long, Actions> actionsBySalesSlipId = new LinkedHashMap<>();
     for (SalesSlip salesSlip : salesSlips) {
       actionsBySalesSlipId.put(
-          salesSlip.getId(), resolve(salesSlip, paidSalesSlipIds, nonCancelableShipmentIds));
+          salesSlip.getId(),
+          new Actions(
+              resolve(
+                  salesSlip,
+                  paidSalesSlipIds,
+                  nonCancelableShipmentIds,
+                  reviews.contains(salesSlip.getId())),
+              reviews.contains(salesSlip.getId())));
     }
     return actionsBySalesSlipId;
   }
 
   private List<SalesSlipAction> resolve(
-      SalesSlip salesSlip, Set<Long> paidSalesSlipIds, Set<Long> nonCancelableShipmentIds) {
+      SalesSlip salesSlip,
+      Set<Long> paidSalesSlipIds,
+      Set<Long> nonCancelableShipmentIds,
+      boolean reviewRequired) {
     if (salesSlip.isCanceled()) {
       return List.of();
     }
@@ -56,7 +69,7 @@ public class SalesSlipActionResolver {
     EnumSet<SalesSlipAction> actions = EnumSet.noneOf(SalesSlipAction.class);
     boolean hasPaymentEvent = paidSalesSlipIds.contains(salesSlip.getId());
 
-    if (salesSlip.canEdit(hasPaymentEvent)) {
+    if (!reviewRequired && salesSlip.canEdit(hasPaymentEvent)) {
       actions.add(SalesSlipAction.EDIT);
     }
     if (salesSlip.canComplete()) {
@@ -65,12 +78,14 @@ public class SalesSlipActionResolver {
     if (canCancel(salesSlip, hasPaymentEvent, nonCancelableShipmentIds)) {
       actions.add(SalesSlipAction.CANCEL);
     }
-    if (salesSlip.canConfirmPayment()) {
+    if (!reviewRequired && salesSlip.canConfirmPayment()) {
       actions.add(SalesSlipAction.CONFIRM_PAYMENT);
     }
 
     return List.copyOf(actions);
   }
+
+  public record Actions(List<SalesSlipAction> availableActions, boolean financialReviewRequired) {}
 
   private boolean canCancel(
       SalesSlip salesSlip, boolean hasPaymentEvent, Set<Long> nonCancelableShipmentIds) {

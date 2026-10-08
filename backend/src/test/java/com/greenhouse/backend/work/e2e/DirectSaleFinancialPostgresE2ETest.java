@@ -120,6 +120,74 @@ class DirectSaleFinancialPostgresE2ETest extends WorkE2ETestBase {
         .isEqualTo(ledger);
   }
 
+  @Test
+  void legacyReviewDisablesMoneyActionsAndRejectsNewCashAndPriceChanges() throws Exception {
+    seedSale(1000, 1, 1000, 1000);
+    jdbc.execute("UPDATE sales_slips SET remaining_amount=1000 WHERE id=900");
+    jdbc.execute(
+        "INSERT INTO direct_sale_amount_reconciliations (sales_slip_id,stored_paid_amount,stored_remaining_amount,stored_payment_status,stored_item_amount_sum,confirmed_allocation_amount,total_mismatch,price_mismatch,paid_mismatch,remaining_mismatch,ledger_review_required,signed_amount_review_required) VALUES (900,400,600,'부분입금',1000,0,false,false,true,true,false,false)");
+    var source = jdbc.queryForList("SELECT * FROM direct_sales ORDER BY sales_slip_id");
+    var document = jdbc.queryForList("SELECT * FROM sales_slips ORDER BY id");
+    var evidence =
+        jdbc.queryForList(
+            "SELECT * FROM direct_sale_amount_reconciliations ORDER BY sales_slip_id");
+    var detail = get("/api/sales-slips/900");
+    assertThat(detail.status()).isEqualTo(200);
+    assertThat(detail.data().path("financialReviewRequired").asBoolean()).isTrue();
+    assertThat(detail.data().path("availableActions").toString())
+        .doesNotContain("EDIT", "CONFIRM_PAYMENT");
+    var blocked =
+        post(
+            "/api/sales-slips/900/confirm-payment",
+            "{\"amount\":100,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"blocked-review\"}");
+    assertThat(blocked.status()).isEqualTo(409);
+    assertThat(blocked.body().path("error").path("code").asText())
+        .isEqualTo("DIRECT_AMOUNT_REVIEW_REQUIRED");
+    var edited =
+        putJson(
+            "/api/sales-slips/900",
+            """
+      {"saleDate":"2026-10-07","salesType":"DIRECT","partnerId":%d,"paymentStatus":"미입금","salesStatus":"작성중","items":[{"itemName":"과거 가격","quantity":1,"unitPrice":2000,"allocations":[]}]}
+      """
+                .formatted(partnerId));
+    assertThat(edited.status()).as(edited.body().toString()).isEqualTo(409);
+    assertThat(edited.body().path("error").path("code").asText())
+        .isEqualTo("DIRECT_AMOUNT_REVIEW_REQUIRED");
+    assertThat(jdbc.queryForList("SELECT * FROM direct_sales ORDER BY sales_slip_id"))
+        .isEqualTo(source);
+    assertThat(jdbc.queryForList("SELECT * FROM sales_slips ORDER BY id")).isEqualTo(document);
+    assertThat(
+            jdbc.queryForList(
+                "SELECT * FROM direct_sale_amount_reconciliations ORDER BY sales_slip_id"))
+        .isEqualTo(evidence);
+    assertThat(events.count()).isZero();
+  }
+
+  @Test
+  void successfulPaymentStillReplaysWhenHistoricalReviewLaterBlocksNewMoney() throws Exception {
+    seedSale(1000, 1, 1000, 1000);
+    jdbc.execute("UPDATE sales_slips SET remaining_amount=1000 WHERE id=900");
+    String body =
+        "{\"amount\":100,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"original-success\"}";
+    assertThat(post("/api/sales-slips/900/confirm-payment", body).status()).isEqualTo(200);
+    jdbc.execute(
+        "INSERT INTO direct_sale_amount_reconciliations (sales_slip_id,stored_paid_amount,stored_remaining_amount,stored_payment_status,stored_item_amount_sum,confirmed_allocation_amount,total_mismatch,price_mismatch,paid_mismatch,remaining_mismatch,ledger_review_required,signed_amount_review_required) VALUES (900,200,800,'부분입금',1000,100,false,false,true,true,false,false)");
+    var before = jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id");
+    var replay = post("/api/sales-slips/900/confirm-payment", body);
+    assertThat(replay.status()).isEqualTo(200);
+    assertThat(replay.data().path("paidAmount").asLong()).isEqualTo(100);
+    assertThat(replay.data().path("financialReviewRequired").asBoolean()).isTrue();
+    var newMoney =
+        post(
+            "/api/sales-slips/900/confirm-payment",
+            body.replace("original-success", "another-key"));
+    assertThat(newMoney.status()).isEqualTo(409);
+    assertThat(newMoney.body().path("error").path("code").asText())
+        .isEqualTo("DIRECT_AMOUNT_REVIEW_REQUIRED");
+    assertThat(jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id"))
+        .isEqualTo(before);
+  }
+
   private void seedSale(int total, int quantity, int unitPrice, int amount) {
     jdbc.update(
         """

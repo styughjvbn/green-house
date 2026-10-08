@@ -122,18 +122,19 @@ class SalesWriteQueryPostgresE2ETest extends WorkE2ETestBase {
     assertThat(stats.getCollectionFetchCount()).isEqualTo(1);
     long queryLimit =
         switch (action) {
-          // Direct adds one root lock and one price fetch regardless of item count.
-          case "EDIT" -> 23;
-          case "OUTBOUND", "PAYMENT" -> 11;
-          case "DRAFT_CANCEL" -> 14;
-          case "OUTBOUND_CANCEL" -> 19;
-          case "PAYMENT_REPLAY" -> 8;
-          case "UNCHANGED" -> 6;
+          // Direct root/price writes and review checks stay constant for 1 and 8 items.
+          case "EDIT" -> 26;
+          case "OUTBOUND" -> 12;
+          case "PAYMENT" -> 13;
+          case "DRAFT_CANCEL" -> 15;
+          case "OUTBOUND_CANCEL" -> 20;
+          case "PAYMENT_REPLAY" -> 9;
+          case "UNCHANGED" -> 7;
           default -> throw new IllegalArgumentException(action);
         };
     assertThat(stats.getQueryExecutionCount()).isLessThanOrEqualTo(queryLimit);
-    if (action.equals("UNCHANGED")) assertThat(stats.getPrepareStatementCount()).isEqualTo(7);
-    if (action.equals("PAYMENT_REPLAY")) assertThat(stats.getPrepareStatementCount()).isEqualTo(9);
+    if (action.equals("UNCHANGED")) assertThat(stats.getPrepareStatementCount()).isEqualTo(8);
+    if (action.equals("PAYMENT_REPLAY")) assertThat(stats.getPrepareStatementCount()).isEqualTo(10);
     assertThat(response).isEqualTo(queries.getSalesSlip(first.id()));
     assertThat(response.items()).hasSize(size);
     assertThat(response.items())

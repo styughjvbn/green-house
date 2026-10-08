@@ -34,6 +34,7 @@ public class DocumentPaymentTarget implements PaymentTargetPort<SalesSlipDocumen
   }
 
   public void recordPayment(Long id, Long amount, String worker, LocalDateTime now) {
+    accounting.requireFinancialReviewCleared(id);
     var slip = repository.findById(id).orElseThrow();
     slip.recordPayment(amount);
     repository.save(slip);

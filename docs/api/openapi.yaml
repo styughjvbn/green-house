@@ -4286,6 +4286,11 @@ components:
         expectedPaymentDate:
           type: string
           format: date
+        financialReviewRequired:
+          type:
+          - boolean
+          - 'null'
+          description: 현재 금액 검토 필요 여부. 과거 생성 응답에는 미상일 수 있습니다.
         id:
           type: integer
           format: int64

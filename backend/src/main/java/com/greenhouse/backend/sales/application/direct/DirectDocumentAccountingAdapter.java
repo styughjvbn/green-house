@@ -20,6 +20,15 @@ public class DirectDocumentAccountingAdapter implements DirectDocumentAccounting
   private final ExpectedPaymentDateCalculator dates;
   private final DirectSaleTermsWriter termsWriter;
   private final DirectSaleFinancialReader financials;
+  private final DirectSaleReviewReader reviews;
+
+  public Set<Long> findFinancialReviewRequiredIds(Collection<Long> ids) {
+    return reviews.findRequired(ids);
+  }
+
+  public void requireFinancialReviewCleared(Long id) {
+    reviews.requireClear(id);
+  }
 
   public Map<Long, FinancialSnapshot> findFinancials(Collection<Long> documentIds) {
     return financials.findAll(documentIds);

@@ -9,6 +9,10 @@ import java.util.Set;
 
 /** Document-owned value contract for Direct terms and accounting coordination. */
 public interface DirectDocumentAccountingPort {
+  Set<Long> findFinancialReviewRequiredIds(Collection<Long> ids);
+
+  void requireFinancialReviewCleared(Long documentId);
+
   void lockPartners(Collection<Long> ids);
 
   void updateReceivable(Long partnerId, Long amount, Long eventId);

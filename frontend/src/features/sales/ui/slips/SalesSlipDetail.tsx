@@ -123,6 +123,15 @@ export function SalesSlipDetail({
   return (
     <>
       <DetailCard>
+        {salesSlip.financialReviewRequired === true ? (
+          <p
+            role="status"
+            className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          >
+            금액 확인이 필요합니다. 검토가 끝날 때까지 입금과 금액 수정을 할 수
+            없습니다.
+          </p>
+        ) : null}
         <DetailHeader
           eyebrow={`LOT #${salesSlip.slipNumber}`}
           title="전표 상세"

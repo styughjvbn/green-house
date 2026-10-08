@@ -43,6 +43,7 @@ public class SalesSlipUpdateService {
     Long previousPartnerId = salesSlip.getPartnerId();
     Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
+    accounting.requireFinancialReviewCleared(salesSlipId);
     validateEditable(salesSlip, request);
     SalesSlipInputPolicy.requirePartner(SalesType.DIRECT, request.partnerId());
     SalesSlipInputPolicy.requireItems(SalesType.DIRECT, request.items().size());

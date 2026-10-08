@@ -210,9 +210,9 @@ class CoreQueryRegressionTest {
 
     long queryCount = measure(() -> salesQueryService.getSalesSlip(slip.getId()));
 
-    // Root/items, allocations/snapshots, Farm states and partner values are loaded in
-    // bulk.
-    assertThat(queryCount).isEqualTo(5L);
+    // Root/items, allocations/snapshots, Farm states, partners and review evidence
+    // are loaded in bulk, independently of the item count.
+    assertThat(queryCount).isEqualTo(6L);
   }
 
   @ParameterizedTest

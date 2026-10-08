@@ -3,7 +3,6 @@ package com.greenhouse.backend.sales.application.document;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.sales.application.partner.BusinessPartnerReader;
 import com.greenhouse.backend.sales.domain.document.SalesSlip;
-import com.greenhouse.backend.sales.domain.document.SalesSlipAction;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.document.SalesSlipItemAllocation;
 import java.util.List;
@@ -65,7 +64,8 @@ public class SalesSlipDocumentAssembler {
     var partners =
         partnerReader.getAllInfo(salesSlips.stream().map(SalesSlip::getPartnerId).toList());
     var marketNames = marketNames(salesSlips);
-    Map<Long, List<SalesSlipAction>> actionsBySalesSlipId = actionResolver.resolveAll(salesSlips);
+    Map<Long, SalesSlipActionResolver.Actions> actionsBySalesSlipId =
+        actionResolver.resolveAll(salesSlips);
     return salesSlips.stream()
         .map(
             salesSlip ->
@@ -77,7 +77,16 @@ public class SalesSlipDocumentAssembler {
                         : marketNames.get(salesSlip.getAuctionShipmentId()),
                     allocationsByItemId,
                     states,
-                    actionsBySalesSlipId.getOrDefault(salesSlip.getId(), List.of())))
+                    actionsBySalesSlipId
+                        .getOrDefault(
+                            salesSlip.getId(),
+                            new SalesSlipActionResolver.Actions(List.of(), false))
+                        .availableActions(),
+                    actionsBySalesSlipId
+                        .getOrDefault(
+                            salesSlip.getId(),
+                            new SalesSlipActionResolver.Actions(List.of(), false))
+                        .financialReviewRequired()))
         .toList();
   }
 }

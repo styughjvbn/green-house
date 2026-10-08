@@ -15,8 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(propagation = Propagation.MANDATORY)
 public class DirectSaleTermsWriter {
   private final DirectSaleRepository repository;
+  private final DirectSaleReviewReader reviews;
 
   public void store(DirectDocumentAccountingPort.Terms terms) {
+    var existing = repository.findForUpdate(terms.documentId());
+    if (existing.isPresent()) reviews.requireClear(terms.documentId());
     var prices =
         terms.prices().stream()
             .map(
@@ -24,7 +27,6 @@ public class DirectSaleTermsWriter {
                     new DirectSalePrice(
                         price.documentItemId(), price.quantity(), price.unitPrice()))
             .toList();
-    var existing = repository.findForUpdate(terms.documentId());
     DirectSale sale;
     if (existing.isPresent()) {
       // Lock the root first, then initialize its prices in one owner-side fetch query.

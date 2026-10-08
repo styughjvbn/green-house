@@ -576,6 +576,7 @@ export type SalesSlip = {
   memo: string | null;
   items: SalesSlipItem[];
   availableActions: SalesSlipAction[];
+  financialReviewRequired?: ApiSchemas["SalesSlipResponse"]["financialReviewRequired"];
 };
 
 export type SalesSlipListItem = Omit<SalesSlip, "items" | "availableActions">;

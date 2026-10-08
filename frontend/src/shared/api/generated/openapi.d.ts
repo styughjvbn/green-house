@@ -2250,6 +2250,8 @@ export interface components {
             availableActions?: ("EDIT" | "COMPLETE" | "CANCEL" | "CONFIRM_PAYMENT")[];
             /** Format: date */
             expectedPaymentDate?: string;
+            /** @description 현재 금액 검토 필요 여부. 과거 생성 응답에는 미상일 수 있습니다. */
+            financialReviewRequired?: boolean | null;
             /** Format: int64 */
             id?: number;
             items?: components["schemas"]["SalesSlipItemResponse"][];
