@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.domain.direct;
+package com.greenhouse.backend.sales.direct.domain;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import java.math.BigDecimal;

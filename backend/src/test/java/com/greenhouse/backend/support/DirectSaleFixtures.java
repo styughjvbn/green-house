@@ -1,8 +1,8 @@
 package com.greenhouse.backend.support;
 
 import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.direct.domain.DirectSaleAmounts;
 import com.greenhouse.backend.sales.document.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.direct.DirectSaleAmounts;
 import java.math.BigDecimal;
 import org.springframework.jdbc.core.JdbcTemplate;
 

@@ -3,7 +3,7 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.sales.api.partner.PartnerType;
-import com.greenhouse.backend.sales.application.direct.DirectSaleFinancialReader;
+import com.greenhouse.backend.sales.direct.application.DirectSaleFinancialReader;
 import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.payment.api.PaymentTargetType;

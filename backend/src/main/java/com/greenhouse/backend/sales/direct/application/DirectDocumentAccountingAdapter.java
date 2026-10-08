@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.application.direct;
+package com.greenhouse.backend.sales.direct.application;
 
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import com.greenhouse.backend.sales.partner.api.ExpectedPaymentDateApi;

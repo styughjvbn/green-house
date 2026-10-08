@@ -1,8 +1,8 @@
-package com.greenhouse.backend.sales.application.direct;
+package com.greenhouse.backend.sales.direct.application;
 
 import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.sales.direct.domain.DirectSaleAmounts;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort.FinancialSnapshot;
-import com.greenhouse.backend.sales.domain.direct.DirectSaleAmounts;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

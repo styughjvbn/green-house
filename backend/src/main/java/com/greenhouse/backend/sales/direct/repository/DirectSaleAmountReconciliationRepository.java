@@ -1,6 +1,6 @@
-package com.greenhouse.backend.sales.repository.direct;
+package com.greenhouse.backend.sales.direct.repository;
 
-import com.greenhouse.backend.sales.domain.direct.DirectSaleAmountReconciliation;
+import com.greenhouse.backend.sales.direct.domain.DirectSaleAmountReconciliation;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.Query;

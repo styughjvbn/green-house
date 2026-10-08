@@ -184,7 +184,7 @@ application|domain|dto/
 
 ### sales
 
-Sales 내부는 document/direct/auction/payment/partner의 소유권을 유지한다. Partner·Payment·Document는 `sales/{partner,payment,document}/{application,domain,repository,web}`로 이동했으며 나머지 기능은 기존 계층 배치에서 순차 전환한다. HTTP DTO는 각 기능의 `web/dto`에 둔다. Farm은 별도 모듈이다. HTTP Controller는 공개 application 계약을 조합하며 저장소와 트랜잭션을 소유하지 않는다.
+Sales 내부는 document/direct/auction/payment/partner의 소유권을 유지한다. Partner·Payment·Document·Direct는 `sales/{partner,payment,document,direct}/{application,domain,repository,web}`로 이동했으며 나머지 기능은 기존 계층 배치에서 순차 전환한다. HTTP DTO는 각 기능의 `web/dto`에 둔다. Farm은 별도 모듈이다. HTTP Controller는 공개 application 계약을 조합하며 저장소와 트랜잭션을 소유하지 않는다.
 
 - Document는 공통 전표·품목·allocation·예약·출고·snapshot·생성 receipt를 소유한다. 일반/경매 allocation 합계와 Farm 예약 대사를 계속 함께 수행한다.
 - Direct는 일반 판매 회계 연결과 입금 진입 유스케이스를 맡는다. V43은 전용 금액 테이블과 기존 금액의 원문 복사·이전 시점 대사를 준비한다. 신규 생성·작성중 수정은 Document와 Direct 거래/가격 모델을 같은 최상위 transaction에서 저장하며, Direct writer는 호출 transaction에 반드시 참여한다. 전표·품목 ID만 연결하고 Entity를 공유하지 않는다. 현재 입금 허용 금액은 Direct 거래와 Payment 유효 배분을 기준으로 검증한다. 입금 후 공통 전표의 금액 요약은 이 값으로 갱신하는 조회 projection이며, 상세·목록·출력 조회도 이 계약으로 일반 판매의 거래/품목 금액·예상일·지급 방식·유효 수납·잔액을 조립한다. 생성·수정의 가격과 합계도 Direct가 먼저 계산하고 Document는 그 결과를 표시 projection으로 저장한다. 검색·분석의 호환 조회는 이 projection을 사용하며 별도 금액 원천으로 취급하지 않는다. V49는 과거 projection을 Direct 거래/가격과 유효 배분으로 갱신하며, 전환 직전 불일치 원문을 기존 대사 근거와 구분해 보존한다. 이전 시점 검토 근거를 현재 수납액 원천으로 사용하지 않는다.

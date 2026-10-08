@@ -1,10 +1,10 @@
-package com.greenhouse.backend.sales.application.direct;
+package com.greenhouse.backend.sales.direct.application;
 
+import com.greenhouse.backend.sales.direct.domain.DirectSale;
+import com.greenhouse.backend.sales.direct.domain.DirectSaleAmounts;
+import com.greenhouse.backend.sales.direct.domain.DirectSalePrice;
+import com.greenhouse.backend.sales.direct.repository.DirectSaleRepository;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
-import com.greenhouse.backend.sales.domain.direct.DirectSale;
-import com.greenhouse.backend.sales.domain.direct.DirectSaleAmounts;
-import com.greenhouse.backend.sales.domain.direct.DirectSalePrice;
-import com.greenhouse.backend.sales.repository.direct.DirectSaleRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

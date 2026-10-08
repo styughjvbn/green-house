@@ -1,6 +1,6 @@
-package com.greenhouse.backend.sales.repository.direct;
+package com.greenhouse.backend.sales.direct.repository;
 
-import com.greenhouse.backend.sales.domain.direct.DirectSale;
+import com.greenhouse.backend.sales.direct.domain.DirectSale;
 import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;

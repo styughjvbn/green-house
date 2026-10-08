@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.domain.direct;
+package com.greenhouse.backend.sales.direct.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

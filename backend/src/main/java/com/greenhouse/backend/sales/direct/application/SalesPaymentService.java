@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.application.direct;
+package com.greenhouse.backend.sales.direct.application;
 
 import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.direct.api.SalesPaymentApi;

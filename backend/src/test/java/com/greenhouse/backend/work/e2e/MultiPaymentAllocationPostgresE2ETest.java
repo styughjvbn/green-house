@@ -7,7 +7,7 @@ import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.application.auction.AuctionProceedsReader;
 import com.greenhouse.backend.sales.application.auction.AuctionProceedsService;
-import com.greenhouse.backend.sales.application.direct.SalesPaymentService;
+import com.greenhouse.backend.sales.direct.application.SalesPaymentService;
 import com.greenhouse.backend.sales.document.application.SalesSlipStatusService;
 import com.greenhouse.backend.sales.document.domain.*;
 import com.greenhouse.backend.sales.document.repository.SalesSlipRepository;

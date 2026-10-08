@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.domain.direct;
+package com.greenhouse.backend.sales.direct.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

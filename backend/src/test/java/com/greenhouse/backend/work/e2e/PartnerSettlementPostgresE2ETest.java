@@ -12,8 +12,8 @@ import com.greenhouse.backend.sales.application.auction.AuctionProceedsPaymentSe
 import com.greenhouse.backend.sales.application.auction.AuctionProceedsReader;
 import com.greenhouse.backend.sales.application.auction.AuctionProceedsService;
 import com.greenhouse.backend.sales.application.auction.AuctionShipmentCreator;
-import com.greenhouse.backend.sales.application.direct.SalesPaymentService;
 import com.greenhouse.backend.sales.auction.api.AuctionProceedsResponse;
+import com.greenhouse.backend.sales.direct.application.SalesPaymentService;
 import com.greenhouse.backend.sales.document.application.SalesSlipStatusService;
 import com.greenhouse.backend.sales.document.domain.SalesSlip;
 import com.greenhouse.backend.sales.document.domain.SalesSlipItem;

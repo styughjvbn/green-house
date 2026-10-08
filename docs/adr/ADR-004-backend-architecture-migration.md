@@ -688,3 +688,10 @@ P2 마무리 검증 결과:
 - 전표 생성·예약·출고·snapshot·receipt·가격 projection·일괄 조회·금융 검토·A5 출력과 기존 트랜잭션/잠금 순서는 동일하다. 생성 v1 필드 fixture는 클래스 FQCN key만 갱신하고 필드 목록·저장 JSON·지문·replay는 변경하지 않는다.
 
 - Document 프로덕션 50개·기능 테스트 7개와 채번 테스트 1개를 이동했다. 실행 본문은 package/import 외 동일함을 대조했다. clean 컴파일과 판매·재고·snapshot·v1 생성 지문·채번·출고·값/의존 그래프/inventory 집중 검증 통과. 초기 수납액 변경 제한 검사의 하드코딩된 이전 Entity 경로를 새 경로로 갱신한 뒤 재검증했다. 전체 검증은 P3 전체 이동 후 수행한다.
+
+### 2026-10-08: P3 — Direct 기능 우선 배치
+
+- Direct의 회계/검토/금액 정책·저장소·입금 유스케이스를 `sales/direct/{application,domain,repository}`로 이동한다. 단건 입금 API는 direct/api, Document 회계 SPI 구현과 Payment 대상 SPI 구현은 기존 클래스가 계속 수행한다. HTTP 진입점은 기존 Payment web 조합을 유지하며 새 web/integration/위임 계층을 만들지 않는다.
+- 금액 원천·가격·검토 차단·projection·입금·호출자 트랜잭션 참여·잠금/원장 의미는 동일하다. Entity/Repository는 Direct 내부에 유지하고 소비자/QueryDSL/테스트의 FQCN만 갱신한다.
+
+- Direct 프로덕션 13개·테스트 2개 이동. clean 컴파일과 가격/금액 정책·판매·입금/배분·값/그래프/inventory/단일 Writer 집중 검증 통과. 전체 검증은 P3 전체 이동 후 수행한다. DB/트랜잭션 변경이 없어 이 이동의 PostgreSQL E2E는 미실행.

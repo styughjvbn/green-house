@@ -1,4 +1,4 @@
-package com.greenhouse.backend.sales.application.direct;
+package com.greenhouse.backend.sales.direct.application;
 
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.sales.api.document.SalesSlipDocument;

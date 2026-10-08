@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
-import com.greenhouse.backend.sales.application.direct.SalesPaymentService;
+import com.greenhouse.backend.sales.direct.application.SalesPaymentService;
 import com.greenhouse.backend.sales.document.application.SalesQueryService;
 import com.greenhouse.backend.sales.document.application.SalesSlipCreationService;
 import com.greenhouse.backend.sales.document.application.SalesSlipUpdateService;

@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
-import com.greenhouse.backend.sales.application.direct.SalesPaymentService;
+import com.greenhouse.backend.sales.direct.application.SalesPaymentService;
 import com.greenhouse.backend.sales.document.domain.*;
 import com.greenhouse.backend.sales.document.repository.SalesSlipRepository;
 import com.greenhouse.backend.sales.partner.domain.*;
