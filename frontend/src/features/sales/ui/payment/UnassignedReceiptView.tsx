@@ -39,14 +39,18 @@ import { paymentRequests as requests } from "../../model/paymentRequests";
 const inputClass =
   "mt-1 h-10 w-full rounded border border-[#cfd8cc] bg-white px-3";
 
-export function UnassignedReceiptView({ v2 = false }: { v2?: boolean }) {
+export function UnassignedReceiptView({
+  dedicated = false,
+}: {
+  dedicated?: boolean;
+}) {
   const params = useSearchParams();
   const write = useUrlSearchParamsWriter();
   const { partnerId: selectedId } = readReceiptRouteState(params);
   return (
     <div
       className={
-        v2
+        dedicated
           ? "flex min-h-0 flex-1 flex-col gap-3 overflow-auto"
           : "min-h-0 flex-1 space-y-4 overflow-auto"
       }
@@ -72,7 +76,11 @@ export function UnassignedReceiptView({ v2 = false }: { v2?: boolean }) {
         </div>
       </FilterPanel>
       {selectedId ? (
-        <ReceiptPanel key={selectedId} partnerId={selectedId} v2={v2} />
+        <ReceiptPanel
+          key={selectedId}
+          partnerId={selectedId}
+          dedicated={dedicated}
+        />
       ) : (
         <p>수납할 거래처를 선택하세요.</p>
       )}
@@ -80,7 +88,13 @@ export function UnassignedReceiptView({ v2 = false }: { v2?: boolean }) {
   );
 }
 
-function ReceiptPanel({ partnerId, v2 }: { partnerId: number; v2: boolean }) {
+function ReceiptPanel({
+  partnerId,
+  dedicated,
+}: {
+  partnerId: number;
+  dedicated: boolean;
+}) {
   const params = useSearchParams();
   const write = useUrlSearchParamsWriter();
   const { page } = readReceiptRouteState(params);
@@ -298,14 +312,16 @@ function ReceiptPanel({ partnerId, v2 }: { partnerId: number; v2: boolean }) {
     },
   ];
   return (
-    <div className={v2 ? "flex min-h-0 flex-1 flex-col gap-3" : "space-y-4"}>
-      {!v2 ? (
+    <div
+      className={dedicated ? "flex min-h-0 flex-1 flex-col gap-3" : "space-y-4"}
+    >
+      {!dedicated ? (
         <p className="text-sm">
           대상 미지정 수납을 기록합니다. 전표의 입금액에는 배분 후 반영됩니다.
         </p>
       ) : null}
       {balance.data ? (
-        <p data-sales-balance={v2 || undefined} className="font-bold">
+        <p data-sales-balance={dedicated || undefined} className="font-bold">
           미배분 수납 {balance.data.unappliedPaymentAmount.toLocaleString()}원
         </p>
       ) : (
@@ -331,7 +347,7 @@ function ReceiptPanel({ partnerId, v2 }: { partnerId: number; v2: boolean }) {
           {error}
         </p>
       ) : null}
-      {v2 ? (
+      {dedicated ? (
         <TabSplit
           columns="lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
           gap="gap-3"
@@ -348,7 +364,7 @@ function ReceiptPanel({ partnerId, v2 }: { partnerId: number; v2: boolean }) {
             }
             columns={historyColumns}
             data={history.data?.content ?? []}
-            settingsKey="sales.v2.unassignedReceipts"
+            settingsKey="sales.unassignedReceipts"
             getRowId={(item) => String(item.id)}
             emptyMessage="수납 내역이 없습니다."
             isLoading={history.isPending}
@@ -378,10 +394,10 @@ function ReceiptPanel({ partnerId, v2 }: { partnerId: number; v2: boolean }) {
         <>
           {" "}
           <section
-            data-sales-payment-panel={v2 ? "new-receipt" : undefined}
+            data-sales-payment-panel={dedicated ? "new-receipt" : undefined}
             className="space-y-3"
           >
-            {v2 ? (
+            {dedicated ? (
               <>
                 <h2>새 입금 기록</h2>
                 <p>
@@ -394,7 +410,7 @@ function ReceiptPanel({ partnerId, v2 }: { partnerId: number; v2: boolean }) {
             {receiptForm}
           </section>
           <section
-            data-sales-payment-panel={v2 ? "history" : undefined}
+            data-sales-payment-panel={dedicated ? "history" : undefined}
             className="space-y-3"
           >
             <h2

@@ -1,9 +1,5 @@
 "use client";
-
 import { useEffect, type ReactNode } from "react";
-import Link from "next/link";
-import type { Route } from "next";
-import { salesV2Href } from "@/shared/config/routes";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useSearchParams } from "next/navigation";
@@ -29,7 +25,6 @@ import {
 } from "../../model/salesQueryOptions";
 import { salesQueryKeys } from "../../model/salesQueryKeys";
 import { ManualPaymentPanel } from "./ManualPaymentPanel";
-
 const money = (value: number | null) =>
   value == null ? "미확인" : `${value.toLocaleString()}원`;
 const columns: ColumnDef<AuctionProceeds, unknown>[] = [
@@ -68,7 +63,6 @@ const columns: ColumnDef<AuctionProceeds, unknown>[] = [
     meta: { align: "right" },
   },
 ];
-
 const resultColumns: ColumnDef<AuctionProceedsResult, unknown>[] = [
   {
     accessorKey: "auctionDate",
@@ -105,19 +99,9 @@ const resultColumns: ColumnDef<AuctionProceedsResult, unknown>[] = [
     meta: { align: "right" },
   },
 ];
-
-export function AuctionSettlementView({
-  v2 = false,
-  actions,
-}: {
-  v2?: boolean;
-  actions?: ReactNode;
-}) {
+export function AuctionSettlementView({ actions }: { actions?: ReactNode }) {
   const queryClient = useQueryClient();
-  const route = readProceedsRouteState(
-    useSearchParams(),
-    v2 ? "auction" : "default",
-  );
+  const route = readProceedsRouteState(useSearchParams(), "default");
   const writeUrlParams = useUrlSearchParamsWriter();
   const pageQuery = useQuery(auctionProceedsPageQueryOptions(route));
   const selectedId =
@@ -133,45 +117,24 @@ export function AuctionSettlementView({
       route.page >= Math.max(1, pageQuery.data.totalPages)
     ) {
       writeUrlParams((params) =>
-        params.set(
-          v2 ? "proceedsPage" : "page",
-          String(Math.max(0, pageQuery.data.totalPages - 1)),
-        ),
+        params.set("page", String(Math.max(0, pageQuery.data.totalPages - 1))),
       );
     }
-  }, [pageQuery.data, route.page, writeUrlParams, v2]);
+  }, [pageQuery.data, route.page, writeUrlParams]);
   function changePage(page: number, size = route.size) {
     writeUrlParams((params) => {
-      params.set(v2 ? "proceedsPage" : "page", String(page));
-      params.set(v2 ? "proceedsSize" : "size", String(size));
+      params.set("page", String(page));
+      params.set("size", String(size));
       params.delete("proceedsId");
       params.delete("settlementId");
       params.delete("paymentPage");
     }, "push");
   }
-  const detailColumns = v2
-    ? [
-        {
-          id: "lot",
-          header: "출하 lot",
-          cell: ({ row }: { row: { original: AuctionProceedsResult } }) => (
-            <Link
-              className="text-green-800 underline"
-              href={
-                salesV2Href("auction", { lotId: row.original.lotId }) as Route
-              }
-            >
-              LOT #{row.original.lotId}
-            </Link>
-          ),
-        },
-        ...resultColumns,
-      ]
-    : resultColumns;
+  const detailColumns = resultColumns;
   const error = pageQuery.error ?? detailQuery.error;
   return (
     <TabStack>
-      {!v2 ? (
+      {
         <section className="rounded-md border bg-white px-4 py-3">
           <h2 className="text-base font-bold">경매 대금</h2>
           <p className="mt-1 text-sm text-[#68756c]">
@@ -179,7 +142,7 @@ export function AuctionSettlementView({
             자료는 입금 확인을 기다립니다.
           </p>
         </section>
-      ) : null}
+      }
       <TabError message={error instanceof Error ? error.message : null} />
       <TabSplit
         columns="lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)]"
@@ -233,19 +196,7 @@ export function AuctionSettlementView({
               }
             />
             <div className="space-y-2 px-4 py-3 text-sm">
-              {v2 ? (
-                <Link
-                  className="block text-green-800 underline"
-                  href={
-                    salesV2Href("payments", {
-                      view: "allocations",
-                      receiptPartnerId: selected.auctionHouseId,
-                    }) as Route
-                  }
-                >
-                  경매장 수납·배분 조회
-                </Link>
-              ) : null}
+              {null}
               <p>{selected.sourceReference ?? "대금 자료 확인 대기"}</p>
               <p>
                 연결된 경매 결과 {selected.resultIds.length.toLocaleString()}건

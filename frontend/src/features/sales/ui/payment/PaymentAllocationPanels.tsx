@@ -7,7 +7,7 @@ import { DataTable } from "@/shared/ui/DataTable";
 import { TabSplit } from "@/shared/ui/TabLayout";
 import { DetailCard, DetailEmpty, DetailHeader } from "@/shared/ui/DetailCard";
 import { Button } from "@/shared/ui/primitives/button";
-import { salesV2Href } from "@/shared/config/routes";
+import { salesHref } from "@/shared/config/routes";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import type {
   getAllocationReceipts,
@@ -133,12 +133,11 @@ export function PaymentAllocationPanels({
           className="font-semibold text-[#159447] underline underline-offset-2"
           aria-label="배분 대상 보기"
           href={
-            salesV2Href(
-              row.original.targetType === "SALES_SLIP" ? "slips" : "auction",
+            salesHref(
+              row.original.targetType === "SALES_SLIP" ? "slips" : "settlement",
               row.original.targetType === "SALES_SLIP"
                 ? { slipId: row.original.targetId, paymentPage: 0 }
                 : {
-                    panel: "proceeds",
                     proceedsId: row.original.targetId,
                     paymentPage: 0,
                   },
@@ -184,7 +183,7 @@ export function PaymentAllocationPanels({
           emptyMessage="수납 내역이 없습니다."
           getRowId={(item) => String(item.id)}
           title="수납 선택"
-          settingsKey="sales.v2.paymentReceipts"
+          settingsKey="sales.paymentReceipts"
           totalLabel={`총 ${(sources.data?.totalElements ?? 0).toLocaleString()}건`}
           selectedRowId={receiptId == null ? null : String(receiptId)}
           pageIndex={page}
@@ -274,7 +273,7 @@ export function PaymentAllocationPanels({
                 emptyMessage="배분 내역이 없습니다."
                 getRowId={(item) => String(item.id)}
                 title="배분 이력"
-                settingsKey="sales.v2.paymentAllocations"
+                settingsKey="sales.paymentAllocations"
                 totalLabel={`총 ${(allocations.data?.totalElements ?? 0).toLocaleString()}건`}
                 pageIndex={allocationPage}
                 pageSize={10}

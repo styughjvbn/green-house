@@ -1,11 +1,7 @@
 "use client";
-
 import type { SubmitEvent } from "react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import type { Route } from "next";
-import { salesV2Href } from "@/shared/config/routes";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { readBusinessPartnerRouteState } from "../lib/salesRouteParams";
 import { useBusinessPartners } from "../model/useBusinessPartners";
@@ -17,14 +13,12 @@ import {
 import { BusinessPartnerFilters } from "./partners/BusinessPartnerFilters";
 import { BusinessPartnerList } from "./partners/BusinessPartnerList";
 import { PartnerSettlementSettingsSection } from "./partners/PartnerSettlementSettingsSection";
-
-export function SalesPartnersPage({ v2 = false }: { v2?: boolean }) {
+export function SalesPartnersPage() {
   const routeState = readBusinessPartnerRouteState(useSearchParams());
-  const partners = useBusinessPartners({ routeState, urlSelection: v2 });
+  const partners = useBusinessPartners({ routeState, urlSelection: false });
   const [showCreatePartner, setShowCreatePartner] = useState(false);
   const [partnerDetailMode, setPartnerDetailMode] =
     useState<BusinessPartnerDetailMode>("read");
-
   async function handleCreateBusinessPartner(
     event: SubmitEvent<HTMLFormElement>,
   ) {
@@ -33,7 +27,6 @@ export function SalesPartnersPage({ v2 = false }: { v2?: boolean }) {
       setShowCreatePartner(false);
     }
   }
-
   return (
     <main className="h-full min-h-0">
       <TabLayout>
@@ -63,31 +56,7 @@ export function SalesPartnersPage({ v2 = false }: { v2?: boolean }) {
             onPageSizeChange={partners.setPageSize}
           />
           <div>
-            {v2 && partners.selectedPartner ? (
-              <div className="mb-3 flex flex-wrap gap-3 rounded-md border bg-white p-3 text-sm">
-                <Link
-                  className="text-green-800 underline"
-                  href={
-                    salesV2Href("slips", {
-                      partnerId: partners.selectedPartner.id,
-                    }) as Route
-                  }
-                >
-                  거래처 전표 조회
-                </Link>
-                <Link
-                  className="text-green-800 underline"
-                  href={
-                    salesV2Href("payments", {
-                      view: "allocations",
-                      receiptPartnerId: partners.selectedPartner.id,
-                    }) as Route
-                  }
-                >
-                  거래처 수납·배분 조회
-                </Link>
-              </div>
-            ) : null}
+            {null}
             <BusinessPartnerEditSection
               key={partners.selectedPartner?.id ?? "empty"}
               partner={partners.selectedPartner}

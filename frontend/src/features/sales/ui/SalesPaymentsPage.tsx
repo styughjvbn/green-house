@@ -1,43 +1,11 @@
 "use client";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Wallet } from "lucide-react";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import { TabLayout } from "@/shared/ui/TabLayout";
-import { DetailActionButton } from "@/shared/ui/DetailCard";
 import { Button } from "@/shared/ui/primitives/button";
-import { SalesAuctionPage } from "./SalesAuctionPage";
-import { AuctionSettlementView } from "./auction/AuctionSettlementView";
 import { PaymentAllocationWorkspace } from "./payment/PaymentAllocationWorkspace";
 import { UnassignedReceiptView } from "./payment/UnassignedReceiptView";
-export function SalesV2AuctionPage() {
-  const proceeds = useSearchParams().get("panel") === "proceeds";
-  const write = useUrlSearchParamsWriter();
-  const action = (
-    <DetailActionButton
-      icon={proceeds ? ArrowLeft : Wallet}
-      onClick={() =>
-        write((p) => {
-          if (proceeds) {
-            p.delete("panel");
-            p.delete("paymentPage");
-          } else p.set("panel", "proceeds");
-        }, "push")
-      }
-    >
-      {proceeds ? "출하 목록으로" : "경매 대금 확인"}
-    </DetailActionButton>
-  );
-  return proceeds ? (
-    <main className="h-full min-h-0">
-      <TabLayout>
-        <AuctionSettlementView v2 actions={action} />
-      </TabLayout>
-    </main>
-  ) : (
-    <SalesAuctionPage actions={action} />
-  );
-}
-export function SalesV2PaymentsPage() {
+export function SalesPaymentsPage() {
   const allocations = useSearchParams().get("view") === "allocations";
   const write = useUrlSearchParamsWriter();
   return (
@@ -66,7 +34,7 @@ export function SalesV2PaymentsPage() {
         {allocations ? (
           <PaymentAllocationWorkspace />
         ) : (
-          <UnassignedReceiptView v2 />
+          <UnassignedReceiptView dedicated />
         )}
       </TabLayout>
     </main>

@@ -2,29 +2,38 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   SALES_NAV_ITEMS,
-  SALES_V2_NAV_ITEMS,
-  isSalesV2Tab,
-  salesV2Href,
+  isSalesTab,
+  salesHref,
 } from "../src/shared/config/routes/sales.ts";
 import { readSelectedBusinessPartnerId } from "../src/features/sales/lib/salesRouteParams.ts";
 
-test("v2 has four distinct menus and leaves legacy URLs intact", () => {
-  assert.deepEqual(
-    SALES_V2_NAV_ITEMS.map((item) => item.label),
-    ["전표", "경매", "입금", "거래처"],
-  );
+test("sales keeps auction settlement and adds a payment submenu", () => {
   assert.deepEqual(
     SALES_NAV_ITEMS.map((item) => item.href),
-    ["/sales/slips", "/sales/auction", "/sales/settlement", "/sales/partners"],
+    [
+      "/sales/slips",
+      "/sales/auction",
+      "/sales/settlement",
+      "/sales/payments",
+      "/sales/partners",
+    ],
   );
-  assert.equal(isSalesV2Tab("payments"), true);
-  assert.equal(isSalesV2Tab("settlement"), false);
-  assert.equal(isSalesV2Tab("constructor"), false);
+  assert.equal(
+    SALES_NAV_ITEMS.find((item) => item.tab === "settlement").label,
+    "경매 정산",
+  );
+  assert.equal(
+    SALES_NAV_ITEMS.find((item) => item.tab === "payments").label,
+    "입금",
+  );
+  assert.equal(isSalesTab("payments"), true);
+  assert.equal(isSalesTab("settlement"), true);
+  assert.equal(isSalesTab("constructor"), false);
   const url = new URL(
-    salesV2Href("auction", { market: "서울 & 부산", lotId: 42 }),
+    salesHref("auction", { market: "서울 & 부산", lotId: 42 }),
     "http://localhost",
   );
-  assert.equal(url.pathname, "/sales-v2/auction");
+  assert.equal(url.pathname, "/sales/auction");
   assert.equal(url.searchParams.get("market"), "서울 & 부산");
   assert.equal(url.searchParams.get("lotId"), "42");
 });

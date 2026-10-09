@@ -3,7 +3,6 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { AuctionLotStatusBadge } from "../common/SalesStatusBadge";
-import { salesV2Href } from "@/shared/config/routes";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Ban, ChevronDown, Copy, Pencil, Printer, Truck } from "lucide-react";
 import type { SalesSlip, SalesSlipItem } from "@/entities/farm/types";
@@ -19,7 +18,6 @@ import {
   DetailHeader,
   DetailSummary,
 } from "@/shared/ui/DetailCard";
-
 const salesSlipItemColumns: ColumnDef<SalesSlipItem, unknown>[] = [
   {
     id: "itemName",
@@ -89,8 +87,7 @@ const salesSlipItemColumns: ColumnDef<SalesSlipItem, unknown>[] = [
     size: 120,
   },
 ];
-
-function auctionItemColumns(v2: boolean): ColumnDef<SalesSlipItem, unknown>[] {
+function auctionItemColumns(): ColumnDef<SalesSlipItem, unknown>[] {
   const columns = salesSlipItemColumns.filter(
     (column) =>
       !(
@@ -141,11 +138,7 @@ function auctionItemColumns(v2: boolean): ColumnDef<SalesSlipItem, unknown>[] {
           <Link
             className="text-green-800 underline"
             href={
-              (v2
-                ? salesV2Href("auction", {
-                    lotId: row.original.auctionShipmentLotId,
-                  })
-                : `/sales/auction?lotId=${row.original.auctionShipmentLotId}`) as Route
+              `/sales/auction?lotId=${row.original.auctionShipmentLotId}` as Route
             }
           >
             상세 보기
@@ -155,10 +148,8 @@ function auctionItemColumns(v2: boolean): ColumnDef<SalesSlipItem, unknown>[] {
   ];
   return [...columns.slice(0, 3), ...lotColumns, ...columns.slice(3)];
 }
-
 export function SalesSlipDetail({
   loading = false,
-  v2 = false,
   salesSlip,
   updatingSalesStatus,
   onCancelSalesSlip,
@@ -167,7 +158,6 @@ export function SalesSlipDetail({
   onPaymentConfirmed,
 }: {
   loading?: boolean;
-  v2?: boolean;
   salesSlip: SalesSlip | null;
   updatingSalesStatus: boolean;
   onCancelSalesSlip: (salesSlipId: number) => Promise<void>;
@@ -178,21 +168,17 @@ export function SalesSlipDetail({
   const [partnerInfoOpen, setPartnerInfoOpen] = useState(false);
   const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
   const [slipInfoOpen, setSlipInfoOpen] = useState(false);
-
   if (loading) {
     return <DetailEmpty>전표 상세를 불러오는 중입니다.</DetailEmpty>;
   }
-
   if (!salesSlip) {
     return <DetailEmpty>선택한 전표가 없습니다.</DetailEmpty>;
   }
-
   const canComplete = salesSlip.availableActions.includes("COMPLETE");
   const canEdit = salesSlip.availableActions.includes("EDIT");
   const canCancel = salesSlip.availableActions.includes("CANCEL");
   const canConfirmPayment =
     salesSlip.availableActions.includes("CONFIRM_PAYMENT");
-
   return (
     <>
       <DetailCard>
@@ -215,7 +201,7 @@ export function SalesSlipDetail({
           </p>
         ) : null}
         <DetailHeader
-          eyebrow={`${v2 ? "전표" : "LOT"} #${salesSlip.slipNumber}`}
+          eyebrow={`${"LOT"} #${salesSlip.slipNumber}`}
           title="전표 상세"
           summary={
             <DetailSummary
@@ -290,41 +276,13 @@ export function SalesSlipDetail({
               >
                 인쇄(미리보기)
               </DetailActionButton>
-              {!v2 ? (
-                <DetailActionButton icon={Copy}>전표 복사</DetailActionButton>
-              ) : null}
+              {<DetailActionButton icon={Copy}>전표 복사</DetailActionButton>}
             </>
           }
         />
 
         <div className="p-4">
-          {v2 ? (
-            <div className="mb-3 flex flex-wrap gap-3 text-sm">
-              {salesSlip.salesType === "AUCTION" && salesSlip.auctionMarket ? (
-                <Link
-                  className="text-green-800 underline"
-                  href={
-                    salesV2Href("auction", {
-                      market: salesSlip.auctionMarket,
-                    }) as Route
-                  }
-                >
-                  경매장 출하 조회
-                </Link>
-              ) : null}
-              <Link
-                className="text-green-800 underline"
-                href={
-                  salesV2Href("payments", {
-                    view: "allocations",
-                    receiptPartnerId: salesSlip.partner.id,
-                  }) as Route
-                }
-              >
-                거래처 수납·배분 조회
-              </Link>
-            </div>
-          ) : null}
+          {null}
           <div className="grid gap-3 lg:grid-cols-2">
             <InfoBox
               open={partnerInfoOpen}
@@ -348,7 +306,7 @@ export function SalesSlipDetail({
             >
               <Description label="경매장" value={salesSlip.auctionMarket} />
               <Description label="결제 방식" value={salesSlip.paymentMethod} />
-              {!v2 ? <Description label="담당자" value="관리자" /> : null}
+              {<Description label="담당자" value="관리자" />}
               <Description label="메모" value={salesSlip.memo} />
             </InfoBox>
           </div>
@@ -363,7 +321,7 @@ export function SalesSlipDetail({
             <DataTable
               columns={
                 salesSlip.salesType === "AUCTION"
-                  ? auctionItemColumns(v2)
+                  ? auctionItemColumns()
                   : salesSlipItemColumns
               }
               data={salesSlip.items}
@@ -381,22 +339,14 @@ export function SalesSlipDetail({
 
           <div className="mt-3 flex justify-end rounded-md border border-[#dfe5dc] bg-white p-4 text-sm">
             <div className="text-right">
-              <p className="font-semibold text-[#344138]">
-                {v2
-                  ? salesSlip.salesType === "AUCTION"
-                    ? "경매 대금"
-                    : "일반 판매 거래금액"
-                  : "총 금액"}
-              </p>
+              <p className="font-semibold text-[#344138]">{"총 금액"}</p>
               <p className="mt-1 text-3xl font-bold text-[#159447]">
-                {v2 && salesSlip.salesType === "AUCTION" ? (
-                  "경매 화면에서 확인"
-                ) : (
+                {
                   <>
                     {salesSlip.totalAmount.toLocaleString()}
                     <span className="ml-1 text-sm text-[#17251b]">원</span>
                   </>
-                )}
+                }
               </p>
             </div>
           </div>
@@ -432,7 +382,6 @@ export function SalesSlipDetail({
     </>
   );
 }
-
 function InfoBox({
   children,
   open,
@@ -463,9 +412,7 @@ function InfoBox({
           ) : null}
         </div>
         <ChevronDown
-          className={`h-4 w-4 shrink-0 text-[#68756c] transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
+          className={`h-4 w-4 shrink-0 text-[#68756c] transition-transform ${open ? "rotate-180" : ""}`}
           strokeWidth={1.8}
           aria-hidden="true"
         />
@@ -478,7 +425,6 @@ function InfoBox({
     </div>
   );
 }
-
 function Description({
   label,
   value,

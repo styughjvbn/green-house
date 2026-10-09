@@ -25,15 +25,14 @@ import type { SalesTab } from "./model/types";
 import { SalesAuctionPage } from "./ui/SalesAuctionPage";
 import { SalesPartnersPage } from "./ui/SalesPartnersPage";
 import { SalesSettlementPage } from "./ui/SalesSettlementPage";
+import { SalesPaymentsPage } from "./ui/SalesPaymentsPage";
 import { SalesSlipsPage } from "./ui/SalesSlipsPage";
 
 export async function SalesRoutePage({
   activeTab,
   resolvedSearchParams,
-  v2 = false,
 }: {
   activeTab: SalesTab;
-  v2?: boolean;
   resolvedSearchParams: Record<string, string | string[] | undefined>;
 }) {
   const reader = createServerSearchParamReader(resolvedSearchParams);
@@ -55,10 +54,7 @@ export async function SalesRoutePage({
       ]);
       return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-          <SalesSlipsPage
-            v2={v2}
-            initialShowCreateSlip={readCreateSlip(reader)}
-          />
+          <SalesSlipsPage initialShowCreateSlip={readCreateSlip(reader)} />
         </HydrationBoundary>
       );
     }
@@ -75,6 +71,8 @@ export async function SalesRoutePage({
         </HydrationBoundary>
       );
     }
+    case "payments":
+      return <SalesPaymentsPage />;
     case "settlement": {
       const state = readProceedsRouteState(reader);
       await Promise.all([
@@ -99,7 +97,7 @@ export async function SalesRoutePage({
       );
       return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-          <SalesPartnersPage v2={v2} />
+          <SalesPartnersPage />
         </HydrationBoundary>
       );
     }

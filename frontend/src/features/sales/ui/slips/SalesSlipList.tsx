@@ -1,5 +1,4 @@
 "use client";
-
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
@@ -7,9 +6,7 @@ import type { SalesSlipListItem } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import { SalesSlipStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
-
 export function SalesSlipList({
-  v2 = false,
   currentPage,
   pageSize,
   salesSlips,
@@ -22,7 +19,6 @@ export function SalesSlipList({
   onPageChange,
   onPageSizeChange,
 }: {
-  v2?: boolean;
   currentPage: number;
   pageSize: number;
   salesSlips: SalesSlipListItem[];
@@ -64,11 +60,8 @@ export function SalesSlipList({
       },
       {
         accessorKey: "totalAmount",
-        header: v2 ? "일반 거래금액" : "총 금액",
-        cell: ({ row }) =>
-          v2 && row.original.salesType === "AUCTION"
-            ? "경매에서 확인"
-            : row.original.totalAmount.toLocaleString(),
+        header: "총 금액",
+        cell: ({ row }) => row.original.totalAmount.toLocaleString(),
         size: 120,
         meta: { align: "right", cellClassName: "whitespace-nowrap" },
       },
@@ -78,7 +71,7 @@ export function SalesSlipList({
         cell: ({ row }) => (
           <SalesSlipStatusBadge value={row.original.paymentStatus} />
         ),
-        size: v2 ? 80 : 10,
+        size: 10,
       },
       {
         accessorKey: "salesStatus",
@@ -92,9 +85,8 @@ export function SalesSlipList({
         size: 110,
       },
     ],
-    [v2],
+    [],
   );
-
   return (
     <DataTable
       actions={
@@ -118,7 +110,7 @@ export function SalesSlipList({
       selectedRowId={
         selectedSalesSlipId == null ? null : String(selectedSalesSlipId)
       }
-      settingsKey={v2 ? "sales.v2.slips" : "sales.slips"}
+      settingsKey={"sales.slips"}
       title="판매 전표 목록"
       totalLabel={`총 ${totalSalesSlips.toLocaleString()}건`}
       totalPages={totalPages}

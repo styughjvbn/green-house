@@ -13,76 +13,42 @@ test.beforeEach(async ({ request, context }) => {
   ]);
 });
 
-test("v2 menus and cleaned documents coexist with the legacy screen", async ({
+test("one sales menu keeps auction settlement and adds payments", async ({
   page,
 }) => {
-  await page.goto("/sales-v2");
-  await expect(page).toHaveURL(/\/sales-v2\/slips$/);
-  await expect(
-    page.getByRole("heading", { name: /^판매 관리 v2 >/, level: 1 }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "전표", exact: true }),
-  ).toHaveCount(0);
-  await expect(page.getByText("전표 #TEST-11", { exact: true })).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "전표 복사", exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("link", { name: "거래처 수납·배분 조회", exact: true }),
-  ).toHaveAttribute(
-    "href",
-    "/sales-v2/payments?view=allocations&receiptPartnerId=7",
-  );
-  await page.goto("/sales-v2/slips?slipId=13");
-  await expect(page.getByText("전표 #TEST-13", { exact: true })).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "경매장 출하 조회", exact: true }),
-  ).toBeVisible();
-  await page.goto("/sales/slips");
+  await page.goto("/sales");
+  await expect(page).toHaveURL(/\/sales\/slips$/);
   await expect(
     page.getByRole("heading", { name: /^판매 관리 >/, level: 1 }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "전표 복사", exact: true }),
+    page.getByRole("link", { name: "경매 정산", exact: true }),
+  ).toHaveAttribute("href", "/sales/settlement");
+  await expect(
+    page.getByRole("link", { name: "입금", exact: true }),
+  ).toHaveAttribute("href", "/sales/payments");
+  await expect(
+    page.getByRole("link", { name: "판매 관리 v2", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("link", { name: "경매 정산", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "경매 대금", exact: true }),
   ).toBeVisible();
+  await page.getByRole("link", { name: "입금", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "수납 등록·오입력 정정", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "수납 조회·배분·정정", exact: true }),
+  ).toBeVisible();
+  const response = await page.goto("/sales-v2");
+  expect(response?.status()).toBe(404);
 });
-
-test("auction proceeds stays inside auction and restores lot selection", async ({
-  page,
-}) => {
-  await page.goto("/sales-v2/auction?lotId=42&market=테스트");
-  await expect(page.getByText("LOT #42", { exact: true })).toBeVisible();
-  await page
-    .getByRole("button", { name: "경매 대금 확인", exact: true })
-    .click();
-  await expect(page).toHaveURL(/panel=proceeds/);
-  await expect(
-    page.getByRole("link", { name: "LOT #42", exact: true }),
-  ).toBeVisible();
-  await page.reload();
-  await expect(
-    page.getByRole("link", { name: "경매장 수납·배분 조회", exact: true }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "출하 목록으로", exact: true })
-    .click();
-  await expect(page.getByText("LOT #42", { exact: true })).toBeVisible();
-  expect(new URL(page.url()).searchParams.get("market")).toBe("테스트");
-  await page.goBack();
-  await expect(
-    page.getByRole("link", { name: "LOT #42", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("link", { name: "LOT #42", exact: true }).click();
-  await expect(page).toHaveURL(/\/sales-v2\/auction\?lotId=42$/);
-  await expect(page.getByText("LOT #42", { exact: true })).toBeVisible();
-});
-
 test("payments keep receipt selection across views, allocation and target tracing", async ({
   page,
 }) => {
   await page.goto(
-    "/sales-v2/payments?view=allocations&receiptPartnerId=7&receiptId=101",
+    "/sales/payments?view=allocations&receiptPartnerId=7&receiptId=101",
   );
   await page.getByRole("button", { name: "배분 추가", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "수납 배분", exact: true });
@@ -107,38 +73,15 @@ test("payments keep receipt selection across views, allocation and target tracin
     page.getByText("입금 1,500원 / 미배분 900원", { exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: "배분 대상 보기", exact: true }).click();
-  await expect(page).toHaveURL(/\/sales-v2\/slips\?slipId=11&paymentPage=0$/);
-  await expect(page.getByText("전표 #TEST-11", { exact: true })).toBeVisible();
-});
-
-test("partner selection reload and links keep the selected partner", async ({
-  page,
-}) => {
-  await page.goto("/sales-v2/partners");
-  await page
-    .getByRole("cell", { name: "수납 테스트 거래처", exact: true })
-    .click();
-  await expect(page).toHaveURL(/partnerId=7/);
-  await page.reload();
-  await expect(
-    page.getByRole("link", { name: "거래처 전표 조회", exact: true }),
-  ).toHaveAttribute("href", "/sales-v2/slips?partnerId=7");
-  await page
-    .getByRole("link", { name: "거래처 수납·배분 조회", exact: true })
-    .click();
-  await expect(page).toHaveURL(
-    /\/sales-v2\/payments\?view=allocations&receiptPartnerId=7$/,
-  );
-  await expect(
-    page.getByRole("button", { name: "수납 #101", exact: false }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/sales\/slips\?slipId=11&paymentPage=0$/);
+  await expect(page.getByText("LOT #TEST-11", { exact: true })).toBeVisible();
 });
 
 test("payment workspace uses separate panels on desktop and stacks without overflow on mobile", async ({
   page,
 }) => {
   await page.goto(
-    "/sales-v2/payments?view=allocations&receiptPartnerId=7&receiptId=101",
+    "/sales/payments?view=allocations&receiptPartnerId=7&receiptId=101",
   );
   const sources = page.locator('[data-sales-payment-panel="sources"]');
   const allocation = page.locator('[data-sales-payment-panel="allocation"]');
@@ -170,7 +113,7 @@ test("auction documents show linked lot facts and navigate to the exact lot", as
   await request.post("http://127.0.0.1:14100/__control", {
     data: { auctionDocumentSeed: true },
   });
-  for (const route of ["/sales-v2/slips?slipId=13", "/sales/slips?slipId=13"]) {
+  for (const route of ["/sales/slips?slipId=13"]) {
     await page.goto(route);
     const row = page.getByRole("row").filter({ hasText: "호접란" });
     await expect(row.getByText("재경매대기", { exact: true })).toBeVisible();
@@ -185,18 +128,13 @@ test("auction documents show linked lot facts and navigate to the exact lot", as
     await expect(cells.nth(6)).toHaveText("30");
     await expect(cells.nth(7)).toHaveText("0");
     const link = row.getByRole("link", { name: "상세 보기", exact: true });
-    await expect(link).toHaveAttribute(
-      "href",
-      route.startsWith("/sales-v2")
-        ? "/sales-v2/auction?lotId=42"
-        : "/sales/auction?lotId=42",
-    );
+    await expect(link).toHaveAttribute("href", "/sales/auction?lotId=42");
     await link.click();
     await expect(page.getByText("LOT #42", { exact: true })).toBeVisible();
     await page.goBack();
     await expect(row.getByText("재경매대기", { exact: true })).toBeVisible();
   }
-  await page.goto("/sales-v2/slips?slipId=11");
+  await page.goto("/sales/slips?slipId=11");
   await expect(page.getByRole("columnheader", { name: /^낙찰 / })).toHaveCount(
     0,
   );

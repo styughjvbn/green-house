@@ -1,5 +1,4 @@
 "use client";
-
 import { useSearchParams } from "next/navigation";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { readSalesRouteState } from "../lib/salesRouteParams";
@@ -8,20 +7,16 @@ import { SalesFilters } from "./slips/SalesFilters";
 import { SalesSlipCreateForm } from "./slips/SalesSlipCreateForm";
 import { SalesSlipDetail } from "./slips/SalesSlipDetail";
 import { SalesSlipList } from "./slips/SalesSlipList";
-
 export function SalesSlipsPage({
   initialShowCreateSlip = false,
-  v2 = false,
 }: {
   initialShowCreateSlip?: boolean;
-  v2?: boolean;
 }) {
   const routeState = readSalesRouteState(useSearchParams());
   const sales = useSalesSlips({
     initialShowCreateSlip,
     routeState,
   });
-
   function handleToggleCreateSalesSlip() {
     const nextOpen = !sales.showCreateSlip;
     if (nextOpen) {
@@ -30,7 +25,6 @@ export function SalesSlipsPage({
       sales.cancelSalesSlipEditing();
     }
   }
-
   return (
     <main className="h-full min-h-0">
       <TabLayout>
@@ -65,13 +59,8 @@ export function SalesSlipsPage({
 
         <TabError message={sales.errorMessage} />
 
-        <TabSplit
-          columns={
-            v2 ? "xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]" : undefined
-          }
-        >
+        <TabSplit>
           <SalesSlipList
-            v2={v2}
             currentPage={sales.salesSlipCurrentPage}
             pageSize={sales.salesSlipPageSize}
             salesSlips={sales.salesSlips}
@@ -85,7 +74,6 @@ export function SalesSlipsPage({
             onPageSizeChange={sales.setSalesSlipPageSize}
           />
           <SalesSlipDetail
-            v2={v2}
             loading={sales.loadingSalesSlipDetail}
             salesSlip={sales.selectedSalesSlip}
             updatingSalesStatus={sales.updatingSlipStatus}

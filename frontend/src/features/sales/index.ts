@@ -18,5 +18,3 @@ export {
   updatePartnerSettlementSettings,
   createSalesSlip,
 } from "./api/salesApi";
-
-export { SalesV2RoutePage } from "./SalesV2RoutePage";
