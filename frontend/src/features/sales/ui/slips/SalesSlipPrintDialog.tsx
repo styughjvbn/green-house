@@ -91,6 +91,11 @@ function SalesSlipPrintSheet({ salesSlip }: { salesSlip: SalesSlip }) {
                 ? "경매 출하 전표"
                 : "판매 전표"}
             </h2>
+            {salesSlip.historicalAuctionImport === true ? (
+              <p className="mt-1 text-xs text-[#4d6755]">
+                과거 출하 이관 · 재고 배분 근거 미상
+              </p>
+            ) : null}
           </div>
           <div className="text-right text-sm">
             <p className="font-semibold">전표번호</p>

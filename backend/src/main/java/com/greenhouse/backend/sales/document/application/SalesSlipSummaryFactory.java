@@ -33,6 +33,7 @@ final class SalesSlipSummaryFactory {
         financial == null ? salesSlip.getPaymentStatus() : financial.paymentStatus(),
         salesSlip.getSalesStatus(),
         financial == null ? salesSlip.getPaymentMethod() : financial.paymentMethod(),
-        salesSlip.getMemo());
+        salesSlip.getMemo(),
+        salesSlip.isHistoricalAuctionImport());
   }
 }

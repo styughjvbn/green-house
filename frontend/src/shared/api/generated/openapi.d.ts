@@ -2292,6 +2292,8 @@ export interface components {
             expectedPaymentDate?: string;
             /** @description 현재 금액 검토 필요 여부. 과거 생성 응답에는 미상일 수 있습니다. */
             financialReviewRequired?: boolean | null;
+            /** @description 기존 출하로부터 이관한 경매 전표 여부. 재고 근거는 추정 복원하지 않으며 과거 생성 응답에는 미상일 수 있습니다. */
+            historicalAuctionImport?: boolean | null;
             /** Format: int64 */
             id?: number;
             items?: components["schemas"]["SalesSlipItemResponse"][];
@@ -4163,6 +4165,8 @@ export interface components {
             auctionShipmentId?: number;
             /** Format: date */
             expectedPaymentDate?: string;
+            /** @description 기존 출하로부터 이관한 경매 전표 여부 */
+            historicalAuctionImport?: boolean;
             /** Format: int64 */
             id?: number;
             memo?: string;
@@ -5267,7 +5271,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
                 };
             };
-            /** @description DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음 */
+            /** @description DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음. HISTORICAL_AUCTION_DOCUMENT_READ_ONLY: 과거 이관 경매 전표 수정 차단 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7339,13 +7343,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 상태 변경 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
+                };
+            };
+            /** @description HISTORICAL_AUCTION_DOCUMENT_READ_ONLY: 과거 이관 경매 전표의 재고 변경 차단 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

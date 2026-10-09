@@ -156,7 +156,7 @@ public class SalesController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "409",
             description =
-                "DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음",
+                "DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음. HISTORICAL_AUCTION_DOCUMENT_READ_ONLY: 과거 이관 경매 전표 수정 차단",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
       })
   @PutMapping("/sales-slips/{salesSlipId}")
@@ -189,6 +189,17 @@ public class SalesController {
     return ApiResponse.ok(salesPaymentService.confirmPayment(salesSlipId, request));
   }
 
+  @Operation(
+      responses = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "상태 변경 결과",
+            useReturnTypeSchema = true),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "409",
+            description = "HISTORICAL_AUCTION_DOCUMENT_READ_ONLY: 과거 이관 경매 전표의 재고 변경 차단",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+      })
   @PatchMapping("/sales-slips/{salesSlipId}/sales-status")
   public ApiResponse<SalesSlipDocument> updateSalesStatus(
       @PathVariable Long salesSlipId, @Valid @RequestBody SalesSlipStatusUpdateRequest request) {

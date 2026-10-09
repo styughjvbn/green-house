@@ -88,7 +88,7 @@ public class SalesSlipActionResolver {
       Set<Long> nonCancelableShipmentIds,
       boolean reviewRequired,
       DirectDocumentAccountingPort.FinancialSnapshot financial) {
-    if (salesSlip.isCanceled()) {
+    if (salesSlip.isCanceled() || salesSlip.isHistoricalAuctionImport()) {
       return List.of();
     }
 

@@ -652,3 +652,11 @@ PostgreSQL job은 먼저 `docker info`로 실행 환경을 확인하고 Testcont
 `workE2eTest`와 `workBenchmark -PworkBenchmarkEnforce=true`를 각각 실행한다. 운영 DB 접속 정보는 사용하지 않는다. 백엔드 테스트 보고서와 PostgreSQL 테스트·벤치마크 결과는 성공 여부와 관계없이 artifact로 업로드해 14일간 보관한다.
 Docker가 없으면 PostgreSQL 검사는 실패한다. 벤치마크는 결과 의미와 쿼리 상한을 검사하고 시간·할당량은 참고값으로 기록한다.
 Java 포맷 기준은 Spotless의 Google Java Format이다. `backend`에서 `./gradlew format`으로 적용하고 `./gradlew spotlessCheck`로 검사한다. CI의 `./gradlew check`에도 이 검사가 포함되며 소스를 자동 수정하지 않는다. Java는 2 spaces, Kotlin Gradle 스크립트는 기존 tab 4를 유지한다. VS Code는 `.vscode/extensions.json`의 Spotless Gradle·Gradle for Java 확장을 설치한 뒤 창을 다시 로드한다. Java 저장 포맷도 같은 Gradle 설정으로 처리하며 Red Hat Java 포맷은 끈다. 최초 전체 Java 포맷 적용은 기능 변경과 분리해 커밋한다.
+
+### V52 과거 경매 출하 전표 이관
+
+배포 전 백업을 보존하고 애플리케이션 writer를 중지한 상태에서 Flyway를 적용한다. V52는 기존 출하·lot를 읽고 누락된 전표·품목만 생성한다. 과거 데이터의 난 묶음 배분·snapshot을 추정하거나 재고 출고를 재실행하지 않는다. source 표의 읽기·쓰기를 migration 동안 잠그고 한 트랜잭션으로 적용하며, 데이터 충돌은 전체 rollback한다. Flyway 재실행은 완료 이관을 중복 실행하지 않는다. 기존 migration의 checksum을 변경하거나 이관 실패를 수동 성공 처리하지 않는다.
+
+2026-10-09에 `temp/green-house_20261006_030001.dump.gz`(SHA-256 `06be57e9a0998738866b040bcdb28d7d4a9acd7fe655688069d37c595622eac5`)를 별도 PostgreSQL 18.4에 복원해 V34→V51→V52를 검증했다. V52로 경매 전표 64건·품목 566건(출하 수량 39,016개)이 생성됐고 전표 없는 출하 및 품목 없는 lot는 각각 0건이 됐다. V51 기준 기존 일반 전표 148건과 전표·품목·Flyway 이력을 제외한 public 54개 테이블 행(난 묶음 320개 포함)은 V52 후 동일했다. 기존 source 표의 상태값도 변경하지 않았다. 실제 적용할 백업에서도 동일한 대사와 재고·원장 불변을 확인한다. 이 복원 검증은 운영 DB 적용을 뜻하지 않는다.
+
+복원본 HTTP 목록에서 64건을 조회하고 각 전표의 상세·인쇄 응답, 빈 재고 배분과 사용 가능한 재고 변경 action 부재를 확인했다. PostgreSQL 회귀는 기존 전표·품목 보존, 완료 migration 재실행, 수량·lot 연결·거래처·번호 충돌의 rollback, 이관 전표의 조회·출력 및 수정·상태 변경 차단을 검증한다. 백엔드 전체 779개·PostgreSQL 전체 회귀 824개(실패·오류·skip 0), 프론트 `npm run check`와 OpenAPI·생성 타입 갱신이 완료됐다.

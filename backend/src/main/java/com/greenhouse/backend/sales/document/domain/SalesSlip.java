@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.document.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.sales.api.document.SalesType;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -80,6 +81,9 @@ public class SalesSlip extends BaseEntity {
 
   @Column(name = "sales_status", nullable = false)
   private String salesStatus;
+
+  @Column(name = "historical_auction_import", nullable = false)
+  private boolean historicalAuctionImport;
 
   @Column(name = "payment_method")
   private String paymentMethod;
@@ -177,11 +181,13 @@ public class SalesSlip extends BaseEntity {
   }
 
   public void requireEditable(boolean hasPaymentEvent) {
+    requireInventoryChangeAllowed();
     String reason = editRejectionReason(hasPaymentEvent);
     if (reason != null) throw new IllegalArgumentException(reason);
   }
 
   private String editRejectionReason(boolean hasPaymentEvent) {
+    if (historicalAuctionImport) return "과거 이관 경매 전표는 수정할 수 없습니다.";
     if (salesType != SalesType.DIRECT) return "경매 판매 전표 수정은 아직 지원하지 않습니다.";
     if (!STATUS_DRAFT.equals(salesStatus)) return "작성중 상태 전표만 수정할 수 있습니다.";
     if (hasPaymentEvent) return "입금 이력이 있는 전표는 수정할 수 없습니다.";
@@ -189,7 +195,14 @@ public class SalesSlip extends BaseEntity {
   }
 
   public boolean canComplete() {
-    return STATUS_DRAFT.equals(salesStatus);
+    return !historicalAuctionImport && STATUS_DRAFT.equals(salesStatus);
+  }
+
+  public void requireInventoryChangeAllowed() {
+    if (historicalAuctionImport) {
+      throw new ConflictException(
+          "HISTORICAL_AUCTION_DOCUMENT_READ_ONLY", "과거 이관 경매 전표는 재고를 변경하는 수정·출고·취소를 할 수 없습니다.");
+    }
   }
 
   // 잔액 검사는 새 입금에만 적용한다. 완납 후에도 기존 입금의 재요청은 확인할 수 있다.
@@ -215,6 +228,7 @@ public class SalesSlip extends BaseEntity {
     if (nextStatus.equals(this.salesStatus)) {
       return;
     }
+    requireInventoryChangeAllowed();
     if (isCanceled()) {
       throw new IllegalArgumentException("취소된 전표는 상태를 변경할 수 없습니다.");
     }

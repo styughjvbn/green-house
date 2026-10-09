@@ -60,6 +60,7 @@ final class SalesSlipDocumentFactory {
                         financial == null ? null : financial.prices().get(item.getId())))
             .toList(),
         availableActions,
-        financialReviewRequired);
+        financialReviewRequired,
+        salesSlip.isHistoricalAuctionImport());
   }
 }

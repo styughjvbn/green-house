@@ -37,7 +37,8 @@
       "allocations" : [ ]
     } ],
     "availableActions" : [ "EDIT", "COMPLETE", "CANCEL", "CONFIRM_PAYMENT" ],
-    "financialReviewRequired" : false
+    "financialReviewRequired" : false,
+    "historicalAuctionImport" : false
   },
   "list" : {
     "content" : [ {
@@ -64,7 +65,8 @@
       "paymentStatus" : "미입금",
       "salesStatus" : "작성중",
       "paymentMethod" : "계좌",
-      "memo" : "Slip Memo"
+      "memo" : "Slip Memo",
+      "historicalAuctionImport" : false
     } ],
     "page" : 0,
     "size" : 10,

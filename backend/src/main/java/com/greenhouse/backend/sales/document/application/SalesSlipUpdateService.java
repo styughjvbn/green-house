@@ -44,6 +44,7 @@ public class SalesSlipUpdateService {
     SalesSlip salesSlip =
         aggregateLoader.getForUpdate(
             salesSlipId, request.partnerId() == null ? List.of() : List.of(request.partnerId()));
+    salesSlip.requireInventoryChangeAllowed();
     Long previousPartnerId = salesSlip.getPartnerId();
     Map<String, Object> before = auditSupport.snapshot(salesSlip);
 

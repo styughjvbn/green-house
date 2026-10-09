@@ -128,6 +128,15 @@ export function SalesSlipDetail({
   return (
     <>
       <DetailCard>
+        {salesSlip.historicalAuctionImport === true ? (
+          <p
+            role="status"
+            className="border-b border-[#e7ebe5] px-4 py-3 text-sm text-[#647268]"
+          >
+            과거 경매 출하에서 이관한 전표입니다. 원래 난 묶음 배분 기록이 없어
+            재고를 변경하는 수정·출고·취소는 할 수 없습니다.
+          </p>
+        ) : null}
         {salesSlip.financialReviewRequired === true ? (
           <p
             role="status"
