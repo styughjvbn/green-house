@@ -41,9 +41,12 @@ public class PaymentController {
   private final PaymentReceiptReader receipts;
 
   @GetMapping("/payment-allocation-metadata")
-  @Operation(operationId = "getPaymentAllocationMetadata")
-  public ApiResponse<PaymentAllocationMetadata> allocationMetadata() {
-    return ApiResponse.ok(receipts.metadata());
+  @Operation(
+      operationId = "getPaymentAllocationMetadata",
+      description = "거래처를 지정하면 일반 거래처는 일반 전표, 경매장은 경매 대금만 배분 대상 종류로 반환합니다.")
+  public ApiResponse<PaymentAllocationMetadata> allocationMetadata(
+      @RequestParam(required = false) Long partnerId) {
+    return ApiResponse.ok(receipts.metadata(partnerId));
   }
 
   @PostMapping("/business-partners/{partnerId}/payment-allocations")

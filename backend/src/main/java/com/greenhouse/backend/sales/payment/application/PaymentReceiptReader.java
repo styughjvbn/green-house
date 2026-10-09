@@ -3,6 +3,8 @@ package com.greenhouse.backend.sales.payment.application;
 import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.payment.api.PaymentAllocationTargetOption;
 import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
 import com.greenhouse.backend.sales.payment.domain.*;
@@ -22,9 +24,22 @@ public class PaymentReceiptReader {
   private final PaymentReceiptIntegrity cash;
   private final List<PaymentAllocationTargetPort<?>> targets;
 
-  public PaymentAllocationMetadata metadata() {
+  private final BusinessPartnerQueryApi partners;
+
+  public PaymentAllocationMetadata metadata(Long partnerId) {
+    PaymentTargetType allowed =
+        partnerId == null
+            ? null
+            : partners.getInfo(partnerId).partnerType() == PartnerType.AUCTION_HOUSE
+                ? PaymentTargetType.AUCTION_PROCEEDS
+                : PaymentTargetType.SALES_SLIP;
     return new PaymentAllocationMetadata(
-        targets.stream().map(PaymentAllocationTargetPort::targetType).distinct().sorted().toList());
+        targets.stream()
+            .map(PaymentAllocationTargetPort::targetType)
+            .filter(type -> allowed == null || type == allowed)
+            .distinct()
+            .sorted()
+            .toList());
   }
 
   public PageResponse<PaymentReceiptResponse> page(Long partnerId, int page, int size) {

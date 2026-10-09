@@ -52,6 +52,12 @@ test("payments keep receipt selection across views, allocation and target tracin
   );
   await page.getByRole("button", { name: "배분 추가", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "수납 배분", exact: true });
+  await expect(
+    dialog.getByRole("option", { name: "경매 대금", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    dialog.getByRole("option", { name: "일반 판매 전표", exact: true }),
+  ).toHaveCount(1);
   await dialog.getByLabel("배분 대상", { exact: true }).selectOption("11");
   await dialog.getByLabel("배분액", { exact: true }).fill("600");
   await dialog.getByRole("button", { name: "배분 확정", exact: true }).click();

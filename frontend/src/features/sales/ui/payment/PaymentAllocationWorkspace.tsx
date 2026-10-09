@@ -128,8 +128,8 @@ function AllocationPanel({ partnerId }: { partnerId: number }) {
     enabled: !!receiptId,
   });
   const metadata = useQuery({
-    queryKey: [...base, "metadata"],
-    queryFn: ({ signal }) => getAllocationMetadata(signal),
+    queryKey: [...base, partnerId, "metadata"],
+    queryFn: ({ signal }) => getAllocationMetadata(partnerId, signal),
   });
   const [checked, setChecked] = useState<number[]>([]);
   const eligibleIds = checked.filter((id) =>

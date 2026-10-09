@@ -1523,6 +1523,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 거래처를 지정하면 일반 거래처는 일반 전표, 경매장은 경매 대금만 배분 대상 종류로 반환합니다. */
         get: operations["getPaymentAllocationMetadata"];
         put?: never;
         post?: never;
@@ -8222,7 +8223,9 @@ export interface operations {
     };
     getPaymentAllocationMetadata: {
         parameters: {
-            query?: never;
+            query?: {
+                partnerId?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;

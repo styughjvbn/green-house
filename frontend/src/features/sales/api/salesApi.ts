@@ -540,9 +540,9 @@ export function getReceiptAllocations(
     { signal },
   );
 }
-export function getAllocationMetadata(signal?: AbortSignal) {
+export function getAllocationMetadata(partnerId: number, signal?: AbortSignal) {
   return fetchApi<import("./types").AllocationMetadata>(
-    "/payment-allocation-metadata",
+    `/payment-allocation-metadata?partnerId=${partnerId}`,
     { signal },
   );
 }

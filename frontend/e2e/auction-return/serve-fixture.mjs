@@ -366,7 +366,12 @@ const server = http.createServer(async (req, res) => {
     };
   }
   if (url.pathname === "/api/payment-allocation-metadata")
-    return send({ targetTypes: ["SALES_SLIP", "AUCTION_PROCEEDS"] });
+    return send({
+      targetTypes:
+        url.searchParams.get("partnerId") === "7"
+          ? ["SALES_SLIP"]
+          : ["SALES_SLIP", "AUCTION_PROCEEDS"],
+    });
   if (
     req.method === "GET" &&
     url.pathname === "/api/business-partners/7/payment-receipts"
