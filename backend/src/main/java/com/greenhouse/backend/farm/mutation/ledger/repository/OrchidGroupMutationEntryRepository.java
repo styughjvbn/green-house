@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.mutation.ledger.repository;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryKind;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationEntryKind;
 import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationEntry;
 import jakarta.persistence.QueryHint;
 import java.time.LocalDate;

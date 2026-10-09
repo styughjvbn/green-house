@@ -2,8 +2,8 @@ package com.greenhouse.backend.farm.mutation.query;
 
 import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.common.api.PageResponse;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationRepository;

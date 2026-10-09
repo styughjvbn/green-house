@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.auction.application;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

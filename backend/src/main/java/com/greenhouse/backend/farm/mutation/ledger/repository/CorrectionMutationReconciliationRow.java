@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.mutation.ledger.repository;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
 import java.util.UUID;
 
 public record CorrectionMutationReconciliationRow(

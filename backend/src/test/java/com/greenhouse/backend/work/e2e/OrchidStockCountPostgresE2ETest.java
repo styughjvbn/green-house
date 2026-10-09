@@ -2,9 +2,9 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupQuantityMutationItem;
-import com.greenhouse.backend.farm.api.orchid.ReserveOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupQuantityMutationItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.ReserveOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import java.time.LocalDate;
 import java.util.List;

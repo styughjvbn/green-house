@@ -2,7 +2,7 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.inbound.application.InboundPlacementInput;
 import com.greenhouse.backend.farm.inbound.application.InboundRecordCreateCommand;
 import com.greenhouse.backend.farm.inbound.application.InboundRecordService;

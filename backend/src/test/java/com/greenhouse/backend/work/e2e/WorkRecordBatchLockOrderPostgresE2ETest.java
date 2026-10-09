@@ -9,8 +9,8 @@ import static org.mockito.Mockito.doThrow;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.api.orchid.MoveOrchidGroupsMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.UpdateOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.MoveOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.orchid.application.OrchidGroupCommandService;

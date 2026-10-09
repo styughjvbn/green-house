@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationRelationType;
 import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationRepository;

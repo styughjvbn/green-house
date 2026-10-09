@@ -10,10 +10,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
-import com.greenhouse.backend.farm.api.orchid.ReconcileOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationResult;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupStateSnapshot;
+import com.greenhouse.backend.farm.api.orchid.mutation.ReconcileOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;

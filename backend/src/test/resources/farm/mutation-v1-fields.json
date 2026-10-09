@@ -1,68 +1,68 @@
 {
-  "com.greenhouse.backend.farm.api.orchid.CancelOrchidGroupCreationMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.CancelOrchidGroupCreationMutationCommand": [
     "correctedMutations",
     "effectiveBusinessDate",
     "orchidGroupId",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.CompensateCreateMutationsCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.CompensateCreateMutationsCommand": [
     "effectiveBusinessDate",
     "mutationIds",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.CompensateTransformMutationsCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.CompensateTransformMutationsCommand": [
     "creationCancellationOrchidGroupIds",
     "effectiveBusinessDate",
     "mutationIds",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.ConsumeOrchidGroupReservationsMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand": [
     "effectiveBusinessDate",
     "items",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.CorrectOrchidGroupMutationItem": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.CorrectOrchidGroupMutationItem": [
     "correctedQuantity",
     "correctedStatus",
     "orchidGroupId"
   ],
-  "com.greenhouse.backend.farm.api.orchid.CorrectOrchidGroupsMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.CorrectOrchidGroupsMutationCommand": [
     "correctedMutations",
     "effectiveBusinessDate",
     "items",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.CreateInboundOrchidGroupsMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.CreateInboundOrchidGroupsMutationCommand": [
     "effectiveBusinessDate",
     "groups",
     "inboundRecordId",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.CreateOrchidGroupMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.CreateOrchidGroupMutationCommand": [
     "bedZoneId",
     "details",
     "effectiveBusinessDate",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.CreateOrchidGroupMutationItem": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.CreateOrchidGroupMutationItem": [
     "bedZoneId",
     "details"
   ],
-  "com.greenhouse.backend.farm.api.orchid.DiscardOrchidGroupMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.DiscardOrchidGroupMutationCommand": [
     "effectiveBusinessDate",
     "orchidGroupId",
     "quantity",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.MoveOrchidGroupMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.MoveOrchidGroupMutationCommand": [
     "effectiveBusinessDate",
     "endPosition",
     "orchidGroupId",
@@ -71,20 +71,20 @@
     "startPosition",
     "toBedZoneId"
   ],
-  "com.greenhouse.backend.farm.api.orchid.MoveOrchidGroupMutationItem": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.MoveOrchidGroupMutationItem": [
     "endPosition",
     "orchidGroupId",
     "startPosition",
     "toBedZoneId"
   ],
-  "com.greenhouse.backend.farm.api.orchid.MoveOrchidGroupsMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.MoveOrchidGroupsMutationCommand": [
     "effectiveBusinessDate",
     "items",
     "placementExclusionOrchidGroupIds",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationDetails": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails": [
     "ageYear",
     "endPosition",
     "memo",
@@ -97,11 +97,11 @@
     "trayCount",
     "varietyId"
   ],
-  "com.greenhouse.backend.farm.api.orchid.OrchidGroupQuantityMutationItem": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupQuantityMutationItem": [
     "orchidGroupId",
     "quantity"
   ],
-  "com.greenhouse.backend.farm.api.orchid.ReconcileOrchidGroupMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.ReconcileOrchidGroupMutationCommand": [
     "actualBedZoneId",
     "actualEndPosition",
     "actualQuantity",
@@ -112,30 +112,30 @@
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.RelatedOrchidGroupMutations": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.RelatedOrchidGroupMutations": [
     "legacySource",
     "mutationIds"
   ],
-  "com.greenhouse.backend.farm.api.orchid.ReleaseOrchidGroupReservationsMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand": [
     "effectiveBusinessDate",
     "items",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.ReserveOrchidGroupsMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.ReserveOrchidGroupsMutationCommand": [
     "effectiveBusinessDate",
     "items",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.RestoreOutboundOrchidGroupsMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand": [
     "compensatedMutations",
     "effectiveBusinessDate",
     "items",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.StockCountOrchidGroupMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.StockCountOrchidGroupMutationCommand": [
     "actualQuantity",
     "effectiveBusinessDate",
     "expectedRevision",
@@ -143,17 +143,17 @@
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.TransformOrchidGroupMutationResult": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResult": [
     "bedZoneId",
     "details"
   ],
-  "com.greenhouse.backend.farm.api.orchid.TransformOrchidGroupMutationSource": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSource": [
     "orchidGroupId",
     "releasedEndPosition",
     "releasedStartPosition",
     "transformedQuantity"
   ],
-  "com.greenhouse.backend.farm.api.orchid.TransformOrchidGroupsMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupsMutationCommand": [
     "effectiveBusinessDate",
     "placementExclusionOrchidGroupIds",
     "reason",
@@ -161,14 +161,14 @@
     "source",
     "sources"
   ],
-  "com.greenhouse.backend.farm.api.orchid.UpdateOrchidGroupMutationCommand": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.UpdateOrchidGroupMutationCommand": [
     "details",
     "effectiveBusinessDate",
     "orchidGroupId",
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupStateSnapshot": [
     "ageYear",
     "bedZoneId",
     "endPosition",

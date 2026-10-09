@@ -6,10 +6,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.api.orchid.MoveOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationDetails;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources;
-import com.greenhouse.backend.farm.api.orchid.UpdateOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.MoveOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.api.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.orchid.application.OrchidGroupCommandService;

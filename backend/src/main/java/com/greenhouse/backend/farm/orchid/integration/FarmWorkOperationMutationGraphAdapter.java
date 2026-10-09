@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.orchid.integration;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationEntry;
 import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationRelationRepository;

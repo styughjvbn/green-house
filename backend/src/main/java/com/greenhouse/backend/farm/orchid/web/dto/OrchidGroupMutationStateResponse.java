@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.orchid.web.dto;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupStateSnapshot;
 import java.math.BigDecimal;
 
 public record OrchidGroupMutationStateResponse(

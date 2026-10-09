@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;

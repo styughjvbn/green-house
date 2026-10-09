@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.orchid.repository;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupStateSnapshot;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.orchid.domain.PotSizeCode;
 import java.math.BigDecimal;
 

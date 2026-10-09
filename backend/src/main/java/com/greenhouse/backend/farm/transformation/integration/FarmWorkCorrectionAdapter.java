@@ -2,11 +2,11 @@ package com.greenhouse.backend.farm.transformation.integration;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.api.orchid.CancelOrchidGroupCreationMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.CorrectOrchidGroupMutationItem;
-import com.greenhouse.backend.farm.api.orchid.CorrectOrchidGroupsMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources;
-import com.greenhouse.backend.farm.api.orchid.RelatedOrchidGroupMutations;
+import com.greenhouse.backend.farm.api.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.CorrectOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.CorrectOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.api.orchid.mutation.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroupStatusPolicy;

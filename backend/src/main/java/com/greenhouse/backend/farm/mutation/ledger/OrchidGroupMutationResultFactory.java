@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.mutation.ledger;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationResult;
 import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutation;
 import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationEntry;
 import java.util.List;

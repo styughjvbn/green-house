@@ -1,8 +1,8 @@
 package com.greenhouse.backend.farm.mutation.engine;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationResult;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationResult;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.mutation.ledger.OrchidGroupMutationResultFactory;
 import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationRepository;

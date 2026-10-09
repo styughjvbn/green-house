@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.orchid.application;
 
-import com.greenhouse.backend.farm.api.orchid.DiscardOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.api.orchid.mutation.DiscardOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;

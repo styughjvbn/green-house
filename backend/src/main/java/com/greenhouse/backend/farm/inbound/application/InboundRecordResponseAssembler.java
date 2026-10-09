@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.inbound.application;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryKind;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationEntryKind;
 import com.greenhouse.backend.farm.inbound.domain.InboundRecord;
 import com.greenhouse.backend.farm.inbound.domain.InboundStatus;
 import com.greenhouse.backend.farm.inbound.domain.InboundType;

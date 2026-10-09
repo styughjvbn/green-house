@@ -1,9 +1,9 @@
 package com.greenhouse.backend.farm.inbound.application;
 
-import com.greenhouse.backend.farm.api.orchid.CreateInboundOrchidGroupsMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.CreateOrchidGroupMutationItem;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationDetails;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.api.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.CreateOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;

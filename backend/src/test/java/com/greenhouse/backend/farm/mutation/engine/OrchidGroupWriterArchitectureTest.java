@@ -3,7 +3,7 @@ package com.greenhouse.backend.farm.mutation.engine;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationWriter;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationWriter;
 import com.greenhouse.backend.farm.mutation.ledger.OrchidGroupMutationRecorder;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;

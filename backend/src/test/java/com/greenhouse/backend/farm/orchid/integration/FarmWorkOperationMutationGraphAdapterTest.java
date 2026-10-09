@@ -7,8 +7,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryRole;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationEntryRole;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutation;
 import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationEntry;
 import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationRelation;

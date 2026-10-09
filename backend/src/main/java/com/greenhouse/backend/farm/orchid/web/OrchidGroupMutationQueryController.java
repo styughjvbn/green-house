@@ -2,8 +2,8 @@ package com.greenhouse.backend.farm.orchid.web;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.common.api.PageResponse;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.mutation.query.OrchidGroupMutationGraphQueryService;
 import com.greenhouse.backend.farm.mutation.query.OrchidGroupMutationQueryService;
 import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupMutationGraphResponse;

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.mutation.query;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutation;
 import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupMutationWorkOperationResponse;
 import com.greenhouse.backend.work.api.operation.WorkOperationMetadataApi;

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.orchid.web.dto;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationEntryRole;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationRelationType;
 import com.greenhouse.backend.farm.transformation.domain.OrchidGroupLineageRelationType;
 

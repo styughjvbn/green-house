@@ -1,0 +1,19 @@
+package com.greenhouse.backend.farm.api.orchid.mutation;
+
+public enum OrchidGroupMutationType {
+  BASELINE_IMPORT,
+  CREATE,
+  UPDATE_DETAILS,
+  MOVE,
+  RESERVE,
+  RELEASE_RESERVATION,
+  CONSUME_RESERVATION,
+  RESTORE_OUTBOUND,
+  DISCARD,
+  TRANSFORM,
+  CORRECTION,
+  RECONCILIATION,
+  COMPENSATION,
+  CANCEL_CREATION,
+  DELETE
+}

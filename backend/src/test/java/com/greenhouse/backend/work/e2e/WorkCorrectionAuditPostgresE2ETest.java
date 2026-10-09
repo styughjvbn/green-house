@@ -7,7 +7,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.mutation.query.OrchidGroupMutationGraphQueryService;
 import com.greenhouse.backend.farm.mutation.query.OrchidGroupMutationQueryService;
 import com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerReconciliationService;

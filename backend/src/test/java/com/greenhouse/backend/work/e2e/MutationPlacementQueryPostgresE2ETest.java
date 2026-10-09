@@ -3,11 +3,11 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.farm.api.orchid.CreateInboundOrchidGroupsMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.CreateOrchidGroupMutationItem;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationDetails;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSource;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.CreateOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import jakarta.persistence.EntityManagerFactory;

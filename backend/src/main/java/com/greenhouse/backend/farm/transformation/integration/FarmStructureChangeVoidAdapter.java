@@ -2,9 +2,9 @@ package com.greenhouse.backend.farm.transformation.integration;
 
 import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.api.orchid.CompensateTransformMutationsCommand;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationSources;
-import com.greenhouse.backend.farm.api.orchid.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.mutation.CompensateTransformMutationsCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEffectiveHeadPolicy;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationEntry;
