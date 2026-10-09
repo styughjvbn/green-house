@@ -376,7 +376,7 @@ export function changeSalesSlipStatus(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     },
-    "판매 상태를 변경하지 못했습니다.",
+    "출고·출하 처리를 변경하지 못했습니다.",
   );
 }
 

@@ -1,3 +1,4 @@
+import { salesDispatchLabel } from "../../lib/salesDisplay";
 import type { SubmitEvent } from "react";
 import { X } from "lucide-react";
 import type { SalesOrchidGroupOption } from "@/entities/farm/types";
@@ -128,7 +129,7 @@ export function SalesSlipCreateForm({
               disabled={saving}
             />
             <SelectField
-              label="입금 상태"
+              label="입금"
               disabled={mode === "edit"}
               value={form.paymentStatus}
               onChange={(value) => onChange("paymentStatus", value)}
@@ -147,7 +148,7 @@ export function SalesSlipCreateForm({
               )}
             </SelectField>
             <SelectField
-              label="판매 상태"
+              label="출고·출하"
               disabled={mode === "edit"}
               value={form.salesStatus}
               onChange={(value) => onChange("salesStatus", value)}
@@ -155,11 +156,15 @@ export function SalesSlipCreateForm({
               {form.salesType === "AUCTION" ? (
                 <>
                   <option value="출하 완료">출하 완료</option>
-                  <option value="작성중">작성중</option>
+                  <option value="작성중">
+                    {salesDispatchLabel("작성중", form.salesType)}
+                  </option>
                 </>
               ) : (
                 <>
-                  <option value="작성중">작성중</option>
+                  <option value="작성중">
+                    {salesDispatchLabel("작성중", form.salesType)}
+                  </option>
                   <option value="출고 완료">출고 완료</option>
                 </>
               )}
@@ -181,7 +186,7 @@ export function SalesSlipCreateForm({
 
           {form.salesType === "AUCTION" ? (
             <div className="rounded-md bg-[#f6f8f5] p-4 text-sm text-[#66736a]">
-              작성중 저장 후 출하 완료 처리하면 경매장 출하 기록과 lot가
+              출하 대기로 저장한 뒤 출하 완료 처리하면 경매장 출하 기록과 lot가
               생성됩니다.
             </div>
           ) : null}

@@ -1,5 +1,7 @@
 "use client";
 
+import { salesDispatchLabel } from "../../lib/salesDisplay";
+
 import { useEffect } from "react";
 import { Printer, X } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
@@ -174,8 +176,11 @@ function SalesSlipPrintSheet({ salesSlip }: { salesSlip: SalesSlip }) {
       </section>
 
       <footer className="mt-6 grid grid-cols-3 gap-3 text-sm">
-        <PrintInfoBox label="입금 상태" value={salesSlip.paymentStatus} />
-        <PrintInfoBox label="판매 상태" value={salesSlip.salesStatus} />
+        <PrintInfoBox label="입금" value={salesSlip.paymentStatus} />
+        <PrintInfoBox
+          label="출고·출하"
+          value={salesDispatchLabel(salesSlip.salesStatus, salesSlip.salesType)}
+        />
         <div className="rounded-md border border-[#cfd8cc] p-3 text-center">
           <p className="font-bold">확인</p>
           <p className="mt-8 border-t border-[#1f2a24] pt-2">서명</p>

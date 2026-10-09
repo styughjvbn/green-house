@@ -74,7 +74,7 @@ export function SalesSlipList({
       },
       {
         accessorKey: "paymentStatus",
-        header: "입금 상태",
+        header: "입금",
         cell: ({ row }) => (
           <SalesSlipStatusBadge value={row.original.paymentStatus} />
         ),
@@ -82,9 +82,12 @@ export function SalesSlipList({
       },
       {
         accessorKey: "salesStatus",
-        header: "판매 상태",
+        header: "출고·출하",
         cell: ({ row }) => (
-          <SalesSlipStatusBadge value={row.original.salesStatus} />
+          <SalesSlipStatusBadge
+            value={row.original.salesStatus}
+            salesType={row.original.salesType}
+          />
         ),
         size: 110,
       },

@@ -1,4 +1,5 @@
-import type { AuctionLot } from "@/entities/farm/types";
+import { salesDispatchLabel } from "../../lib/salesDisplay";
+import type { AuctionLot, SalesSlip } from "@/entities/farm/types";
 import { StatusBadge, type StatusBadgeSize } from "@/shared/ui/StatusBadge";
 import {
   auctionStatusLabel,
@@ -8,9 +9,11 @@ import {
 export function SalesSlipStatusBadge({
   size = "default",
   value,
+  salesType,
 }: {
   size?: StatusBadgeSize;
   value: string;
+  salesType?: SalesSlip["salesType"];
 }) {
   const tone =
     value === "미입금"
@@ -23,7 +26,7 @@ export function SalesSlipStatusBadge({
 
   return (
     <StatusBadge size={size} tone={tone}>
-      {value}
+      {salesDispatchLabel(value, salesType)}
     </StatusBadge>
   );
 }

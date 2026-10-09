@@ -1,3 +1,4 @@
+import { salesDispatchLabel } from "../../lib/salesDisplay";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Route } from "next";
@@ -165,8 +166,14 @@ export function SalesSlipDetail({
                   label: "판매일자",
                   value: formatShortDate(salesSlip.saleDate),
                 },
-                { label: "입금 상태", value: salesSlip.paymentStatus },
-                { label: "판매 상태", value: salesSlip.salesStatus },
+                { label: "입금", value: salesSlip.paymentStatus },
+                {
+                  label: "출고·출하",
+                  value: salesDispatchLabel(
+                    salesSlip.salesStatus,
+                    salesSlip.salesType,
+                  ),
+                },
               ]}
             />
           }

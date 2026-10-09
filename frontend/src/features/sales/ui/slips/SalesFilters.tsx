@@ -1,5 +1,7 @@
 ﻿"use client";
 
+import { salesDispatchLabel } from "../../lib/salesDisplay";
+
 import { BusinessPartnerSelect } from "../common/BusinessPartnerSelect";
 import type { SalesFilterState } from "../../model/types";
 import {
@@ -43,19 +45,19 @@ export function SalesFilters({
         />
 
         <FilterSelect
-          label="판매 상태"
+          label="출고·출하"
           value={filters.salesStatus}
           onChange={(value) => onChange("salesStatus", value)}
         >
           <option value="">전체</option>
-          <option value="작성중">작성중</option>
+          <option value="작성중">{salesDispatchLabel("작성중")}</option>
           <option value="출하 완료">출하 완료</option>
           <option value="출고 완료">출고 완료</option>
           <option value="취소">취소</option>
         </FilterSelect>
 
         <FilterSelect
-          label="입금 상태"
+          label="입금"
           value={filters.paymentStatus}
           onChange={(value) => onChange("paymentStatus", value)}
         >
