@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.auction.application;
 
+import com.greenhouse.backend.sales.api.document.SalesSlipDocumentItem;
 import com.greenhouse.backend.sales.document.spi.AuctionDocumentPort;
 import java.time.LocalDate;
 import java.util.Collection;
@@ -38,6 +39,10 @@ public class AuctionDocumentAdapter implements AuctionDocumentPort {
 
   public Map<Long, String> getMarketNames(Collection<Long> ids) {
     return reader.getMarketNames(ids);
+  }
+
+  public Map<Long, SalesSlipDocumentItem.AuctionLot> getLotSummaries(Collection<Long> ids) {
+    return reader.getLotSummaries(ids);
   }
 
   public List<Long> getShipmentIdsNewestFirst(int page, int size) {

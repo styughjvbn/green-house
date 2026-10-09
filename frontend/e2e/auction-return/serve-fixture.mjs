@@ -76,6 +76,7 @@ const bed = {
   memo: null,
   bedZones: [zone],
 };
+let auctionDocumentSeed = false;
 let summary,
   arrivals,
   calls,
@@ -85,6 +86,7 @@ let summary,
   cashEvents,
   allocationEvents;
 function reset() {
+  auctionDocumentSeed = false;
   summary = {
     lotId: 42,
     decisionId: null,
@@ -126,6 +128,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === "/__control") {
     if (body.reset) reset();
+    if (body.auctionDocumentSeed) auctionDocumentSeed = true;
     if (body.allocationSeed)
       cashEvents = [
         {
@@ -183,11 +186,33 @@ const server = http.createServer(async (req, res) => {
     totalAmount: 1000,
     paidAmount: 0,
     remainingAmount: 1000,
-    salesStatus: "작성중",
+    salesStatus: id === 13 && auctionDocumentSeed ? "출하 완료" : "작성중",
     paymentStatus: "미입금",
     auctionMarket: id === 13 ? lot.auctionMarket : null,
     auctionShipmentId: id === 13 ? 8 : null,
-    items: [],
+    items:
+      id === 13 && auctionDocumentSeed
+        ? [
+            {
+              id: 131,
+              auctionShipmentLotId: 42,
+              itemName: "호접란",
+              genus: null,
+              spec: "A",
+              quantity: 30,
+              unitPrice: 0,
+              amount: 0,
+              memo: null,
+              allocations: [],
+              auctionLot: {
+                currentStatus: lot.currentStatus,
+                soldQuantity: 0,
+                waitingQuantity: 30,
+                returnedQuantity: 0,
+              },
+            },
+          ]
+        : [],
     memo: null,
     paymentMethod: null,
     expectedPaymentDate: null,

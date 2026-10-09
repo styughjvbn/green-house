@@ -27,6 +27,7 @@
     "items" : [ {
       "id" : 99,
       "auctionShipmentLotId" : null,
+      "auctionLot" : null,
       "itemName" : "Snow White",
       "genus" : "Orchid",
       "spec" : "A",

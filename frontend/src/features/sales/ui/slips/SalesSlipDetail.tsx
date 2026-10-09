@@ -2,6 +2,7 @@ import { salesDispatchLabel } from "../../lib/salesDisplay";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Route } from "next";
+import { AuctionLotStatusBadge } from "../common/SalesStatusBadge";
 import { salesV2Href } from "@/shared/config/routes";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Ban, ChevronDown, Copy, Pencil, Printer, Truck } from "lucide-react";
@@ -88,6 +89,72 @@ const salesSlipItemColumns: ColumnDef<SalesSlipItem, unknown>[] = [
     size: 120,
   },
 ];
+
+function auctionItemColumns(v2: boolean): ColumnDef<SalesSlipItem, unknown>[] {
+  const columns = salesSlipItemColumns.filter(
+    (column) =>
+      !(
+        "accessorKey" in column &&
+        ["unitPrice", "amount"].includes(String(column.accessorKey))
+      ),
+  );
+  const lotColumns: ColumnDef<SalesSlipItem, unknown>[] = [
+    {
+      id: "auctionLotStatus",
+      header: "경매",
+      cell: ({ row }) =>
+        row.original.auctionLot ? (
+          <AuctionLotStatusBadge
+            status={row.original.auctionLot.currentStatus ?? "미상"}
+          />
+        ) : row.original.auctionShipmentLotId == null ? (
+          "출하 전"
+        ) : (
+          "조회 불가"
+        ),
+      size: 120,
+    },
+    ...(
+      [
+        ["soldQuantity", "낙찰"],
+        ["waitingQuantity", "대기"],
+        ["returnedQuantity", "반환"],
+      ] as const
+    ).map(
+      ([key, header]): ColumnDef<SalesSlipItem, unknown> => ({
+        id: key,
+        header,
+        size: 70,
+        cell: ({ row }) =>
+          row.original.auctionLot?.[key]?.toLocaleString() ?? "-",
+        meta: { align: "right" },
+      }),
+    ),
+    {
+      id: "auctionLotLink",
+      header: "lot",
+      size: 90,
+      cell: ({ row }) =>
+        row.original.auctionShipmentLotId == null ? (
+          "-"
+        ) : (
+          <Link
+            className="text-green-800 underline"
+            href={
+              (v2
+                ? salesV2Href("auction", {
+                    lotId: row.original.auctionShipmentLotId,
+                  })
+                : `/sales/auction?lotId=${row.original.auctionShipmentLotId}`) as Route
+            }
+          >
+            상세 보기
+          </Link>
+        ),
+    },
+  ];
+  return [...columns.slice(0, 3), ...lotColumns, ...columns.slice(3)];
+}
 
 export function SalesSlipDetail({
   loading = false,
@@ -287,24 +354,26 @@ export function SalesSlipDetail({
           </div>
 
           <div className="mt-4">
+            {salesSlip.salesType === "AUCTION" ? (
+              <p className="mb-2 text-xs text-[#68756c]">
+                현재 lot의 처리 현황입니다. 반환 결정·실제 농장 도착·반환 추정은
+                lot 상세에서 확인하세요.
+              </p>
+            ) : null}
             <DataTable
               columns={
-                v2 && salesSlip.salesType === "AUCTION"
-                  ? salesSlipItemColumns.filter(
-                      (column) =>
-                        !(
-                          "accessorKey" in column &&
-                          ["unitPrice", "amount"].includes(
-                            String(column.accessorKey),
-                          )
-                        ),
-                    )
+                salesSlip.salesType === "AUCTION"
+                  ? auctionItemColumns(v2)
                   : salesSlipItemColumns
               }
               data={salesSlip.items}
               emptyMessage="판매 품목이 없습니다."
               getRowId={(row) => String(row.id)}
-              settingsKey="sales.slipDetail.items"
+              settingsKey={
+                salesSlip.salesType === "AUCTION"
+                  ? "sales.slipDetail.auctionItems"
+                  : "sales.slipDetail.items"
+              }
               title="판매 품목"
               totalLabel={`총 ${salesSlip.items.length.toLocaleString()}건`}
             />

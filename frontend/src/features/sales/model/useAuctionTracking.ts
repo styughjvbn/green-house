@@ -67,9 +67,10 @@ export function useAuctionTracking({
 
   async function invalidateAuctionTracking(changed: AuctionLot) {
     setSelectedId(changed.id);
-    await queryClient.invalidateQueries({
-      queryKey: salesQueryKeys.auction.all,
-    });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: salesQueryKeys.auction.all }),
+      queryClient.invalidateQueries({ queryKey: salesQueryKeys.slips.all }),
+    ]);
   }
 
   const createResultMutation = useMutation({

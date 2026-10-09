@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.document.spi;
 
+import com.greenhouse.backend.sales.api.document.SalesSlipDocumentItem;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -17,6 +18,8 @@ public interface AuctionDocumentPort {
   Set<Long> findNonCancelableShipmentIds(Collection<Long> shipmentIds);
 
   Map<Long, String> getMarketNames(Collection<Long> shipmentIds);
+
+  Map<Long, SalesSlipDocumentItem.AuctionLot> getLotSummaries(Collection<Long> lotIds);
 
   List<Long> getShipmentIdsNewestFirst(int page, int size);
 

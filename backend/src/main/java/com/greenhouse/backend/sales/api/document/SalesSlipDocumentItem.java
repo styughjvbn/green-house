@@ -14,4 +14,13 @@ public record SalesSlipDocumentItem(
     Integer unitPrice,
     Integer amount,
     String memo,
-    List<SalesSlipDocumentAllocation> allocations) {}
+    List<SalesSlipDocumentAllocation> allocations,
+    @Schema(nullable = true, description = "현재 경매 lot 요약. 출하 전 또는 과거 생성 응답에는 없을 수 있습니다.")
+        AuctionLot auctionLot) {
+  @Schema(name = "SalesSlipAuctionLotResponse")
+  public record AuctionLot(
+      String currentStatus,
+      Integer soldQuantity,
+      Integer waitingQuantity,
+      Integer returnedQuantity) {}
+}

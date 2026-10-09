@@ -54,6 +54,7 @@ export function useAuctionFollowUp(lotId: number, page: number) {
       // Receipt replay returns the original response. Refetch the current facts instead of caching it.
       await Promise.all([
         client.invalidateQueries({ queryKey: salesQueryKeys.auction.all }),
+        client.invalidateQueries({ queryKey: salesQueryKeys.slips.all }),
         ...(request.operation === "FOLLOW_UP"
           ? []
           : [

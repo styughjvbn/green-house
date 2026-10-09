@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.api.document.SalesSlipAction;
 import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.api.document.SalesSlipDocumentItem;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo;
 import com.greenhouse.backend.sales.document.domain.SalesSlip;
 import com.greenhouse.backend.sales.document.domain.SalesSlipItemAllocation;
@@ -21,6 +22,7 @@ final class SalesSlipDocumentFactory {
       String auctionMarket,
       Map<Long, List<SalesSlipItemAllocation>> allocationsByItemId,
       Map<Long, OrchidGroupState> states,
+      Map<Long, SalesSlipDocumentItem.AuctionLot> lotSummaries,
       DirectDocumentAccountingPort.FinancialSnapshot financial,
       List<SalesSlipAction> availableActions,
       boolean financialReviewRequired) {
@@ -57,7 +59,10 @@ final class SalesSlipDocumentFactory {
                         item,
                         allocationsByItemId.getOrDefault(item.getId(), List.of()),
                         states,
-                        financial == null ? null : financial.prices().get(item.getId())))
+                        financial == null ? null : financial.prices().get(item.getId()),
+                        item.getAuctionShipmentLotId() == null
+                            ? null
+                            : lotSummaries.get(item.getAuctionShipmentLotId())))
             .toList(),
         availableActions,
         financialReviewRequired,

@@ -2248,6 +2248,15 @@ export interface components {
             varietyId?: number;
             varietyName?: string;
         };
+        SalesSlipAuctionLotResponse: {
+            currentStatus?: string;
+            /** Format: int32 */
+            returnedQuantity?: number;
+            /** Format: int32 */
+            soldQuantity?: number;
+            /** Format: int32 */
+            waitingQuantity?: number;
+        };
         SalesSlipItemAllocationResponse: {
             /** Format: int32 */
             allocatedQuantity?: number;
@@ -2270,6 +2279,8 @@ export interface components {
             allocations?: components["schemas"]["SalesSlipItemAllocationResponse"][];
             /** Format: int32 */
             amount?: number;
+            /** @description 현재 경매 lot 요약. 출하 전 또는 과거 생성 응답에는 없을 수 있습니다. */
+            auctionLot?: components["schemas"]["SalesSlipAuctionLotResponse"];
             /** Format: int64 */
             auctionShipmentLotId?: number;
             genus?: string;

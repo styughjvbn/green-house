@@ -488,6 +488,7 @@ export type PartnerSettlementSettings = {
 };
 
 export type SalesSlipItem = {
+  auctionLot?: ApiSchemas["SalesSlipItemResponse"]["auctionLot"];
   id: number;
   auctionShipmentLotId: number | null;
   itemName: string;

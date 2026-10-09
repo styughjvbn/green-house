@@ -1,10 +1,12 @@
 package com.greenhouse.backend.sales.auction.application;
 
+import com.greenhouse.backend.sales.api.document.SalesSlipDocumentItem;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.auction.api.AuctionResultReference;
 import com.greenhouse.backend.sales.auction.domain.AuctionShipment;
 import com.greenhouse.backend.sales.auction.repository.AuctionResultLineRepository;
 import com.greenhouse.backend.sales.auction.repository.AuctionResultReadRow;
+import com.greenhouse.backend.sales.auction.repository.AuctionShipmentLotRepository;
 import com.greenhouse.backend.sales.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.sales.document.spi.AuctionDocumentPort.Lot;
 import com.greenhouse.backend.sales.document.spi.AuctionDocumentPort.Shipment;
@@ -30,6 +32,20 @@ public class AuctionDataReader {
   private final AuctionShipmentRepository shipmentRepository;
 
   private final AuctionResultLineRepository resultLineRepository;
+
+  private final AuctionShipmentLotRepository lotRepository;
+
+  public Map<Long, SalesSlipDocumentItem.AuctionLot> getLotSummaries(Collection<Long> lotIds) {
+    if (lotIds.isEmpty()) return Map.of();
+    return lotRepository.findSummariesByIdIn(lotIds).stream()
+        .collect(
+            Collectors.toMap(
+                row -> row.getId(),
+                row ->
+                    new SalesSlipDocumentItem.AuctionLot(
+                        row.getCurrentStatus().name(), row.getSoldQuantity(),
+                        row.getWaitingQuantity(), row.getReturnedQuantity())));
+  }
 
   public Map<Long, String> getMarketNames(Collection<Long> shipmentIds) {
     if (shipmentIds.isEmpty()) {

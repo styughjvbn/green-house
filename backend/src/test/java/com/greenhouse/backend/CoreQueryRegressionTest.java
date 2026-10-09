@@ -188,6 +188,54 @@ class CoreQueryRegressionTest {
 
   @ParameterizedTest
   @ValueSource(ints = {1, 10, 50})
+  void auctionDocumentLoadsCurrentLotSummariesInBulk(int count) {
+    var partner =
+        partnerRepository.save(
+            new BusinessPartner("전표 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
+    var shipment =
+        new AuctionShipment(LocalDate.of(2030, 2, 1), partner.getId(), partner.getPartnerType());
+    for (int index = 0; index < count; index++) {
+      var lot = new AuctionShipmentLot("난", "품종 " + index, "특", 1, 10);
+      lot.applyResult(2, 1, false, false, LocalDateTime.of(2030, 2, 2, 1, 0));
+      shipment.addLot(lot);
+    }
+    auctionShipmentRepository.saveAndFlush(shipment);
+    var slip =
+        new SalesSlip(
+            "LOT-SUMMARY",
+            LocalDate.of(2030, 2, 1),
+            SalesType.AUCTION,
+            shipment.getId(),
+            partner.getId(),
+            "정산대기",
+            SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED,
+            null,
+            null);
+    for (var lot : shipment.getLots()) {
+      slip.addItem(new SalesSlipItem(lot.getId(), lot.getItemName(), null, "특", 10, 0, null));
+    }
+    salesSlipRepository.saveAndFlush(slip);
+    long queries =
+        measure(
+            () -> {
+              var document = salesQueryService.getSalesSlip(slip.getId());
+              assertThat(document.items())
+                  .hasSize(count)
+                  .allSatisfy(
+                      item -> {
+                        assertThat(item.auctionShipmentLotId()).isNotNull();
+                        assertThat(item.auctionLot()).isNotNull();
+                        assertThat(item.auctionLot().currentStatus()).isEqualTo("PARTIALLY_SOLD");
+                        assertThat(item.auctionLot().soldQuantity()).isEqualTo(2);
+                        assertThat(item.auctionLot().waitingQuantity()).isEqualTo(7);
+                        assertThat(item.auctionLot().returnedQuantity()).isEqualTo(1);
+                      });
+            });
+    assertThat(queries).isLessThanOrEqualTo(8L);
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {1, 10, 50})
   void salesSlipDetailLoadsAllocationsAndActionsWithFixedQueryCount(int count) {
     BusinessPartner partner =
         partnerRepository.save(
@@ -214,7 +262,13 @@ class CoreQueryRegressionTest {
 
     entityManager.flush();
     DirectSaleFixtures.copyTerms(jdbc, slip.getId());
-    long queryCount = measure(() -> salesQueryService.getSalesSlip(slip.getId()));
+    long queryCount =
+        measure(
+            () -> {
+              var document = salesQueryService.getSalesSlip(slip.getId());
+              assertThat(document.items())
+                  .allSatisfy(item -> assertThat(item.auctionLot()).isNull());
+            });
 
     // Root/items, allocations/snapshots, Farm states, partners and review evidence
     // are loaded in bulk, independently of the item count.

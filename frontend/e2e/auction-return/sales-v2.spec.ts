@@ -162,3 +162,42 @@ test("payment workspace uses separate panels on desktop and stacks without overf
     page.getByRole("button", { name: "수납 조회·배분·정정", exact: true }),
   ).toBeFocused();
 });
+
+test("auction documents show linked lot facts and navigate to the exact lot", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:14100/__control", {
+    data: { auctionDocumentSeed: true },
+  });
+  for (const route of ["/sales-v2/slips?slipId=13", "/sales/slips?slipId=13"]) {
+    await page.goto(route);
+    const row = page.getByRole("row").filter({ hasText: "호접란" });
+    await expect(row.getByText("재경매대기", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: /^낙찰 / }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: /^반환 / }),
+    ).toBeVisible();
+    const cells = row.getByRole("cell");
+    await expect(cells.nth(5)).toHaveText("0");
+    await expect(cells.nth(6)).toHaveText("30");
+    await expect(cells.nth(7)).toHaveText("0");
+    const link = row.getByRole("link", { name: "상세 보기", exact: true });
+    await expect(link).toHaveAttribute(
+      "href",
+      route.startsWith("/sales-v2")
+        ? "/sales-v2/auction?lotId=42"
+        : "/sales/auction?lotId=42",
+    );
+    await link.click();
+    await expect(page.getByText("LOT #42", { exact: true })).toBeVisible();
+    await page.goBack();
+    await expect(row.getByText("재경매대기", { exact: true })).toBeVisible();
+  }
+  await page.goto("/sales-v2/slips?slipId=11");
+  await expect(page.getByRole("columnheader", { name: /^낙찰 / })).toHaveCount(
+    0,
+  );
+});

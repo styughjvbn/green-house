@@ -16,6 +16,7 @@ CONSTRUCTOR	com.greenhouse.backend.farm.api.orchid.mutation.ReleaseOrchidGroupRe
 CONSTRUCTOR	com.greenhouse.backend.farm.api.orchid.mutation.ReserveOrchidGroupsMutationCommand.<init>(com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSource, java.util.List, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.farm.api.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand.<init>(com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSource, java.util.List, com.greenhouse.backend.farm.api.orchid.mutation.RelatedOrchidGroupMutations, java.time.LocalDate, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales.<init>(java.lang.Long, long, long, long, long, java.time.LocalDate)
+CONSTRUCTOR	com.greenhouse.backend.sales.api.document.SalesSlipDocumentItem$AuctionLot.<init>(java.lang.String, java.lang.Integer, java.lang.Integer, java.lang.Integer)
 CONSTRUCTOR	com.greenhouse.backend.sales.api.partner.PartnerTextSearch.<init>(com.greenhouse.backend.sales.api.partner.PartnerTextMatch, java.lang.String)
 CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$CreatedShipment.<init>(java.lang.Long, java.util.Map)
 CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$Lot.<init>(java.lang.Long, java.lang.String, java.lang.String, java.lang.String, java.lang.Integer)
@@ -423,6 +424,7 @@ TYPE	com.greenhouse.backend.sales.api.document.SalesMetricsApi$PartnerSales
 TYPE	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary
 TYPE	com.greenhouse.backend.sales.api.document.SalesPaymentCategory
 TYPE	com.greenhouse.backend.sales.api.document.SalesSlipDocument
+TYPE	com.greenhouse.backend.sales.api.document.SalesSlipDocumentItem$AuctionLot
 TYPE	com.greenhouse.backend.sales.api.document.SalesSlipSummary
 TYPE	com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo
 TYPE	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi

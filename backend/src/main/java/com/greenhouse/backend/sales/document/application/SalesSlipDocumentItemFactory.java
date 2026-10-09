@@ -16,7 +16,8 @@ final class SalesSlipDocumentItemFactory {
       SalesSlipItem item,
       List<SalesSlipItemAllocation> allocations,
       Map<Long, OrchidGroupState> states,
-      DirectDocumentAccountingPort.PriceSnapshot price) {
+      DirectDocumentAccountingPort.PriceSnapshot price,
+      SalesSlipDocumentItem.AuctionLot auctionLot) {
     return new SalesSlipDocumentItem(
         item.getId(),
         item.getAuctionShipmentLotId(),
@@ -32,6 +33,7 @@ final class SalesSlipDocumentItemFactory {
                 allocation ->
                     SalesSlipDocumentAllocationFactory.from(
                         allocation, states.get(allocation.getOrchidGroupId())))
-            .toList());
+            .toList(),
+        auctionLot);
   }
 }

@@ -17,6 +17,27 @@ public interface AuctionShipmentLotRepository
 
   @Query(
       """
+      select lot.id as id, lot.currentStatus as currentStatus,
+             lot.soldQuantity as soldQuantity, lot.waitingQuantity as waitingQuantity,
+             lot.returnedQuantity as returnedQuantity
+      from AuctionShipmentLot lot where lot.id in :ids
+      """)
+  List<LotSummaryRow> findSummariesByIdIn(@Param("ids") Collection<Long> ids);
+
+  interface LotSummaryRow {
+    Long getId();
+
+    AuctionLotStatus getCurrentStatus();
+
+    Integer getSoldQuantity();
+
+    Integer getWaitingQuantity();
+
+    Integer getReturnedQuantity();
+  }
+
+  @Query(
+      """
       select lot.id as lotId, lot.shipment.id as shipmentId from AuctionShipmentLot lot
       where lot.shipment.id in :shipmentIds
       """)

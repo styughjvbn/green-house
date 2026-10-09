@@ -13,6 +13,7 @@ import com.greenhouse.backend.sales.document.spi.AuctionDocumentPort;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -75,6 +76,15 @@ public class SalesSlipDocumentAssembler {
         partnerReader.getAllInfo(salesSlips.stream().map(SalesSlip::getPartnerId).toList());
     var marketNames = marketNames(salesSlips);
     var financials = financials(salesSlips);
+    var lotSummaries =
+        auctionReader.getLotSummaries(
+            salesSlips.stream()
+                .filter(slip -> slip.getSalesType() == SalesType.AUCTION)
+                .flatMap(slip -> slip.getItems().stream())
+                .map(SalesSlipItem::getAuctionShipmentLotId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList());
     Map<Long, SalesSlipActionResolver.Actions> actionsBySalesSlipId =
         actionResolver.resolveAll(salesSlips, financials);
     return salesSlips.stream()
@@ -88,6 +98,7 @@ public class SalesSlipDocumentAssembler {
                         : marketNames.get(salesSlip.getAuctionShipmentId()),
                     allocationsByItemId,
                     states,
+                    lotSummaries,
                     financials.get(salesSlip.getId()),
                     actionsBySalesSlipId
                         .getOrDefault(

@@ -42,8 +42,10 @@ export const auctionStatusOptions = Object.entries(statusLabels) as Array<
   [AuctionLotStatus, string]
 >;
 
-export function auctionStatusLabel(status: AuctionLotStatus) {
-  return statusLabels[status];
+export function auctionStatusLabel(status: string) {
+  return Object.hasOwn(statusLabels, status)
+    ? statusLabels[status as AuctionLotStatus]
+    : status;
 }
 
 export function auctionInspectionLabel(status: AuctionInspectionStatus) {
@@ -54,7 +56,7 @@ export function auctionAttemptStatusLabel(status: string) {
   return attemptStatusLabels[status] ?? status;
 }
 
-export function auctionStatusTone(status: AuctionLotStatus) {
+export function auctionStatusTone(status: string) {
   if (["SOLD", "RETURNED"].includes(status)) return "green";
   if (
     [

@@ -1,5 +1,5 @@
 import { salesDispatchLabel } from "../../lib/salesDisplay";
-import type { AuctionLot, SalesSlip } from "@/entities/farm/types";
+import type { SalesSlip } from "@/entities/farm/types";
 import { StatusBadge, type StatusBadgeSize } from "@/shared/ui/StatusBadge";
 import {
   auctionStatusLabel,
@@ -36,7 +36,7 @@ export function AuctionLotStatusBadge({
   status,
 }: {
   size?: StatusBadgeSize;
-  status: AuctionLot["currentStatus"];
+  status: string;
 }) {
   return (
     <StatusBadge size={size} tone={auctionStatusTone(status)}>
