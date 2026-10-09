@@ -325,14 +325,14 @@ export function SalesSlipDetail({
                   : salesSlipItemColumns
               }
               data={salesSlip.items}
-              emptyMessage="판매 품목이 없습니다."
+              emptyMessage="품목이 없습니다."
               getRowId={(row) => String(row.id)}
               settingsKey={
                 salesSlip.salesType === "AUCTION"
                   ? "sales.slipDetail.auctionItems"
                   : "sales.slipDetail.items"
               }
-              title="판매 품목"
+              title="품목"
               totalLabel={`총 ${salesSlip.items.length.toLocaleString()}건`}
             />
           </div>
