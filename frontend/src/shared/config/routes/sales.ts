@@ -1,15 +1,15 @@
 export const SALES_TABS = {
   slips: {
-    label: "판매 전표",
+    label: "전표 관리",
   },
   auction: {
-    label: "출하·경매 추적",
+    label: "경매 관리",
   },
   settlement: {
     label: "경매 정산",
   },
   payments: {
-    label: "입금",
+    label: "입금 관리",
   },
   partners: {
     label: "거래처 관리",

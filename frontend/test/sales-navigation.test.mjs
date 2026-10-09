@@ -24,7 +24,7 @@ test("sales keeps auction settlement and adds a payment submenu", () => {
   );
   assert.equal(
     SALES_NAV_ITEMS.find((item) => item.tab === "payments").label,
-    "입금",
+    "입금 관리",
   );
   assert.equal(isSalesTab("payments"), true);
   assert.equal(isSalesTab("settlement"), true);

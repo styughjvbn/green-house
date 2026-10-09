@@ -96,7 +96,7 @@ export function SalesSlipList({
           onClick={onCreateSalesSlip}
         >
           <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-          판매 전표 등록
+          전표 작성
         </button>
       }
       columns={columns}
@@ -111,7 +111,7 @@ export function SalesSlipList({
         selectedSalesSlipId == null ? null : String(selectedSalesSlipId)
       }
       settingsKey={"sales.slips"}
-      title="판매 전표 목록"
+      title="전표 목록"
       totalLabel={`총 ${totalSalesSlips.toLocaleString()}건`}
       totalPages={totalPages}
       onPageChange={onPageChange}

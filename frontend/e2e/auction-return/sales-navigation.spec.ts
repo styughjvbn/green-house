@@ -25,7 +25,7 @@ test("one sales menu keeps auction settlement and adds payments", async ({
     page.getByRole("link", { name: "경매 정산", exact: true }),
   ).toHaveAttribute("href", "/sales/settlement");
   await expect(
-    page.getByRole("link", { name: "입금", exact: true }),
+    page.getByRole("link", { name: "입금 관리", exact: true }),
   ).toHaveAttribute("href", "/sales/payments");
   await expect(
     page.getByRole("link", { name: "판매 관리 v2", exact: true }),
@@ -34,7 +34,7 @@ test("one sales menu keeps auction settlement and adds payments", async ({
   await expect(
     page.getByRole("heading", { name: "경매 대금", exact: true }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "입금", exact: true }).click();
+  await page.getByRole("link", { name: "입금 관리", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "수납 등록·오입력 정정", exact: true }),
   ).toBeVisible();
