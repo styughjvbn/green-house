@@ -117,6 +117,18 @@ public class PaymentController {
 
   private final PartnerBalanceService partnerBalanceService;
 
+  @GetMapping("/payment-targets/{targetType}/{targetId}/history")
+  @Operation(
+      description =
+          "대상에 반영한 수납 배분 이력. 대상 미지정 수납에서 배분한 기록과 직접 수납의 배분 기록을 한 번씩 조회합니다. 금액은 해당 대상의 배분액이며 날짜는 반영일입니다. 취소된 배분도 상태와 함께 보존합니다.")
+  public ApiResponse<PageResponse<PartnerPaymentEventResponse>> targetHistory(
+      @PathVariable PaymentTargetType targetType,
+      @PathVariable Long targetId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+    return ApiResponse.ok(paymentService.targetHistory(targetType, targetId, page, size));
+  }
+
   @GetMapping("/partner-payment-events")
   @Operation(
       deprecated = true,

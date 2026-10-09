@@ -89,6 +89,18 @@ public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaym
 
   @Query(
       """
+      select event from PartnerPaymentEvent event
+      where event.targetType = :targetType and event.targetId = :targetId
+        and event.parentEvent is not null
+        and event.eventType in (com.greenhouse.backend.sales.payment.domain.PaymentEventType.PAYMENT_ALLOCATED,
+          com.greenhouse.backend.sales.payment.domain.PaymentEventType.MANUAL_MATCH_CONFIRMED)
+      order by event.eventDate desc, event.id desc
+      """)
+  Page<PartnerPaymentEvent> findTargetAllocationHistory(
+      PaymentTargetType targetType, Long targetId, Pageable pageable);
+
+  @Query(
+      """
 			select event from PartnerPaymentEvent event
 			where (:partnerId is null or event.partnerId = :partnerId)
 			  and (:targetType is null or event.targetType = :targetType)

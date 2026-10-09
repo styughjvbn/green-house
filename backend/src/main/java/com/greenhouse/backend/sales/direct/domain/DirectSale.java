@@ -122,7 +122,10 @@ public class DirectSale extends BaseEntity {
 
   public void requirePaymentAmount(long allocatedAmount, long amount) {
     if (amount <= 0) throw new IllegalArgumentException("입금액은 0보다 커야 합니다.");
-    if (amount > remainingAmount(allocatedAmount))
-      throw new IllegalArgumentException("입금액이 현재 잔액을 초과할 수 없습니다.");
+    long remaining = remainingAmount(allocatedAmount);
+    if (amount > remaining)
+      throw new IllegalArgumentException(
+          "수납액 %,d원이 현재 잔액 %,d원을 초과합니다. (전표 총액 %,d원, 기존 수납 %,d원)"
+              .formatted(amount, remaining, totalAmount, allocatedAmount));
   }
 }

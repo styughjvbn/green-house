@@ -10,11 +10,13 @@ import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.document.application.command.SalesInitialReceiptInput;
 import com.greenhouse.backend.sales.document.application.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.document.domain.SalesSlip;
 import com.greenhouse.backend.sales.document.domain.SalesSlipInputPolicy;
 import com.greenhouse.backend.sales.document.repository.SalesCreationReceiptRepository;
 import com.greenhouse.backend.sales.document.repository.SalesSlipRepository;
+import com.greenhouse.backend.sales.document.spi.DirectCreationReceiptPort;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -37,6 +39,7 @@ public class SalesSlipCreationService {
           .build();
 
   private final DirectDocumentAccountingPort accounting;
+  private final DirectCreationReceiptPort initialReceipts;
 
   private final SalesCreationReceiptRepository receiptRepository;
   private final Clock clock;
@@ -58,11 +61,13 @@ public class SalesSlipCreationService {
   private final SalesSlipAuditSupport auditSupport;
 
   public SalesSlipDocument create(SalesSlipCommand request) {
-    return createNew(request);
+    return create(request, null);
   }
 
   public SalesSlipDocument create(SalesSlipCommand request, String idempotencyKey) {
     if (idempotencyKey == null) {
+      if (request.initialReceipt() != null)
+        throw new IllegalArgumentException("수납 함께 기록에는 생성 요청 키가 필요합니다.");
       return createNew(request);
     }
     if (idempotencyKey.isBlank() || idempotencyKey.length() > 100) {
@@ -103,6 +108,8 @@ public class SalesSlipCreationService {
 
   private SalesSlipDocument createNew(SalesSlipCommand request) {
     SalesType type = request.salesType() == null ? SalesType.DIRECT : request.salesType();
+    SalesSlipInputPolicy.requireCreationReceipt(
+        type, request.initialReceipt() != null, request.paymentStatus());
     SalesSlipInputPolicy.requirePartner(type, request.partnerId());
     SalesSlipInputPolicy.requireItems(type, request.items().size());
     var partner = partnerReader.getActiveInfo(request.partnerId());
@@ -176,6 +183,14 @@ public class SalesSlipCreationService {
     // Cascaded IDs must be present in both the first response and its stored replay snapshot.
     salesSlipRepository.flush();
     auditSupport.record(AuditAction.CREATED, saved, null, auditSupport.snapshot(saved));
+    if (request.initialReceipt() != null) {
+      var receipt = request.initialReceipt();
+      initialReceipts.collect(
+          saved.getId(),
+          receipt.amount(),
+          receipt.paymentDate(),
+          receipt.method() == SalesInitialReceiptInput.Method.CASH);
+    }
     return responseAssembler.assemble(saved);
   }
 }

@@ -76,13 +76,13 @@ export function PaymentAllocationPanels({
     },
     {
       accessorKey: "paymentDate",
-      header: "입금일",
+      header: "수납일",
       size: 90,
       cell: ({ row }) => formatShortDate(row.original.paymentDate),
     },
     {
       accessorKey: "amount",
-      header: "입금액",
+      header: "수납액",
       size: 110,
       cell: ({ row }) => `${row.original.amount.toLocaleString()}원`,
       meta: { align: "right" },
@@ -252,7 +252,7 @@ export function PaymentAllocationPanels({
                 </p>
               ) : receipt.data ? (
                 <p className="text-sm font-semibold text-[#344138]">
-                  입금 {receipt.data.amount.toLocaleString()}원 / 미배분{" "}
+                  수납 {receipt.data.amount.toLocaleString()}원 / 미배분{" "}
                   {receipt.data.availableAmount.toLocaleString()}원
                   {receipt.data.reviewRequired
                     ? " · 원장 검토가 필요합니다."

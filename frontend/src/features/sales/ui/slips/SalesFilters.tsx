@@ -74,13 +74,14 @@ export function SalesFilters({
         </FilterSelect>
 
         <FilterSelect
-          label="입금"
+          label="수납"
           value={filters.paymentStatus}
           onChange={(value) => onChange("paymentStatus", value)}
         >
           <option value="">전체</option>
-          <option value="미입금">미입금</option>
-          <option value="입금 완료">완료</option>
+          <option value="미입금">미수납</option>
+          <option value="부분입금">일부 수납</option>
+          <option value="입금 완료">수납 완료</option>
         </FilterSelect>
 
         <FilterInput

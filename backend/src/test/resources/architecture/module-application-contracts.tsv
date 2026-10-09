@@ -538,3 +538,7 @@ TYPE	com.greenhouse.backend.work.spi.target.ResolvedWorkTarget
 TYPE	com.greenhouse.backend.work.spi.target.WorkExecutionLocation
 TYPE	com.greenhouse.backend.work.spi.target.WorkExecutionReferenceGateway
 TYPE	com.greenhouse.backend.work.spi.target.WorkTargetResolver
+CONSTRUCTOR	com.greenhouse.backend.sales.payment.api.ManualPaymentCommand.<init>(java.lang.Long, java.time.LocalDate, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String)
+TYPE	com.greenhouse.backend.sales.document.spi.DirectCreationReceiptPort
+METHOD	com.greenhouse.backend.sales.payment.api.ManualPaymentApi.receiveAndAllocate(java.lang.Long, com.greenhouse.backend.sales.payment.api.PaymentTargetType, com.greenhouse.backend.sales.payment.api.ManualPaymentCommand, long, com.greenhouse.backend.sales.payment.spi.PaymentTargetPort)
+METHOD	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$FinancialSnapshot.remainingAmount()

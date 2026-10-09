@@ -11,7 +11,7 @@ export function SalesPaymentsPage() {
   return (
     <main className="h-full min-h-0">
       <TabLayout>
-        <nav aria-label="입금 업무" className="flex flex-wrap gap-2">
+        <nav aria-label="수납 업무" className="flex flex-wrap gap-2">
           <Button
             size="sm"
             variant={allocations ? "outline" : "default"}

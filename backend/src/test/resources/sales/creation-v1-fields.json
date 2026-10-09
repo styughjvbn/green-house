@@ -12,7 +12,8 @@
     "paymentStatus",
     "saleDate",
     "salesStatus",
-    "salesType"
+    "salesType",
+    "initialReceipt"
   ],
   "com.greenhouse.backend.sales.document.application.command.SalesSlipItemInput": [
     "allocations",

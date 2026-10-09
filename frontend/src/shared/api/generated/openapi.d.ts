@@ -535,6 +535,7 @@ export interface paths {
          */
         get: operations["getSalesSlips"];
         put?: never;
+        /** @description 출고·출하와 수납은 독립적입니다. 일반 판매의 최초 수납은 전표 생성과 같은 트랜잭션으로 기록하며 생성 키가 필수입니다. 받은 전액을 기록하고 전표 총액까지 배분하며 초과분은 거래처 미배분 잔액으로 남깁니다. 수납 상태만으로 완납을 지정할 수 없습니다. */
         post: operations["createSalesSlip"];
         delete?: never;
         options?: never;
@@ -1498,6 +1499,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/payment-targets/{targetType}/{targetId}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 대상에 반영한 수납 배분 이력. 대상 미지정 수납에서 배분한 기록과 직접 수납의 배분 기록을 한 번씩 조회합니다. 금액은 해당 대상의 배분액이며 날짜는 반영일입니다. 취소된 배분도 상태와 함께 보존합니다. */
+        get: operations["targetHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/payment-allocation-metadata": {
         parameters: {
             query?: never;
@@ -2162,9 +2180,19 @@ export interface components {
         ErrorResponse: {
             error?: components["schemas"]["ErrorBody"];
         };
+        /** @description 실제 받은 전액을 기록합니다. 전표 총액까지 배분하고 초과분은 거래처 미배분 잔액으로 남깁니다. */
+        SalesInitialReceiptRequest: {
+            /** Format: int64 */
+            amount: number;
+            /** @enum {string} */
+            method: "CASH" | "BANK_TRANSFER";
+            /** Format: date */
+            paymentDate: string;
+        };
         SalesSlipCreateRequest: {
             /** Format: int64 */
             auctionShipmentId?: number;
+            initialReceipt?: components["schemas"]["SalesInitialReceiptRequest"];
             items: components["schemas"]["SalesSlipItemRequest"][];
             memo?: string;
             /** Format: int64 */
@@ -4274,17 +4302,6 @@ export interface components {
             data?: components["schemas"]["PhysicalBedResponse"];
             message?: string;
         };
-        ApiResponsePaymentAllocationMetadata: {
-            data?: components["schemas"]["PaymentAllocationMetadata"];
-            message?: string;
-        };
-        PaymentAllocationMetadata: {
-            targetTypes?: ("SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE")[];
-        };
-        ApiResponseListPartnerPaymentEventResponse: {
-            data?: components["schemas"]["PartnerPaymentEventResponse"][];
-            message?: string;
-        };
         ApiResponsePageResponsePartnerPaymentEventResponse: {
             data?: components["schemas"]["PageResponsePartnerPaymentEventResponse"];
             message?: string;
@@ -4299,6 +4316,17 @@ export interface components {
             totalElements?: number;
             /** Format: int32 */
             totalPages?: number;
+        };
+        ApiResponsePaymentAllocationMetadata: {
+            data?: components["schemas"]["PaymentAllocationMetadata"];
+            message?: string;
+        };
+        PaymentAllocationMetadata: {
+            targetTypes?: ("SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE")[];
+        };
+        ApiResponseListPartnerPaymentEventResponse: {
+            data?: components["schemas"]["PartnerPaymentEventResponse"][];
+            message?: string;
         };
         ApiResponseListOrchidGroupWorkHistoryResponse: {
             data?: components["schemas"]["OrchidGroupWorkHistoryResponse"][];
@@ -8162,6 +8190,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponsePhysicalBedResponse"];
+                };
+            };
+        };
+    };
+    targetHistory: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                targetType: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
+                targetId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponsePartnerPaymentEventResponse"];
                 };
             };
         };

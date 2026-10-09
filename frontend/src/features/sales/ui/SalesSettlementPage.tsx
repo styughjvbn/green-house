@@ -15,7 +15,7 @@ export function SalesSettlementPage() {
   return (
     <main className="h-full min-h-0">
       <TabLayout>
-        <nav aria-label="입금 업무" className="flex gap-2">
+        <nav aria-label="수납 업무" className="flex gap-2">
           <button
             type="button"
             aria-pressed={!receipts && !allocations}

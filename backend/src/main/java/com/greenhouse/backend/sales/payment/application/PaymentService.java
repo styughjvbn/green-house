@@ -66,4 +66,15 @@ public class PaymentService {
                 partners.get(event.getPartnerId()).name(),
                 states.containsKey(event.getId()) && states.get(event.getId()).reviewRequired()));
   }
+
+  @Transactional(readOnly = true)
+  public PageResponse<PartnerPaymentEventResponse> targetHistory(
+      PaymentTargetType type, Long id, int page, int size) {
+    if (type == PaymentTargetType.NONE || id == null || id <= 0)
+      throw new IllegalArgumentException("수납 이력의 전표·경매 대금 대상을 지정하세요.");
+    return PageResponse.from(
+        eventResponses(
+            eventRepository.findTargetAllocationHistory(
+                type, id, PageRequests.clamped(page, size))));
+  }
 }

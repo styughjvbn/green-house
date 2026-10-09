@@ -119,6 +119,8 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
   }
 
   private BooleanExpression paymentStatusEq(String paymentStatus) {
+    if ("부분입금".equals(paymentStatus) || "부분 입금".equals(paymentStatus))
+      return salesSlip.paymentStatus.in("부분입금", "부분 입금");
     return isBlank(paymentStatus) ? null : salesSlip.paymentStatus.eq(paymentStatus);
   }
 

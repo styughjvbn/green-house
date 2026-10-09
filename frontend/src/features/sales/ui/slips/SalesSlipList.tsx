@@ -67,7 +67,7 @@ export function SalesSlipList({
       },
       {
         accessorKey: "paymentStatus",
-        header: "입금",
+        header: "수납",
         cell: ({ row }) => (
           <SalesSlipStatusBadge value={row.original.paymentStatus} />
         ),

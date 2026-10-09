@@ -67,14 +67,13 @@ export function SalesSlipCreateForm({
         className="flex max-h-[calc(100dvh-2rem)] w-full max-w-5xl flex-col rounded-md bg-white shadow-xl"
         role="dialog"
         aria-modal="true"
-        aria-label={mode === "edit" ? "판매 전표 수정" : "새 판매 전표"}
+        aria-label={mode === "edit" ? "전표 수정" : "전표 작성"}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#edf0ec] p-5">
           <div>
-            <p className="text-sm font-semibold text-[#3d6f91]">판매 전표</p>
             <h2 className="mt-1 text-xl font-semibold">
-              {mode === "edit" ? "판매 전표 수정" : "새 판매 전표"}
+              {mode === "edit" ? "전표 수정" : "전표 작성"}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -111,7 +110,7 @@ export function SalesSlipCreateForm({
             />
           </div>
 
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-3">
             <TextField
               label={form.salesType === "AUCTION" ? "출하일" : "판매일"}
               required
@@ -128,25 +127,6 @@ export function SalesSlipCreateForm({
               activeOnly
               disabled={saving}
             />
-            <SelectField
-              label="입금"
-              disabled={mode === "edit"}
-              value={form.paymentStatus}
-              onChange={(value) => onChange("paymentStatus", value)}
-            >
-              {form.salesType === "AUCTION" ? (
-                <>
-                  <option value="정산 대기">정산 대기</option>
-                  <option value="부분 입금">부분 입금</option>
-                  <option value="입금 완료">입금 완료</option>
-                </>
-              ) : (
-                <>
-                  <option value="미입금">미입금</option>
-                  <option value="입금 완료">입금 완료</option>
-                </>
-              )}
-            </SelectField>
             <SelectField
               label="출고·출하"
               disabled={mode === "edit"}
@@ -171,18 +151,85 @@ export function SalesSlipCreateForm({
             </SelectField>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <TextField
-              label="결제 방법"
-              value={form.paymentMethod}
-              onChange={(value) => onChange("paymentMethod", value)}
-            />
+          <div className="grid gap-3">
             <TextField
               label="메모"
               value={form.memo}
               onChange={(value) => onChange("memo", value)}
             />
           </div>
+
+          {form.salesType === "DIRECT" && mode === "create" ? (
+            <fieldset
+              disabled={saving}
+              className="space-y-3 rounded-md border border-[#d7ddd4] p-4"
+            >
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  checked={form.receiptEnabled}
+                  onChange={(event) =>
+                    onChange("receiptEnabled", event.target.checked)
+                  }
+                />
+                수납 함께 기록
+              </label>
+              {form.receiptEnabled ? (
+                <div className="grid gap-3 md:grid-cols-3">
+                  <SelectField
+                    label="수납 방법"
+                    value={form.receiptMethod}
+                    onChange={(value) =>
+                      onChange(
+                        "receiptMethod",
+                        value as SalesSlipForm["receiptMethod"],
+                      )
+                    }
+                  >
+                    <option value="CASH">현금</option>
+                    <option value="BANK_TRANSFER">계좌이체</option>
+                  </SelectField>
+                  <TextField
+                    label="수납액"
+                    type="number"
+                    required
+                    value={form.receiptAmount}
+                    onChange={(value) => onChange("receiptAmount", value)}
+                  />
+                  <TextField
+                    label="수납일"
+                    type="date"
+                    required
+                    value={form.receiptDate}
+                    onChange={(value) => onChange("receiptDate", value)}
+                  />
+                </div>
+              ) : null}
+              <p className="text-sm text-[#66736a]">
+                출고 여부와 별도로 실제 받은 금액만 기록하세요. 부분 수납도
+                가능합니다.
+              </p>
+              {form.receiptEnabled ? (
+                <p className="text-sm text-[#66736a]">
+                  전표 배분액{" "}
+                  {Math.min(
+                    Number(form.receiptAmount) || 0,
+                    totalAmount,
+                  ).toLocaleString()}
+                  원
+                  {Number(form.receiptAmount) > totalAmount ? (
+                    <span className="ml-2">
+                      초과분{" "}
+                      {(
+                        Number(form.receiptAmount) - totalAmount
+                      ).toLocaleString()}
+                      원은 거래처 미배분 잔액으로 남습니다.
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
+            </fieldset>
+          ) : null}
 
           {form.salesType === "AUCTION" ? (
             <div className="rounded-md bg-[#f6f8f5] p-4 text-sm text-[#66736a]">

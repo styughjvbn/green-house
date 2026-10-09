@@ -10,7 +10,7 @@ import { PaginationControls } from "@/shared/ui/PaginationControls";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import { readPaymentHistoryPage } from "../../lib/salesRouteParams";
 import { salesQueryKeys } from "../../model/salesQueryKeys";
-import { receivedPaymentPageQueryOptions } from "../../model/salesQueryOptions";
+import { targetPaymentHistoryPageQueryOptions } from "../../model/salesQueryOptions";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import type { ManualPaymentPayload } from "../../api/salesApi";
@@ -36,7 +36,11 @@ export function ManualPaymentPanel({
   const historyPage = readPaymentHistoryPage(useSearchParams());
   const open = historyPage != null;
   const eventsQuery = useQuery({
-    ...receivedPaymentPageQueryOptions(targetType, targetId, historyPage ?? 0),
+    ...targetPaymentHistoryPageQueryOptions(
+      targetType,
+      targetId,
+      historyPage ?? 0,
+    ),
     enabled: open,
   });
   const events = eventsQuery.data;
@@ -84,7 +88,7 @@ export function ManualPaymentPanel({
         worker: worker.trim() || null,
         memo: memo.trim() || null,
       });
-      setMessage("입금 확인 완료");
+      setMessage("수납 기록 완료");
       setAmount(String(remaining ?? ""));
       setMemo("");
       setIdempotencyKey(createUuid());
@@ -93,7 +97,7 @@ export function ManualPaymentPanel({
       void queryClient.invalidateQueries({ queryKey });
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "입금을 확인하지 못했습니다.",
+        error instanceof Error ? error.message : "수납을 기록하지 못했습니다.",
       );
     } finally {
       setSaving(false);
@@ -110,7 +114,7 @@ export function ManualPaymentPanel({
       >
         <span className="inline-flex items-center gap-2">
           <Banknote className="h-4 w-4 text-[#159447]" />
-          입금 확인
+          {paymentAllowed ? "수납 기록" : "수납 이력"}
         </span>
         {open ? (
           <ChevronUp className="h-4 w-4" />
@@ -128,13 +132,13 @@ export function ManualPaymentPanel({
                 ? "미확인"
                 : `${remainingAmount.toLocaleString()}원`}
             </span>
-            <span>입금 예정일 {formatShortDate(expectedPaymentDate)}</span>
+            <span>수납 예정일 {formatShortDate(expectedPaymentDate)}</span>
           </div>
 
           {paymentAllowed && remainingAmount != null && remainingAmount > 0 ? (
             <form onSubmit={submit}>
               <fieldset disabled={saving} className="grid gap-2 sm:grid-cols-2">
-                <Field label="입금액">
+                <Field label="수납액">
                   <input
                     className={controlClass}
                     type="number"
@@ -148,7 +152,7 @@ export function ManualPaymentPanel({
                     }}
                   />
                 </Field>
-                <Field label="입금일">
+                <Field label="수납일">
                   <input
                     className={controlClass}
                     type="date"
@@ -160,7 +164,7 @@ export function ManualPaymentPanel({
                     }}
                   />
                 </Field>
-                <Field label="입금 방식">
+                <Field label="수납 방법">
                   <select
                     className={controlClass}
                     value={paymentMethod}
@@ -172,7 +176,7 @@ export function ManualPaymentPanel({
                     <option>기타</option>
                   </select>
                 </Field>
-                <Field label="입금자명">
+                <Field label="납부자명">
                   <input
                     className={controlClass}
                     value={depositorName}
@@ -198,15 +202,15 @@ export function ManualPaymentPanel({
                   type="submit"
                   disabled={saving}
                 >
-                  {saving ? "처리 중" : "입금 확정"}
+                  {saving ? "처리 중" : "수납 기록"}
                 </button>
               </fieldset>
             </form>
           ) : (
             <p className="text-xs font-semibold">
               {!paymentAllowed || remainingAmount == null
-                ? "현재 새 입금을 확인할 수 없습니다."
-                : "입금 완료"}
+                ? "현재 새 수납을 확인할 수 없습니다."
+                : "수납 완료"}
             </p>
           )}
 
@@ -214,12 +218,12 @@ export function ManualPaymentPanel({
 
           <div>
             <p className="mb-1.5 text-xs font-bold">
-              입금 이력
+              수납 이력
               {events ? ` · 총 ${events.totalElements.toLocaleString()}건` : ""}
             </p>
             {eventsQuery.isError ? (
               <p role="alert" className="text-xs text-red-700">
-                입금 이력을 불러오지 못했습니다.{" "}
+                수납 이력을 불러오지 못했습니다.{" "}
                 <button
                   type="button"
                   className="underline"
@@ -230,7 +234,7 @@ export function ManualPaymentPanel({
               </p>
             ) : eventsQuery.isPending ? (
               <p className="text-xs text-[#68756c]">
-                입금 이력을 불러오는 중입니다.
+                수납 이력을 불러오는 중입니다.
               </p>
             ) : events?.content.length ? (
               <div className="divide-y divide-[#edf0ec] rounded-md border border-[#e1e6df] text-xs">
@@ -240,15 +244,25 @@ export function ManualPaymentPanel({
                     className="flex flex-wrap justify-between gap-2 px-3 py-2"
                   >
                     <span>
-                      {formatShortDate(event.eventDate)} ·{" "}
-                      {event.depositorName || "입금자 미기재"}
+                      반영 {formatShortDate(event.eventDate)} ·{" "}
+                      {event.paymentMethod || "방법 미기재"}
+                      {event.depositorName ? ` · ${event.depositorName}` : ""}
                     </span>
-                    <strong>{event.amount.toLocaleString()}원</strong>
+                    <strong
+                      className={
+                        event.status === "CANCELLED"
+                          ? "text-[#68756c]"
+                          : undefined
+                      }
+                    >
+                      {event.status === "CANCELLED" ? "배분 취소 · " : ""}
+                      {event.amount.toLocaleString()}원
+                    </strong>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-[#68756c]">입금 이력이 없습니다.</p>
+              <p className="text-xs text-[#68756c]">수납 이력이 없습니다.</p>
             )}
             {events && events.totalPages > 1 ? (
               <PaginationControls

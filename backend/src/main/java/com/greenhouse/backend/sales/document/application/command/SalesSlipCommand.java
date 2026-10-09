@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.document.application.command;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.greenhouse.backend.sales.api.document.SalesType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -18,4 +19,28 @@ public record SalesSlipCommand(
     @Size(max = 50) String salesStatus,
     @Size(max = 50) String paymentMethod,
     @Size(max = 1000) String memo,
-    @NotNull List<@Valid SalesSlipItemInput> items) {}
+    @NotNull List<@Valid SalesSlipItemInput> items,
+    @Valid @JsonInclude(JsonInclude.Include.NON_NULL) SalesInitialReceiptInput initialReceipt) {
+  public SalesSlipCommand(
+      LocalDate saleDate,
+      SalesType salesType,
+      Long partnerId,
+      Long auctionShipmentId,
+      String paymentStatus,
+      String salesStatus,
+      String paymentMethod,
+      String memo,
+      List<SalesSlipItemInput> items) {
+    this(
+        saleDate,
+        salesType,
+        partnerId,
+        auctionShipmentId,
+        paymentStatus,
+        salesStatus,
+        paymentMethod,
+        memo,
+        items,
+        null);
+  }
+}

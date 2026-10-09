@@ -184,10 +184,36 @@ const server = http.createServer(async (req, res) => {
     saleDate: "2026-10-01",
     partner: partnerDetails,
     totalAmount: 1000,
-    paidAmount: 0,
-    remainingAmount: 1000,
+    paidAmount: allocationEvents
+      .filter(
+        (e) =>
+          e.targetId === id &&
+          e.targetType === "SALES_SLIP" &&
+          e.status === "CONFIRMED",
+      )
+      .reduce((sum, e) => sum + e.amount, 0),
+    remainingAmount:
+      1000 -
+      allocationEvents
+        .filter(
+          (e) =>
+            e.targetId === id &&
+            e.targetType === "SALES_SLIP" &&
+            e.status === "CONFIRMED",
+        )
+        .reduce((sum, e) => sum + e.amount, 0),
     salesStatus: id === 13 && auctionDocumentSeed ? "출하 완료" : "작성중",
-    paymentStatus: "미입금",
+    paymentStatus:
+      allocationEvents
+        .filter(
+          (e) =>
+            e.targetId === id &&
+            e.targetType === "SALES_SLIP" &&
+            e.status === "CONFIRMED",
+        )
+        .reduce((sum, e) => sum + e.amount, 0) >= 1000
+        ? "입금 완료"
+        : "미입금",
     auctionMarket: id === 13 ? lot.auctionMarket : null,
     auctionShipmentId: id === 13 ? 8 : null,
     items:
@@ -455,6 +481,31 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     return send(result);
+  }
+  if (
+    /^\/api\/payment-targets\/(SALES_SLIP|AUCTION_PROCEEDS)\/\d+\/history$/.test(
+      url.pathname,
+    )
+  ) {
+    const parts = url.pathname.split("/");
+    return send(
+      pageOf(
+        allocationEvents
+          .filter(
+            (e) => e.targetType === parts[3] && e.targetId === Number(parts[4]),
+          )
+          .reverse()
+          .map((e) => ({
+            ...e,
+            eventDate: e.allocationDate,
+            eventType: "PAYMENT_ALLOCATED",
+            parentEventId: e.receiptId,
+            paymentMethod: cashEvents.find((c) => c.id === e.receiptId)
+              ?.paymentMethod,
+          })),
+        Number(url.searchParams.get("page") ?? 0),
+      ),
+    );
   }
   if (url.pathname === "/api/partner-payment-events/page")
     return send(

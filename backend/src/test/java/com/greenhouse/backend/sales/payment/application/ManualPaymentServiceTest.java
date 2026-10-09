@@ -32,7 +32,8 @@ class ManualPaymentServiceTest {
   private final PaymentTargetPort<String> target = mock(PaymentTargetPort.class);
 
   private final Clock clock = Clock.fixed(Instant.parse("2026-09-05T15:30:00Z"), ZoneOffset.UTC);
-  private final ManualPaymentService service = new ManualPaymentService(ledger, actors, clock);
+  private final ManualPaymentService service =
+      new ManualPaymentService(ledger, actors, clock, mock(PartnerBalanceService.class));
   private final ManualPaymentCommand command =
       new ManualPaymentCommand(
           100L, LocalDate.of(2026, 9, 6), "same-key", "계좌이체", null, "worker", null);

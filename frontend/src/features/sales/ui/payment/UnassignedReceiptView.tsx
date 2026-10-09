@@ -115,6 +115,7 @@ function ReceiptPanel({
   });
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(businessDate);
+  const [method, setMethod] = useState("계좌이체");
   const [depositor, setDepositor] = useState("");
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
@@ -186,7 +187,7 @@ function ReceiptPanel({
     event.preventDefault();
     const value = Number(amount);
     if (!Number.isSafeInteger(value) || value <= 0) {
-      setError("입금액은 양의 정수로 입력하세요.");
+      setError("수납액은 양의 정수로 입력하세요.");
       return;
     }
     await execute(
@@ -195,7 +196,7 @@ function ReceiptPanel({
         payload: {
           amount: value,
           paymentDate: date,
-          paymentMethod: "계좌이체",
+          paymentMethod: method,
           worker: null,
           depositorName: depositor.trim() || null,
           memo: memo.trim() || null,
@@ -210,7 +211,18 @@ function ReceiptPanel({
         className="grid gap-3 sm:grid-cols-2"
       >
         <label>
-          입금액
+          수납 방법
+          <select
+            className={inputClass}
+            value={method}
+            onChange={(event) => setMethod(event.target.value)}
+          >
+            <option value="계좌이체">계좌이체</option>
+            <option value="현금">현금</option>
+          </select>
+        </label>
+        <label>
+          수납액
           <input
             className={inputClass}
             type="number"
@@ -223,7 +235,7 @@ function ReceiptPanel({
           />
         </label>
         <label>
-          입금일
+          수납일
           <input
             className={inputClass}
             type="date"
@@ -233,7 +245,7 @@ function ReceiptPanel({
           />
         </label>
         <label>
-          입금자
+          납부자
           <input
             className={inputClass}
             maxLength={100}
@@ -317,7 +329,7 @@ function ReceiptPanel({
     >
       {!dedicated ? (
         <p className="text-sm">
-          대상 미지정 수납을 기록합니다. 전표의 입금액에는 배분 후 반영됩니다.
+          대상 미지정 수납을 기록합니다. 전표의 수납액에는 배분 후 반영됩니다.
         </p>
       ) : null}
       {balance.data ? (
@@ -353,7 +365,7 @@ function ReceiptPanel({
           gap="gap-3"
         >
           <DetailCard>
-            <DetailHeader title="새 입금 기록" />
+            <DetailHeader title="새 수납 기록" />
             <div className="p-4">{receiptForm}</div>
           </DetailCard>
           <DataTable
@@ -399,11 +411,11 @@ function ReceiptPanel({
           >
             {dedicated ? (
               <>
-                <h2>새 입금 기록</h2>
+                <h2>새 수납 기록</h2>
                 <p>
-                  입금액과 날짜를 입력하세요.
+                  수납액과 날짜를 입력하세요.
                   <br />
-                  저장한 입금은 배분·정정에서 연결할 수 있습니다.
+                  저장한 수납은 배분·정정에서 연결할 수 있습니다.
                 </p>
               </>
             ) : null}

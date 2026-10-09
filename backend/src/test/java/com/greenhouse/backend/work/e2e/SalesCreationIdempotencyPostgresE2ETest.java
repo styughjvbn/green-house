@@ -13,6 +13,7 @@ import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.document.application.SalesSlipCreationService;
 import com.greenhouse.backend.sales.document.application.SalesSlipStatusService;
+import com.greenhouse.backend.sales.document.application.command.SalesInitialReceiptInput;
 import com.greenhouse.backend.sales.document.application.command.SalesSlipAllocationInput;
 import com.greenhouse.backend.sales.document.application.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.document.application.command.SalesSlipItemInput;
@@ -90,6 +91,169 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
             jdbc.queryForObject(
                 "select reserved_quantity from orchid_groups where id = ?", Integer.class, groupId))
         .isEqualTo(5);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "CASH,작성중,2000,부분입금",
+    "CASH,출고 완료,5000,입금 완료",
+    "BANK_TRANSFER,작성중,5000,입금 완료",
+    "CASH,작성중,6000,입금 완료",
+    "BANK_TRANSFER,출고 완료,7000,입금 완료"
+  })
+  void createsReceiptAndAllocationAtomicallyAndReplaysWithoutCollectingTwice(
+      SalesInitialReceiptInput.Method method, String dispatch, long amount, String paymentStatus)
+      throws Exception {
+    var command = withReceipt(request(SalesType.DIRECT, dispatch, 5, null), amount, method);
+    String body = objectMapper.writeValueAsString(command);
+    var first = post("/api/sales-slips", body, Map.of("Idempotency-Key", "with-cash"));
+    assertThat(first.status()).isEqualTo(201);
+    assertThat(first.data().path("paidAmount").asLong()).isEqualTo(Math.min(amount, 5000));
+    assertThat(first.data().path("remainingAmount").asLong()).isEqualTo(Math.max(0, 5000 - amount));
+    assertThat(first.data().path("paymentStatus").asText()).isEqualTo(paymentStatus);
+    assertThat(first.data().path("salesStatus").asText()).isEqualTo(dispatch);
+    assertThat(post("/api/sales-slips", body, Map.of("Idempotency-Key", "with-cash")).data())
+        .isEqualTo(first.data());
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from partner_payment_events where event_type='PAYMENT_RECEIVED' and partner_id=?",
+                Integer.class,
+                partnerId))
+        .isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject(
+                "select payment_method from partner_payment_events where event_type='PAYMENT_RECEIVED' and partner_id=?",
+                String.class,
+                partnerId))
+        .isEqualTo(method == SalesInitialReceiptInput.Method.CASH ? "현금" : "계좌이체");
+    assertThat(
+            jdbc.queryForObject(
+                "select unapplied_payment_amount from partner_balance_summaries where partner_id=?",
+                Long.class,
+                partnerId))
+        .isEqualTo(Math.max(0, amount - 5000));
+    assertThat(
+            jdbc.queryForObject(
+                "select amount from partner_payment_events where event_type='PAYMENT_RECEIVED' and partner_id=?",
+                Long.class,
+                partnerId))
+        .isEqualTo(amount);
+    var history =
+        get("/api/payment-targets/SALES_SLIP/" + first.data().path("id").asLong() + "/history");
+    assertThat(history.data().path("content").get(0).path("amount").asLong())
+        .isEqualTo(Math.min(amount, 5000));
+    var changed = withReceipt(command, amount == 5000 ? 4000 : 3000, method);
+    assertThat(
+            post(
+                    "/api/sales-slips",
+                    objectMapper.writeValueAsString(changed),
+                    Map.of("Idempotency-Key", "with-cash"))
+                .status())
+        .isEqualTo(409);
+    if (amount > 5000) {
+      long receiptId =
+          jdbc.queryForObject(
+              "select id from partner_payment_events where event_type='PAYMENT_RECEIVED' and partner_id=?",
+              Long.class,
+              partnerId);
+      var cash = get("/api/business-partners/" + partnerId + "/payment-receipts/" + receiptId);
+      assertThat(cash.data().path("availableAmount").asLong()).isEqualTo(amount - 5000);
+      assertThat(cash.data().path("reviewRequired").asBoolean()).isFalse();
+      var next =
+          post(
+              "/api/sales-slips",
+              objectMapper.writeValueAsString(request(2, null)),
+              Map.of("Idempotency-Key", "next-document"));
+      assertThat(next.status()).isEqualTo(201);
+      var allocation =
+          post(
+              "/api/business-partners/" + partnerId + "/payment-allocations",
+              objectMapper.writeValueAsString(
+                  Map.of(
+                      "allocationDate",
+                      DATE.toString(),
+                      "idempotencyKey",
+                      "use-excess",
+                      "allocations",
+                      List.of(
+                          Map.of(
+                              "receiptId",
+                              receiptId,
+                              "targetType",
+                              "SALES_SLIP",
+                              "targetId",
+                              next.data().path("id").asLong(),
+                              "amount",
+                              amount - 5000)))));
+      assertThat(allocation.status()).isEqualTo(200);
+      assertThat(
+              get("/api/sales-slips/" + next.data().path("id").asLong())
+                  .data()
+                  .path("paidAmount")
+                  .asLong())
+          .isEqualTo(amount - 5000);
+      assertThat(
+              jdbc.queryForObject(
+                  "select unapplied_payment_amount from partner_balance_summaries where partner_id=?",
+                  Long.class,
+                  partnerId))
+          .isZero();
+    }
+  }
+
+  @Test
+  void failedCollectionRollsBackDocumentOutboundAndCreationReceipt() throws Exception {
+    var command =
+        withReceipt(
+            request(SalesType.DIRECT, "출고 완료", 5, null), 0, SalesInitialReceiptInput.Method.CASH);
+    var before = snapshot();
+    assertThat(
+            post(
+                    "/api/sales-slips",
+                    objectMapper.writeValueAsString(command),
+                    Map.of("Idempotency-Key", "overpaid"))
+                .status())
+        .isEqualTo(400);
+    assertThat(snapshot()).isEqualTo(before);
+    assertThat(
+            post(
+                    "/api/sales-slips",
+                    objectMapper.writeValueAsString(
+                        withReceipt(command, 5000, SalesInitialReceiptInput.Method.CASH)),
+                    Map.of("Idempotency-Key", "overpaid"))
+                .status())
+        .isEqualTo(201);
+  }
+
+  @Test
+  void rejectsStatusOnlyCompletionAndAuctionInitialCollection() throws Exception {
+    var node = (ObjectNode) objectMapper.valueToTree(request(5, null));
+    node.put("paymentStatus", "입금 완료");
+    assertThat(post("/api/sales-slips", node.toString()).status()).isEqualTo(400);
+    var auction =
+        withReceipt(
+            request(SalesType.AUCTION, "출하 완료", 5, null),
+            1000,
+            SalesInitialReceiptInput.Method.CASH);
+    var before = snapshot();
+    assertThat(post("/api/sales-slips", objectMapper.writeValueAsString(auction)).status())
+        .isEqualTo(400);
+    assertThat(snapshot()).isEqualTo(before);
+  }
+
+  private SalesSlipCommand withReceipt(
+      SalesSlipCommand request, long amount, SalesInitialReceiptInput.Method method) {
+    return new SalesSlipCommand(
+        request.saleDate(),
+        request.salesType(),
+        request.partnerId(),
+        request.auctionShipmentId(),
+        request.paymentStatus(),
+        request.salesStatus(),
+        request.paymentMethod(),
+        request.memo(),
+        request.items(),
+        new SalesInitialReceiptInput(amount, DATE, method));
   }
 
   @ParameterizedTest
@@ -335,7 +499,11 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
   @CsvSource({"DIRECT,출고 완료", "AUCTION,출하 완료"})
   void lateReceiptFailureRollsBackCompletedSaleAndAllowsSameKeyRetry(
       SalesType type, String status) {
-    var request = request(type, status, 5, null);
+    var request =
+        type == SalesType.DIRECT
+            ? withReceipt(
+                request(type, status, 5, null), 7000, SalesInitialReceiptInput.Method.CASH)
+            : request(type, status, 5, null);
     var before = snapshot();
     jdbc.execute(
         "alter table sales_creation_receipts add constraint test_sales_receipt_failure check (response_snapshot is null)");
@@ -369,11 +537,26 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @ParameterizedTest
-  @CsvSource({"false,false", "false,true", "true,false"})
-  void concurrentCreationWaitsForCommitOrRollbackBeforeDeciding(boolean rollback, boolean changed)
-      throws Exception {
-    var request = request(5, null);
-    var competing = changed ? request(6, "다른 입력") : request;
+  @CsvSource({
+    "false,false,false",
+    "false,true,false",
+    "true,false,false",
+    "false,false,true",
+    "false,true,true",
+    "true,false,true"
+  })
+  void concurrentCreationWaitsForCommitOrRollbackBeforeDeciding(
+      boolean rollback, boolean changed, boolean collect) throws Exception {
+    var request =
+        collect
+            ? withReceipt(request(5, null), 7000, SalesInitialReceiptInput.Method.CASH)
+            : request(5, null);
+    var competing =
+        changed
+            ? (collect
+                ? withReceipt(request(6, "다른 입력"), 7000, SalesInitialReceiptInput.Method.CASH)
+                : request(6, "다른 입력"))
+            : request;
     var held = new CountDownLatch(1);
     var resume = new CountDownLatch(1);
     var started = new CountDownLatch(1);
@@ -456,6 +639,12 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
           assertThat(second.error()).isNull();
           assertThat(second.document()).isEqualTo(first.document());
         }
+        assertThat(
+                jdbc.queryForObject(
+                    "select count(*) from partner_payment_events where event_type='PAYMENT_RECEIVED' and partner_id=?",
+                    Integer.class,
+                    partnerId))
+            .isEqualTo(collect ? 1 : 0);
         assertThat(jdbc.queryForObject("select count(*) from sales_slips", Integer.class))
             .isEqualTo(1);
         assertThat(
@@ -498,6 +687,8 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
             "sales_creation_receipts",
             "sales_slips",
             "sales_slip_items",
+            "direct_sales",
+            "direct_sale_prices",
             "sales_slip_item_allocations",
             "sales_orchid_group_snapshots",
             "orchid_groups",

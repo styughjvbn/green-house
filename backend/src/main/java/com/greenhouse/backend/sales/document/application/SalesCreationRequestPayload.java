@@ -1,12 +1,17 @@
 package com.greenhouse.backend.sales.document.application;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.document.application.command.SalesInitialReceiptInput;
 import com.greenhouse.backend.sales.document.application.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.document.application.command.SalesSlipItemInput;
 import java.time.LocalDate;
 import java.util.List;
 
-/** Legacy v1 receipt hash input, independent of future command fields. */
+/**
+ * Preserves legacy v1 hashes when no receipt is supplied; opt-in receipt fields participate in the
+ * hash.
+ */
 record SalesCreationRequestPayload(
     LocalDate saleDate,
     SalesType salesType,
@@ -16,7 +21,8 @@ record SalesCreationRequestPayload(
     String salesStatus,
     String paymentMethod,
     String memo,
-    List<Item> items) {
+    List<Item> items,
+    @JsonInclude(JsonInclude.Include.NON_NULL) SalesInitialReceiptInput initialReceipt) {
 
   static SalesCreationRequestPayload from(SalesSlipCommand request) {
     return request == null
@@ -30,7 +36,8 @@ record SalesCreationRequestPayload(
             request.salesStatus(),
             request.paymentMethod(),
             request.memo(),
-            request.items() == null ? null : request.items().stream().map(Item::from).toList());
+            request.items() == null ? null : request.items().stream().map(Item::from).toList(),
+            request.initialReceipt());
   }
 
   private record Item(

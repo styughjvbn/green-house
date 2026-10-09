@@ -8,7 +8,7 @@ import {
   getBusinessPartnerPage,
   getBusinessPartnerOptions,
   getBusinessPartnerOption,
-  getReceivedPaymentPage,
+  getTargetPaymentHistoryPage,
   getSalesSlip,
   getSalesSlipPage,
 } from "../api/salesApi";
@@ -141,20 +141,20 @@ export function auctionProceedsDetailQueryOptions(id: number) {
   });
 }
 
-export function receivedPaymentPageQueryOptions(
+export function targetPaymentHistoryPageQueryOptions(
   targetType: PaymentTargetType,
   targetId: number,
   page: number,
 ) {
   const size = 10;
   return queryOptions({
-    queryKey: salesQueryKeys.payments.receivedPage(
+    queryKey: salesQueryKeys.payments.historyPage(
       targetType,
       targetId,
       page,
       size,
     ),
     queryFn: ({ signal }) =>
-      getReceivedPaymentPage(targetType, targetId, page, size, signal),
+      getTargetPaymentHistoryPage(targetType, targetId, page, size, signal),
   });
 }

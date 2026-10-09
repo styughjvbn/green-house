@@ -228,7 +228,7 @@ function AllocationPanel({ partnerId }: { partnerId: number }) {
       {!dedicated ? (
         <p>
           기록된 수납을 여러 전표·경매 대금에 배분합니다. 정정은 기존 배분을
-          취소하며 원래 입금은 유지합니다.
+          취소하며 원래 수납은 유지합니다.
         </p>
       ) : null}
       {pending && (
@@ -367,7 +367,7 @@ function AllocationPanel({ partnerId }: { partnerId: number }) {
               )}
               {selected.data && (
                 <p>
-                  입금 {selected.data.amount.toLocaleString()}원 / 미배분{" "}
+                  수납 {selected.data.amount.toLocaleString()}원 / 미배분{" "}
                   {selected.data.availableAmount.toLocaleString()}원
                   {selected.data.reviewRequired
                     ? " · 원장 검토가 필요합니다."
@@ -509,7 +509,7 @@ function AllocationPanel({ partnerId }: { partnerId: number }) {
           </DialogTitle>
           <DialogDescription>
             {mode === "CORRECT"
-              ? `${cancellationIds.length}건을 취소합니다. 새 배분을 추가하면 함께 반영됩니다. 실제 입금은 취소하지 않습니다.`
+              ? `${cancellationIds.length}건을 취소합니다. 새 배분을 추가하면 함께 반영됩니다. 실제 수납은 취소하지 않습니다.`
               : "같은 거래처의 수납과 배분 대상을 선택하세요."}
           </DialogDescription>
           <form

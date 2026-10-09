@@ -39,6 +39,12 @@ export type SalesSlipForm = {
   paymentStatus: string;
   salesStatus: string;
   paymentMethod: string;
+  receiptEnabled: boolean;
+  receiptAmount: string;
+  receiptDate: string;
+  receiptMethod: NonNullable<
+    components["schemas"]["SalesInitialReceiptRequest"]["method"]
+  >;
   memo: string;
   items: SalesItemForm[];
 };

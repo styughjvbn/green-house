@@ -1,6 +1,6 @@
 "use client";
 
-import { salesDispatchLabel } from "../../lib/salesDisplay";
+import { salesDispatchLabel, salesPaymentLabel } from "../../lib/salesDisplay";
 
 import { useEffect } from "react";
 import { Printer, X } from "lucide-react";
@@ -116,10 +116,7 @@ function SalesSlipPrintSheet({ salesSlip }: { salesSlip: SalesSlip }) {
           value={salesSlip.partner.ownerName ?? "-"}
         />
         <PrintInfoBox label="전화번호" value={salesSlip.partner.phone ?? "-"} />
-        <PrintInfoBox
-          label="결제 방법"
-          value={salesSlip.paymentMethod ?? "-"}
-        />
+
         <PrintInfoBox
           className="col-span-2"
           label="주소"
@@ -176,7 +173,10 @@ function SalesSlipPrintSheet({ salesSlip }: { salesSlip: SalesSlip }) {
       </section>
 
       <footer className="mt-6 grid grid-cols-3 gap-3 text-sm">
-        <PrintInfoBox label="입금" value={salesSlip.paymentStatus} />
+        <PrintInfoBox
+          label="수납"
+          value={salesPaymentLabel(salesSlip.paymentStatus)}
+        />
         <PrintInfoBox
           label="출고·출하"
           value={salesDispatchLabel(salesSlip.salesStatus, salesSlip.salesType)}

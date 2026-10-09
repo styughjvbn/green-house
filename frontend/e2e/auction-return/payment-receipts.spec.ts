@@ -20,8 +20,8 @@ test.beforeEach(async ({ page, request, context }) => {
 test("cash receipt and input correction refresh history, balances and focus", async ({
   page,
 }) => {
-  await page.getByLabel("입금액", { exact: true }).fill("1000");
-  await expect(page.getByLabel("입금일", { exact: true })).toHaveValue(
+  await page.getByLabel("수납액", { exact: true }).fill("1000");
+  await expect(page.getByLabel("수납일", { exact: true })).toHaveValue(
     "2026-10-08",
   );
   await page.getByRole("button", { name: "수납 기록", exact: true }).click();
@@ -37,7 +37,7 @@ test("cash receipt and input correction refresh history, balances and focus", as
   await dialog.press("Escape");
   await expect(cancel).toBeFocused();
   await cancel.click();
-  await dialog.getByLabel("정정 사유").fill("입금액 오입력");
+  await dialog.getByLabel("정정 사유").fill("수납액 오입력");
   await dialog
     .getByRole("button", { name: "오입력 취소 확정", exact: true })
     .click();
@@ -58,7 +58,7 @@ test("lost receipt response can be retried after reload without another cash rec
   page,
   request,
 }) => {
-  await page.getByLabel("입금액", { exact: true }).fill("2000");
+  await page.getByLabel("수납액", { exact: true }).fill("2000");
   await page.getByLabel("메모", { exact: true }).fill("원본 입력");
   await request.post("http://127.0.0.1:14100/__control", {
     data: { loseNextResponse: true },

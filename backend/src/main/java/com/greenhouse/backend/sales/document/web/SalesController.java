@@ -139,6 +139,9 @@ public class SalesController {
     return ApiResponse.ok(salesOrchidGroupQueryService.search(keyword, varietyId, status));
   }
 
+  @Operation(
+      description =
+          "출고·출하와 수납은 독립적입니다. 일반 판매의 최초 수납은 전표 생성과 같은 트랜잭션으로 기록하며 생성 키가 필수입니다. 받은 전액을 기록하고 전표 총액까지 배분하며 초과분은 거래처 미배분 잔액으로 남깁니다. 수납 상태만으로 완납을 지정할 수 없습니다.")
   @PostMapping("/sales-slips")
   @ResponseStatus(HttpStatus.CREATED)
   public ApiResponse<SalesSlipDocument> createSalesSlip(

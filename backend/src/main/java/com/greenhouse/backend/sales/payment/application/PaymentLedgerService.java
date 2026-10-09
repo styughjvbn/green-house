@@ -26,20 +26,52 @@ public class PaymentLedgerService {
 
   public Long recordManualPayment(
       Long partnerId, PaymentTargetType targetType, Long targetId, ManualPaymentCommand request) {
+    return recordManualPayment(partnerId, targetType, targetId, request, request.amount());
+  }
+
+  public Long recordManualPayment(
+      Long partnerId,
+      PaymentTargetType targetType,
+      Long targetId,
+      ManualPaymentCommand request,
+      long allocationAmount) {
+    String worker = defaultWorker(requestActorProvider.resolve(request.worker()));
+    String uid = externalUid(targetType, targetId, request.idempotencyKey());
     var received =
         eventRepository.save(
-            PartnerPaymentEvent.received(
-                partnerId,
-                request.paymentDate(),
-                request.amount(),
-                targetType,
-                targetId,
-                normalize(request.paymentMethod()),
-                normalize(request.depositorName()),
-                externalUid(targetType, targetId, request.idempotencyKey()),
-                normalize(request.memo()),
-                defaultWorker(requestActorProvider.resolve(request.worker()))));
-    eventRepository.save(PartnerPaymentEvent.manualMatch(received));
+            allocationAmount == request.amount()
+                ? PartnerPaymentEvent.received(
+                    partnerId,
+                    request.paymentDate(),
+                    request.amount(),
+                    targetType,
+                    targetId,
+                    normalize(request.paymentMethod()),
+                    normalize(request.depositorName()),
+                    uid,
+                    normalize(request.memo()),
+                    worker)
+                : PartnerPaymentEvent.unassignedReceipt(
+                    partnerId,
+                    request.paymentDate(),
+                    request.amount(),
+                    normalize(request.paymentMethod()),
+                    normalize(request.depositorName()),
+                    uid,
+                    normalize(request.memo()),
+                    worker));
+    if (allocationAmount == request.amount())
+      eventRepository.save(PartnerPaymentEvent.manualMatch(received));
+    else if (allocationAmount > 0)
+      eventRepository.save(
+          PartnerPaymentEvent.allocated(
+              received,
+              targetType,
+              targetId,
+              allocationAmount,
+              request.paymentDate(),
+              defaultWorker(requestActorProvider.resolve(request.worker())),
+              "MANUAL_ALLOCATION:" + received.getExternalUid()));
     auditSupport.recordManualPayment(received);
     return received.getId();
   }

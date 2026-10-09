@@ -214,7 +214,7 @@ export function confirmSalesSlipPayment(
   );
 }
 
-export function getReceivedPaymentPage(
+export function getTargetPaymentHistoryPage(
   targetType: PaymentTargetType,
   targetId: number,
   page: number,
@@ -222,14 +222,11 @@ export function getReceivedPaymentPage(
   signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({
-    targetType,
-    targetId: String(targetId),
-    eventType: "PAYMENT_RECEIVED",
     page: String(page),
     size: String(size),
   });
   return fetchApi<PartnerPaymentEventPage>(
-    `/partner-payment-events/page?${params}`,
+    `/payment-targets/${targetType}/${targetId}/history?${params}`,
     { signal },
   );
 }

@@ -9,7 +9,7 @@ export const SALES_TABS = {
     label: "경매 정산",
   },
   payments: {
-    label: "입금 관리",
+    label: "수납 관리",
   },
   partners: {
     label: "거래처 관리",

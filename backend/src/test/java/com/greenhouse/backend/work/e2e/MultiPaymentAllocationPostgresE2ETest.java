@@ -84,6 +84,39 @@ class MultiPaymentAllocationPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
+  void targetHistoryShowsAllocatedPortionsAndDirectReceiptOnceAndRetainsCancellation()
+      throws Exception {
+    long cash = receive(1000);
+    var allocated =
+        allocations.allocate(
+            partnerId, command("history", line(cash, first, 400), line(cash, second, 600)));
+    manual.confirmPayment(
+        first, new ManualPaymentCommand(300L, DATE, "history-direct", "현금", null, null, null));
+    var firstPage = get("/api/payment-targets/SALES_SLIP/" + first + "/history?size=1");
+    assertThat(firstPage.status()).isEqualTo(200);
+    assertThat(firstPage.data().path("totalElements").asLong()).isEqualTo(2);
+    assertThat(firstPage.data().path("content").get(0).path("amount").asLong()).isEqualTo(300);
+    var other = get("/api/payment-targets/SALES_SLIP/" + second + "/history");
+    assertThat(other.data().path("totalElements").asLong()).isEqualTo(1);
+    assertThat(other.data().path("content").get(0).path("amount").asLong()).isEqualTo(600);
+    allocations.correct(
+        partnerId,
+        new PaymentAllocationCorrectionRequest(
+            DATE,
+            List.of(allocated.allocationIds().getFirst()),
+            List.of(),
+            "대상 정정",
+            "history-cancel",
+            null));
+    var after = get("/api/payment-targets/SALES_SLIP/" + first + "/history");
+    assertThat(after.data().path("totalElements").asLong()).isEqualTo(2);
+    assertThat(after.data().path("content").findValuesAsText("status"))
+        .containsExactly("CONFIRMED", "CANCELLED");
+    assertThat(paid(first)).isEqualTo(300);
+    assertThat(get("/api/payment-targets/NONE/1/history").status()).isEqualTo(400);
+  }
+
+  @Test
   void failedReplacementRollsBackCancellationCashSummaryAndCommandReceipt() {
     long source = receive(700);
     var original = allocations.allocate(partnerId, command("initial", line(source, first, 700)));

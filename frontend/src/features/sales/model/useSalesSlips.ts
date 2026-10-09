@@ -132,7 +132,13 @@ export function useSalesSlips({
     field: K,
     value: SalesSlipForm[K],
   ) {
-    setSalesForm((current) => ({ ...current, [field]: value }));
+    setSalesForm((current) => ({
+      ...current,
+      [field]: value,
+      ...(field === "receiptEnabled" && value === true && !current.receiptAmount
+        ? { receiptAmount: String(calculateSalesTotal(current.items)) }
+        : {}),
+    }));
   }
 
   function selectSalesType(salesType: SalesSlipForm["salesType"]) {
@@ -144,6 +150,8 @@ export function useSalesSlips({
       paymentStatus: salesType === "AUCTION" ? "정산 대기" : "미입금",
       salesStatus: "작성중",
       paymentMethod: salesType === "AUCTION" ? "경매 정산" : "",
+      receiptEnabled: false,
+      receiptAmount: "",
       items:
         current.items.length > 0 ? current.items : [createEmptySalesItem()],
     }));
@@ -301,7 +309,23 @@ export function useSalesSlips({
       setShowCreateSlip(false);
       setSalesForm((current) => resetSalesSlipFormAfterSave(current));
       setEditingSlipId(null);
-      await invalidateSalesSlips();
+      await Promise.all([
+        invalidateSalesSlips(),
+        queryClient.invalidateQueries({
+          queryKey: salesQueryKeys.partners.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: salesQueryKeys.payments.balance(salesSlip.partner.id),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["sales", "allocationWorkspace", salesSlip.partner.id],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: salesQueryKeys.payments
+            .historyPage("SALES_SLIP", salesSlip.id, 0, 10)
+            .slice(0, 4),
+        }),
+      ]);
       return true;
     } catch (error) {
       setErrorMessage(

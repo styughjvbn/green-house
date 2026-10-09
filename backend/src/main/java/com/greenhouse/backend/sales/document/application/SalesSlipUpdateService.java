@@ -41,6 +41,8 @@ public class SalesSlipUpdateService {
   private final SalesSlipDocumentAssembler responseAssembler;
 
   public SalesSlipDocument update(Long salesSlipId, SalesSlipCommand request) {
+    if (request.initialReceipt() != null)
+      throw new IllegalArgumentException("전표 수정에서는 수납을 함께 기록할 수 없습니다. 수납 관리에서 처리하세요.");
     SalesSlip salesSlip =
         aggregateLoader.getForUpdate(
             salesSlipId, request.partnerId() == null ? List.of() : List.of(request.partnerId()));

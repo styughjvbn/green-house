@@ -146,6 +146,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePaymentAllocationChangeResponse'
+  /api/payment-targets/{targetType}/{targetId}/history:
+    get:
+      tags:
+      - payment-controller
+      description: 대상에 반영한 수납 배분 이력. 대상 미지정 수납에서 배분한 기록과 직접 수납의 배분 기록을 한 번씩 조회합니다. 금액은 해당 대상의 배분액이며 날짜는 반영일입니다. 취소된 배분도 상태와
+        함께 보존합니다.
+      operationId: targetHistory
+      parameters:
+      - name: targetType
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+      - name: targetId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponsePartnerPaymentEventResponse'
   /api/payment-allocation-metadata:
     get:
       tags:

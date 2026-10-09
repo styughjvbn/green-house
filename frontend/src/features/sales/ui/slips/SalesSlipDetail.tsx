@@ -1,4 +1,4 @@
-import { salesDispatchLabel } from "../../lib/salesDisplay";
+import { salesDispatchLabel, salesPaymentLabel } from "../../lib/salesDisplay";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Route } from "next";
@@ -196,7 +196,7 @@ export function SalesSlipDetail({
             role="status"
             className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           >
-            금액 확인이 필요합니다. 검토가 끝날 때까지 입금과 금액 수정을 할 수
+            금액 확인이 필요합니다. 검토가 끝날 때까지 수납과 금액 수정을 할 수
             없습니다.
           </p>
         ) : null}
@@ -219,7 +219,10 @@ export function SalesSlipDetail({
                   label: "판매일자",
                   value: formatShortDate(salesSlip.saleDate),
                 },
-                { label: "입금", value: salesSlip.paymentStatus },
+                {
+                  label: "수납",
+                  value: salesPaymentLabel(salesSlip.paymentStatus),
+                },
                 {
                   label: "출고·출하",
                   value: salesDispatchLabel(
@@ -305,7 +308,7 @@ export function SalesSlipDetail({
               onToggle={() => setSlipInfoOpen((current) => !current)}
             >
               <Description label="경매장" value={salesSlip.auctionMarket} />
-              <Description label="결제 방식" value={salesSlip.paymentMethod} />
+
               {<Description label="담당자" value="관리자" />}
               <Description label="메모" value={salesSlip.memo} />
             </InfoBox>
@@ -351,12 +354,13 @@ export function SalesSlipDetail({
             </div>
           </div>
 
-          {canConfirmPayment ? (
+          {salesSlip.salesType === "DIRECT" ? (
             <div className="mt-3 rounded-md border border-[#dfe5dc]">
               <ManualPaymentPanel
                 key={salesSlip.id}
                 targetType="SALES_SLIP"
                 targetId={salesSlip.id}
+                paymentAllowed={canConfirmPayment}
                 remainingAmount={salesSlip.remainingAmount}
                 expectedPaymentDate={salesSlip.expectedPaymentDate}
                 onConfirm={async (payload) => {

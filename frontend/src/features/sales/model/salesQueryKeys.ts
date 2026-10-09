@@ -61,7 +61,7 @@ export const salesQueryKeys = {
       ["sales", "paymentBalance", partnerId] as const,
     target: (targetType: PaymentTargetType, targetId: number) =>
       ["sales", "paymentEvents", targetType, targetId] as const,
-    receivedPage: (
+    historyPage: (
       targetType: PaymentTargetType,
       targetId: number,
       page: number,
@@ -72,7 +72,7 @@ export const salesQueryKeys = {
         "paymentEvents",
         targetType,
         targetId,
-        "PAYMENT_RECEIVED",
+        "TARGET_HISTORY",
         page,
         size,
       ] as const,

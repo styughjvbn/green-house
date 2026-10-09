@@ -65,6 +65,10 @@ export function createInitialSalesForm(businessDate: string): SalesSlipForm {
     paymentStatus: "미입금",
     salesStatus: "작성중",
     paymentMethod: "",
+    receiptEnabled: false,
+    receiptAmount: "",
+    receiptDate: businessDate,
+    receiptMethod: "CASH",
     memo: "",
     items: [createEmptySalesItem()],
   };
@@ -107,6 +111,14 @@ export function toCreateSalesSlipPayload(
   form: SalesSlipForm,
 ): CreateSalesSlipPayload {
   return {
+    initialReceipt:
+      form.receiptEnabled && form.salesType === "DIRECT"
+        ? {
+            amount: Number(form.receiptAmount),
+            paymentDate: form.receiptDate,
+            method: form.receiptMethod,
+          }
+        : null,
     salesType: form.salesType,
     saleDate: form.saleDate,
     partnerId: form.partnerId ? Number(form.partnerId) : null,
@@ -139,6 +151,9 @@ export function resetSalesSlipFormAfterSave(
     paymentStatus: "미입금",
     salesStatus: "작성중",
     paymentMethod: "",
+    receiptEnabled: false,
+    receiptAmount: "",
+    receiptMethod: "CASH",
     memo: "",
     items: [createEmptySalesItem()],
   };
@@ -152,6 +167,10 @@ export function toSalesSlipForm(salesSlip: SalesSlip): SalesSlipForm {
     paymentStatus: salesSlip.paymentStatus,
     salesStatus: salesSlip.salesStatus,
     paymentMethod: salesSlip.paymentMethod ?? "",
+    receiptEnabled: false,
+    receiptAmount: "",
+    receiptDate: salesSlip.saleDate,
+    receiptMethod: "CASH",
     memo: salesSlip.memo ?? "",
     items: salesSlip.items.map((item) => ({
       itemName: item.itemName,

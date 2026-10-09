@@ -1,4 +1,4 @@
-import { salesDispatchLabel } from "../../lib/salesDisplay";
+import { salesDispatchLabel, salesPaymentLabel } from "../../lib/salesDisplay";
 import type { SalesSlip } from "@/entities/farm/types";
 import { StatusBadge, type StatusBadgeSize } from "@/shared/ui/StatusBadge";
 import {
@@ -26,7 +26,7 @@ export function SalesSlipStatusBadge({
 
   return (
     <StatusBadge size={size} tone={tone}>
-      {salesDispatchLabel(value, salesType)}
+      {salesDispatchLabel(salesPaymentLabel(value), salesType)}
     </StatusBadge>
   );
 }
