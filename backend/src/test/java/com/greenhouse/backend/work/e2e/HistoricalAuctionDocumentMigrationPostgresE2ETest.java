@@ -49,7 +49,7 @@ class HistoricalAuctionDocumentMigrationPostgresE2ETest {
     var existing = jdbc.queryForList("SELECT * FROM sales_slips ORDER BY id");
     var lots = jdbc.queryForList("SELECT * FROM auction_shipment_lots ORDER BY id");
     var shipments = jdbc.queryForList("SELECT * FROM auction_shipments ORDER BY id");
-    var migration = Flyway.configure().dataSource(source).load();
+    var migration = Flyway.configure().dataSource(source).target("52").load();
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();
@@ -100,6 +100,58 @@ class HistoricalAuctionDocumentMigrationPostgresE2ETest {
                 jdbc.execute(
                     "UPDATE sales_slips SET sales_status='취소' WHERE historical_auction_import"))
         .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void repairsImportedVarietyAndGenusWithoutChangingOtherItemFactsOrSourceLots() {
+    var source = database();
+    var jdbc = new JdbcTemplate(source);
+    seed(jdbc);
+    jdbc.execute(
+        """
+        INSERT INTO auction_shipment_lots (id,shipment_id,item_name,variety_name,
+          shipped_quantity,sold_quantity,waiting_quantity,returned_quantity,current_status,created_at,updated_at)
+        VALUES (99006,99003,'品目','  ',5,0,5,0,'WAITING',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+               (99007,99003,'품목','원본 품종',5,0,5,0,'WAITING',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+        """);
+    Flyway.configure().dataSource(source).target("52").load().migrate();
+    jdbc.execute(
+        """
+        UPDATE sales_slip_items SET item_name='별도 보정 품종',genus='확인된 속' WHERE auction_shipment_lot_id=99007;
+        INSERT INTO auction_shipment_lots (id,shipment_id,item_name,variety_name,
+          shipped_quantity,sold_quantity,waiting_quantity,returned_quantity,current_status,created_at,updated_at)
+        VALUES (99008,99002,'현재 품목','현재 품종',5,0,5,0,'WAITING',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+        INSERT INTO sales_slips (id,created_at,updated_at,slip_number,sale_date,sales_type,
+          auction_shipment_id,partner_id,total_amount,payment_status,sales_status)
+        VALUES (99020,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'CURRENT',DATE '2026-10-01',
+          'AUCTION',99002,99000,0,'정산 대기','작성중');
+        INSERT INTO sales_slip_items (id,sales_slip_id,auction_shipment_lot_id,item_name,quantity,unit_price,amount)
+        VALUES (99021,99020,99008,'현재 품목',5,0,0)
+        """);
+    var lots = jdbc.queryForList("SELECT * FROM auction_shipment_lots ORDER BY id");
+    var slips = jdbc.queryForList("SELECT * FROM sales_slips ORDER BY id");
+    var before = jdbc.queryForList("SELECT * FROM sales_slip_items ORDER BY id");
+    var migration = Flyway.configure().dataSource(source).target("53").load();
+    assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
+    assertThat(migration.migrate().migrationsExecuted).isZero();
+    migration.validate();
+    var expected =
+        before.stream()
+            .map(
+                row -> {
+                  var value = new LinkedHashMap<>(row);
+                  long lotId = (Long) row.get("auction_shipment_lot_id");
+                  if (lotId == 99004L || lotId == 99005L) {
+                    value.put("item_name", lotId == 99004L ? "품종" : "품종2");
+                    value.put("genus", lotId == 99004L ? "난" : "난2");
+                  }
+                  return value;
+                })
+            .toList();
+    assertThat(jdbc.queryForList("SELECT * FROM sales_slip_items ORDER BY id")).isEqualTo(expected);
+    assertThat(jdbc.queryForList("SELECT * FROM auction_shipment_lots ORDER BY id"))
+        .isEqualTo(lots);
+    assertThat(jdbc.queryForList("SELECT * FROM sales_slips ORDER BY id")).isEqualTo(slips);
   }
 
   @Test
