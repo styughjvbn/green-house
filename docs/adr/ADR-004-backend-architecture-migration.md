@@ -830,49 +830,30 @@ P6 완료 검증 결과:
 - 프론트 `npm run check` 통과. OpenAPI 재생성 성공(157 operations, 132 paths, 292 schemas), 생성 명세·TypeScript schema 차이 0. 기존 모듈·하위 기능 허용 방향과 Mutation 단일 Writer 검사가 포함된 전체 테스트 통과.
 - 기본 CI 재현성과 실제 백업 복원본 CLI 검증의 보류 항목을 모두 해소했다. 합의한 P0~P6 전환은 최종 완료이며 테스트된 업무 경로의 기능 회귀는 발견되지 않았다. 운영 서버 재배포는 이번 작업 범위가 아니다. 최종 검증 이후 변경은 완료 근거·현행 문서뿐이다.
 
-### 2026-10-09: 후속 — Orchid 공개 계약의 책임별 배치와 명명 검토
+### 2026-10-09: 후속 — Orchid 공개 계약 배치와 입력 항목 명명 통일
 
-- `farm/api/orchid` 루트에 조회·현재 상태·사용 여부 계약 3개를 유지하고 Mutation 계약 37개를 `mutation`, 대사 대상·issue 값 2개를 `verification`으로 옮겼다. 기능 간·최상위 모듈 간 허용 방향과 외부 Writer 6개 메서드는 그대로다.
-- Mutation 안에서는 명령·입력 항목·출처·실행 결과·snapshot을 함께 유지한다. sealed 부모와 명령 17개는 같은 패키지에 두고 정규화 helper 2개는 package-private을 유지한다. 추가 Command/DTO/Result 하위 폴더·Interface·Port·Adapter를 만들지 않는다.
-- 호출처와 대사 SPI의 import, 검토된 계약 inventory, v1 필드 fixture의 타입 식별자만 새 경로로 갱신한다. 클래스명·record 필드·enum 값·정규화·지문·저장 JSON·실행 본문·SQL·트랜잭션은 바꾸지 않는다. 현재 구조의 기준은 갱신한 `docs/04-architecture.md`다.
+`farm/api/orchid`의 조회·Mutation·대사 계약을 책임별로 정리하고 구조 변경 입력 항목의 이름을 통일했다. 배치를 먼저 변경한 뒤 입력 항목을 개명했다. 현재 구조·명명 기준은 `docs/04-architecture.md`를 따른다.
 
-이름 개선 후보는 다음과 같다. 이번 작업에서는 후보를 선정하고 이름은 유지한다.
+- 루트에는 조회·현재 상태·사용 여부 계약 3개를 유지했다. Mutation 계약 37개는 `mutation`, 대사 대상·issue 값 2개는 `verification`으로 옮겼다.
+- Mutation 내부는 평평하게 유지했다. sealed 부모와 명령 17개는 같은 패키지에 두고 정규화 helper 2개는 package-private을 유지했다. 기능 간·최상위 모듈 간 허용 방향, 외부 Writer 6개 메서드와 호출자 트랜잭션 참여는 동일하다. Interface·Port·Adapter는 추가하지 않았다.
+- 타입 이동·개명에 맞춰 호출처·테스트·v1 필드 fixture의 타입 식별자를 갱신했다. record 필드·enum·정규화·validation·지문·저장 JSON·과거 snapshot·효과 handler 이름·SQL·잠금·트랜잭션 경계는 유지했다.
 
-| 우선순위 | 현재 이름 | 후보 이름 | 실제 역할과 검토 이유 |
+명명 검토의 최종 상태:
+
+| 상태 | 기존 또는 현재 이름 | 적용 이름 또는 검토 후보 | 판단 근거 |
 |---|---|---|---|
-| 우선 | `TransformOrchidGroupMutationResult` | `TransformOrchidGroupMutationTarget` | 구조 변경 후 생성할 난 묶음의 구역·속성을 지정하는 명령 입력이다. 실제 실행 결과인 `OrchidGroupMutationResult`와 구분한다. |
-| 우선 | `TransformOrchidGroupMutationSource` | `TransformOrchidGroupMutationSourceItem` | 구조 변경 원본 난 묶음·투입 수량·해제 위치의 입력 항목이다. 실행 출처 metadata인 `OrchidGroupMutationSource`와 구분한다. |
-| 검토 | `OrchidGroupLedgerReconciliationGroup` | `OrchidGroupLedgerReconciliationTarget` | 대사에 전달하는 ID·revision·snapshot·위치 한계의 대상 값이다. Entity와 구분되는 역할을 이름에 드러낸다. |
-| 검토 | `OrchidGroupUsage` | `OrchidGroupUsageBlocker` | 사용 여부 검사에서 취소·보정을 막는 참조의 코드·설명·건수를 반환한다. 일반 사용 통계와 구분한다. |
-| 검토 | `ReconcileOrchidGroupMutationCommand` | `SyncOrchidGroupStateMutationCommand` | 현장에서 확인한 수량·상태·위치를 적용하는 쓰기 명령이다. 읽기 전용 원장 대사와 구분한다. Work의 기존 RECONCILIATION 용어와 함께 검토하되 업무 기능을 변경하거나 확장하지 않는다. |
+| 적용 완료 | `TransformOrchidGroupMutationSource` | `TransformOrchidGroupMutationSourceItem` | 구조 변경 원본의 입력 항목임을 표시하고 실행 출처 metadata인 `OrchidGroupMutationSource`와 구분한다. |
+| 적용 완료 | `TransformOrchidGroupMutationResult` | `TransformOrchidGroupMutationResultItem` | 생성할 난 묶음의 입력 항목임을 표시하고 실제 실행 결과인 `OrchidGroupMutationResult`와 구분한다. |
+| 후보·현재 이름 유지 | `OrchidGroupLedgerReconciliationGroup` | `OrchidGroupLedgerReconciliationTarget` | 대사 대상의 값 계약임을 더 명확히 표현할 수 있다. 이번 적용 범위에는 포함하지 않았다. |
+| 후보·현재 이름 유지 | `OrchidGroupUsage` | `OrchidGroupUsageBlocker` | 취소·보정을 막는 참조와 일반 사용 통계를 구분할 수 있다. 이번 적용 범위에는 포함하지 않았다. |
+| 보류·현재 이름 유지 | `ReconcileOrchidGroupMutationCommand` | `SyncOrchidGroupStateMutationCommand` | Work의 `WorkReconciliationCommand`·`ReconciliationWorkHandler`와 용어 일관성을 먼저 검토해야 한다. |
 
-명명 변경을 후속 적용할 때도 명령의 `sources`/`results` 등 record 필드, 저장 enum·효과 handler 이름·v1 지문·과거 snapshot을 함께 개명하지 않는다. 명령·결과·Source·Item이라는 역할이 이미 명확한 다른 타입의 일괄 개명은 하지 않는다.
+초기 `TransformOrchidGroupMutationTarget` 후보는 `SourceItem`과의 짝이 일관되지 않아 채택하지 않았다. 최종 이름은 기존 `sources`·`results` 필드와 원장 `SOURCE`·`RESULT` 역할에 맞춘 `SourceItem`·`ResultItem`이다. 실제 실행 결과 `OrchidGroupMutationResult`는 유지한다. 역할이 이미 명확한 다른 타입은 일괄 개명하지 않았다.
 
-검증 결과:
+검증 근거:
 
-- clean 컴파일과 공개 값·모듈 경계·정확한 inventory·단일 Writer·지문·저장 형식 집중 검증 통과. 이어서 저장소 기본 `check bootJar --no-daemon` 통과, 전체 테스트 779개·실패/오류/skip 0. 프론트 `npm run check` 통과.
-- 이동 전 원본과 대조해 Orchid 계약 42개와 변경된 프로덕션 호출 코드 43개의 실행 본문이 package/import 외 동일함을 확인했다. v1 필드 fixture의 26개 필드 목록은 동일하고 reviewed inventory도 이동표의 FQCN만 바뀌었다. 이전 계약 경로의 source/fixture 참조·class artifact 0.
-- OpenAPI 재생성 성공(157 operations, 132 paths, 292 schemas), 생성 명세·TypeScript schema·DB/Flyway resource 차이 0. 수정 문서 상대 링크·diff 검사 통과.
-- 패키지·import·fixture 타입 식별자만 바뀌어 `workE2eTest`와 벤치마크는 재실행하지 않았다. 업무 정책·트랜잭션·잠금·SQL·저장 계약 변경 없음. 최종 검증 이후 변경은 이 완료 기록뿐이다.
-
-### 2026-10-09: 후속 — 구조 변경 입력 항목의 명명 통일
-
-앞선 후보는 개별 역할의 명확성에 집중해 `SourceItem`·`Target`의 짝이 일관되지 않았다. 사용자와 합의한 역할별 기준으로 다음 두 입력 타입의 이름을 개선했다.
-
-| 기존 이름 | 적용한 이름 | 역할 |
-|---|---|---|
-| `TransformOrchidGroupMutationSource` | `TransformOrchidGroupMutationSourceItem` | 구조 변경 원본 난 묶음의 입력 항목 |
-| `TransformOrchidGroupMutationResult` | `TransformOrchidGroupMutationResultItem` | 구조 변경 후 생성할 난 묶음의 입력 항목 |
-
-`Command`는 실행 명령, `Item`은 입력 항목, `Details`는 공유 입력 속성, `Result`는 실행 결과, `Source`는 실행 출처를 뜻한다. 구조 변경 입력은 기존 `sources`·`results` 필드와 원장 `SOURCE`·`RESULT` 역할에 맞춰 `SourceItem`·`ResultItem`으로 짝을 이룬다. 앞선 `Target` 후보는 적용하지 않는다. `OrchidGroupMutationResult`는 실제 실행 결과이므로 유지한다.
-
-`Reconcile` → `Sync`는 Work의 `WorkReconciliationCommand`·`ReconciliationWorkHandler`와 일관성이 필요한 사안이므로 보류한다. 대사 대상·사용 여부의 나머지 개명 후보도 이번 두 입력 항목 개명의 범위에 포함하지 않는다. Mutation 내부의 평평한 배치와 공개 계약·단일 Writer·트랜잭션 경계는 그대로다.
-
-호출처·테스트·v1 필드 fixture의 타입 식별자는 함께 갱신했다. 타입명 외 record 필드·정규화·수량/위치 validation·enum·v1 지문·저장 JSON·과거 snapshot·효과 handler 이름은 유지한다.
-
-검증 결과:
-
-- 저장소 기본 `spotlessApply clean check bootJar --no-daemon` 통과. 전체 테스트 779개·실패/오류/skip 0, 지문·저장 형식·Mutation 실행·rollback 회귀 18개 포함. 프론트 `npm run check` 통과.
-- 변경된 코드·fixture 13개의 원본 대조에서 타입명과 포맷 외 동일함을 확인했다. v1 필드 목록 26개는 그대로이며 이전 두 타입의 source 참조와 class artifact는 남아 있지 않다. 검토된 공개 계약 inventory 변경 없음.
-- OpenAPI 재생성 성공(157 operations, 132 paths, 292 schemas), 생성 명세·TypeScript schema·DB/Flyway resource 차이 0. 문서 링크·diff 검사 통과.
-- 타입 식별자 개명으로 업무·DB 경계가 바뀌지 않아 `workE2eTest`와 벤치마크는 재실행하지 않았다. 최종 검증 이후 변경은 이 완료 기록뿐이다.
+- 배치 변경 후 clean 컴파일·공개 값·모듈 경계·정확한 inventory·단일 Writer·지문·저장 형식 집중 검증과 `check bootJar --no-daemon`이 통과했다. 전체 테스트 779개·실패/오류/skip 0, 프론트 `npm run check` 통과.
+- 입력 항목 개명 후 `spotlessApply clean check bootJar --no-daemon`을 다시 실행했다. 전체 테스트 779개·실패/오류/skip 0, 지문·저장 형식·Mutation 실행·rollback 회귀 18개 포함. 프론트 `npm run check` 통과.
+- 배치 단계의 계약 42개·호출 코드 43개 원본 대조에서 package/import 외 실행 본문이 동일했다. 개명 단계의 코드·fixture 13개는 타입명·포맷 외 동일했다. v1 필드 목록 26개를 보존했다. reviewed inventory는 배치 단계에서 FQCN만 변경됐고 개명 단계에서는 변경되지 않았다. 이전 경로·이름의 source 참조와 class artifact는 남아 있지 않다.
+- 두 체크포인트에서 OpenAPI를 재생성했다(157 operations, 132 paths, 292 schemas). 생성 명세·TypeScript schema·DB/Flyway resource 차이 0, 문서 링크·diff 검사 통과.
+- 업무·DB 경계가 바뀌지 않아 두 후속 작업에서 `workE2eTest`와 벤치마크는 재실행하지 않았다. 전체 검증 이후 수정은 문서 통합·표현 정리뿐이다.

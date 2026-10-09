@@ -283,7 +283,7 @@ Persistence 조회 규칙:
 
 ### 4.1 백엔드 구현 기준
 
-[ADR-004](adr/ADR-004-backend-architecture-migration.md)의 코드·문서 전환과 최종 검증을 완료했다. 저장소 기본 CI 명령 및 실제 운영 백업 복원본의 대사·기동 CLI 검증 근거는 ADR의 마지막 실행 기록을 따른다. 현행 구조와 신규 개발의 기준은 이 문서이며 이전 목표 설계는 [보관 문서](archive/plans/green-house-backend-architecture-final.md)로 남긴다. Sales·Farm·Work의 기능 우선 배치와 Mutation 내부 책임별 배치를 사용하며 이전 계층 루트는 허용하지 않는다.
+[ADR-004](adr/ADR-004-backend-architecture-migration.md)의 코드·문서 전환과 최종 검증을 완료했다. 저장소 기본 CI 명령 및 실제 운영 백업 복원본의 대사·기동 CLI 검증 근거는 ADR의 P6 최종 완료 기록을 따른다. 현행 구조와 신규 개발의 기준은 이 문서이며 이전 목표 설계는 [보관 문서](archive/plans/green-house-backend-architecture-final.md)로 남긴다. Sales·Farm·Work의 기능 우선 배치와 Mutation 내부 책임별 배치를 사용하며 이전 계층 루트는 허용하지 않는다.
 
 소유권, 컴파일 의존, 런타임 호출을 구분한다. 공개 SPI 구현으로 컴파일 방향을 유지해도 런타임 재진입·트랜잭션·잠금 안전성은 별도로 검토한다. 실제 모듈 허용 컴파일 의존은 다음과 같다. 표에 없는 방향과 순환 의존은 허용하지 않는다.
 
@@ -320,7 +320,7 @@ Document의 Payment 접근은 기존 인터페이스 제한을 유지한다. Doc
 - 모듈 밖 계약은 `{module}/api`·`spi`, 기능 간 계약은 `{module}/{feature}/api`·`spi`로 구분한다. 모든 공개 메서드·중첩 값·generic에서 Entity·Repository projection·HTTP 타입 누출을 검사한다. 기능 내부 API/SPI는 최상위 모듈 밖에 공개하지 않는다.
 - HTTP 전용 값은 web/dto, 내부 Command/Result는 application, 도메인 값은 domain, 저장소 Row/Projection은 repository에 둔다. DTO라는 이유만으로 같은 폴더에 모으지 않는다. 기존 HTTP 입력과 application 명령의 의미·validation이 같으면 중복 래퍼를 강제하지 않는다.
 - 패키지는 소문자의 구체적인 업무·역할 명사로 정한다. Service는 유스케이스 조율, Policy는 규칙, Assembler는 결과 조립, Adapter는 실제 Port/SPI 구현처럼 책임에 맞춰 이름을 붙인다. 새 범용 util/helper/manager/support 패키지를 만들지 않는다. 기존 AuditSupport의 snapshot·변경 사실 기록, WorkOperationSupport의 내부 시간·actor·제목 조립은 실제 책임을 가지므로 이름만을 이유로 분해하지 않는다.
-- Mutation은 `farm/api/orchid/mutation`의 typed Writer를 통해 호출한다. Engine만 OrchidGroup을 생성·변경·저장하고 같은 트랜잭션에서 원장을 기록한다. Engine이 Orchid application이나 Work application에 재진입하지 않는다. Recorder는 Mutation 내부로 제한한다.
+- Mutation은 `farm/api/orchid/mutation`의 typed Writer를 통해 호출하며 외부 계약은 실제 소비되는 메서드로 제한한다. Engine이 계약을 직접 구현하고 호출자 트랜잭션에 `MANDATORY`로 참여한다. Engine만 OrchidGroup을 생성·변경·저장하고 같은 트랜잭션에서 원장을 기록한다. Engine이 Orchid application이나 Work application에 재진입하지 않는다. Recorder는 Mutation 내부로 제한한다.
 - Mutation/Entry는 Farm의 상태·revision 원장, Work Effect는 실행 효과, Audit는 실행자·업무 변경 사실이다. 각 사실과 연결 식별자를 유지하며 서로 합치거나 현재 Entity로 과거 snapshot을 재구성하지 않는다.
 - 디렉터리 이동으로 지문·schema version·canonical snapshot·replay·revision·write fence·잠금 순서·최상위 트랜잭션을 바꾸지 않는다. 예약과 실제 출고를 구분하고 원자적으로 반영해야 하는 재고·전표·작업 효과를 비동기 이벤트로 분리하지 않는다. 외부 연동이나 메시징은 실제 요구가 있을 때만 도입한다.
 
@@ -350,11 +350,11 @@ Farm의 즉시 작업 이력 생성과 작업 단건 조회는 Work 공개 API�
 
 Farm의 취소·보정 사용 여부 확장 계약은 `farm/spi/orchid`, 차단 결과 값은 `farm/api/orchid`에 둔다. Sales가 기존 구현으로 이 SPI를 직접 구현하며, 입고·판매·작업 검사 순서와 제외 대상 의미를 유지한다.
 
-외부 Mutation 쓰기는 `farm/api/orchid/mutation/OrchidGroupMutationWriter`의 실제 소비 메서드만 사용한다. 기존 Engine이 이를 직접 구현하고 호출자 트랜잭션을 `MANDATORY`로 요구한다. 난 묶음 생성·상태 변경·Repository 쓰기는 Engine 하나로 제한한다.
+`farm/api/orchid`에는 조회·현재 상태·사용 여부 계약을 둔다. Mutation의 공개 Writer·명령·입력 항목·출처·실행 결과·Entry enum·과거 상태 snapshot은 `farm/api/orchid/mutation`에 둔다. sealed 부모와 명령은 같은 패키지에 두고 Mutation 내부는 평평하게 유지한다.
 
-`farm/api/orchid`의 조회·현재 상태·사용 여부 계약과 Mutation·대사 계약을 책임별로 구분한다. Mutation 출처·결과·Entry enum과 과거 상태 snapshot 값은 `farm/api/orchid/mutation`에 둔다. sealed Mutation 명령·명령 항목·출처 생성은 같은 공개 값 패키지에 두고 명령 전용 정규화 helper는 package-private으로 유지한다. Mutation 내부는 평평하게 유지하며 Command·DTO·Result 디렉터리를 추가하지 않는다. 필수값·중복/수량 검증과 정렬·문자/위치 정규화는 기존 명령이 한 곳에서 수행한다. Entity에서 결과·snapshot을 생성하는 factory는 Farm 내부에 유지하고, snapshot의 canonical 계산과 기존 저장 JSON·replay 의미를 보존한다.
+Mutation 계약은 실행 명령을 `Command`, 개별 입력 항목을 `Item`, 공유 입력 속성을 `Details`, 실행 결과를 `Result`, 실행 출처를 `Source`로 구분한다. 구조 변경 입력은 원본·결과 역할에 맞춰 `SourceItem`·`ResultItem`으로 짝을 이룬다. 역할별 접미사를 디렉터리 구분으로 확대하지 않는다.
 
-Mutation 계약은 실행 명령을 `Command`, 명령의 개별 입력을 `Item`, 공유 입력 속성을 `Details`, 실행 결과를 `Result`, 실행 출처를 `Source`로 구분한다. 구조 변경 원본·결과 입력은 기존 원장 용어와 맞춰 `SourceItem`·`ResultItem`으로 짝을 이룬다. 타입의 역할을 분명히 하되 저장된 필드·enum·handler 이름을 명명 정리에 함께 변경하지 않는다.
+명령 전용 정규화 helper는 package-private으로 유지한다. 필수값·중복/수량 검증과 정렬·문자/위치 정규화는 명령이 한 곳에서 수행한다. Entity에서 결과·snapshot을 생성하는 factory는 Farm 내부에 두고 snapshot의 canonical 계산과 저장 JSON·replay 의미를 보존한다. 명명 정리로 저장된 필드·enum·handler 이름을 변경하지 않는다.
 
 Farm 원장 대사의 모듈별 정합성 확장은 `farm/spi/orchid`의 기존 검사 SPI로 연결하고 대상·issue 값은 `farm/api/orchid/verification`으로 전달한다. Sales는 자신이 소유한 배분/예약 참조만 검사하며, Farm Entity·원장 저장소에 접근하지 않는다.
 
