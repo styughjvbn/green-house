@@ -829,3 +829,28 @@ P6 완료 검증 결과:
 - 원장 schema·대사·복원 CLI의 `workE2eTest` 집중 회귀 4개와 `workBenchmark -PworkBenchmarkEnforce=true` 2개 통과. 실패/오류/skip 0, queryLimitsEnforced=true. 이번 보완은 테스트 설정·테스트 코드·문서 변경이며 업무 코드·SQL·Flyway·트랜잭션·잠금은 바꾸지 않았다. 전체 PostgreSQL E2E 818개는 앞선 P6 성공 체크포인트를 사용하며 이번에는 전체 재실행하지 않았다.
 - 프론트 `npm run check` 통과. OpenAPI 재생성 성공(157 operations, 132 paths, 292 schemas), 생성 명세·TypeScript schema 차이 0. 기존 모듈·하위 기능 허용 방향과 Mutation 단일 Writer 검사가 포함된 전체 테스트 통과.
 - 기본 CI 재현성과 실제 백업 복원본 CLI 검증의 보류 항목을 모두 해소했다. 합의한 P0~P6 전환은 최종 완료이며 테스트된 업무 경로의 기능 회귀는 발견되지 않았다. 운영 서버 재배포는 이번 작업 범위가 아니다. 최종 검증 이후 변경은 완료 근거·현행 문서뿐이다.
+
+### 2026-10-09: 후속 — Orchid 공개 계약의 책임별 배치와 명명 검토
+
+- `farm/api/orchid` 루트에 조회·현재 상태·사용 여부 계약 3개를 유지하고 Mutation 계약 37개를 `mutation`, 대사 대상·issue 값 2개를 `verification`으로 옮겼다. 기능 간·최상위 모듈 간 허용 방향과 외부 Writer 6개 메서드는 그대로다.
+- Mutation 안에서는 명령·입력 항목·출처·실행 결과·snapshot을 함께 유지한다. sealed 부모와 명령 17개는 같은 패키지에 두고 정규화 helper 2개는 package-private을 유지한다. 추가 Command/DTO/Result 하위 폴더·Interface·Port·Adapter를 만들지 않는다.
+- 호출처와 대사 SPI의 import, 검토된 계약 inventory, v1 필드 fixture의 타입 식별자만 새 경로로 갱신한다. 클래스명·record 필드·enum 값·정규화·지문·저장 JSON·실행 본문·SQL·트랜잭션은 바꾸지 않는다. 현재 구조의 기준은 갱신한 `docs/04-architecture.md`다.
+
+이름 개선 후보는 다음과 같다. 이번 작업에서는 후보를 선정하고 이름은 유지한다.
+
+| 우선순위 | 현재 이름 | 후보 이름 | 실제 역할과 검토 이유 |
+|---|---|---|---|
+| 우선 | `TransformOrchidGroupMutationResult` | `TransformOrchidGroupMutationTarget` | 구조 변경 후 생성할 난 묶음의 구역·속성을 지정하는 명령 입력이다. 실제 실행 결과인 `OrchidGroupMutationResult`와 구분한다. |
+| 우선 | `TransformOrchidGroupMutationSource` | `TransformOrchidGroupMutationSourceItem` | 구조 변경 원본 난 묶음·투입 수량·해제 위치의 입력 항목이다. 실행 출처 metadata인 `OrchidGroupMutationSource`와 구분한다. |
+| 검토 | `OrchidGroupLedgerReconciliationGroup` | `OrchidGroupLedgerReconciliationTarget` | 대사에 전달하는 ID·revision·snapshot·위치 한계의 대상 값이다. Entity와 구분되는 역할을 이름에 드러낸다. |
+| 검토 | `OrchidGroupUsage` | `OrchidGroupUsageBlocker` | 사용 여부 검사에서 취소·보정을 막는 참조의 코드·설명·건수를 반환한다. 일반 사용 통계와 구분한다. |
+| 검토 | `ReconcileOrchidGroupMutationCommand` | `SyncOrchidGroupStateMutationCommand` | 현장에서 확인한 수량·상태·위치를 적용하는 쓰기 명령이다. 읽기 전용 원장 대사와 구분한다. Work의 기존 RECONCILIATION 용어와 함께 검토하되 업무 기능을 변경하거나 확장하지 않는다. |
+
+명명 변경을 후속 적용할 때도 명령의 `sources`/`results` 등 record 필드, 저장 enum·효과 handler 이름·v1 지문·과거 snapshot을 함께 개명하지 않는다. 명령·결과·Source·Item이라는 역할이 이미 명확한 다른 타입의 일괄 개명은 하지 않는다.
+
+검증 결과:
+
+- clean 컴파일과 공개 값·모듈 경계·정확한 inventory·단일 Writer·지문·저장 형식 집중 검증 통과. 이어서 저장소 기본 `check bootJar --no-daemon` 통과, 전체 테스트 779개·실패/오류/skip 0. 프론트 `npm run check` 통과.
+- 이동 전 원본과 대조해 Orchid 계약 42개와 변경된 프로덕션 호출 코드 43개의 실행 본문이 package/import 외 동일함을 확인했다. v1 필드 fixture의 26개 필드 목록은 동일하고 reviewed inventory도 이동표의 FQCN만 바뀌었다. 이전 계약 경로의 source/fixture 참조·class artifact 0.
+- OpenAPI 재생성 성공(157 operations, 132 paths, 292 schemas), 생성 명세·TypeScript schema·DB/Flyway resource 차이 0. 수정 문서 상대 링크·diff 검사 통과.
+- 패키지·import·fixture 타입 식별자만 바뀌어 `workE2eTest`와 벤치마크는 재실행하지 않았다. 업무 정책·트랜잭션·잠금·SQL·저장 계약 변경 없음. 최종 검증 이후 변경은 이 완료 기록뿐이다.
