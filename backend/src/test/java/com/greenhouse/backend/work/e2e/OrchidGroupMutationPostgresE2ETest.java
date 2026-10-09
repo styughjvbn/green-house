@@ -18,8 +18,8 @@ import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupQuantityMutati
 import com.greenhouse.backend.farm.api.orchid.mutation.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.api.orchid.mutation.ReserveOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResult;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResultItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSourceItem;
 import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationFingerprint;
@@ -763,10 +763,10 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
                             "EXECUTION:round-1",
                             UUID.randomUUID()),
                         List.of(
-                            new TransformOrchidGroupMutationSource(
+                            new TransformOrchidGroupMutationSourceItem(
                                 scenario.orchidGroupId(), 10, null, null)),
                         List.of(
-                            new TransformOrchidGroupMutationResult(
+                            new TransformOrchidGroupMutationResultItem(
                                 scenario.bedZoneId(),
                                 new OrchidGroupMutationDetails(
                                     varietyId,
@@ -923,10 +923,10 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
                                       "EXECUTION:round-1",
                                       UUID.randomUUID()),
                                   List.of(
-                                      new TransformOrchidGroupMutationSource(
+                                      new TransformOrchidGroupMutationSourceItem(
                                           scenario.orchidGroupId(), 60, null, null)),
                                   List.of(
-                                      new TransformOrchidGroupMutationResult(
+                                      new TransformOrchidGroupMutationResultItem(
                                           scenario.bedZoneId(),
                                           new OrchidGroupMutationDetails(
                                               varietyId,

@@ -23,8 +23,8 @@ import com.greenhouse.backend.farm.api.orchid.mutation.ReleaseOrchidGroupReserva
 import com.greenhouse.backend.farm.api.orchid.mutation.ReserveOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.mutation.StockCountOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResult;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResultItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSourceItem;
 import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import java.math.BigDecimal;
@@ -362,7 +362,7 @@ public class OrchidGroupMutationCommandFingerprint {
       return new PlacedDetailsV1(value.bedZoneId(), DetailsV1.from(value.details()));
     }
 
-    static PlacedDetailsV1 from(TransformOrchidGroupMutationResult value) {
+    static PlacedDetailsV1 from(TransformOrchidGroupMutationResultItem value) {
       return new PlacedDetailsV1(value.bedZoneId(), DetailsV1.from(value.details()));
     }
   }
@@ -372,7 +372,7 @@ public class OrchidGroupMutationCommandFingerprint {
       Integer transformedQuantity,
       BigDecimal releasedStartPosition,
       BigDecimal releasedEndPosition) {
-    static TransformSourceV1 from(TransformOrchidGroupMutationSource value) {
+    static TransformSourceV1 from(TransformOrchidGroupMutationSourceItem value) {
       return new TransformSourceV1(
           value.orchidGroupId(),
           value.transformedQuantity(),

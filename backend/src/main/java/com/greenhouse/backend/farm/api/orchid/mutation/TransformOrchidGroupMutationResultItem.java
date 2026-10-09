@@ -1,9 +1,9 @@
 package com.greenhouse.backend.farm.api.orchid.mutation;
 
-public record TransformOrchidGroupMutationResult(
+public record TransformOrchidGroupMutationResultItem(
     Long bedZoneId, OrchidGroupMutationDetails details) {
 
-  public TransformOrchidGroupMutationResult {
+  public TransformOrchidGroupMutationResultItem {
     if (bedZoneId == null || details == null) {
       throw new IllegalArgumentException("구조 변경 결과의 논리 구역과 상세 상태가 필요합니다.");
     }

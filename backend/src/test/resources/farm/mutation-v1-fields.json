@@ -143,11 +143,11 @@
     "reason",
     "source"
   ],
-  "com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResult": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResultItem": [
     "bedZoneId",
     "details"
   ],
-  "com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSource": [
+  "com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSourceItem": [
     "orchidGroupId",
     "releasedEndPosition",
     "releasedStartPosition",

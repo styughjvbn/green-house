@@ -354,6 +354,8 @@ Farm의 취소·보정 사용 여부 확장 계약은 `farm/spi/orchid`, 차단 
 
 `farm/api/orchid`의 조회·현재 상태·사용 여부 계약과 Mutation·대사 계약을 책임별로 구분한다. Mutation 출처·결과·Entry enum과 과거 상태 snapshot 값은 `farm/api/orchid/mutation`에 둔다. sealed Mutation 명령·명령 항목·출처 생성은 같은 공개 값 패키지에 두고 명령 전용 정규화 helper는 package-private으로 유지한다. Mutation 내부는 평평하게 유지하며 Command·DTO·Result 디렉터리를 추가하지 않는다. 필수값·중복/수량 검증과 정렬·문자/위치 정규화는 기존 명령이 한 곳에서 수행한다. Entity에서 결과·snapshot을 생성하는 factory는 Farm 내부에 유지하고, snapshot의 canonical 계산과 기존 저장 JSON·replay 의미를 보존한다.
 
+Mutation 계약은 실행 명령을 `Command`, 명령의 개별 입력을 `Item`, 공유 입력 속성을 `Details`, 실행 결과를 `Result`, 실행 출처를 `Source`로 구분한다. 구조 변경 원본·결과 입력은 기존 원장 용어와 맞춰 `SourceItem`·`ResultItem`으로 짝을 이룬다. 타입의 역할을 분명히 하되 저장된 필드·enum·handler 이름을 명명 정리에 함께 변경하지 않는다.
+
 Farm 원장 대사의 모듈별 정합성 확장은 `farm/spi/orchid`의 기존 검사 SPI로 연결하고 대상·issue 값은 `farm/api/orchid/verification`으로 전달한다. Sales는 자신이 소유한 배분/예약 참조만 검사하며, Farm Entity·원장 저장소에 접근하지 않는다.
 
 Farm 원장 대사는 Work 공개 조회 API와 결과 값을 직접 사용한다. 진행 상태·효과 연결·보정 참조의 저장소 조회와 JSON 해석은 Work 내부 구현이 담당하며, Farm 대사의 기존 readOnly·REPEATABLE_READ 트랜잭션에 참여한다. 모듈 간 대사는 상태를 자동 보정하지 않는다.

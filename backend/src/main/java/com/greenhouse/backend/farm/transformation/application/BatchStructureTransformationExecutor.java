@@ -6,8 +6,8 @@ import com.greenhouse.backend.farm.api.orchid.mutation.MoveOrchidGroupsMutationC
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSources;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResult;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResultItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSourceItem;
 import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
@@ -288,21 +288,23 @@ public class BatchStructureTransformationExecutor {
       Map<Long, Integer> transformedBySourceId,
       List<ResultPlan> plannedResults,
       Set<Long> placementExclusionOrchidGroupIds) {
-    List<TransformOrchidGroupMutationSource> mutationSources =
+    List<TransformOrchidGroupMutationSourceItem> mutationSources =
         request.sources().stream()
             .sorted(Comparator.comparing(StructureChangeSourceInput::sourceOrchidGroupId))
             .filter(source -> transformedBySourceId.get(source.sourceOrchidGroupId()) > 0)
             .map(
                 source ->
-                    new TransformOrchidGroupMutationSource(
+                    new TransformOrchidGroupMutationSourceItem(
                         source.sourceOrchidGroupId(),
                         transformedBySourceId.get(source.sourceOrchidGroupId()),
                         source.releasedStartPosition(),
                         source.releasedEndPosition()))
             .toList();
-    List<TransformOrchidGroupMutationResult> mutationResults =
+    List<TransformOrchidGroupMutationResultItem> mutationResults =
         plannedResults.stream()
-            .map(plan -> new TransformOrchidGroupMutationResult(plan.bedZoneId(), plan.details()))
+            .map(
+                plan ->
+                    new TransformOrchidGroupMutationResultItem(plan.bedZoneId(), plan.details()))
             .toList();
     return new TransformOrchidGroupsMutationCommand(
         OrchidGroupMutationSources.work(operationId, "EXECUTION:" + request.idempotencyKey()),

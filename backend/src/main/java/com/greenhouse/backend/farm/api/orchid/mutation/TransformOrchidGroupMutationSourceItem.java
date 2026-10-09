@@ -4,13 +4,13 @@ import static com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutatio
 
 import java.math.BigDecimal;
 
-public record TransformOrchidGroupMutationSource(
+public record TransformOrchidGroupMutationSourceItem(
     Long orchidGroupId,
     Integer transformedQuantity,
     BigDecimal releasedStartPosition,
     BigDecimal releasedEndPosition) {
 
-  public TransformOrchidGroupMutationSource {
+  public TransformOrchidGroupMutationSourceItem {
     if (orchidGroupId == null) {
       throw new IllegalArgumentException("구조 변경 원본 난 묶음이 필요합니다.");
     }

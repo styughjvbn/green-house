@@ -28,8 +28,8 @@ import com.greenhouse.backend.farm.api.orchid.mutation.ReleaseOrchidGroupReserva
 import com.greenhouse.backend.farm.api.orchid.mutation.ReserveOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.mutation.StockCountOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResult;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResultItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSourceItem;
 import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import java.math.BigDecimal;
@@ -119,9 +119,9 @@ class MutationFingerprintCompatibilityTest {
         new TransformOrchidGroupsMutationCommand(
             source,
             List.of(
-                new TransformOrchidGroupMutationSource(
+                new TransformOrchidGroupMutationSourceItem(
                     5L, 2, new BigDecimal("1"), new BigDecimal("2"))),
-            List.of(new TransformOrchidGroupMutationResult(2L, details)),
+            List.of(new TransformOrchidGroupMutationResultItem(2L, details)),
             date,
             "reason",
             Set.of(9L, 8L));
@@ -211,8 +211,8 @@ class MutationFingerprintCompatibilityTest {
             new CreateInboundOrchidGroupsMutationCommand(source, 4L, groups, date, " reason "),
             new TransformOrchidGroupsMutationCommand(
                 source,
-                List.of(new TransformOrchidGroupMutationSource(5L, 10, null, null)),
-                List.of(new TransformOrchidGroupMutationResult(2L, details)),
+                List.of(new TransformOrchidGroupMutationSourceItem(5L, 10, null, null)),
+                List.of(new TransformOrchidGroupMutationResultItem(2L, details)),
                 date,
                 " reason ",
                 Set.of(8L, 9L)),

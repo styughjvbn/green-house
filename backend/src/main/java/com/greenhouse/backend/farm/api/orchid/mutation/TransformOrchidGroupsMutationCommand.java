@@ -9,8 +9,8 @@ import java.util.Set;
 
 public record TransformOrchidGroupsMutationCommand(
     OrchidGroupMutationSource source,
-    List<TransformOrchidGroupMutationSource> sources,
-    List<TransformOrchidGroupMutationResult> results,
+    List<TransformOrchidGroupMutationSourceItem> sources,
+    List<TransformOrchidGroupMutationResultItem> results,
     LocalDate effectiveBusinessDate,
     String reason,
     Set<Long> placementExclusionOrchidGroupIds)
@@ -18,8 +18,8 @@ public record TransformOrchidGroupsMutationCommand(
 
   public TransformOrchidGroupsMutationCommand(
       OrchidGroupMutationSource source,
-      List<TransformOrchidGroupMutationSource> sources,
-      List<TransformOrchidGroupMutationResult> results,
+      List<TransformOrchidGroupMutationSourceItem> sources,
+      List<TransformOrchidGroupMutationResultItem> results,
       LocalDate effectiveBusinessDate,
       String reason) {
     this(source, sources, results, effectiveBusinessDate, reason, Set.of());
@@ -36,13 +36,16 @@ public record TransformOrchidGroupsMutationCommand(
       throw new IllegalArgumentException("구조 변경 결과가 필요합니다.");
     }
     long distinctSourceCount =
-        sources.stream().map(TransformOrchidGroupMutationSource::orchidGroupId).distinct().count();
+        sources.stream()
+            .map(TransformOrchidGroupMutationSourceItem::orchidGroupId)
+            .distinct()
+            .count();
     if (distinctSourceCount != sources.size()) {
       throw new IllegalArgumentException("구조 변경 원본 난 묶음은 중복될 수 없습니다.");
     }
     sources =
         sources.stream()
-            .sorted(Comparator.comparing(TransformOrchidGroupMutationSource::orchidGroupId))
+            .sorted(Comparator.comparing(TransformOrchidGroupMutationSourceItem::orchidGroupId))
             .toList();
     results = List.copyOf(results);
     reason = normalizeText(reason);

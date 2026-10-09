@@ -14,8 +14,8 @@ import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationEntryR
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResult;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResultItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSourceItem;
 import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
@@ -331,13 +331,13 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
         new TransformOrchidGroupsMutationCommand(
             mutationSource,
             List.of(
-                new TransformOrchidGroupMutationSource(secondSource.getId(), 7, null, null),
-                new TransformOrchidGroupMutationSource(firstSource.getId(), 5, null, null)),
+                new TransformOrchidGroupMutationSourceItem(secondSource.getId(), 7, null, null),
+                new TransformOrchidGroupMutationSourceItem(firstSource.getId(), 5, null, null)),
             List.of(
-                new TransformOrchidGroupMutationResult(
+                new TransformOrchidGroupMutationResultItem(
                     fixture.destinationZone().getId(),
                     details(fixture.variety().getId(), 6, "4치", "0", "2")),
-                new TransformOrchidGroupMutationResult(
+                new TransformOrchidGroupMutationResultItem(
                     fixture.destinationZone().getId(),
                     details(fixture.variety().getId(), 6, "4치", "2", "4"))),
             businessDate,
@@ -351,8 +351,9 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
             new TransformOrchidGroupsMutationCommand(
                 mutationSource,
                 List.of(
-                    new TransformOrchidGroupMutationSource(firstSource.getId(), 5, null, null),
-                    new TransformOrchidGroupMutationSource(secondSource.getId(), 7, null, null)),
+                    new TransformOrchidGroupMutationSourceItem(firstSource.getId(), 5, null, null),
+                    new TransformOrchidGroupMutationSourceItem(
+                        secondSource.getId(), 7, null, null)),
                 command.results(),
                 businessDate,
                 " N:M 분갈이 "));

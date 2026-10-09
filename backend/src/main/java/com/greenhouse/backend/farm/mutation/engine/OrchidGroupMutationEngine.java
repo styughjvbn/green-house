@@ -30,8 +30,8 @@ import com.greenhouse.backend.farm.api.orchid.mutation.ReleaseOrchidGroupReserva
 import com.greenhouse.backend.farm.api.orchid.mutation.ReserveOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.mutation.StockCountOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResult;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResultItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSourceItem;
 import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.api.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.inbound.domain.InboundRecord;
@@ -186,7 +186,9 @@ public class OrchidGroupMutationEngine implements OrchidGroupMutationWriter {
     }
 
     List<Long> sourceIds =
-        command.sources().stream().map(TransformOrchidGroupMutationSource::orchidGroupId).toList();
+        command.sources().stream()
+            .map(TransformOrchidGroupMutationSourceItem::orchidGroupId)
+            .toList();
     Map<Long, OrchidGroup> sourceById =
         findGroupsForUpdate(sourceIds, "구조 변경 원본 난 묶음을 모두 찾을 수 없습니다.");
     replay = replayResolver.findExisting(command.source(), fingerprint);
@@ -210,7 +212,7 @@ public class OrchidGroupMutationEngine implements OrchidGroupMutationWriter {
     Map<Long, BedZone> zones =
         findZonesForUpdate(
             command.results().stream()
-                .map(TransformOrchidGroupMutationResult::bedZoneId)
+                .map(TransformOrchidGroupMutationResultItem::bedZoneId)
                 .collect(Collectors.toSet()));
     Map<Long, Variety> varieties =
         findVarieties(
@@ -226,7 +228,7 @@ public class OrchidGroupMutationEngine implements OrchidGroupMutationWriter {
             command.effectiveBusinessDate(),
             command.reason());
     List<OrchidGroupMutationRecorder.Change> sourceChanges = new ArrayList<>();
-    for (TransformOrchidGroupMutationSource sourceCommand : command.sources()) {
+    for (TransformOrchidGroupMutationSourceItem sourceCommand : command.sources()) {
       OrchidGroup sourceGroup = sourceById.get(sourceCommand.orchidGroupId());
       long revisionBefore = sourceGroup.getStateRevision();
       OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshotFactory.from(sourceGroup);
@@ -245,7 +247,7 @@ public class OrchidGroupMutationEngine implements OrchidGroupMutationWriter {
         orchidPlacementPolicy.prepareBatch(
             zones.values(), command.placementExclusionOrchidGroupIds());
     List<OrchidGroup> resultGroups = new ArrayList<>();
-    for (TransformOrchidGroupMutationResult resultCommand : command.results()) {
+    for (TransformOrchidGroupMutationResultItem resultCommand : command.results()) {
       BedZone zone = zones.get(resultCommand.bedZoneId());
       Variety variety = varieties.get(resultCommand.details().varietyId());
       requireActive(variety);

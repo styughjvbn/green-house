@@ -14,8 +14,8 @@ import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetail
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupQuantityMutationItem;
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.api.orchid.mutation.RelatedOrchidGroupMutations;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResult;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResultItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSourceItem;
 import java.lang.reflect.RecordComponent;
 import java.util.Arrays;
 import java.util.List;
@@ -39,8 +39,8 @@ class MutationPersistedSchemaCompatibilityTest {
         List.of(
             OrchidGroupMutationDetails.class,
             CreateOrchidGroupMutationItem.class,
-            TransformOrchidGroupMutationSource.class,
-            TransformOrchidGroupMutationResult.class,
+            TransformOrchidGroupMutationSourceItem.class,
+            TransformOrchidGroupMutationResultItem.class,
             MoveOrchidGroupMutationItem.class,
             OrchidGroupQuantityMutationItem.class,
             CorrectOrchidGroupMutationItem.class,

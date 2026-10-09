@@ -10,8 +10,8 @@ import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetail
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.api.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResult;
-import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResultItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSourceItem;
 import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerReconciliationService;
@@ -521,14 +521,14 @@ class SalesAllocationLockOrderPostgresE2ETest extends WorkE2ETestBase {
                 "TRANSFORM",
                 key),
             List.of(
-                new TransformOrchidGroupMutationSource(
+                new TransformOrchidGroupMutationSourceItem(
                     lowId, 20, BigDecimal.valueOf(4), BigDecimal.valueOf(5)),
-                new TransformOrchidGroupMutationSource(
+                new TransformOrchidGroupMutationSourceItem(
                     highId, 20, BigDecimal.valueOf(9), BigDecimal.TEN)),
             List.of(
-                new TransformOrchidGroupMutationResult(
+                new TransformOrchidGroupMutationResultItem(
                     example.getBedZone().getId(), resultDetails(example, 4, 5)),
-                new TransformOrchidGroupMutationResult(
+                new TransformOrchidGroupMutationResultItem(
                     example.getBedZone().getId(), resultDetails(example, 9, 10))),
             DATE,
             "잠금 순서 구조 변경"));
