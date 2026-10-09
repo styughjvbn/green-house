@@ -3,6 +3,7 @@ package com.greenhouse.backend.sales.document.repository;
 import static com.greenhouse.backend.sales.document.domain.QSalesSlip.salesSlip;
 
 import com.greenhouse.backend.common.persistence.LongIdMembership;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.document.domain.SalesSlip;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
@@ -27,7 +28,7 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
         queryFactory
             .select(salesSlip.id)
             .from(salesSlip)
-            .where(conditions(partnerId, from, to, null, null, null, List.of()))
+            .where(conditions(partnerId, from, to, null, null, null, List.of(), null))
             .orderBy(defaultOrder())
             .limit(limit)
             .fetch();
@@ -52,9 +53,18 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
       String salesStatus,
       String keyword,
       List<Long> matchingPartnerIds,
-      Pageable pageable) {
+      Pageable pageable,
+      SalesType salesType) {
     BooleanBuilder conditions =
-        conditions(partnerId, from, to, paymentStatus, salesStatus, keyword, matchingPartnerIds);
+        conditions(
+            partnerId,
+            from,
+            to,
+            paymentStatus,
+            salesStatus,
+            keyword,
+            matchingPartnerIds,
+            salesType);
     List<SalesSlip> content =
         baseQuery()
             .where(conditions)
@@ -79,9 +89,16 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
       String paymentStatus,
       String salesStatus,
       String keyword,
-      List<Long> matchingPartnerIds) {
+      List<Long> matchingPartnerIds,
+      SalesType salesType) {
     return new BooleanBuilder()
         .and(partnerIdEq(partnerId))
+        .and(
+            salesType == null
+                ? null
+                : salesType == SalesType.DIRECT
+                    ? salesSlip.salesType.eq(SalesType.DIRECT).or(salesSlip.salesType.isNull())
+                    : salesSlip.salesType.eq(salesType))
         .and(saleDateGoe(from))
         .and(saleDateLoe(to))
         .and(paymentStatusEq(paymentStatus))
@@ -106,7 +123,11 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
   }
 
   private BooleanExpression salesStatusEq(String salesStatus) {
-    return isBlank(salesStatus) ? null : salesSlip.salesStatus.eq(salesStatus);
+    if (isBlank(salesStatus)) return null;
+    if ("완료".equals(salesStatus))
+      return salesSlip.salesStatus.in(
+          SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED, SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED);
+    return salesSlip.salesStatus.eq(salesStatus);
   }
 
   private BooleanBuilder keywordContains(String keyword, List<Long> matchingPartnerIds) {

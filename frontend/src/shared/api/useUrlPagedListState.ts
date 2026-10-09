@@ -73,5 +73,6 @@ export function useUrlPagedListState<Filters>({
     reset,
     search,
     updateFilter,
+    replaceFilters: (filters: Filters) => setDraft({ routeKey, filters }),
   };
 }

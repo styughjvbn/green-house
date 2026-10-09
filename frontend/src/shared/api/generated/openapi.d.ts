@@ -8069,7 +8069,9 @@ export interface operations {
                 from?: string;
                 to?: string;
                 paymentStatus?: string;
+                /** @description 완료는 출고 완료·출하 완료를 포함하며 판매 유형 조건과 함께 적용합니다. 기존 개별 상태 검색도 지원합니다. */
                 salesStatus?: string;
+                salesType?: "DIRECT" | "AUCTION";
                 keyword?: string;
                 page?: number;
                 size?: number;

@@ -27,6 +27,7 @@ test("sales route state reads filters, paging, and create request", () => {
       from: "2026-07-01",
       to: "",
       partnerId: "3",
+      salesType: "",
       paymentStatus: "미입금",
       salesStatus: "",
       keyword: "거래처",
@@ -196,4 +197,29 @@ test("v2 proceeds paging is independent from lot filters and paging", () => {
     size: 20,
     selectedProceedsId: 12,
   });
+});
+
+test("sales type and grouped dispatch filters survive URLs while legacy completion URLs keep their type", () => {
+  for (const salesType of ["", "DIRECT", "AUCTION"]) {
+    const state = readSalesRouteState(
+      new URLSearchParams({ salesType, salesStatus: "완료" }),
+    );
+    assert.equal(state.filters.salesType, salesType);
+    assert.equal(state.filters.salesStatus, "완료");
+  }
+  for (const [status, type] of [
+    ["출고 완료", "DIRECT"],
+    ["출하 완료", "AUCTION"],
+  ]) {
+    const filters = readSalesRouteState(
+      new URLSearchParams({ salesStatus: status }),
+    ).filters;
+    assert.equal(filters.salesType, type);
+    assert.equal(filters.salesStatus, "완료");
+  }
+  assert.equal(
+    readSalesRouteState(new URLSearchParams("salesType=INVALID")).filters
+      .salesType,
+    "",
+  );
 });

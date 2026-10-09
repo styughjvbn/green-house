@@ -31,6 +31,7 @@ export function SalesSlipsPage({
         <SalesFilters
           filters={sales.filters}
           onChange={sales.updateFilters}
+          onSalesTypeChange={sales.setSalesTypeFilter}
           onReset={sales.resetFilters}
           onSearch={sales.searchSalesSlips}
         />

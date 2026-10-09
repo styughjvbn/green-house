@@ -47,6 +47,7 @@ import type {
   SalesAllocationForm,
   SalesItemForm,
   SalesSlipForm,
+  SalesFilterState,
 } from "./types";
 
 export function useSalesSlips({
@@ -424,6 +425,12 @@ export function useSalesSlips({
     loadingSalesSlipDetail: salesSlipDetailQuery.isFetching,
     loadingSalesSlipPage: salesSlipQuery.isFetching,
     filters: listState.filters,
+    setSalesTypeFilter: (salesType: SalesFilterState["salesType"]) =>
+      listState.replaceFilters({
+        ...listState.filters,
+        salesType,
+        partnerId: "",
+      }),
     salesForm,
     showCreateSlip,
     editingSlipId,

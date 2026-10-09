@@ -1,7 +1,5 @@
 ﻿"use client";
 
-import { salesDispatchLabel } from "../../lib/salesDisplay";
-
 import { BusinessPartnerSelect } from "../common/BusinessPartnerSelect";
 import type { SalesFilterState } from "../../model/types";
 import {
@@ -19,18 +17,20 @@ export function SalesFilters({
   onChange,
   onReset,
   onSearch,
+  onSalesTypeChange,
 }: {
   filters: SalesFilterState;
   onChange: <K extends keyof SalesFilterState>(
     field: K,
     value: SalesFilterState[K],
   ) => void;
+  onSalesTypeChange: (value: SalesFilterState["salesType"]) => void;
   onReset: () => void;
   onSearch: () => void;
 }) {
   return (
     <FilterPanel>
-      <FilterGrid className="lg:grid-cols-[2fr_1.3fr_1.1fr_1.1fr_1.7fr_auto_auto]">
+      <FilterGrid className="lg:grid-cols-[2.3fr_1fr_1.5fr_0.7fr_0.7fr_1.5fr_auto_auto]">
         <FilterDateRange
           from={filters.from}
           to={filters.to}
@@ -38,7 +38,25 @@ export function SalesFilters({
           onToChange={(value) => onChange("to", value)}
         />
 
+        <FilterSelect
+          label="판매 유형"
+          value={filters.salesType}
+          onChange={(value) =>
+            onSalesTypeChange(value as SalesFilterState["salesType"])
+          }
+        >
+          <option value="">전체</option>
+          <option value="DIRECT">일반 판매</option>
+          <option value="AUCTION">경매</option>
+        </FilterSelect>
+
         <BusinessPartnerSelect
+          key={filters.salesType}
+          auctionHouse={
+            filters.salesType === ""
+              ? undefined
+              : filters.salesType === "AUCTION"
+          }
           label="거래처"
           value={filters.partnerId}
           onChange={(value) => onChange("partnerId", value)}
@@ -50,9 +68,8 @@ export function SalesFilters({
           onChange={(value) => onChange("salesStatus", value)}
         >
           <option value="">전체</option>
-          <option value="작성중">{salesDispatchLabel("작성중")}</option>
-          <option value="출하 완료">출하 완료</option>
-          <option value="출고 완료">출고 완료</option>
+          <option value="작성중">대기</option>
+          <option value="완료">완료</option>
           <option value="취소">취소</option>
         </FilterSelect>
 
@@ -63,7 +80,7 @@ export function SalesFilters({
         >
           <option value="">전체</option>
           <option value="미입금">미입금</option>
-          <option value="입금 완료">입금 완료</option>
+          <option value="입금 완료">완료</option>
         </FilterSelect>
 
         <FilterInput

@@ -281,8 +281,31 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/api/auction-proceeds/page")
     return send(pageOf([proceeds]));
   if (url.pathname === "/api/auction-proceeds/12") return send(proceeds);
-  if (url.pathname === "/api/business-partners/options")
-    return send(pageOf([partner]));
+  if (url.pathname === "/api/business-partners/options") {
+    const auctionPartner = {
+      id: 8,
+      name: "경매 선택지",
+      partnerType: "AUCTION_HOUSE",
+      active: true,
+    };
+    const type = url.searchParams.get("auctionHouse");
+    return send(
+      pageOf(
+        type === "true"
+          ? [auctionPartner]
+          : type === "false"
+            ? [partner]
+            : [partner, auctionPartner],
+      ),
+    );
+  }
+  if (url.pathname === "/api/business-partners/8/option")
+    return send({
+      id: 8,
+      name: "경매 선택지",
+      partnerType: "AUCTION_HOUSE",
+      active: true,
+    });
   if (url.pathname === "/api/business-partners/7/option") return send(partner);
   if (url.pathname === "/api/business-partners/7/balance-summary")
     return send({

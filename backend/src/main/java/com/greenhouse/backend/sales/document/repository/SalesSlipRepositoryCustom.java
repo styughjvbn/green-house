@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.document.repository;
 
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.document.domain.SalesSlip;
 import java.time.LocalDate;
 import java.util.List;
@@ -18,5 +19,6 @@ public interface SalesSlipRepositoryCustom {
       String salesStatus,
       String keyword,
       List<Long> matchingPartnerIds,
-      Pageable pageable);
+      Pageable pageable,
+      SalesType salesType);
 }

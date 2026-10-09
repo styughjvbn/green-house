@@ -64,13 +64,26 @@ export function createServerSearchParamReader(
 export function readSalesRouteState(
   params: SearchParamReader,
 ): SalesSlipsRouteState {
+  const rawStatus = params.get("salesStatus");
+  const legacyType =
+    rawStatus === "출고 완료"
+      ? "DIRECT"
+      : rawStatus === "출하 완료"
+        ? "AUCTION"
+        : "";
+  const salesType =
+    readEnumValue(params.get("salesType"), ["DIRECT", "AUCTION"]) ||
+    (params.get("salesType") == null ? legacyType : "");
   return {
     filters: {
       from: params.get("from") ?? "",
       to: params.get("to") ?? "",
       partnerId: params.get("partnerId") ?? "",
       paymentStatus: params.get("paymentStatus") ?? "",
-      salesStatus: params.get("salesStatus") ?? "",
+      salesStatus: legacyType
+        ? "완료"
+        : readEnumValue(rawStatus, ["작성중", "완료", "취소"]),
+      salesType,
       keyword: params.get("keyword") ?? "",
     },
     page: readBoundedIntegerValue(

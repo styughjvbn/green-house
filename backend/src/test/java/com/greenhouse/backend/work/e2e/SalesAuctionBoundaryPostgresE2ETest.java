@@ -25,7 +25,10 @@ import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.support.DirectSaleFixtures;
 import jakarta.persistence.EntityManagerFactory;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.hibernate.SessionFactory;
@@ -178,6 +181,84 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
     var lastPage = sales.getSalesSlipPage(null, DATE, DATE, null, null, "Batch Contact", 5, 100);
     assertThat(lastPage.totalElements()).isEqualTo(501);
     assertThat(lastPage.content()).hasSize(1);
+  }
+
+  @Test
+  void salesTypeAndGroupedCompletionFilterBeforePaginationAndKeepLegacyStatusQueries()
+      throws Exception {
+    var date = LocalDate.of(2046, 6, 7);
+    transactions.executeWithoutResult(
+        tx -> {
+          for (var type : SalesType.values()) {
+            var partner =
+                partners.save(
+                    new BusinessPartner(
+                        "필터 " + type,
+                        type == SalesType.AUCTION ? PartnerType.AUCTION_HOUSE : PartnerType.RETAIL,
+                        null,
+                        null,
+                        null,
+                        null));
+            for (int index = 0; index < 3; index++) {
+              var status =
+                  index == 1
+                      ? (type == SalesType.AUCTION
+                          ? SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED
+                          : SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED)
+                      : SalesSlip.STATUS_DRAFT;
+              var slip =
+                  new SalesSlip(
+                      "FILTER-" + type + "-" + index,
+                      date,
+                      type,
+                      null,
+                      partner.getId(),
+                      "미입금",
+                      status,
+                      null,
+                      null);
+              if (index == 2) slip.updateSalesStatus(SalesSlip.STATUS_CANCELED);
+              slips.save(slip);
+            }
+          }
+        });
+    DirectSaleFixtures.copyAllTerms(jdbc);
+    var base = "/api/sales-slips/page?from=" + date + "&to=" + date;
+    var completed = URLEncoder.encode("완료", StandardCharsets.UTF_8);
+    var all = get(base + "&salesStatus=" + completed + "&size=1");
+    assertThat(all.status()).isEqualTo(200);
+    assertThat(all.data().path("totalElements").asInt()).isEqualTo(2);
+    assertThat(all.data().path("content")).hasSize(1);
+    for (var type : SalesType.values()) {
+      var response = get(base + "&salesType=" + type + "&salesStatus=" + completed);
+      assertThat(response.status()).isEqualTo(200);
+      assertThat(response.data().path("totalElements").asInt()).isEqualTo(1);
+      assertThat(response.data().path("content").get(0).path("salesType").asText())
+          .isEqualTo(type.name());
+      assertThat(get(base + "&salesType=" + type).data().path("totalElements").asInt())
+          .isEqualTo(3);
+    }
+    for (var status : List.of("작성중", "취소", "출고 완료", "출하 완료")) {
+      var response =
+          get(base + "&salesStatus=" + URLEncoder.encode(status, StandardCharsets.UTF_8));
+      assertThat(response.status()).isEqualTo(200);
+      assertThat(response.data().path("totalElements").asInt())
+          .isEqualTo(status.endsWith("완료") ? 1 : 2);
+    }
+    assertThat(get(base + "&salesType=INVALID").status()).isEqualTo(400);
+    for (boolean auction : List.of(true, false)) {
+      var options = get("/api/business-partners/options?auctionHouse=" + auction);
+      assertThat(options.status()).isEqualTo(200);
+      assertThat(options.data().path("content")).isNotEmpty();
+      var expectedIds =
+          partners.findAll().stream()
+              .filter(partner -> (partner.getPartnerType() == PartnerType.AUCTION_HOUSE) == auction)
+              .map(BusinessPartner::getId)
+              .toList();
+      var actualIds = new ArrayList<Long>();
+      options.data().path("content").forEach(option -> actualIds.add(option.path("id").asLong()));
+      assertThat(actualIds).containsExactlyInAnyOrderElementsOf(expectedIds);
+    }
   }
 
   @Test

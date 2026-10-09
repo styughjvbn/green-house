@@ -6,6 +6,7 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.api.document.SalesDocumentQueryApi;
 import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.api.document.SalesSlipSummary;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.api.partner.PartnerTextMatch;
 import com.greenhouse.backend.sales.document.domain.SalesSlip;
@@ -65,6 +66,20 @@ public class SalesQueryService implements SalesDocumentQueryApi {
       String keyword,
       int page,
       int size) {
+    return getSalesSlipPage(
+        partnerId, from, to, paymentStatus, salesStatus, keyword, page, size, null);
+  }
+
+  public PageResponse<SalesSlipSummary> getSalesSlipPage(
+      Long partnerId,
+      LocalDate from,
+      LocalDate to,
+      String paymentStatus,
+      String salesStatus,
+      String keyword,
+      int page,
+      int size,
+      SalesType salesType) {
     PageRequest pageable =
         PageRequests.clamped(
             page,
@@ -85,7 +100,8 @@ public class SalesQueryService implements SalesDocumentQueryApi {
                 ? List.of()
                 : partnerReader.findMatchingIds(
                     PartnerTextMatch.CONTACT_CONTAINS, normalizedKeyword.toLowerCase()),
-            pageable);
+            pageable,
+            salesType);
     return PageResponse.from(responseAssembler.assemblePage(result));
   }
 

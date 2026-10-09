@@ -168,7 +168,7 @@ class PersistenceIndexPlanPostgresE2ETest extends WorkE2ETestBase {
             "sales-page-all",
             () ->
                 sales.searchPage(
-                    null, null, null, null, null, null, List.of(), PageRequest.of(0, 20)),
+                    null, null, null, null, null, null, List.of(), PageRequest.of(0, 20), null),
             0,
             20));
     cases.add(
@@ -176,7 +176,7 @@ class PersistenceIndexPlanPostgresE2ETest extends WorkE2ETestBase {
             "sales-page-partner",
             () ->
                 sales.searchPage(
-                    BASE + 1, null, null, null, null, null, List.of(), PageRequest.of(0, 20)),
+                    BASE + 1, null, null, null, null, null, List.of(), PageRequest.of(0, 20), null),
             BASE + 1,
             0,
             20));

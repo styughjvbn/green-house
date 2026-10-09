@@ -1,4 +1,5 @@
 import type { AuctionLotStatus, PartnerType } from "@/entities/farm/types";
+import type { components } from "@/shared/api/generated/openapi";
 import type { SalesTab } from "@/shared/config/routes";
 
 export type { SalesTab };
@@ -58,6 +59,9 @@ export type AuctionFilterState = {
 };
 
 export type SalesFilterState = {
+  salesType:
+    | NonNullable<components["schemas"]["SalesSlipResponse"]["salesType"]>
+    | "";
   from: string;
   to: string;
   partnerId: string;

@@ -139,3 +139,59 @@ test("auction documents show linked lot facts and navigate to the exact lot", as
     0,
   );
 });
+
+test("document filters scope partners by sales type and keep grouped dispatch search in the URL", async ({
+  page,
+}) => {
+  await page.goto("/sales/slips");
+  const partner = page.getByRole("combobox", { name: "거래처", exact: true });
+  await partner.click();
+  await expect(
+    page.getByRole("option", { name: "수납 테스트 거래처", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("option", { name: "경매 선택지", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("option", { name: "수납 테스트 거래처", exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: "판매 유형", exact: true })
+    .selectOption("AUCTION");
+  await partner.click();
+  await expect(
+    page.getByRole("option", { name: "수납 테스트 거래처", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("option", { name: "경매 선택지", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "출고·출하", exact: true })
+    .selectOption({ label: "완료" });
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await expect(page).toHaveURL(/salesType=AUCTION/);
+  expect(new URL(page.url()).searchParams.get("salesStatus")).toBe("완료");
+  expect(new URL(page.url()).searchParams.get("partnerId")).toBe("8");
+  await page.reload();
+  await expect(
+    page.getByRole("combobox", { name: "판매 유형", exact: true }),
+  ).toHaveValue("AUCTION");
+  await expect(
+    page.getByRole("combobox", { name: "출고·출하", exact: true }),
+  ).toHaveValue("완료");
+  await page
+    .getByRole("combobox", { name: "판매 유형", exact: true })
+    .selectOption("DIRECT");
+  await partner.click();
+  await expect(
+    page.getByRole("option", { name: "경매 선택지", exact: true }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await expect(page).toHaveURL(/salesType=DIRECT/);
+  expect(new URL(page.url()).searchParams.has("partnerId")).toBe(false);
+  await page
+    .getByRole("combobox", { name: "판매 유형", exact: true })
+    .selectOption("");
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await expect(page).not.toHaveURL(/salesType=/);
+  expect(new URL(page.url()).searchParams.get("salesStatus")).toBe("완료");
+});

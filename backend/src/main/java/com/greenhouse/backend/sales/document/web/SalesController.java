@@ -5,6 +5,7 @@ import com.greenhouse.backend.common.api.ErrorResponse;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.api.document.SalesSlipSummary;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.direct.api.SalesPaymentApi;
 import com.greenhouse.backend.sales.document.application.SalesOrchidGroupQueryService;
 import com.greenhouse.backend.sales.document.application.SalesQueryService;
@@ -96,13 +97,16 @@ public class SalesController {
       @RequestParam(required = false) LocalDate from,
       @RequestParam(required = false) LocalDate to,
       @RequestParam(required = false) String paymentStatus,
-      @RequestParam(required = false) String salesStatus,
+      @Parameter(description = "완료는 출고 완료·출하 완료를 포함하며 판매 유형 조건과 함께 적용합니다. 기존 개별 상태 검색도 지원합니다.")
+          @RequestParam(required = false)
+          String salesStatus,
+      @RequestParam(required = false) SalesType salesType,
       @RequestParam(required = false) String keyword,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size) {
     return ApiResponse.ok(
         salesQueryService.getSalesSlipPage(
-            partnerId, from, to, paymentStatus, salesStatus, keyword, page, size));
+            partnerId, from, to, paymentStatus, salesStatus, keyword, page, size, salesType));
   }
 
   @Operation(

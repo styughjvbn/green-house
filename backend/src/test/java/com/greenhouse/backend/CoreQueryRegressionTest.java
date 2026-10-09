@@ -395,7 +395,7 @@ class CoreQueryRegressionTest {
         () -> {
           var page =
               salesSlipRepository.searchPage(
-                  null, null, null, null, null, "absent", ids, PageRequest.of(0, 1));
+                  null, null, null, null, null, "absent", ids, PageRequest.of(0, 1), null);
           assertThat(page.getTotalElements()).isEqualTo(1);
           assertThat(page.getContent())
               .extracting(row -> row.getId())
