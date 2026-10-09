@@ -12,6 +12,7 @@ import type {
   SalesSlipListItem,
   SalesSlipPage,
 } from "@/entities/farm/types";
+import { createUuid } from "@/shared/lib/id";
 import { createEmptyPage } from "@/shared/api/page";
 import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
@@ -80,7 +81,7 @@ export function useSalesSlips({
   const [creationRequestKey] = useState(() =>
     createPendingCreationRequestKey(
       "greenhouse:sales-create-request:v1",
-      () => crypto.randomUUID(),
+      createUuid,
       () => window.sessionStorage,
     ),
   );

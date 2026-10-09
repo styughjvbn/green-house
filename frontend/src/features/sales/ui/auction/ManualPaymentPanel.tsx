@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { Banknote, ChevronDown, ChevronUp } from "lucide-react";
 import type { PaymentTargetType } from "@/entities/farm/types";
+import { createUuid } from "@/shared/lib/id";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import { readPaymentHistoryPage } from "../../lib/salesRouteParams";
@@ -47,9 +48,7 @@ export function ManualPaymentPanel({
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [idempotencyKey, setIdempotencyKey] = useState(
-    createPaymentIdempotencyKey,
-  );
+  const [idempotencyKey, setIdempotencyKey] = useState(createUuid);
 
   useEffect(() => {
     if (
@@ -88,7 +87,7 @@ export function ManualPaymentPanel({
       setMessage("입금 확인 완료");
       setAmount(String(remaining ?? ""));
       setMemo("");
-      setIdempotencyKey(createPaymentIdempotencyKey());
+      setIdempotencyKey(createUuid());
       const queryKey = salesQueryKeys.payments.target(targetType, targetId);
       await queryClient.cancelQueries({ queryKey });
       void queryClient.invalidateQueries({ queryKey });
@@ -145,7 +144,7 @@ export function ManualPaymentPanel({
                     value={amount}
                     onChange={(event) => {
                       setAmount(event.target.value);
-                      setIdempotencyKey(createPaymentIdempotencyKey());
+                      setIdempotencyKey(createUuid());
                     }}
                   />
                 </Field>
@@ -157,7 +156,7 @@ export function ManualPaymentPanel({
                     value={paymentDate}
                     onChange={(event) => {
                       setPaymentDate(event.target.value);
-                      setIdempotencyKey(createPaymentIdempotencyKey());
+                      setIdempotencyKey(createUuid());
                     }}
                   />
                 </Field>
@@ -268,13 +267,6 @@ export function ManualPaymentPanel({
       ) : null}
     </div>
   );
-}
-
-function createPaymentIdempotencyKey() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `manual-payment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 const controlClass =
