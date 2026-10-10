@@ -98,7 +98,7 @@ export function SalesSlipCreateForm({
         aria-label={mode === "edit" ? "전표 수정" : "전표 작성"}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#edf0ec] p-5">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#edf0ec] p-3">
           <div>
             <h2 className="mt-1 text-xl font-semibold">
               {mode === "edit" ? "전표 수정" : "전표 작성"}
@@ -106,7 +106,7 @@ export function SalesSlipCreateForm({
           </div>
           <div className="flex items-center gap-2">
             {form.salesType === "DIRECT" ? (
-              <div className="rounded-md bg-[#eef7ec] px-3 py-2 text-sm font-semibold text-[#246b38]">
+              <div className="rounded-md bg-[#eef7ec] px-3 py-1 text-sm font-semibold text-[#246b38]">
                 합계 {totalAmount.toLocaleString()}원
               </div>
             ) : null}
@@ -259,13 +259,6 @@ export function SalesSlipCreateForm({
                 </p>
               ) : null}
             </fieldset>
-          ) : null}
-
-          {form.salesType === "AUCTION" ? (
-            <div className="rounded-md bg-[#f6f8f5] p-4 text-sm text-[#66736a]">
-              출하 대기로 저장한 뒤 출하 완료 처리하면 경매장 출하 기록과 lot가
-              생성됩니다.
-            </div>
           ) : null}
 
           <section className="space-y-3 rounded-md border border-[#d7ddd4] p-4">
