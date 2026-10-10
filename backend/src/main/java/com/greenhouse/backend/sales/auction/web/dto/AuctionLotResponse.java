@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.auction.web.dto;
 
 import com.greenhouse.backend.sales.auction.domain.AuctionAttempt;
+import com.greenhouse.backend.sales.auction.domain.AuctionAttemptStatus;
 import com.greenhouse.backend.sales.auction.domain.AuctionInspectionStatus;
 import com.greenhouse.backend.sales.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.sales.auction.domain.AuctionLotStatusHistory;
@@ -32,7 +33,8 @@ public record AuctionLotResponse(
     String memo,
     List<AuctionAttemptResponse> attempts,
     List<AuctionStatusHistoryResponse> statusHistory,
-    @Schema(nullable = true) Boolean quantityAdjustmentAllowed) {
+    @Schema(nullable = true) Boolean quantityAdjustmentAllowed,
+    @Schema(nullable = true, description = "현재 유찰 잔량에 대응하는 최신 경매 시도 식별자") Long followUpAttemptId) {
 
   public static AuctionLotResponse from(AuctionShipmentLot lot, String auctionMarket) {
     return from(lot, auctionMarket, lot.getAttempts(), lot.getStatusHistory());
@@ -77,6 +79,15 @@ public record AuctionLotResponse(
         lot.getMemo(),
         attempts.stream().map(AuctionAttemptResponse::from).toList(),
         statusHistory.stream().map(AuctionStatusHistoryResponse::from).toList(),
-        lot.isQuantityAdjustmentAllowed(!attempts.isEmpty()));
+        lot.isQuantityAdjustmentAllowed(!attempts.isEmpty()),
+        attempts.stream()
+            .max(Comparator.comparing(AuctionAttempt::getAttemptNo))
+            .filter(attempt -> attempt.getAttemptStatus() != AuctionAttemptStatus.RETURN_INFERRED)
+            .filter(
+                attempt ->
+                    attempt.getResultLines().stream()
+                        .anyMatch(line -> line.getQuantity() > 0 && line.getAmount() == 0))
+            .map(AuctionAttempt::getId)
+            .orElse(null));
   }
 }

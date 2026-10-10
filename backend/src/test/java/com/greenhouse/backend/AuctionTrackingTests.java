@@ -60,6 +60,33 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
   @Autowired MockMvc mockMvc;
 
   @Test
+  void identifiesOnlyTheLatestUnsoldAuctionForFollowUp() {
+    var lot = createLot(LocalDate.of(2026, 6, 1), "양재", "심비디움 A", "A", 50);
+    assertThat(trackingService.getLot(lot.getId()).followUpAttemptId()).isNull();
+
+    addResult(lot, LocalDate.of(2026, 6, 3), 1, 50, 0, "유찰", AuctionAttemptStatus.FAILED);
+    lotRepository.flush();
+    var failed = trackingService.getLot(lot.getId());
+    assertThat(failed.followUpAttemptId()).isEqualTo(failed.attempts().getFirst().id());
+
+    addResult(
+        lot, LocalDate.of(2026, 6, 5), 2, 30, 0, "부분 유찰", AuctionAttemptStatus.PARTIALLY_SOLD);
+    lotRepository.flush();
+    var partial = trackingService.getLot(lot.getId());
+    assertThat(partial.followUpAttemptId()).isEqualTo(partial.attempts().getLast().id());
+    assertThat(partial.followUpAttemptId()).isNotEqualTo(failed.followUpAttemptId());
+
+    addResult(lot, LocalDate.of(2026, 6, 7), 3, 30, 1000, null, AuctionAttemptStatus.SOLD);
+    lotRepository.flush();
+    assertThat(trackingService.getLot(lot.getId()).followUpAttemptId()).isNull();
+
+    addResult(
+        lot, LocalDate.of(2026, 6, 8), 4, 30, 0, "반환 추정", AuctionAttemptStatus.RETURN_INFERRED);
+    lotRepository.flush();
+    assertThat(trackingService.getLot(lot.getId()).followUpAttemptId()).isNull();
+  }
+
+  @Test
   void tracksFailedThenSoldAuctionsWithPagination() throws Exception {
     var lot = createLot(LocalDate.of(2026, 6, 1), "태성", "카틀레야 A", "특", 100);
     addResult(lot, LocalDate.of(2026, 6, 3), 1, 100, 0, "유찰", AuctionAttemptStatus.FAILED);

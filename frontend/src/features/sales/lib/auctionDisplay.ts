@@ -77,6 +77,6 @@ export const followUpLabels: Record<
   string
 > = {
   REAUCTION: "재경매",
-  FARM_RETURN: "농장으로 가져오기",
-  AUCTION_DISPOSAL: "경매장 폐기·처리",
+  FARM_RETURN: "농장 반환",
+  AUCTION_DISPOSAL: "경매장 처리",
 };

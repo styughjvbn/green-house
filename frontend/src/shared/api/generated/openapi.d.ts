@@ -3488,6 +3488,11 @@ export interface components {
             currentStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED" | "DISPOSED";
             /** Format: int32 */
             failedCount?: number;
+            /**
+             * Format: int64
+             * @description 현재 유찰 잔량에 대응하는 최신 경매 시도 식별자
+             */
+            followUpAttemptId?: number | null;
             /** Format: int64 */
             id?: number;
             /** @enum {string} */

@@ -44,7 +44,18 @@ const lot = {
   inspectionStatus: "NORMAL",
   memo: null,
   quantityAdjustmentAllowed: false,
-  attempts: [],
+  followUpAttemptId: 420,
+  attempts: [
+    {
+      id: 420,
+      auctionDate: "2026-10-07",
+      attemptNo: 1,
+      attemptStatus: "FAILED",
+      failedReason: "유찰",
+      memo: null,
+      resultLines: [{ id: 421, quantity: 30, unitPrice: 0, amount: 0 }],
+    },
+  ],
   statusHistory: [],
 };
 const zone = {
@@ -77,6 +88,7 @@ const bed = {
   bedZones: [zone],
 };
 let auctionDocumentSeed = false;
+let lotOverride = {};
 let summary,
   arrivals,
   calls,
@@ -86,6 +98,7 @@ let summary,
   cashEvents,
   allocationEvents;
 function reset() {
+  lotOverride = {};
   auctionDocumentSeed = false;
   summary = {
     lotId: 42,
@@ -128,6 +141,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === "/__control") {
     if (body.reset) reset();
+    if (body.lotOverride) lotOverride = body.lotOverride;
     if (body.auctionDocumentSeed) auctionDocumentSeed = true;
     if (body.allocationSeed)
       cashEvents = [
@@ -588,7 +602,11 @@ const server = http.createServer(async (req, res) => {
       totalAmount: 0,
     });
   if (url.pathname === "/api/auction-lots/42")
-    return send({ ...lot, waitingQuantity: summary.pendingQuantity });
+    return send({
+      ...lot,
+      waitingQuantity: summary.pendingQuantity,
+      ...lotOverride,
+    });
   if (url.pathname === "/api/work-operations") return send(pageOf([], 0));
   if (url.pathname === "/api/houses")
     return send([

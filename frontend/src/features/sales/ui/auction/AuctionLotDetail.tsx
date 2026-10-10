@@ -3,7 +3,10 @@ import { Plus, SlidersHorizontal } from "lucide-react";
 import type { AuctionLot } from "@/entities/farm/types";
 import type { AuctionResultFormPayload } from "../../api/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
-import { auctionAttemptStatusLabel } from "../../lib/auctionDisplay";
+import {
+  auctionAttemptStatusLabel,
+  followUpLabels,
+} from "../../lib/auctionDisplay";
 import {
   DetailCard,
   DetailActionButton,
@@ -107,121 +110,111 @@ export function AuctionLotDetail({
           }
         />
 
-        <AuctionFollowUpPanel lot={currentLot} arrivalPage={arrivalPage} />
-
-        <div className="grid gap-3 p-4">
-          <div>
-            <h3 className="mb-2 text-sm font-bold">경매 진행 타임라인</h3>
-            <ol className="space-y-2 border-l-2 border-[#dce9da] pl-4">
-              <TimelineItem
-                date={currentLot.shipmentDate}
-                title={`경매장 출하 ${currentLot.shippedQuantity.toLocaleString()}분`}
-                description={`${currentLot.boxes == null ? "상자 수 미지정" : `${currentLot.boxes.toLocaleString()}상자`} · 출하등급 ${currentLot.shipmentGrade || "미지정"}`}
-              />
-              {currentLot.attempts.map((attempt) => {
-                const attemptSoldQuantity = attempt.resultLines
-                  .filter((line) => line.amount > 0)
-                  .reduce((sum, line) => sum + line.quantity, 0);
-                const attemptTitle =
-                  attempt.attemptStatus === "RETURN_INFERRED"
-                    ? "반환 추정"
-                    : `${attempt.attemptNo}차 경매 · ${auctionAttemptStatusLabel(attempt.attemptStatus)}`;
-
-                return (
+        <AuctionFollowUpPanel lot={currentLot} arrivalPage={arrivalPage}>
+          {({ openDecision, openReturn, decisionBlocked, selectedMethod }) => (
+            <div className="grid gap-3 p-4">
+              <div>
+                <h3 className="mb-2 text-sm font-bold">경매 진행 타임라인</h3>
+                <ol className="space-y-2 border-l-2 border-[#dce9da] pl-4">
                   <TimelineItem
-                    key={attempt.id}
-                    date={attempt.auctionDate}
-                    alert={attempt.attemptStatus === "RETURN_INFERRED"}
-                    title={
-                      <span className="inline-flex items-center gap-2">
-                        <span>{attemptTitle}</span>
-                        {attemptSoldQuantity > 0 ? (
-                          <span className="text-[11px] font-medium text-[#159447]">
-                            {attemptSoldQuantity.toLocaleString()}분 낙찰
-                          </span>
-                        ) : null}
-                      </span>
-                    }
-                    description={
-                      attempt.resultLines.length > 0 ? (
-                        <ul className="space-y-1">
-                          {attempt.resultLines.map((line) => (
-                            <li key={line.id} className="flex gap-2">
-                              <span className="text-[#98a29a]">•</span>
-                              <span>
-                                {line.quantity.toLocaleString()}분 ·{" "}
-                                {line.amount > 0 ? (
-                                  <>
-                                    단가 {line.unitPrice.toLocaleString()}원 ·
-                                    총액 {line.amount.toLocaleString()}원
-                                  </>
-                                ) : attempt.attemptStatus ===
-                                  "RETURN_INFERRED" ? (
-                                  "반환"
-                                ) : (
-                                  "유찰"
-                                )}
+                    date={currentLot.shipmentDate}
+                    title={`경매장 출하 ${currentLot.shippedQuantity.toLocaleString()}분`}
+                    description={`${currentLot.boxes == null ? "상자 수 미지정" : `${currentLot.boxes.toLocaleString()}상자`} · 출하등급 ${currentLot.shipmentGrade || "미지정"}`}
+                  />
+                  {currentLot.attempts.map((attempt) => {
+                    const attemptSoldQuantity = attempt.resultLines
+                      .filter((line) => line.amount > 0)
+                      .reduce((sum, line) => sum + line.quantity, 0);
+                    const attemptTitle =
+                      attempt.attemptStatus === "RETURN_INFERRED"
+                        ? "반환 추정"
+                        : `${attempt.attemptNo}차 경매 · ${auctionAttemptStatusLabel(attempt.attemptStatus)}`;
+
+                    return (
+                      <TimelineItem
+                        key={attempt.id}
+                        date={attempt.auctionDate}
+                        alert={attempt.attemptStatus === "RETURN_INFERRED"}
+                        title={
+                          <span className="inline-flex items-center gap-2">
+                            <span>{attemptTitle}</span>
+                            {attemptSoldQuantity > 0 ? (
+                              <span className="text-[11px] font-medium text-[#159447]">
+                                {attemptSoldQuantity.toLocaleString()}분 낙찰
                               </span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        attempt.failedReason || "결과 없음"
-                      )
-                    }
-                  />
-                );
-              })}
-              {currentLot.statusHistory.map((history) => {
-                const quantities = [
-                  [
-                    "낙찰",
-                    history.previousSoldQuantity,
-                    history.newSoldQuantity,
-                  ],
-                  [
-                    "대기",
-                    history.previousWaitingQuantity,
-                    history.newWaitingQuantity,
-                  ],
-                  [
-                    "반환",
-                    history.previousReturnedQuantity,
-                    history.newReturnedQuantity,
-                  ],
-                ] as const;
-                const quantityChange = quantities
-                  .filter(
-                    ([, before, after]) =>
-                      typeof before === "number" &&
-                      typeof after === "number" &&
-                      before !== after,
-                  )
-                  .map(
-                    ([label, before, after]) =>
-                      `${label} ${before} → ${after}분`,
-                  )
-                  .join(" · ");
-                return (
-                  <TimelineItem
-                    key={`history-${history.id}`}
-                    date={history.changedAt.slice(0, 10)}
-                    title={`${quantityChange ? "수량 변경" : "상태 변경"} · ${history.reason}`}
-                    description={
-                      [quantityChange, history.memo, history.worker]
-                        .filter(Boolean)
-                        .join(" · ") || "변경 이력"
-                    }
-                  />
-                );
-              })}
-            </ol>
-            <div className="mt-3 flex justify-end gap-8 border-t border-[#e5e9e3] pt-3">
-              <Money label="낙찰금액" value={soldAmount} />
-              <Money label="평균 단가" value={averageUnitPrice} />
+                            ) : null}
+                          </span>
+                        }
+                        actions={
+                          currentLot.followUpAttemptId === attempt.id ? (
+                            <>
+                              {selectedMethod === "FARM_RETURN" ? (
+                                <button
+                                  type="button"
+                                  className="rounded-md border border-[#b8d8be] bg-[#eef7ec] px-3 py-1 text-xs font-semibold text-[#246b38]"
+                                  onClick={openReturn}
+                                >
+                                  농장 반환
+                                </button>
+                              ) : selectedMethod ? (
+                                <span className="text-xs font-semibold text-[#5c6960]">
+                                  {followUpLabels[selectedMethod]}
+                                </span>
+                              ) : null}
+                              <button
+                                type="button"
+                                className="rounded-md border bg-white px-3 py-1 text-xs font-semibold disabled:opacity-50"
+                                disabled={decisionBlocked}
+                                onClick={openDecision}
+                              >
+                                유찰 처리
+                              </button>
+                            </>
+                          ) : null
+                        }
+                        description={
+                          <>
+                            {attempt.resultLines.length > 0 ? (
+                              <ul className="space-y-1">
+                                {attempt.resultLines.map((line) => (
+                                  <li key={line.id} className="flex gap-2">
+                                    <span className="text-[#98a29a]">•</span>
+                                    <span>
+                                      {line.quantity.toLocaleString()}분 ·{" "}
+                                      {line.amount > 0 ? (
+                                        <>
+                                          단가 {line.unitPrice.toLocaleString()}
+                                          원 · 총액{" "}
+                                          {line.amount.toLocaleString()}원
+                                        </>
+                                      ) : attempt.attemptStatus ===
+                                        "RETURN_INFERRED" ? (
+                                        "반환"
+                                      ) : (
+                                        "유찰"
+                                      )}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              attempt.failedReason || "결과 없음"
+                            )}
+                          </>
+                        }
+                      />
+                    );
+                  })}
+                  {/* TODO: 내부 상태·수량 변경 이력의 표시 방식은 보류. 저장된 이력은 유지한다. */}
+                </ol>
+                <div className="mt-3 flex justify-end gap-8 border-t border-[#e5e9e3] pt-3">
+                  <Money label="낙찰금액" value={soldAmount} />
+                  <Money label="평균 단가" value={averageUnitPrice} />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+        </AuctionFollowUpPanel>
       </DetailCard>
 
       {showResultForm ? (
@@ -262,11 +255,13 @@ function TimelineItem({
   title,
   description,
   alert = false,
+  actions,
 }: {
   date: string;
   title: ReactNode;
   description: ReactNode;
   alert?: boolean;
+  actions?: ReactNode;
 }) {
   return (
     <li
@@ -277,6 +272,11 @@ function TimelineItem({
         <time className="text-xs text-[#68756c]">{formatShortDate(date)}</time>
       </div>
       <div className="mt-1 text-xs text-[#5c6960]">{description}</div>
+      {actions ? (
+        <div className="mt-2 flex items-center justify-end gap-2">
+          {actions}
+        </div>
+      ) : null}
     </li>
   );
 }

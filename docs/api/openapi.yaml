@@ -7272,6 +7272,12 @@ components:
         failedCount:
           type: integer
           format: int32
+        followUpAttemptId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: 현재 유찰 잔량에 대응하는 최신 경매 시도 식별자
         id:
           type: integer
           format: int64

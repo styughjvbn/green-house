@@ -687,6 +687,7 @@ export type AuctionLot = {
   attempts: AuctionAttempt[];
   statusHistory: AuctionStatusHistory[];
   quantityAdjustmentAllowed: ApiSchemas["AuctionLotResponse"]["quantityAdjustmentAllowed"];
+  followUpAttemptId?: ApiSchemas["AuctionLotResponse"]["followUpAttemptId"];
 };
 
 export type AuctionLotPage = Page<AuctionLot>;
