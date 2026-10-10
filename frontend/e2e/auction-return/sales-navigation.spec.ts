@@ -45,6 +45,25 @@ test("one sales menu keeps auction settlement and adds payments", async ({
   const response = await page.goto("/sales-v2");
   expect(response?.status()).toBe(404);
 });
+
+test("auction slip editor omits price and total fields", async ({ page }) => {
+  await page.goto("/sales/slips");
+  await page.getByRole("button", { name: "전표 작성", exact: true }).click();
+  const form = page.getByRole("dialog", { name: "전표 작성", exact: true });
+  await expect(
+    form.getByRole("spinbutton", { name: "단가", exact: true }),
+  ).toBeVisible();
+  await expect(form.getByText(/^합계 /)).toBeVisible();
+  await form.getByRole("button", { name: "경매 판매", exact: true }).click();
+  await expect(
+    form.getByRole("spinbutton", { name: "단가", exact: true }),
+  ).toHaveCount(0);
+  await expect(form.getByText("금액", { exact: true })).toHaveCount(0);
+  await expect(form.getByText(/^합계 /)).toHaveCount(0);
+  await expect(
+    form.getByRole("spinbutton", { name: "수량", exact: true }),
+  ).toBeVisible();
+});
 test("payments keep receipt selection across views, allocation and target tracing", async ({
   page,
 }) => {

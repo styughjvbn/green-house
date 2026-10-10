@@ -68,12 +68,14 @@ test("sales creates variety-grouped items from a mixed selection and keeps the p
   await expect(dialog).toHaveCount(0);
   await expect(opener).toHaveCount(1);
   await expect(
-    form.getByText("호접란 / 다른 품종", { exact: true }).first(),
+    form.getByText("다른 품종 / 호접란", { exact: true }).first(),
   ).toBeVisible();
-  await form
-    .locator('[data-sales-item-index="0"]')
-    .getByRole("button", { name: "같은 품종 품목 추가" })
-    .click();
+  const variety = form.getByRole("region", {
+    name: "수납 테스트 품종 / 호접란 품목",
+  });
+  await expect(variety).toHaveCount(1);
+  await variety.getByRole("button", { name: "품목 분리" }).click();
+  await expect(variety.locator("[data-sales-item-index]")).toHaveCount(2);
   const first = form.locator('[data-sales-item-index="0"]');
   const second = form.locator('[data-sales-item-index="1"]');
   const other = form.locator('[data-sales-item-index="2"]');
@@ -113,6 +115,8 @@ test("sales creates variety-grouped items from a mixed selection and keeps the p
   await expect(dialog).toHaveCount(0);
   await expect(form).toBeVisible();
   await expect(opener).toBeFocused();
+  await second.getByRole("button", { name: "제거", exact: true }).click();
+  await expect(variety.locator("[data-sales-item-index]")).toHaveCount(1);
 });
 
 test("work keeps manual multi-selection and user-group selection in the shared dialog", async ({

@@ -45,6 +45,17 @@ test("one selection creates items by variety and allocates each requested quanti
   assert.equal(salesAllocationIssue(items), null);
 });
 
+test("auction slip ignores a price left in the draft while direct slip keeps it", () => {
+  const direct = createInitialSalesForm("2026-10-10");
+  direct.items[0].unitPrice = "12500";
+  assert.equal(toCreateSalesSlipPayload(direct).items[0].unitPrice, 12500);
+  assert.equal(
+    toCreateSalesSlipPayload({ ...direct, salesType: "AUCTION" }).items[0]
+      .unitPrice,
+    0,
+  );
+});
+
 test("two price or grade items share group capacity in proportion, including integer remainders", () => {
   const first = addSelectedGroupsToSalesItems(
     [createEmptySalesItem()],

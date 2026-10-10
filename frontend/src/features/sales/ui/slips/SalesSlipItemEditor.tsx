@@ -9,9 +9,8 @@ import { useState } from "react";
 export function SalesSlipItemEditor({
   item,
   index,
+  showPricing,
   canRemove,
-  canAddItem,
-  onAddItem,
   onAutomaticAllocation,
   onAllocationChange,
   onChange,
@@ -19,9 +18,8 @@ export function SalesSlipItemEditor({
 }: {
   item: SalesItemForm;
   index: number;
+  showPricing: boolean;
   canRemove: boolean;
-  canAddItem: boolean;
-  onAddItem: (index: number) => void;
   onAutomaticAllocation: (index: number) => void;
   onAllocationChange: (
     index: number,
@@ -37,19 +35,17 @@ export function SalesSlipItemEditor({
   const allocatedQuantity = calculateSalesItemAllocated(item);
   const quantity = Number(item.quantity || 0);
   const allocationMatched = quantity === allocatedQuantity;
-  const varietyLabel =
-    [item.genus, item.itemName].filter(Boolean).join(" / ") ||
-    "난 묶음 선택 후 자동 입력";
 
   return (
     <div
       data-sales-item-index={index}
       className="rounded-md border border-[#d7ddd4] bg-[#f8faf7] p-3"
     >
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_1fr_90px_90px_90px_110px_110px]">
-        <ReadonlyField label="품종명 / 속" value={varietyLabel} />
+      <div
+        className={`grid gap-3 sm:grid-cols-2 ${showPricing ? "lg:grid-cols-[80px_70px_85px_80px_125px_135px_minmax(140px,1fr)]" : "lg:grid-cols-[80px_70px_85px_80px_minmax(140px,1fr)]"}`}
+      >
         <TextField
-          label="등급/규격"
+          label="등급"
           value={item.spec}
           onChange={(value) => onChange(index, "spec", value)}
         />
@@ -62,7 +58,6 @@ export function SalesSlipItemEditor({
         <TextField
           label="상자 수"
           type="number"
-          min={1}
           value={item.boxes}
           onChange={(value) => onChange(index, "boxes", value)}
         />
@@ -73,19 +68,28 @@ export function SalesSlipItemEditor({
           value={item.quantity}
           onChange={(value) => onChange(index, "quantity", value)}
         />
+        {showPricing ? (
+          <>
+            <TextField
+              label="단가"
+              required
+              type="number"
+              value={item.unitPrice}
+              onChange={(value) => onChange(index, "unitPrice", value)}
+            />
+            <div>
+              <p className="text-sm font-semibold text-[#435047]">금액</p>
+              <p className="mt-2 text-sm font-semibold whitespace-nowrap">
+                {amount.toLocaleString()}원
+              </p>
+            </div>
+          </>
+        ) : null}
         <TextField
-          label="단가"
-          required
-          type="number"
-          value={item.unitPrice}
-          onChange={(value) => onChange(index, "unitPrice", value)}
+          label="메모"
+          value={item.memo}
+          onChange={(value) => onChange(index, "memo", value)}
         />
-        <div>
-          <p className="text-sm font-semibold text-[#435047]">금액</p>
-          <p className="mt-2 text-sm font-semibold">
-            {amount.toLocaleString()}원
-          </p>
-        </div>
       </div>
 
       <div className="mt-3 rounded-md border border-[#dfe5dc] bg-white p-3">
@@ -171,42 +175,17 @@ export function SalesSlipItemEditor({
         )}
       </div>
 
-      <div className="mt-2 flex gap-2">
-        <TextField
-          label="품목 메모"
-          value={item.memo}
-          onChange={(value) => onChange(index, "memo", value)}
-        />
-        {canAddItem && item.itemName ? (
+      {canRemove ? (
+        <div className="mt-2 flex justify-end">
           <button
-            className="mt-6 rounded-md border border-[#cfd8cc] px-3 py-2 text-sm font-semibold text-[#29422e]"
-            onClick={() => onAddItem(index)}
-            type="button"
-          >
-            같은 품종 품목 추가
-          </button>
-        ) : null}
-        {canRemove ? (
-          <button
-            className="mt-6 rounded-md border border-[#e0b3aa] px-3 py-2 text-sm font-semibold text-[#b43b24]"
+            className="rounded-md border border-[#e0b3aa] px-3 py-2 text-sm font-semibold text-[#b43b24]"
             onClick={() => onRemove(index)}
             type="button"
           >
-            삭제
+            제거
           </button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function ReadonlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-sm font-semibold text-[#435047]">{label}</p>
-      <p className="mt-1 flex h-10 items-center rounded-md border border-[#cfd8cc] bg-[#eef2ed] px-3 text-sm font-semibold text-[#26352c]">
-        {value}
-      </p>
+        </div>
+      ) : null}
     </div>
   );
 }

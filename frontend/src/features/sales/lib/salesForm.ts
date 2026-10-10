@@ -359,7 +359,7 @@ export function toCreateSalesSlipPayload(
       unit: nullableText(item.unit),
       boxes: item.boxes ? Number(item.boxes) : null,
       quantity: Number(item.quantity),
-      unitPrice: Number(item.unitPrice),
+      unitPrice: form.salesType === "AUCTION" ? 0 : Number(item.unitPrice),
       memo: nullableText(item.memo),
       allocations: item.allocations
         .filter((allocation) => Number(allocation.quantity) > 0)

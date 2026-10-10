@@ -65,6 +65,26 @@ export function SalesSlipCreateForm({
     value: string,
   ) => void;
 }) {
+  const itemGroups = new Map<
+    string,
+    {
+      itemName: string;
+      genus: string;
+      rows: { item: SalesItemForm; index: number }[];
+    }
+  >();
+  form.items.forEach((item, index) => {
+    const key = JSON.stringify([item.genus, item.itemName]);
+    const group = itemGroups.get(key);
+    if (group) group.rows.push({ item, index });
+    else
+      itemGroups.set(key, {
+        itemName: item.itemName,
+        genus: item.genus,
+        rows: [{ item, index }],
+      });
+  });
+
   return (
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
@@ -85,9 +105,11 @@ export function SalesSlipCreateForm({
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            <div className="rounded-md bg-[#eef7ec] px-3 py-2 text-sm font-semibold text-[#246b38]">
-              합계 {totalAmount.toLocaleString()}원
-            </div>
+            {form.salesType === "DIRECT" ? (
+              <div className="rounded-md bg-[#eef7ec] px-3 py-2 text-sm font-semibold text-[#246b38]">
+                합계 {totalAmount.toLocaleString()}원
+              </div>
+            ) : null}
             <button
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#d9dfda] text-[#435047] hover:bg-[#f4f7f3]"
               type="button"
@@ -312,20 +334,50 @@ export function SalesSlipCreateForm({
             )}
           </section>
 
-          <div className="space-y-3">
-            {form.items.map((item, index) => (
-              <SalesSlipItemEditor
-                key={index}
-                item={item}
-                index={index}
-                canRemove={mode === "create" && form.items.length > 1}
-                canAddItem={mode === "create"}
-                onAddItem={onAddItem}
-                onAutomaticAllocation={onAutomaticAllocation}
-                onAllocationChange={onAllocationChange}
-                onChange={onUpdateItem}
-                onRemove={onRemoveItem}
-              />
+          <div className="space-y-4">
+            {[...itemGroups.entries()].map(([key, group]) => (
+              <section
+                key={key}
+                aria-label={`${group.itemName || "미선택"}${group.genus ? ` / ${group.genus}` : ""} 품목`}
+                className="rounded-md border border-[#cfd8cc] bg-white p-3"
+              >
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold text-[#66736a]">
+                      품종명 / 속
+                    </p>
+                    <h3 className="text-base font-bold text-[#17251b]">
+                      {group.itemName || "난 묶음을 선택하세요"}
+                      {group.genus ? ` / ${group.genus}` : ""}
+                    </h3>
+                  </div>
+                  {mode === "create" && group.itemName ? (
+                    <button
+                      type="button"
+                      disabled={saving}
+                      className="rounded-md border border-[#cfd8cc] px-3 py-2 text-sm font-semibold text-[#29422e] disabled:opacity-50"
+                      onClick={() => onAddItem(group.rows.at(-1)!.index)}
+                    >
+                      품목 분리
+                    </button>
+                  ) : null}
+                </div>
+                <div className="space-y-3">
+                  {group.rows.map(({ item, index }) => (
+                    <SalesSlipItemEditor
+                      key={index}
+                      item={item}
+                      index={index}
+                      showPricing={form.salesType === "DIRECT"}
+                      canRemove={mode === "create" && group.rows.length > 1}
+                      onAutomaticAllocation={onAutomaticAllocation}
+                      onAllocationChange={onAllocationChange}
+                      onChange={onUpdateItem}
+                      onRemove={onRemoveItem}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
 

@@ -157,7 +157,14 @@ export function useSalesSlips({
       receiptEnabled: false,
       receiptAmount: "",
       items:
-        current.items.length > 0 ? current.items : [createEmptySalesItem()],
+        salesType === "AUCTION"
+          ? (current.items.length > 0
+              ? current.items
+              : [createEmptySalesItem()]
+            ).map((item) => ({ ...item, unitPrice: "0" }))
+          : current.items.length > 0
+            ? current.items
+            : [createEmptySalesItem()],
     }));
   }
 
