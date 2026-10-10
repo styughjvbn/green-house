@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.partner.web.dto;
 
+import com.greenhouse.backend.sales.partner.domain.PartnerPrintTemplate;
 import com.greenhouse.backend.sales.partner.domain.PaymentDayMode;
 import com.greenhouse.backend.sales.partner.domain.SettlementUnit;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -25,4 +26,7 @@ public record PartnerSettlementSettingsRequest(
     @Schema(description = "선입금 자동 차감의 보관용 선호값. 현재 실행은 제공하지 않는다.") boolean creditAutoApplyEnabled,
     @Schema(description = "보관용 규칙 JSON. 현재 결과 수신/파싱 또는 정산 실행에 적용하지 않는다.")
         Map<String, Object> ruleJson,
-    @Size(max = 1000) String memo) {}
+    @Size(max = 1000) String memo,
+    @Schema(description = "거래처 전표의 기본 인쇄 양식. 생략하면 기존 설정을 유지한다.") PartnerPrintTemplate printTemplate,
+    @Schema(description = "경매장 출하 전표에 사용할 기본 출하자 코드") @Size(max = 50) String shipperCode,
+    @Schema(description = "경매장 출하 전표에 사용할 기본 출하자 성명") @Size(max = 100) String shipperName) {}

@@ -290,9 +290,8 @@ export function SalesSlipDetail({
                 icon={Printer}
                 onClick={() => setPrintPreviewOpen(true)}
               >
-                인쇄(미리보기)
+                인쇄
               </DetailActionButton>
-              {<DetailActionButton icon={Copy}>전표 복사</DetailActionButton>}
             </>
           }
         />

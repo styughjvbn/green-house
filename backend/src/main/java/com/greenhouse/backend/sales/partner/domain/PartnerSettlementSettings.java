@@ -77,6 +77,16 @@ public class PartnerSettlementSettings extends BaseEntity {
   @Column(columnDefinition = "text")
   private String memo;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "print_template", nullable = false)
+  private PartnerPrintTemplate printTemplate;
+
+  @Column(name = "shipper_code", length = 50)
+  private String shipperCode;
+
+  @Column(name = "shipper_name", length = 100)
+  private String shipperName;
+
   public PartnerSettlementSettings(Long partnerId, PartnerType partnerType) {
     this.partnerId = partnerId;
     this.settlementUnit =
@@ -91,6 +101,7 @@ public class PartnerSettlementSettings extends BaseEntity {
     this.depositorAliases = new ArrayList<>();
     this.allowPrepayment = false;
     this.creditAutoApplyEnabled = false;
+    this.printTemplate = PartnerPrintTemplate.STANDARD_A5;
   }
 
   public LocalDate calculateExpectedPaymentDate(LocalDate baseDate) {
@@ -135,5 +146,12 @@ public class PartnerSettlementSettings extends BaseEntity {
     this.creditAutoApplyEnabled = creditAutoApplyEnabled;
     this.ruleJson = ruleJson;
     this.memo = memo;
+  }
+
+  public void updatePrintSettings(
+      PartnerPrintTemplate printTemplate, String shipperCode, String shipperName) {
+    this.printTemplate = printTemplate;
+    this.shipperCode = shipperCode;
+    this.shipperName = shipperName;
   }
 }

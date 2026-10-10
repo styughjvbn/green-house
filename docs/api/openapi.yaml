@@ -4609,6 +4609,12 @@ components:
           type: integer
           format: int32
           minimum: 0
+        printTemplate:
+          type: string
+          description: 거래처 전표의 기본 인쇄 양식. 생략하면 기존 설정을 유지한다.
+          enum:
+          - STANDARD_A5
+          - YANGJAE_AUCTION_SHIPMENT
         ruleJson:
           type: object
           additionalProperties: {}
@@ -4620,6 +4626,16 @@ components:
           - SALES_SLIP
           - MONTHLY_BATCH
           - AUCTION_DATE
+        shipperCode:
+          type: string
+          description: 경매장 출하 전표에 사용할 기본 출하자 코드
+          maxLength: 50
+          minLength: 0
+        shipperName:
+          type: string
+          description: 경매장 출하 전표에 사용할 기본 출하자 성명
+          maxLength: 100
+          minLength: 0
       required:
       - amountTolerance
       - depositorAliases
@@ -4671,6 +4687,11 @@ components:
         paymentDelayDays:
           type: integer
           format: int32
+        printTemplate:
+          type: string
+          enum:
+          - STANDARD_A5
+          - YANGJAE_AUCTION_SHIPMENT
         ruleJson:
           type: object
           additionalProperties: {}
@@ -4680,6 +4701,10 @@ components:
           - SALES_SLIP
           - MONTHLY_BATCH
           - AUCTION_DATE
+        shipperCode:
+          type: string
+        shipperName:
+          type: string
       required:
       - capabilities
     SettlementCapabilities:

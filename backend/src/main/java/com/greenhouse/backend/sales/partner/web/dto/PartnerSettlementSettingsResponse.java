@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.partner.web.dto;
 
 import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.partner.domain.PartnerPrintTemplate;
 import com.greenhouse.backend.sales.partner.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.sales.partner.domain.PaymentDayMode;
 import com.greenhouse.backend.sales.partner.domain.SettlementCapabilities;
@@ -23,6 +24,9 @@ public record PartnerSettlementSettingsResponse(
     boolean creditAutoApplyEnabled,
     Map<String, Object> ruleJson,
     String memo,
+    PartnerPrintTemplate printTemplate,
+    String shipperCode,
+    String shipperName,
     @Schema(
             description = "현재 거래처의 정산 실행 지원 범위. 저장된 설정값과 독립적이며 권한 또는 특정 전표의 실행 가능 여부를 뜻하지 않는다.",
             requiredMode = Schema.RequiredMode.REQUIRED,
@@ -44,6 +48,9 @@ public record PartnerSettlementSettingsResponse(
         settings.isCreditAutoApplyEnabled(),
         settings.getRuleJson(),
         settings.getMemo(),
+        settings.getPrintTemplate(),
+        settings.getShipperCode(),
+        settings.getShipperName(),
         SettlementCapabilities.forPartnerType(partnerType));
   }
 }

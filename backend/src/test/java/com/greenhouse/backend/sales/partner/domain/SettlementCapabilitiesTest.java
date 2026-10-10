@@ -40,6 +40,21 @@ class SettlementCapabilitiesTest {
     assertThat(response.capabilities().prepayment()).isFalse();
     assertThat(response.capabilities().creditAutoApply()).isFalse();
     assertThat(response.capabilities().ruleExecution()).isFalse();
+    assertThat(response.printTemplate()).isEqualTo(PartnerPrintTemplate.STANDARD_A5);
+    assertThat(response.shipperCode()).isNull();
+    assertThat(response.shipperName()).isNull();
+  }
+
+  @Test
+  void updatesAuctionPrintDefaultsIndependentlyFromSettlementRules() {
+    var settings = new PartnerSettlementSettings(1L, PartnerType.AUCTION_HOUSE);
+
+    settings.updatePrintSettings(PartnerPrintTemplate.YANGJAE_AUCTION_SHIPMENT, "16000052", "김출하");
+
+    assertThat(settings.getPrintTemplate())
+        .isEqualTo(PartnerPrintTemplate.YANGJAE_AUCTION_SHIPMENT);
+    assertThat(settings.getShipperCode()).isEqualTo("16000052");
+    assertThat(settings.getShipperName()).isEqualTo("김출하");
   }
 
   @Test

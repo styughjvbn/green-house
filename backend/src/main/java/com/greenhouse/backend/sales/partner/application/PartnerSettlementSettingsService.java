@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.partner.application;
 
 import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.partner.domain.PartnerPrintTemplate;
 import com.greenhouse.backend.sales.partner.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.sales.partner.repository.PartnerSettlementSettingsRepository;
 import com.greenhouse.backend.sales.partner.web.dto.PartnerSettlementSettingsRequest;
@@ -47,6 +48,14 @@ public class PartnerSettlementSettingsService {
         request.creditAutoApplyEnabled(),
         request.ruleJson(),
         normalize(request.memo()));
+    var printTemplate =
+        request.printTemplate() == null ? settings.getPrintTemplate() : request.printTemplate();
+    if (context.partnerType() != PartnerType.AUCTION_HOUSE
+        && printTemplate != PartnerPrintTemplate.STANDARD_A5) {
+      throw new IllegalArgumentException("경매장 전용 인쇄 양식은 경매장 거래처에만 설정할 수 있습니다.");
+    }
+    settings.updatePrintSettings(
+        printTemplate, normalize(request.shipperCode()), normalize(request.shipperName()));
     var saved = settingsRepository.save(settings);
     auditSupport.recordSettingsUpdate(saved, before, auditSupport.settingsSnapshot(saved));
     return PartnerSettlementSettingsResponse.from(saved, context.partnerType());

@@ -38,8 +38,13 @@ class PartnerSettlementCapabilitiesPostgresE2ETest extends WorkE2ETestBase {
         {"settlementUnit":"MONTHLY_BATCH", "paymentDelayDays":3, "paymentDayMode":"CALENDAR_DAY",
          "autoMatchEnabled":true, "autoSettleEnabled":true, "amountTolerance":1000,
          "depositorAliases":["보관"], "allowPrepayment":true, "creditAutoApplyEnabled":true,
-         "ruleJson":{"enabled":true}, "memo":"기존 선호값"}
-        """);
+         "ruleJson":{"enabled":true}, "memo":"기존 선호값",
+         "printTemplate":"%s", "shipperCode":"16000052", "shipperName":"김출하"}
+        """
+                .formatted(
+                    type == PartnerType.AUCTION_HOUSE
+                        ? "YANGJAE_AUCTION_SHIPMENT"
+                        : "STANDARD_A5"));
     assertThat(saved.status()).isEqualTo(200);
     var loaded = get(path);
     assertThat(loaded.status()).isEqualTo(200);
@@ -52,6 +57,10 @@ class PartnerSettlementCapabilitiesPostgresE2ETest extends WorkE2ETestBase {
       assertThat(loaded.data().path(field).asBoolean()).as("stored %s", field).isTrue();
     }
     assertThat(loaded.data().path("ruleJson").path("enabled").asBoolean()).isTrue();
+    assertThat(loaded.data().path("printTemplate").asText())
+        .isEqualTo(type == PartnerType.AUCTION_HOUSE ? "YANGJAE_AUCTION_SHIPMENT" : "STANDARD_A5");
+    assertThat(loaded.data().path("shipperCode").asText()).isEqualTo("16000052");
+    assertThat(loaded.data().path("shipperName").asText()).isEqualTo("김출하");
     assertThat(loaded.data().path("capabilities")).isEqualTo(initial.data().path("capabilities"));
     for (String capability :
         List.of(

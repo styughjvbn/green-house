@@ -203,6 +203,21 @@ button:disabled {
     left: 0;
   }
 
+  .sales-slip-print-pages {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  .sales-slip-print-pages .sales-slip-print-sheet {
+    position: relative;
+    break-after: page;
+  }
+
+  .sales-slip-print-pages .sales-slip-print-sheet:last-child {
+    break-after: auto;
+  }
+
   .a5-sheet {
     box-shadow: none !important;
     min-height: 210mm;

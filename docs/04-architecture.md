@@ -194,7 +194,8 @@ Sales 내부는 document/direct/auction/payment/partner의 소유권을 유지�
 ### print
 
 - 출력과 판매 화면은 Sales application의 문서·요약 값 계약을 공유한다. Print가 Sales HTTP DTO에 의존하거나 같은 문서 필드를 복제하지 않는다.
-- 출력 응답의 금액·스냅샷·현재 거래처 정보·호환 action은 Sales가 제공한다. 기존 HTTP JSON을 유지하기 위해 action 필드도 보존하며 Print에서 업무 판정을 다시 하지 않는다. 문서 종류가 늘기 전 범용 renderer/provider는 만들지 않는다.
+- 출력 응답의 금액·스냅샷·현재 거래처 정보·호환 action은 Sales가 제공한다. 기존 HTTP JSON을 유지하기 위해 action 필드도 보존하며 Print에서 업무 판정을 다시 하지 않는다.
+- 프론트는 일반 A5 전표와 양재 경매장 출하 양식을 명시적인 renderer로 분리한다. 경매장별 기본 renderer와 출하자 정보는 Partner 설정의 서버 상태로 조회하고, 인쇄 창에서 바꾼 값은 해당 출력에만 쓰는 Local UI state로 둔다. 양식이 추가되면 enum과 renderer를 함께 추가하며 경매장 이름으로 양식을 추론하지 않는다.
 
 ### Sales Auction
 

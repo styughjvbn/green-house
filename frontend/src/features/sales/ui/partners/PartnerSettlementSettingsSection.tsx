@@ -124,10 +124,13 @@ export function PartnerSettlementSettingsSection({
         creditAutoApplyEnabled: settings.creditAutoApplyEnabled,
         ruleJson: parsedRule,
         memo: settings.memo,
+        printTemplate: settings.printTemplate,
+        shipperCode: settings.shipperCode,
+        shipperName: settings.shipperName,
       });
       setSettings(saved);
       setAliases(saved.depositorAliases.join(", "));
-      setMessage("정산 설정 저장 완료");
+      setMessage("정산·인쇄 설정 저장 완료");
       onSaved?.();
     } catch (error) {
       setMessage(
@@ -161,7 +164,7 @@ export function PartnerSettlementSettingsSection({
         <div>
           {embedded ? (
             <h3 className="text-sm font-bold text-[#26342b]">
-              {mode === "edit" ? "정산 수정" : "정산 설정"}
+              {mode === "edit" ? "정산·인쇄 수정" : "정산·인쇄 설정"}
             </h3>
           ) : (
             <>
@@ -295,21 +298,73 @@ export function PartnerSettlementSettingsSection({
           </div>
 
           {partner.partnerType === "AUCTION_HOUSE" ? (
-            <details className="rounded-md border border-[#e1e6df] px-3 py-2">
-              <summary className="cursor-pointer text-sm font-semibold">
-                경매 규칙 JSON (보관용)
-              </summary>
-              <FieldHint tone="muted" className="mt-2">
-                {disabledFeatures.ruleJson.reason}
-              </FieldHint>
-              <textarea
-                className="mt-3 min-h-36 w-full rounded-md border border-[#ccd5ca] bg-[#f5f7f4] p-3 font-mono text-xs text-[#748178] disabled:cursor-not-allowed"
-                value={ruleJson}
-                placeholder={'{"auctionDays":["MON","THU"]}'}
-                disabled={!disabledFeatures.ruleJson.enabled}
-                onChange={(event) => setRuleJson(event.target.value)}
-              />
-            </details>
+            <>
+              <section className="rounded-md border border-[#d9e2d7] bg-[#f7faf6] p-3">
+                <h4 className="text-sm font-bold text-[#26342b]">
+                  출하 전표 인쇄
+                </h4>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <Field label="기본 양식">
+                    <select
+                      className={controlClass}
+                      value={settings.printTemplate}
+                      onChange={(event) =>
+                        update(
+                          "printTemplate",
+                          event.target
+                            .value as PartnerSettlementSettings["printTemplate"],
+                        )
+                      }
+                    >
+                      <option value="STANDARD_A5">기본 A5</option>
+                      <option value="YANGJAE_AUCTION_SHIPMENT">
+                        양재 경매장 출하 양식
+                      </option>
+                    </select>
+                  </Field>
+                  <Field label="출하자 코드">
+                    <input
+                      className={controlClass}
+                      maxLength={50}
+                      value={settings.shipperCode ?? ""}
+                      onChange={(event) =>
+                        update("shipperCode", event.target.value || null)
+                      }
+                    />
+                  </Field>
+                  <Field label="출하자 성명">
+                    <input
+                      className={controlClass}
+                      maxLength={100}
+                      value={settings.shipperName ?? ""}
+                      onChange={(event) =>
+                        update("shipperName", event.target.value || null)
+                      }
+                    />
+                  </Field>
+                </div>
+                <FieldHint tone="muted" className="mt-2">
+                  저장한 출하자 정보는 인쇄 시 기본값이며 인쇄 창에서 수정할 수
+                  있습니다.
+                </FieldHint>
+              </section>
+
+              <details className="rounded-md border border-[#e1e6df] px-3 py-2">
+                <summary className="cursor-pointer text-sm font-semibold">
+                  경매 규칙 JSON (보관용)
+                </summary>
+                <FieldHint tone="muted" className="mt-2">
+                  {disabledFeatures.ruleJson.reason}
+                </FieldHint>
+                <textarea
+                  className="mt-3 min-h-36 w-full rounded-md border border-[#ccd5ca] bg-[#f5f7f4] p-3 font-mono text-xs text-[#748178] disabled:cursor-not-allowed"
+                  value={ruleJson}
+                  placeholder={'{"auctionDays":["MON","THU"]}'}
+                  disabled={!disabledFeatures.ruleJson.enabled}
+                  onChange={(event) => setRuleJson(event.target.value)}
+                />
+              </details>
+            </>
           ) : null}
 
           <Field label="메모">
@@ -336,6 +391,7 @@ export function PartnerSettlementSettingsSection({
           settings={settings}
           aliases={aliases}
           disabledFeatures={disabledFeatures}
+          auctionHouse={partner.partnerType === "AUCTION_HOUSE"}
         />
       )}
 
@@ -419,10 +475,12 @@ function SettlementReadView({
   aliases,
   disabledFeatures,
   settings,
+  auctionHouse,
 }: {
   aliases: string;
   disabledFeatures: ReturnType<typeof createSettlementFeatures>;
   settings: PartnerSettlementSettings;
+  auctionHouse: boolean;
 }) {
   return (
     <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -481,8 +539,31 @@ function SettlementReadView({
         label="정산 메모"
         value={settings.memo}
       />
+      {auctionHouse ? (
+        <>
+          <ReadField
+            label="출하 전표 기본 양식"
+            value={printTemplateLabel(settings.printTemplate)}
+          />
+          <ReadField
+            label="출하자 기본값"
+            value={[settings.shipperCode, settings.shipperName]
+              .filter(Boolean)
+              .join(" · ")}
+          />
+        </>
+      ) : null}
     </div>
   );
+}
+
+function printTemplateLabel(
+  template: PartnerSettlementSettings["printTemplate"],
+) {
+  if (template === "YANGJAE_AUCTION_SHIPMENT") {
+    return "양재 경매장 출하 양식";
+  }
+  return "기본 A5";
 }
 
 function ReadField({

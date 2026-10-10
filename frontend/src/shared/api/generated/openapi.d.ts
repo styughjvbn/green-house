@@ -2390,6 +2390,11 @@ export interface components {
             paymentDayMode: "CALENDAR_DAY" | "BUSINESS_DAY";
             /** Format: int32 */
             paymentDelayDays: number;
+            /**
+             * @description 거래처 전표의 기본 인쇄 양식. 생략하면 기존 설정을 유지한다.
+             * @enum {string}
+             */
+            printTemplate?: "STANDARD_A5" | "YANGJAE_AUCTION_SHIPMENT";
             /** @description 보관용 규칙 JSON. 현재 결과 수신/파싱 또는 정산 실행에 적용하지 않는다. */
             ruleJson?: {
                 [key: string]: unknown;
@@ -2399,6 +2404,10 @@ export interface components {
              * @enum {string}
              */
             settlementUnit: "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
+            /** @description 경매장 출하 전표에 사용할 기본 출하자 코드 */
+            shipperCode?: string;
+            /** @description 경매장 출하 전표에 사용할 기본 출하자 성명 */
+            shipperName?: string;
         };
         ApiResponsePartnerSettlementSettingsResponse: {
             data?: components["schemas"]["PartnerSettlementSettingsResponse"];
@@ -2423,11 +2432,15 @@ export interface components {
             paymentDayMode?: "CALENDAR_DAY" | "BUSINESS_DAY";
             /** Format: int32 */
             paymentDelayDays?: number;
+            /** @enum {string} */
+            printTemplate?: "STANDARD_A5" | "YANGJAE_AUCTION_SHIPMENT";
             ruleJson?: {
                 [key: string]: unknown;
             };
             /** @enum {string} */
             settlementUnit?: "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
+            shipperCode?: string;
+            shipperName?: string;
         };
         SettlementCapabilities: {
             autoMatching?: boolean;

@@ -27,6 +27,9 @@ class PartnerSettingsAuditSupport {
     data.put("allowPrepayment", settings.isAllowPrepayment());
     data.put("creditAutoApplyEnabled", settings.isCreditAutoApplyEnabled());
     data.put("ruleJson", settings.getRuleJson());
+    data.put("printTemplate", settings.getPrintTemplate());
+    data.put("shipperCode", settings.getShipperCode());
+    data.put("shipperName", settings.getShipperName());
     return data;
   }
 

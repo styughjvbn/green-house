@@ -469,6 +469,7 @@ export type SettlementUnit = NonNullable<
 >;
 export type SettlementCapabilities = ApiSchemas["SettlementCapabilities"];
 export type PaymentDayMode = "CALENDAR_DAY" | "BUSINESS_DAY";
+export type PartnerPrintTemplate = "STANDARD_A5" | "YANGJAE_AUCTION_SHIPMENT";
 
 export type PartnerSettlementSettings = {
   id: number;
@@ -484,6 +485,9 @@ export type PartnerSettlementSettings = {
   creditAutoApplyEnabled: boolean;
   ruleJson: Record<string, unknown> | null;
   memo: string | null;
+  printTemplate: PartnerPrintTemplate;
+  shipperCode: string | null;
+  shipperName: string | null;
   capabilities: SettlementCapabilities;
 };
 

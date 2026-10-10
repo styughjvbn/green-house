@@ -76,7 +76,7 @@ export function BusinessPartnerEditSection({
                 icon={Pencil}
                 onClick={() => onModeChange("settlement")}
               >
-                정산 수정
+                정산·인쇄 수정
               </DetailActionButton>
             </>
           ) : (
@@ -230,6 +230,6 @@ function partnerTypeLabel(type: BusinessPartner["partnerType"]) {
 
 function modeTitle(mode: BusinessPartnerDetailMode, partnerName: string) {
   if (mode === "basic") return "기본 정보 수정";
-  if (mode === "settlement") return "정산 수정";
+  if (mode === "settlement") return "정산·인쇄 수정";
   return partnerName;
 }
