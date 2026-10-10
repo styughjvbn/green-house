@@ -51,6 +51,7 @@ export function FarmGroupSelectionDialog({
   onConfirm,
   title,
   description,
+  searchPlaceholder = "위치, 품종 또는 그룹 이름 검색",
   renderQuickSelection,
   onManualSelection,
   loading = false,
@@ -67,6 +68,7 @@ export function FarmGroupSelectionDialog({
   onConfirm: (selectedIds: Set<number>) => void;
   title: string;
   description: string;
+  searchPlaceholder?: string;
   renderQuickSelection?: (context: FarmSelectionContext) => ReactNode;
   onManualSelection?: () => void;
 }) {
@@ -74,6 +76,9 @@ export function FarmGroupSelectionDialog({
     () => new Set(initialSelectedIds),
   );
   const [keyword, setKeyword] = useState("");
+  const [houseNavigation, setHouseNavigation] = useState<{
+    houseId: number;
+  } | null>(null);
   const [returnFocus] = useState(() =>
     typeof document === "undefined"
       ? null
@@ -107,6 +112,19 @@ export function FarmGroupSelectionDialog({
     [groups],
   );
   const normalizedKeyword = keyword.trim().toLocaleLowerCase("ko");
+  const firstSearchHouseId = normalizedKeyword ? visibleTree[0]?.id : null;
+  const targetHouseNavigation = useMemo(
+    () =>
+      houseNavigation ??
+      (firstSearchHouseId != null ? { houseId: firstSearchHouseId } : null),
+    [firstSearchHouseId, houseNavigation, normalizedKeyword],
+  );
+
+  function updateKeyword(value: string) {
+    setHouseNavigation(null);
+    setKeyword(value);
+  }
+
   function toggleIds(targetIds: number[]) {
     const availableIds = targetIds.filter((id) => selectableIds.has(id));
     const shouldSelect = availableIds.some((id) => !selectedIds.has(id));
@@ -172,19 +190,19 @@ export function FarmGroupSelectionDialog({
               <input
                 autoFocus
                 className="w-full rounded-md border border-[#cfd8cc] bg-white py-1.5 pr-3 pl-9 text-sm outline-none focus:border-[#159447] focus:ring-2 focus:ring-[#159447]/15"
-                placeholder="위치, 품종 또는 그룹 이름 검색"
+                placeholder={searchPlaceholder}
                 aria-label="난 묶음 검색"
                 onKeyDown={(event) => {
                   if (event.key === "Enter") event.preventDefault();
                 }}
                 value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
+                onChange={(event) => updateKeyword(event.target.value)}
               />
             </label>
 
             {renderQuickSelection?.({
               keyword,
-              setKeyword,
+              setKeyword: updateKeyword,
               selectedIds,
               selectableIds,
               toggleIds,
@@ -232,9 +250,19 @@ export function FarmGroupSelectionDialog({
                               label={`${house.number}동 전체`}
                               {...selectionState(house.groups, selectedIds)}
                               disabled={house.groups.length === 0}
-                              onChange={() => toggleGroups(house.groups)}
+                              onChange={() => {
+                                toggleGroups(house.groups);
+                                setHouseNavigation({ houseId: house.id });
+                              }}
                             />
-                            <div className="flex flex-1 flex-col items-start">
+                            <button
+                              type="button"
+                              aria-label={`${house.number}동 배치 보기`}
+                              className="flex flex-1 flex-col items-start rounded text-left focus-visible:outline-2 focus-visible:outline-[#159447]"
+                              onClick={() =>
+                                setHouseNavigation({ houseId: house.id })
+                              }
+                            >
                               <span className="flex-end flex items-end gap-1 text-sm font-bold text-[#26352b]">
                                 {house.number}동
                                 {selectedCount > 0 ? (
@@ -249,7 +277,7 @@ export function FarmGroupSelectionDialog({
                                   : ""}
                                 전체 {originalHouse.groups.length}개
                               </span>
-                            </div>
+                            </button>
                           </div>
                         );
                       })}
@@ -266,6 +294,7 @@ export function FarmGroupSelectionDialog({
                     groupsById={
                       new Map(groups.map((group) => [group.id, group]))
                     }
+                    houseNavigation={targetHouseNavigation}
                     onViewportIndexChange={loadAround}
                     onToggleGroups={toggleGroups}
                   />
@@ -323,6 +352,7 @@ function FarmSelectionBedCarousel({
   selectedIds,
   visibleGroupIds,
   groupsById,
+  houseNavigation,
   onViewportIndexChange,
   onToggleGroups,
 }: {
@@ -336,6 +366,7 @@ function FarmSelectionBedCarousel({
   selectedIds: Set<number>;
   visibleGroupIds: Set<number>;
   groupsById: Map<number, OrchidGroup>;
+  houseNavigation: { houseId: number } | null;
   onViewportIndexChange: (index: number) => void;
   onToggleGroups: (groups: OrchidGroup[]) => void;
 }) {
@@ -383,7 +414,15 @@ function FarmSelectionBedCarousel({
       emblaApi.off("reInit", handleSelect);
       emblaApi.off("select", handleSelect);
     };
-  }, [emblaApi, onViewportIndexChange]);
+  }, [bedOrder, emblaApi, onViewportIndexChange]);
+
+  useEffect(() => {
+    if (!emblaApi || houseNavigation == null) return;
+    const bedIndex = bedOrder.findIndex(
+      (bed) => bed.houseId === houseNavigation.houseId,
+    );
+    if (bedIndex >= 0) emblaApi.scrollTo(bedIndex);
+  }, [bedOrder, emblaApi, houseNavigation]);
 
   useEffect(() => {
     onViewportIndexChange(0);

@@ -18,6 +18,120 @@ test.beforeEach(async ({ request, context, page }) => {
   await installFarmSelectionFixture(page);
 });
 
+test("house cards move the shared layout and search moves to the first matching house", async ({
+  page,
+}) => {
+  const send = (data: unknown) => ({ json: { success: true, data } });
+  const houses = [1, 2, 3].map((houseNumber) => ({
+    id: houseNumber,
+    number: houseNumber,
+    physicalBeds: [1, 2, 3].map((bedNumber) => {
+      const id = houseNumber * 10 + bedNumber;
+      const zoneId = id * 10;
+      const group =
+        bedNumber === 1
+          ? [
+              {
+                ...selectionGroups[0],
+                id: houseNumber * 100,
+                houseId: houseNumber,
+                houseNumber,
+                physicalBedNumber: bedNumber,
+                bedZoneId: zoneId,
+                varietyName:
+                  houseNumber === 1
+                    ? "첫번째 품종"
+                    : `검색 대상 ${houseNumber === 2 ? "A" : "B"}`,
+              },
+            ]
+          : [];
+      return {
+        id,
+        houseId: houseNumber,
+        houseNumber,
+        number: bedNumber,
+        positionUnitCount: 10,
+        bedZones: [
+          {
+            id: zoneId,
+            name: "앞",
+            side: "LEFT",
+            active: true,
+            orchidGroups: group,
+          },
+        ],
+      };
+    }),
+  }));
+  const beds = houses.flatMap((house) => house.physicalBeds);
+  const groups = beds.flatMap((bed) =>
+    bed.bedZones.flatMap((zone) => zone.orchidGroups),
+  );
+  const bedOrder = beds.map((bed) => ({
+    id: bed.id,
+    houseId: bed.houseId,
+    houseNumber: bed.houseNumber,
+    number: bed.number,
+  }));
+  await page.route("**/api/houses", (route) => route.fulfill(send(houses)));
+  await page.route("**/api/sales/orchid-groups/search**", (route) =>
+    route.fulfill(
+      send(
+        groups.map((group) => ({
+          ...group,
+          reservedQuantity: 0,
+          availableQuantity: group.quantity,
+        })),
+      ),
+    ),
+  );
+  await page.route("**/api/farm-status/orchid-management/bed-order", (route) =>
+    route.fulfill(send(bedOrder)),
+  );
+  await page.route("**/api/farm-status/orchid-management?**", (route) => {
+    const startBedId = Number(
+      new URL(route.request().url()).searchParams.get("startBedId"),
+    );
+    const startIndex = Math.max(
+      0,
+      beds.findIndex((bed) => bed.id === startBedId),
+    );
+    return route.fulfill(
+      send({
+        beds: beds.slice(startIndex, startIndex + 3),
+        bedOrder,
+        totalBeds: beds.length,
+      }),
+    );
+  });
+
+  await page.goto("/sales/slips");
+  await page.getByRole("button", { name: "전표 작성", exact: true }).click();
+  await page.getByRole("button", { name: "난 묶음 선택", exact: true }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "난 묶음 선택",
+    exact: true,
+  });
+  await expect(
+    dialog.getByRole("textbox", { name: "난 묶음 검색" }),
+  ).toHaveAttribute("placeholder", "위치 또는 품종 검색");
+  const currentHouse = dialog.getByRole("combobox", { name: "동으로 이동" });
+  await expect(currentHouse).toHaveValue("1");
+  await dialog.getByRole("button", { name: "3동 배치 보기" }).click();
+  await expect(currentHouse).toHaveValue("3");
+  await expect(dialog.getByText("0묶음 · 0분", { exact: true })).toBeVisible();
+  await dialog.getByRole("checkbox", { name: "1동 전체" }).check();
+  await expect(currentHouse).toHaveValue("1");
+
+  const search = dialog.getByRole("textbox", { name: "난 묶음 검색" });
+  await search.fill("검색 대상");
+  await expect(currentHouse).toHaveValue("2");
+  await dialog.getByRole("button", { name: "3동 배치 보기" }).click();
+  await expect(currentHouse).toHaveValue("3");
+  await search.fill("검색 대상 A");
+  await expect(currentHouse).toHaveValue("2");
+});
+
 test("sales creates variety-grouped items from a mixed selection and keeps the parent form", async ({
   page,
 }) => {

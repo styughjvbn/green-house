@@ -87,6 +87,7 @@ export function SalesOrchidGroupSearchSelect({
           }}
           title="난 묶음 선택"
           description="여러 품종을 함께 선택하세요. 같은 속·품종끼리 품목이 만들어집니다. 수량은 가용 수량입니다."
+          searchPlaceholder="위치 또는 품종 검색"
           houses={houses.data ?? []}
           groups={groups}
           initialSelectedIds={new Set()}
