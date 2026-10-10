@@ -144,6 +144,12 @@ function SalesSlipPrintSheet({ salesSlip }: { salesSlip: SalesSlip }) {
                 <td className="px-2 py-2">{item.spec ?? "-"}</td>
                 <td className="px-2 py-2 text-right">
                   {item.quantity.toLocaleString()}
+                  {item.unit ? ` ${item.unit}` : ""}
+                  {item.boxes != null ? (
+                    <span className="block text-xs text-[#5b675e]">
+                      {item.boxes.toLocaleString()}상자
+                    </span>
+                  ) : null}
                 </td>
                 <td className="px-2 py-2 text-right">
                   {item.unitPrice.toLocaleString()}

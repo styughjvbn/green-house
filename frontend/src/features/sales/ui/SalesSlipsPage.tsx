@@ -43,10 +43,13 @@ export function SalesSlipsPage({
             mode={sales.editingSlipId == null ? "create" : "edit"}
             saving={sales.savingSlip}
             totalAmount={sales.totalAmount}
-            onAddAllocation={sales.addAllocation}
+            onSelectGroups={sales.selectSalesGroups}
+            onRemoveGroup={sales.removeSalesGroup}
+            onAutomaticAllocation={sales.useAutomaticAllocation}
+            selectedGroups={sales.selectedGroups}
+            allocationIssue={sales.allocationIssue}
             onAddItem={sales.addSalesItem}
             onAllocationChange={sales.updateAllocation}
-            onAllocationRemove={sales.removeAllocation}
             onCancel={() => {
               sales.cancelSalesSlipEditing();
             }}

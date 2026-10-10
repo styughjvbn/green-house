@@ -32,13 +32,15 @@ export function getWorkHouses(): Promise<House[]> {
   return fetchApi<House[]>("/houses");
 }
 
-export async function getWorkTargetGroupOptions(): Promise<{
+export async function getWorkTargetGroupOptions(signal?: AbortSignal): Promise<{
   derivedGroups: WorkDerivedGroupOption[];
   collections: WorkCollectionOption[];
 }> {
   const [derivedGroups, collections] = await Promise.all([
-    fetchApi<WorkDerivedGroupOption[]>("/orchid-groups/derived-groups"),
-    fetchApi<WorkCollectionOption[]>("/orchid-group-collections"),
+    fetchApi<WorkDerivedGroupOption[]>("/orchid-groups/derived-groups", {
+      signal,
+    }),
+    fetchApi<WorkCollectionOption[]>("/orchid-group-collections", { signal }),
   ]);
   return {
     derivedGroups,
@@ -50,9 +52,11 @@ export async function getWorkTargetGroupOptions(): Promise<{
 
 export function getDerivedWorkTargetMembers(
   groupKey: string,
+  signal?: AbortSignal,
 ): Promise<OrchidGroup[]> {
   return fetchApi<OrchidGroup[]>(
     `/orchid-groups/derived-groups/${encodeURIComponent(groupKey)}/members`,
+    { signal },
   );
 }
 

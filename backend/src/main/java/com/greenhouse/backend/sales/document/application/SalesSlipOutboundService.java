@@ -47,7 +47,8 @@ public class SalesSlipOutboundService {
                                 : item.getGenus()),
                         SalesTextNormalizer.required(item.getItemName()),
                         SalesTextNormalizer.normalize(item.getSpec()),
-                        item.getQuantity()))
+                        item.getQuantity(),
+                        item.getBoxes()))
             .toList();
     var shipment = shipmentCreator.create(slip.getSaleDate(), slip.getPartnerId(), drafts);
     slip.assignAuctionShipment(shipment.id());

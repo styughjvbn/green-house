@@ -49,6 +49,11 @@ public class SalesSlipItem {
 
   private String spec;
 
+  @Column(length = 30)
+  private String unit;
+
+  private Integer boxes;
+
   @Column(nullable = false)
   private Integer quantity;
 
@@ -80,6 +85,29 @@ public class SalesSlipItem {
         memo);
   }
 
+  public SalesSlipItem(
+      Long auctionShipmentLotId,
+      String itemName,
+      String genus,
+      String spec,
+      Integer quantity,
+      Integer unitPrice,
+      String memo,
+      String unit,
+      Integer boxes) {
+    this(
+        auctionShipmentLotId,
+        itemName,
+        genus,
+        spec,
+        quantity,
+        unitPrice,
+        calculateAmount(quantity, unitPrice),
+        memo,
+        unit,
+        boxes);
+  }
+
   /** The price is supplied by its owner; Document only validates physical quantity here. */
   public SalesSlipItem(
       Long auctionShipmentLotId,
@@ -90,12 +118,30 @@ public class SalesSlipItem {
       Integer unitPrice,
       Integer amount,
       String memo) {
+    this(
+        auctionShipmentLotId, itemName, genus, spec, quantity, unitPrice, amount, memo, null, null);
+  }
+
+  public SalesSlipItem(
+      Long auctionShipmentLotId,
+      String itemName,
+      String genus,
+      String spec,
+      Integer quantity,
+      Integer unitPrice,
+      Integer amount,
+      String memo,
+      String unit,
+      Integer boxes) {
     if (quantity == null || quantity <= 0)
       throw new IllegalArgumentException("판매 품목 수량은 0보다 커야 합니다.");
+    validateBoxes(boxes);
     this.auctionShipmentLotId = auctionShipmentLotId;
     this.itemName = itemName;
     this.genus = genus;
     this.spec = spec;
+    this.unit = unit;
+    this.boxes = boxes;
     this.quantity = quantity;
     this.unitPrice = unitPrice;
     this.amount = amount;
@@ -130,16 +176,36 @@ public class SalesSlipItem {
       Integer unitPrice,
       Integer amount,
       String memo) {
+    updateDetails(itemName, genus, spec, quantity, unitPrice, amount, memo, unit, boxes);
+  }
+
+  public void updateDetails(
+      String itemName,
+      String genus,
+      String spec,
+      Integer quantity,
+      Integer unitPrice,
+      Integer amount,
+      String memo,
+      String unit,
+      Integer boxes) {
     if (quantity == null || quantity <= 0)
       throw new IllegalArgumentException("판매 품목 수량은 0보다 커야 합니다.");
+    validateBoxes(boxes);
 
     this.itemName = itemName;
     this.genus = genus;
     this.spec = spec;
+    this.unit = unit;
+    this.boxes = boxes;
     this.quantity = quantity;
     this.unitPrice = unitPrice;
     this.amount = amount;
     this.memo = memo;
+  }
+
+  private static void validateBoxes(Integer boxes) {
+    if (boxes != null && boxes < 1) throw new IllegalArgumentException("상자 수는 1 이상이어야 합니다.");
   }
 
   private static int calculateAmount(Integer quantity, Integer unitPrice) {

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { installFarmSelectionFixture } from "./farm-selection-fixture";
 
 test.beforeEach(async ({ request, context }) => {
   await request.post("http://127.0.0.1:14100/__control", {
@@ -232,6 +233,7 @@ test("direct document creation collects cash separately from dispatch and remove
       },
     });
   });
+  await installFarmSelectionFixture(page);
   await page.route("**/api/sales/orchid-groups/search**", (route) =>
     route.fulfill({
       json: {
@@ -266,14 +268,21 @@ test("direct document creation collects cash separately from dispatch and remove
     .getByRole("option", { name: "수납 테스트 거래처", exact: true })
     .click();
   await form.getByRole("button", { name: "난 묶음 선택", exact: true }).click();
-  await page.getByRole("button", { name: /수납 테스트 품종.*호접란/ }).click();
+  const selector = page.getByRole("dialog", {
+    name: "난 묶음 선택",
+    exact: true,
+  });
+  await selector
+    .getByRole("button", { name: /수납 테스트 품종 100분/ })
+    .first()
+    .click();
+  await selector
+    .getByRole("button", { name: "대상 확정", exact: true })
+    .click();
   await form.getByRole("spinbutton", { name: "수량", exact: true }).fill("5");
   await form
     .getByRole("spinbutton", { name: "단가", exact: true })
     .fill("1000");
-  await form
-    .getByRole("spinbutton", { name: "배분 수량", exact: true })
-    .fill("5");
   await form.getByRole("checkbox", { name: "수납 함께 기록" }).check();
   await expect(
     form.getByRole("spinbutton", { name: "수납액", exact: true }),

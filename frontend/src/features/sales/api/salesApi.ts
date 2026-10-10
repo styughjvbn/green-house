@@ -129,13 +129,18 @@ export function updateSalesSlip(
   );
 }
 
-export function searchSalesOrchidGroups(keyword: string, varietyId?: number) {
+export function searchSalesOrchidGroups(
+  keyword: string,
+  varietyId?: number,
+  signal?: AbortSignal,
+) {
   const params = new URLSearchParams();
   if (keyword.trim()) params.set("keyword", keyword.trim());
   if (varietyId != null) params.set("varietyId", String(varietyId));
   const query = params.size > 0 ? `?${params}` : "";
   return fetchApi<SalesOrchidGroupOption[]>(
     `/sales/orchid-groups/search${query}`,
+    { signal },
   );
 }
 

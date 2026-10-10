@@ -596,6 +596,7 @@ src/
 - 컴포넌트는 파일 길이가 아니라 변경 이유, 상태 공유 범위, UI 책임을 기준으로 분리한다. JSX 몇 줄을 감싸는 것만으로 새 컴포넌트를 만들지 않는다.
 - page나 section이 조회 상태, form state, dialog state, 도메인 변환을 모두 소유하면 응집된 feature hook 또는 하위 section으로 나눈다. hook 하나가 모든 화면 상태와 callback을 반환하는 God Object가 되지 않게 한다.
 - 동일한 변경 이유가 두 feature 이상에서 반복될 때만 `shared`로 이동한다. 농장 도메인 공통 타입·UI는 `entities/farm`, 한 feature에만 필요한 추상화는 해당 feature에 유지한다.
+- 작업 등록과 판매 전표의 위치별 난 묶음 다중 선택은 `entities/farm`의 공통 선택 화면을 사용한다. 작업의 자동·사용자 그룹 조회와 선택 계약은 Work feature가 제공하고, 판매는 판매 대상 API의 허용 묶음·가용 수량을 위치 자료에 연결한다. 공통 화면은 선택과 배치 표현만 담당하며 업무 API·예약·배분 처리를 소유하지 않는다.
 - 다른 feature와 `app`·`widgets`는 `features/<name>/index.ts`의 공개 API만 사용한다. public API는 실제 외부 사용 항목만 export한다.
 - `useMemo`, `useCallback`, `memo`는 큰 목록·지도 또는 identity 안정성이 실제 dependency와 렌더 범위를 줄이는 경우에만 사용한다. 성능 판단이 불명확하면 Profiler나 기존 map E2E로 측정한다.
 

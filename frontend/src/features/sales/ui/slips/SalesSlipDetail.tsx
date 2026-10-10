@@ -44,6 +44,19 @@ const salesSlipItemColumns: ColumnDef<SalesSlipItem, unknown>[] = [
     meta: { align: "right" },
   },
   {
+    accessorKey: "unit",
+    header: "단위",
+    cell: ({ row }) => row.original.unit ?? "-",
+    size: 70,
+  },
+  {
+    accessorKey: "boxes",
+    header: "상자",
+    cell: ({ row }) => row.original.boxes?.toLocaleString() ?? "-",
+    size: 70,
+    meta: { align: "right" },
+  },
+  {
     accessorKey: "unitPrice",
     header: "단가",
     cell: ({ row }) => row.original.unitPrice.toLocaleString(),

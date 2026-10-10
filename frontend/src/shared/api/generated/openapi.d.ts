@@ -2214,12 +2214,15 @@ export interface components {
         };
         SalesSlipItemRequest: {
             allocations: components["schemas"]["SalesSlipItemAllocationRequest"][];
+            /** Format: int32 */
+            boxes?: number;
             genus?: string;
             itemName: string;
             memo?: string;
             /** Format: int32 */
             quantity: number;
             spec?: string;
+            unit?: string;
             /** Format: int32 */
             unitPrice: number;
         };
@@ -2312,6 +2315,8 @@ export interface components {
             auctionLot?: components["schemas"]["SalesSlipAuctionLotResponse"];
             /** Format: int64 */
             auctionShipmentLotId?: number;
+            /** Format: int32 */
+            boxes?: number;
             genus?: string;
             /** Format: int64 */
             id?: number;
@@ -2320,6 +2325,7 @@ export interface components {
             /** Format: int32 */
             quantity?: number;
             spec?: string;
+            unit?: string;
             /** Format: int32 */
             unitPrice?: number;
         };

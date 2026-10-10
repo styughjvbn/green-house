@@ -30,7 +30,17 @@ public interface AuctionDocumentPort {
       String itemName,
       String varietyName,
       String shipmentGrade,
-      Integer quantity) {}
+      Integer quantity,
+      Integer boxes) {
+    public LotDraft(
+        Long sourceItemId,
+        String itemName,
+        String varietyName,
+        String shipmentGrade,
+        Integer quantity) {
+      this(sourceItemId, itemName, varietyName, shipmentGrade, quantity, null);
+    }
+  }
 
   public record CreatedShipment(Long id, Map<Long, Long> lotIdsBySourceItemId) {
     public CreatedShipment {

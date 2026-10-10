@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 export function TextField({
   disabled = false,
   label,
+  maxLength,
+  min,
   onChange,
   required = false,
   type = "text",
@@ -10,6 +12,8 @@ export function TextField({
 }: {
   disabled?: boolean;
   label: string;
+  maxLength?: number;
+  min?: number;
   onChange: (value: string) => void;
   required?: boolean;
   type?: "date" | "number" | "text";
@@ -21,7 +25,8 @@ export function TextField({
       <input
         className="mt-1 w-full rounded-md border border-[#cfd8cc] px-3 py-2 text-sm"
         disabled={disabled}
-        min={type === "number" ? 0 : undefined}
+        maxLength={maxLength}
+        min={type === "number" ? (min ?? 0) : undefined}
         required={required}
         type={type}
         value={value}

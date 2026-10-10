@@ -1,7 +1,6 @@
 import { salesDispatchLabel } from "../../lib/salesDisplay";
 import type { SubmitEvent } from "react";
 import { X } from "lucide-react";
-import type { SalesOrchidGroupOption } from "@/entities/farm/types";
 import type {
   SalesAllocationForm,
   SalesItemForm,
@@ -11,6 +10,7 @@ import type {
 import { BusinessPartnerSelect } from "../common/BusinessPartnerSelect";
 import { SelectField, TextField } from "../common/FormFields";
 import { SalesSlipItemEditor } from "./SalesSlipItemEditor";
+import { SalesOrchidGroupSearchSelect } from "./SalesOrchidGroupSearchSelect";
 
 export function SalesSlipCreateForm({
   errorMessage,
@@ -19,9 +19,12 @@ export function SalesSlipCreateForm({
   saving,
   totalAmount,
   onAddItem,
-  onAddAllocation,
+  onSelectGroups,
+  onRemoveGroup,
+  onAutomaticAllocation,
+  selectedGroups,
+  allocationIssue,
   onAllocationChange,
-  onAllocationRemove,
   onCancel,
   onChange,
   onRemoveItem,
@@ -34,15 +37,20 @@ export function SalesSlipCreateForm({
   mode: SalesSlipFormMode;
   saving: boolean;
   totalAmount: number;
-  onAddItem: () => void;
-  onAddAllocation: (index: number, orchidGroup: SalesOrchidGroupOption) => void;
+  onAddItem: (index: number) => void;
+  onSelectGroups: (
+    groups: import("@/entities/farm/types").SalesOrchidGroupOption[],
+  ) => void;
+  onRemoveGroup: (id: string) => void;
+  onAutomaticAllocation: (index: number) => void;
+  selectedGroups: SalesAllocationForm[];
+  allocationIssue: string | null;
   onAllocationChange: (
     index: number,
     allocationIndex: number,
     field: keyof SalesAllocationForm,
     value: string,
   ) => void;
-  onAllocationRemove: (index: number, allocationIndex: number) => void;
   onCancel: () => void;
   onChange: <K extends keyof SalesSlipForm>(
     field: K,
@@ -238,16 +246,83 @@ export function SalesSlipCreateForm({
             </div>
           ) : null}
 
+          <section className="space-y-3 rounded-md border border-[#d7ddd4] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-[#17251b]">
+                  난 묶음 선택
+                </h3>
+                <p className="text-xs text-[#66736a]">
+                  선택한 묶음을 품목 수량에 따라 자동 배분합니다.
+                </p>
+              </div>
+              <div className="w-full max-w-[260px]">
+                <SalesOrchidGroupSearchSelect
+                  disabled={saving}
+                  selectedIds={selectedGroups.map(
+                    (group) => group.orchidGroupId,
+                  )}
+                  onSelect={onSelectGroups}
+                />
+              </div>
+            </div>
+            {selectedGroups.length === 0 ? (
+              <p className="text-sm text-[#66736a]">
+                판매할 난 묶음을 선택하세요.
+              </p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {selectedGroups.map((group) => {
+                  const used = form.items
+                    .flatMap((item) => item.allocations)
+                    .filter(
+                      (allocation) =>
+                        allocation.orchidGroupId === group.orchidGroupId,
+                    )
+                    .reduce(
+                      (sum, allocation) =>
+                        sum + (Number(allocation.quantity) || 0),
+                      0,
+                    );
+                  return (
+                    <div
+                      key={group.orchidGroupId}
+                      className="flex items-center justify-between gap-2 rounded-md bg-[#f6f8f5] px-3 py-2 text-sm"
+                    >
+                      <div>
+                        <p className="font-semibold">
+                          {group.genus} / {group.varietyName}
+                        </p>
+                        <p className="text-xs text-[#66736a]">
+                          {group.locationLabel} · 가용 {group.availableQuantity}
+                          분 · 배분 {used}분
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="shrink-0 rounded border border-[#d9dfda] px-2 py-1 text-xs"
+                        onClick={() => onRemoveGroup(group.orchidGroupId)}
+                      >
+                        제거
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
           <div className="space-y-3">
             {form.items.map((item, index) => (
               <SalesSlipItemEditor
                 key={index}
                 item={item}
                 index={index}
-                canRemove={form.items.length > 1}
-                onAddAllocation={onAddAllocation}
+                canRemove={mode === "create" && form.items.length > 1}
+                canAddItem={mode === "create"}
+                onAddItem={onAddItem}
+                onAutomaticAllocation={onAutomaticAllocation}
                 onAllocationChange={onAllocationChange}
-                onAllocationRemove={onAllocationRemove}
                 onChange={onUpdateItem}
                 onRemove={onRemoveItem}
               />
@@ -255,16 +330,22 @@ export function SalesSlipCreateForm({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              className="rounded-md border border-[#d7ddd4] px-4 py-2 text-sm font-semibold"
-              onClick={onAddItem}
-              type="button"
-            >
-              {form.salesType === "AUCTION" ? "lot 추가" : "품목 추가"}
-            </button>
+            {allocationIssue ? (
+              <p
+                role="alert"
+                className="w-full rounded-md bg-[#fff1ec] px-3 py-2 text-sm text-[#9b341e]"
+              >
+                {allocationIssue}
+              </p>
+            ) : null}
             <button
               className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              disabled={saving || !form.partnerId || form.items.length === 0}
+              disabled={
+                saving ||
+                !form.partnerId ||
+                form.items.length === 0 ||
+                allocationIssue != null
+              }
               type="submit"
             >
               {saving

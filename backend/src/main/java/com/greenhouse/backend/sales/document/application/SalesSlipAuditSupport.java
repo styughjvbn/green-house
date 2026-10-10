@@ -41,6 +41,8 @@ class SalesSlipAuditSupport {
                   value.put("itemName", item.getItemName());
                   value.put("genus", item.getGenus());
                   value.put("spec", item.getSpec());
+                  value.put("unit", item.getUnit());
+                  value.put("boxes", item.getBoxes());
                   value.put("quantity", item.getQuantity());
                   value.put("unitPrice", item.getUnitPrice());
                   value.put("amount", item.getAmount());

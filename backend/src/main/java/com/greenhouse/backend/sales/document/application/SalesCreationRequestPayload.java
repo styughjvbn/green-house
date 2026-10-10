@@ -47,7 +47,9 @@ record SalesCreationRequestPayload(
       Integer quantity,
       Integer unitPrice,
       String memo,
-      List<Allocation> allocations) {
+      List<Allocation> allocations,
+      @JsonInclude(JsonInclude.Include.NON_NULL) String unit,
+      @JsonInclude(JsonInclude.Include.NON_NULL) Integer boxes) {
     static Item from(SalesSlipItemInput value) {
       return value == null
           ? null
@@ -67,7 +69,9 @@ record SalesCreationRequestPayload(
                                   ? null
                                   : new Allocation(
                                       allocation.orchidGroupId(), allocation.quantity()))
-                      .toList());
+                      .toList(),
+              value.unit(),
+              value.boxes());
     }
   }
 

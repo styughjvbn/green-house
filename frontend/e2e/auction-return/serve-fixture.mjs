@@ -589,6 +589,7 @@ const server = http.createServer(async (req, res) => {
     });
   if (url.pathname === "/api/auction-lots/42")
     return send({ ...lot, waitingQuantity: summary.pendingQuantity });
+  if (url.pathname === "/api/work-operations") return send(pageOf([], 0));
   if (url.pathname === "/api/houses")
     return send([
       {

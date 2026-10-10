@@ -98,7 +98,9 @@ public class SalesSlipUpdateService {
           nextItem.getQuantity(),
           nextItem.getUnitPrice(),
           nextItem.getAmount(),
-          nextItem.getMemo());
+          nextItem.getMemo(),
+          nextItem.getUnit(),
+          nextItem.getBoxes());
       currentItem.replaceAllocations(
           nextItem.getAllocations().stream().map(SalesSlipItemAllocation::copy).toList());
     }

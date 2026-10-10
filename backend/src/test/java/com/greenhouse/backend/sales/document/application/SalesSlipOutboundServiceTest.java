@@ -45,7 +45,7 @@ class SalesSlipOutboundServiceTest {
     when(salesSlip.getPartnerId()).thenReturn(4L);
     var date = LocalDate.of(2026, 8, 12);
     when(salesSlip.getSaleDate()).thenReturn(date);
-    var first = new SalesSlipItem(null, " 호접란 ", " 팔레놉시스 ", " 특품 ", 12, 0, null);
+    var first = new SalesSlipItem(null, " 호접란 ", " 팔레놉시스 ", " 특품 ", 12, 0, null, "분", 2);
     var second = new SalesSlipItem(null, " 호접란 ", null, " ", 3, 0, null);
     ReflectionTestUtils.setField(first, "id", 9L);
     ReflectionTestUtils.setField(second, "id", 3L);
@@ -54,7 +54,7 @@ class SalesSlipOutboundServiceTest {
     var allocations = SalesSlipAllocationBatch.from(salesSlip);
     var drafts =
         List.of(
-            new LotDraft(9L, "팔레놉시스", "호접란", "특품", 12), new LotDraft(3L, "호접란", "호접란", null, 3));
+            new LotDraft(9L, "팔레놉시스", "호접란", "특품", 12, 2), new LotDraft(3L, "호접란", "호접란", null, 3));
     when(creator.create(date, 4L, drafts))
         .thenReturn(new CreatedShipment(5L, Map.of(3L, 300L, 9L, 900L)));
     Clock clock = Clock.fixed(Instant.parse("2026-08-12T01:02:03Z"), ZoneOffset.UTC);

@@ -31,7 +31,11 @@ public class AuctionShipmentCreator {
     for (var draft : drafts) {
       var lot =
           new AuctionShipmentLot(
-              draft.itemName(), draft.varietyName(), draft.shipmentGrade(), null, draft.quantity());
+              draft.itemName(),
+              draft.varietyName(),
+              draft.shipmentGrade(),
+              draft.boxes(),
+              draft.quantity());
       if (draft.sourceItemId() == null
           || lotsBySourceId.putIfAbsent(draft.sourceItemId(), lot) != null) {
         throw new IllegalArgumentException("출하 원본 품목 식별자는 필수이며 중복될 수 없습니다.");

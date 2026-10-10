@@ -247,6 +247,55 @@ class SalesIntegrationTests extends FarmFixtureIntegrationTest {
   }
 
   @Test
+  void optionalItemUnitAndBoxesSurviveCreateAndDirectEdit() throws Exception {
+    var request =
+        policyRequest(SalesType.DIRECT, policyPartner(PartnerType.WHOLESALE).getId(), null);
+    var original = request.items().getFirst();
+    var item =
+        new SalesSlipItemInput(
+            original.itemName(),
+            original.genus(),
+            original.spec(),
+            original.quantity(),
+            original.unitPrice(),
+            original.memo(),
+            original.allocations(),
+            " 분 ",
+            2);
+    var withPackaging = policyInput(request, request.partnerId(), List.of(item));
+    var created =
+        mockMvc
+            .perform(
+                post("/api/sales-slips")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(policyJson(withPackaging)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data.items[0].unit").value("분"))
+            .andExpect(jsonPath("$.data.items[0].boxes").value(2))
+            .andReturn();
+    long id =
+        JsonMapper.builder()
+            .build()
+            .readTree(created.getResponse().getContentAsString())
+            .path("data")
+            .path("id")
+            .asLong();
+    mockMvc
+        .perform(get("/api/sales-slips/{id}", id))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.items[0].unit").value("분"))
+        .andExpect(jsonPath("$.data.items[0].boxes").value(2));
+    mockMvc
+        .perform(
+            put("/api/sales-slips/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(policyJson(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.items[0].unit").isEmpty())
+        .andExpect(jsonPath("$.data.items[0].boxes").isEmpty());
+  }
+
+  @Test
   void createsBusinessPartnersAndSalesSlipsWithCalculatedAmounts() throws Exception {
     var sampleGroups =
         orchidGroupRepository.findAll().stream()

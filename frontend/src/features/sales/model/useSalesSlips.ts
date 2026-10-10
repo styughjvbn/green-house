@@ -24,7 +24,11 @@ import {
   updateSalesSlip as requestUpdateSalesSlip,
 } from "../api/salesApi";
 import {
+  addSelectedGroupsToSalesItems,
   calculateSalesTotal,
+  distributeSalesItems,
+  salesAllocationIssue,
+  selectedSalesGroups,
   createEmptySalesItem,
   createInitialSalesForm,
   resetSalesSlipFormAfterSave,
@@ -162,83 +166,90 @@ export function useSalesSlips({
     field: keyof SalesItemForm,
     value: string,
   ) {
-    setSalesForm((current) => ({
-      ...current,
-      items: current.items.map((item, itemIndex) => {
-        if (itemIndex !== index) return item;
-
-        const nextItem = { ...item, [field]: value };
-
-        return {
-          ...nextItem,
-          allocations:
-            field === "itemName" || field === "genus"
-              ? nextItem.allocations.filter((allocation) =>
-                  isSameSalesItemVariety(nextItem, allocation),
-                )
-              : nextItem.allocations,
-        };
-      }),
-    }));
+    setSalesForm((current) => {
+      const items = current.items.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              [field]: value,
+              allocationMode:
+                field === "quantity" ? ("AUTO" as const) : item.allocationMode,
+            }
+          : item,
+      );
+      return {
+        ...current,
+        items: field === "quantity" ? distributeSalesItems(items) : items,
+      };
+    });
   }
 
-  function addSalesItem() {
-    setSalesForm((current) => ({
-      ...current,
-      items: [...current.items, createEmptySalesItem()],
-    }));
+  function addSalesItem(index: number) {
+    setSalesForm((current) => {
+      if (editingSlipId != null) return current;
+      const source = current.items[index];
+      if (!source?.itemName) return current;
+      const item = {
+        ...createEmptySalesItem(),
+        itemName: source.itemName,
+        genus: source.genus,
+      };
+      const items = [...current.items];
+      items.splice(index + 1, 0, item);
+      return { ...current, items: distributeSalesItems(items) };
+    });
   }
 
   function removeSalesItem(index: number) {
     setSalesForm((current) => ({
       ...current,
-      items: current.items.filter((_, itemIndex) => itemIndex !== index),
+      items: distributeSalesItems(
+        current.items.filter((_, itemIndex) => itemIndex !== index),
+      ),
     }));
   }
 
-  function addAllocation(index: number, orchidGroup: SalesOrchidGroupOption) {
+  function selectSalesGroups(groups: SalesOrchidGroupOption[]) {
     setSalesForm((current) => ({
       ...current,
-      items: current.items.map((item, itemIndex) => {
-        if (itemIndex !== index) return item;
-        if (
-          !isSameSalesItemVariety(item, {
-            genus: orchidGroup.genus,
-            varietyName: orchidGroup.varietyName,
-          })
-        ) {
-          return item;
-        }
+      items: addSelectedGroupsToSalesItems(current.items, groups),
+    }));
+  }
 
-        const existingIndex = item.allocations.findIndex(
-          (allocation) => Number(allocation.orchidGroupId) === orchidGroup.id,
-        );
-        const nextAllocation = {
-          orchidGroupId: String(orchidGroup.id),
-          varietyName: orchidGroup.varietyName,
-          genus: orchidGroup.genus,
-          locationLabel: `${orchidGroup.houseNumber}동 ${orchidGroup.physicalBedNumber}배드 ${orchidGroup.bedZoneName}`,
-          availableQuantity: orchidGroup.availableQuantity,
-          quantity: "1",
-        };
+  function removeSalesGroup(id: string) {
+    setSalesForm((current) => {
+      const stripped = current.items.map((item) => ({
+        ...item,
+        allocations: item.allocations.filter(
+          (allocation) => allocation.orchidGroupId !== id,
+        ),
+      }));
+      const kept =
+        editingSlipId == null
+          ? stripped.filter(
+              (item) =>
+                item.allocations.length > 0 || (!item.itemName && !item.genus),
+            )
+          : stripped;
+      return {
+        ...current,
+        items: distributeSalesItems(
+          kept.length ? kept : [createEmptySalesItem()],
+        ),
+      };
+    });
+  }
 
-        return {
-          ...item,
-          itemName: item.itemName || orchidGroup.varietyName,
-          genus: item.genus || orchidGroup.genus,
-          allocations:
-            existingIndex >= 0
-              ? item.allocations.map((allocation, allocationIndex) =>
-                  allocationIndex === existingIndex
-                    ? {
-                        ...allocation,
-                        availableQuantity: orchidGroup.availableQuantity,
-                      }
-                    : allocation,
-                )
-              : [...item.allocations, nextAllocation],
-        };
-      }),
+  function useAutomaticAllocation(index: number) {
+    setSalesForm((current) => ({
+      ...current,
+      items: distributeSalesItems(
+        current.items.map((item, itemIndex) =>
+          itemIndex === index
+            ? { ...item, allocationMode: "AUTO" as const }
+            : item,
+        ),
+      ),
     }));
   }
 
@@ -248,40 +259,24 @@ export function useSalesSlips({
     field: keyof SalesAllocationForm,
     value: string,
   ) {
+    if (field !== "quantity") return;
     setSalesForm((current) => ({
       ...current,
-      items: current.items.map((item, itemIndex) =>
-        itemIndex === index
-          ? {
-              ...item,
-              allocations: item.allocations.map((allocation, currentIndex) =>
-                currentIndex === allocationIndex
-                  ? { ...allocation, [field]: value }
-                  : allocation,
-              ),
-            }
-          : item,
+      items: distributeSalesItems(
+        current.items.map((item, itemIndex) =>
+          itemIndex === index
+            ? {
+                ...item,
+                allocationMode: "MANUAL" as const,
+                allocations: item.allocations.map((allocation, currentIndex) =>
+                  currentIndex === allocationIndex
+                    ? { ...allocation, quantity: value }
+                    : allocation,
+                ),
+              }
+            : item,
+        ),
       ),
-    }));
-  }
-
-  function removeAllocation(index: number, allocationIndex: number) {
-    setSalesForm((current) => ({
-      ...current,
-      items: current.items.map((item, itemIndex) => {
-        if (itemIndex !== index) return item;
-
-        const allocations = item.allocations.filter(
-          (_, currentIndex) => currentIndex !== allocationIndex,
-        );
-
-        return {
-          ...item,
-          itemName: allocations.length === 0 ? "" : item.itemName,
-          genus: allocations.length === 0 ? "" : item.genus,
-          allocations,
-        };
-      }),
     }));
   }
 
@@ -291,6 +286,8 @@ export function useSalesSlips({
     setErrorMessage(null);
 
     try {
+      const allocationError = salesAllocationIssue(salesForm.items);
+      if (allocationError) throw new Error(allocationError);
       const payload = toCreateSalesSlipPayload(salesForm);
       let salesSlip: SalesSlip;
       if (editingSlipId == null) {
@@ -468,9 +465,12 @@ export function useSalesSlips({
           : toMessage(salesSlipDetailQuery.error)
         : toMessage(salesSlipQuery.error)),
     totalAmount,
-    addAllocation,
+    selectSalesGroups,
+    removeSalesGroup,
+    useAutomaticAllocation,
+    selectedGroups: selectedSalesGroups(salesForm.items),
+    allocationIssue: salesAllocationIssue(salesForm.items),
     addSalesItem,
-    removeAllocation,
     removeSalesItem,
     selectSalesSlip,
     selectSalesType,

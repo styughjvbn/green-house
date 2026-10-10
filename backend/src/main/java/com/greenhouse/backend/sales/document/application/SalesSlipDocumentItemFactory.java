@@ -24,6 +24,8 @@ final class SalesSlipDocumentItemFactory {
         item.getItemName(),
         item.getGenus(),
         item.getSpec(),
+        item.getUnit(),
+        item.getBoxes(),
         item.getQuantity(),
         price == null ? item.getUnitPrice() : price.unitPrice(),
         price == null ? item.getAmount() : price.amount(),

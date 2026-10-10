@@ -4250,6 +4250,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SalesSlipItemAllocationRequest'
+        boxes:
+          type: integer
+          format: int32
+          minimum: 1
         genus:
           type: string
           maxLength: 100
@@ -4269,6 +4273,10 @@ components:
         spec:
           type: string
           maxLength: 100
+          minLength: 0
+        unit:
+          type: string
+          maxLength: 30
           minLength: 0
         unitPrice:
           type: integer
@@ -4435,6 +4443,9 @@ components:
         auctionShipmentLotId:
           type: integer
           format: int64
+        boxes:
+          type: integer
+          format: int32
         genus:
           type: string
         id:
@@ -4448,6 +4459,8 @@ components:
           type: integer
           format: int32
         spec:
+          type: string
+        unit:
           type: string
         unitPrice:
           type: integer

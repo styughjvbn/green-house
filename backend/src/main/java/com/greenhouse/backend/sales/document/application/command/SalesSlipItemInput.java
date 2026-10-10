@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.document.application.command;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -16,4 +17,17 @@ public record SalesSlipItemInput(
     @NotNull @Min(1) Integer quantity,
     @NotNull @Min(0) Integer unitPrice,
     @Size(max = 1000) String memo,
-    @NotNull List<@Valid SalesSlipAllocationInput> allocations) {}
+    @NotNull List<@Valid SalesSlipAllocationInput> allocations,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @Size(max = 30) String unit,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @Min(1) Integer boxes) {
+  public SalesSlipItemInput(
+      String itemName,
+      String genus,
+      String spec,
+      Integer quantity,
+      Integer unitPrice,
+      String memo,
+      List<SalesSlipAllocationInput> allocations) {
+    this(itemName, genus, spec, quantity, unitPrice, memo, allocations, null, null);
+  }
+}

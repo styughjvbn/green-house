@@ -81,7 +81,9 @@ public class SalesSlipAllocationFactory {
                 SalesTextNormalizer.normalize(request.spec()),
                 request.quantity(),
                 request.unitPrice(),
-                SalesTextNormalizer.normalize(request.memo()))
+                SalesTextNormalizer.normalize(request.memo()),
+                SalesTextNormalizer.normalize(request.unit()),
+                request.boxes())
             : new SalesSlipItem(
                 null,
                 SalesTextNormalizer.required(request.itemName()),
@@ -90,7 +92,9 @@ public class SalesSlipAllocationFactory {
                 request.quantity(),
                 price.unitPrice(),
                 price.amount(),
-                SalesTextNormalizer.normalize(request.memo()));
+                SalesTextNormalizer.normalize(request.memo()),
+                SalesTextNormalizer.normalize(request.unit()),
+                request.boxes());
     for (SalesSlipAllocationInput allocationRequest : mergeAllocations(request.allocations())) {
       OrchidGroupState orchidGroup = orchidGroups.get(allocationRequest.orchidGroupId());
       validateItemVariety(request, orchidGroup);

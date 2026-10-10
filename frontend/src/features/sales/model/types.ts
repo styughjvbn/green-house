@@ -26,10 +26,13 @@ export type SalesItemForm = {
   itemName: string;
   genus: string;
   spec: string;
+  unit: string;
+  boxes: string;
   quantity: string;
   unitPrice: string;
   memo: string;
   allocations: SalesAllocationForm[];
+  allocationMode: "AUTO" | "MANUAL";
 };
 
 export type SalesSlipForm = {

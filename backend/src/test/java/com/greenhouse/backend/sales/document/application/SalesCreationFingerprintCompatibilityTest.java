@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class SalesCreationFingerprintCompatibilityTest {
@@ -54,9 +55,15 @@ class SalesCreationFingerprintCompatibilityTest {
               SalesSlipAllocationInput.class.getName());
       for (var schema : schemas.entrySet()) {
         var type = Class.forName(schema.getKey());
+        // Keep the v1 fixture unchanged: absent optional packing fields must retain its hash.
+        var expected =
+            schema.getKey().equals(SalesSlipItemInput.class.getName())
+                ? Stream.concat(schema.getValue().stream(), List.of("unit", "boxes").stream())
+                    .toList()
+                : schema.getValue();
         assertThat(Arrays.stream(type.getRecordComponents()).map(RecordComponent::getName).toList())
             .as("%s: review versioning/replay before updating the v1 fixture", schema.getKey())
-            .containsExactlyInAnyOrderElementsOf(schema.getValue());
+            .containsExactlyInAnyOrderElementsOf(expected);
       }
     }
   }

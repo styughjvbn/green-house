@@ -38,6 +38,7 @@ import java.util.stream.IntStream;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -92,6 +93,62 @@ class SalesWriteQueryPostgresE2ETest extends WorkE2ETestBase {
             .saveAndFlush(
                 new BusinessPartner("쓰기 조회 회귀", PartnerType.WHOLESALE, null, null, null, null))
             .getId();
+  }
+
+  @Test
+  void optionalPackingPersistsForBothSaleTypesAndAuctionLot() {
+    var base = request(1, false);
+    var item = base.items().getFirst();
+    var withPacking =
+        new SalesSlipItemInput(
+            item.itemName(),
+            item.genus(),
+            item.spec(),
+            item.quantity(),
+            item.unitPrice(),
+            item.memo(),
+            item.allocations(),
+            "분",
+            2);
+    var directRequest =
+        new SalesSlipCommand(
+            DATE, SalesType.DIRECT, partner, null, null, "작성중", "현금", null, List.of(withPacking));
+    var direct = creation.create(directRequest);
+    assertThat(queries.getSalesSlip(direct.id()).items().getFirst().unit()).isEqualTo("분");
+    assertThat(queries.getSalesSlip(direct.id()).items().getFirst().boxes()).isEqualTo(2);
+    assertThat(
+            jdbc.queryForObject(
+                "select boxes from sales_slip_items where sales_slip_id = ?",
+                Integer.class,
+                direct.id()))
+        .isEqualTo(2);
+    updates.update(direct.id(), base);
+    assertThat(queries.getSalesSlip(direct.id()).items().getFirst().boxes()).isNull();
+
+    var auctionPartner =
+        partners.saveAndFlush(
+            new BusinessPartner("상자 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
+    var auctionRequest =
+        new SalesSlipCommand(
+            DATE,
+            SalesType.AUCTION,
+            auctionPartner.getId(),
+            null,
+            null,
+            "작성중",
+            null,
+            null,
+            List.of(withPacking));
+    var auction = creation.create(auctionRequest);
+    statuses.updateStatus(auction.id(), new SalesSlipStatusUpdateRequest("출하 완료", null));
+    assertThat(queries.getSalesSlip(auction.id()).items().getFirst().boxes()).isEqualTo(2);
+    assertThat(
+            jdbc.queryForObject(
+                "select lot.boxes from auction_shipment_lots lot join sales_slip_items item "
+                    + "on item.auction_shipment_lot_id = lot.id where item.sales_slip_id = ?",
+                Integer.class,
+                auction.id()))
+        .isEqualTo(2);
   }
 
   @ParameterizedTest
