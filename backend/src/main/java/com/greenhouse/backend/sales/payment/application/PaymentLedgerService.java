@@ -81,10 +81,12 @@ public class PaymentLedgerService {
     var event =
         eventRepository.findByExternalUid(
             externalUid(targetType, targetId, request.idempotencyKey()));
+    boolean usedTargetAlias = false;
     if (event.isEmpty() && targetType == PaymentTargetType.AUCTION_PROCEEDS) {
       var original = eventRepository.findOriginalTarget(targetType.name(), targetId);
       if (original.isPresent()) {
         var alias = original.orElseThrow();
+        usedTargetAlias = true;
         event =
             eventRepository.findByExternalUid(
                 externalUid(
@@ -93,11 +95,13 @@ public class PaymentLedgerService {
                     request.idempotencyKey()));
       }
     }
+    final boolean aliasLookup = usedTargetAlias;
     return event.map(
         received -> {
           if (targetType == PaymentTargetType.AUCTION_PROCEEDS
               && (received.getTargetType() != targetType
-                  || !Objects.equals(received.getTargetId(), targetId)))
+                  || !Objects.equals(received.getTargetId(), targetId))
+              && (received.getTargetType() != PaymentTargetType.NONE || aliasLookup))
             throw new ConflictException(
                 "PAYMENT_REPLAY_TARGET_MISMATCH", "기존 입금의 대상 연결을 확인해야 합니다.");
           received.validateReplay(request.amount(), request.paymentDate());

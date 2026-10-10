@@ -176,6 +176,7 @@ METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.lockAllocati
 METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.lockAndValidate(java.lang.Long)
 METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.paymentSnapshot(java.lang.Long)
 METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.recordPayment(java.lang.Long, java.lang.Long, java.lang.String, java.time.LocalDateTime)
+METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.remainingAmount(java.lang.Long)
 METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.response(java.lang.Long)
 METHOD	com.greenhouse.backend.sales.document.api.DocumentPaymentApi.updateBalance(java.lang.Long, java.lang.Long)
 METHOD	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$LotDraft.boxes()

@@ -552,7 +552,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은 409 IDEMPOTENCY_KEY_REUSED입니다. */
+        /** @description 받은 전액을 기록하고 전표 잔액까지만 배분하며 초과액은 거래처 미배분 잔액으로 남깁니다. 대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은 409 IDEMPOTENCY_KEY_REUSED입니다. */
         post: operations["confirmPayment"];
         delete?: never;
         options?: never;
@@ -864,7 +864,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 자료 연결과 받을 금액이 확인된 경매 대금에 입금을 배분합니다. 같은 키·금액·입금일은 중복 수납 없이 현재 조회를 반환합니다. */
+        /** @description 자료 연결과 받을 금액이 확인된 경매 대금에 잔액까지만 배분하고 초과 수납액은 거래처 미배분 잔액으로 남깁니다. 같은 키·금액·입금일은 중복 수납 없이 현재 조회를 반환합니다. */
         post: operations["confirmPayment_1"];
         delete?: never;
         options?: never;
@@ -6330,7 +6330,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
                 };
             };
-            /** @description VALIDATION_ERROR: 입력 오류 또는 초과입금 등 기존 업무 검증 실패 */
+            /** @description VALIDATION_ERROR: 입력 오류 또는 배분할 대상 잔액 없음 */
             400: {
                 headers: {
                     [name: string]: unknown;

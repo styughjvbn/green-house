@@ -143,7 +143,8 @@ export function ManualPaymentPanel({
                     className={controlClass}
                     type="number"
                     min={1}
-                    max={remainingAmount}
+                    max={Number.MAX_SAFE_INTEGER}
+                    step={1}
                     required
                     value={amount}
                     onChange={(event) => {
@@ -172,8 +173,6 @@ export function ManualPaymentPanel({
                   >
                     <option>계좌이체</option>
                     <option>현금</option>
-                    <option>카드</option>
-                    <option>기타</option>
                   </select>
                 </Field>
                 <Field label="납부자명">
@@ -205,6 +204,10 @@ export function ManualPaymentPanel({
                   {saving ? "처리 중" : "수납 기록"}
                 </button>
               </fieldset>
+              <p className="mt-2 text-xs text-[#68756c]">
+                현재 잔액까지만 이 대상에 배분하고, 초과 수납액은 거래처 미배분
+                잔액으로 남습니다.
+              </p>
             </form>
           ) : (
             <p className="text-xs font-semibold">

@@ -140,6 +140,37 @@ class SalesAmountPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
+  void excessDirectReceiptKeepsTheFullAmountAndLeavesTheRemainderUnassigned() {
+    var created = creation.create(request(1, 1000, 1000));
+    var command =
+        new ManualPaymentCommand(2500L, DATE, "direct-overpayment", "현금", null, null, null);
+
+    var paid = payments.confirmPayment(created.id(), command);
+    assertThat(paid.paidAmount()).isEqualTo(2000L);
+    assertThat(paid.remainingAmount()).isZero();
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT unapplied_payment_amount FROM partner_balance_summaries WHERE partner_id = ?",
+                Long.class,
+                partnerId))
+        .isEqualTo(500L);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT amount FROM partner_payment_events WHERE external_uid = 'MANUAL:SALES_SLIP:' || ? || ':direct-overpayment'",
+                Long.class,
+                created.id()))
+        .isEqualTo(2500L);
+
+    assertThat(payments.confirmPayment(created.id(), command)).isEqualTo(paid);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM partner_payment_events WHERE external_uid = 'MANUAL:SALES_SLIP:' || ? || ':direct-overpayment'",
+                Long.class,
+                created.id()))
+        .isEqualTo(1L);
+  }
+
+  @Test
   void preservesZeroPriceForAuctionShipments() {
     var auctionPartner =
         partners.saveAndFlush(

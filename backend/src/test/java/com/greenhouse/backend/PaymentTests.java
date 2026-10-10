@@ -306,6 +306,48 @@ class PaymentTests {
         .andExpect(jsonPath("$.data.receivableBalance").value(0));
   }
 
+  @Test
+  void overpaidSalesSlipKeepsOnlyItsBalanceAllocatedAndTheRestUnassigned() throws Exception {
+    var partner =
+        partnerRepository.saveAndFlush(
+            new BusinessPartner("초과 수납 거래처", PartnerType.WHOLESALE, null, null, null, null));
+    var slip =
+        new SalesSlip(
+            "S20260706-OVER",
+            LocalDate.of(2026, 7, 6),
+            SalesType.DIRECT,
+            null,
+            partner.getId(),
+            "미입금",
+            "작성중",
+            "계좌이체",
+            null);
+    slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
+    DirectSaleFixtures.refreshProjection(slip);
+    slip = salesSlipRepository.saveAndFlush(slip);
+    DirectSaleFixtures.copyTerms(jdbc, slip.getId());
+
+    for (int attempt = 0; attempt < 2; attempt++) {
+      mockMvc
+          .perform(
+              post("/api/sales-slips/{id}/confirm-payment", slip.getId())
+                  .contentType("application/json")
+                  .content(paymentJson(120_000)))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.data.paidAmount").value(100_000))
+          .andExpect(jsonPath("$.data.remainingAmount").value(0));
+    }
+    assertThat(eventRepository.findAll())
+        .extracting(PartnerPaymentEvent::getEventType)
+        .containsExactlyInAnyOrder(
+            PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.PAYMENT_ALLOCATED);
+    assertThat(eventRepository.sumUnassignedAmount(partner.getId())).isEqualByComparingTo("20000");
+    mockMvc
+        .perform(get("/api/business-partners/{id}/balance-summary", partner.getId()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.unappliedPaymentAmount").value(20_000));
+  }
+
   @ParameterizedTest
   @CsvSource({"DIRECT, 취소", "AUCTION, 작성중", "AUCTION, 출하 완료"})
   void rejectsPaymentToCanceledOrAuctionSalesSlip(SalesType salesType, String salesStatus)
@@ -349,7 +391,7 @@ class PaymentTests {
   }
 
   @Test
-  void confirmsAuctionPaymentAndRejectsOverpayment() throws Exception {
+  void confirmsAuctionPaymentAndKeepsOverpaymentUnassigned() throws Exception {
     var auctionHouse =
         partnerRepository.saveAndFlush(
             new BusinessPartner("입금 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
@@ -411,9 +453,26 @@ class PaymentTests {
             post("/api/auction-proceeds/{id}/confirm-payment", settlement.id())
                 .contentType("application/json")
                 .content(paymentJson(70_000)))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
-        .andExpect(jsonPath("$.error.message").exists());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.paidAmount").value(100_000))
+        .andExpect(jsonPath("$.data.remainingAmount").value(0));
+    mockMvc
+        .perform(
+            post("/api/auction-proceeds/{id}/confirm-payment", settlement.id())
+                .contentType("application/json")
+                .content(paymentJson(70_000)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.paidAmount").value(100_000))
+        .andExpect(jsonPath("$.data.remainingAmount").value(0));
+    assertThat(eventRepository.sumUnassignedAmount(auctionHouse.getId()))
+        .isEqualByComparingTo("10000");
+    assertThat(eventRepository.findAll())
+        .extracting(PartnerPaymentEvent::getEventType)
+        .containsExactlyInAnyOrder(
+            PaymentEventType.PAYMENT_RECEIVED,
+            PaymentEventType.MANUAL_MATCH_CONFIRMED,
+            PaymentEventType.PAYMENT_RECEIVED,
+            PaymentEventType.PAYMENT_ALLOCATED);
 
     var audits =
         auditEventRepository.findAll().stream()
@@ -422,18 +481,18 @@ class PaymentTests {
                     "AUCTION_PROCEEDS".equals(event.getEntityType())
                         || "PAYMENT_EVENT".equals(event.getEntityType()))
             .toList();
-    assertThat(audits).hasSize(2);
+    assertThat(audits).hasSize(4);
     assertThat(audits)
         .extracting(event -> event.getEntityType())
-        .containsExactly("PAYMENT_EVENT", "AUCTION_PROCEEDS");
+        .containsExactly("PAYMENT_EVENT", "AUCTION_PROCEEDS", "PAYMENT_EVENT", "AUCTION_PROCEEDS");
     assertThat(audits.getLast().getChangedFields())
         .containsExactly("paidAmount", "remainingAmount");
     assertPaymentAudit(
         audits.getLast(),
         auctionHouse.getId(),
         "AUCTION_PROCEEDS",
-        "{\"paidAmount\":0,\"remainingAmount\":100000}",
-        "{\"paidAmount\":40000,\"remainingAmount\":60000}");
+        "{\"paidAmount\":40000,\"remainingAmount\":60000}",
+        "{\"paidAmount\":100000,\"remainingAmount\":0}");
     assertThat(audits.getLast().getEntityId()).isEqualTo(settlement.id());
   }
 

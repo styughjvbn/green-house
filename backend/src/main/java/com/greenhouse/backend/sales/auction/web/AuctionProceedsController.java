@@ -33,7 +33,8 @@ public class AuctionProceedsController {
 
   @PostMapping("/{id}/confirm-payment")
   @Operation(
-      description = "자료 연결과 받을 금액이 확인된 경매 대금에 입금을 배분합니다. 같은 키·금액·입금일은 중복 수납 없이 현재 조회를 반환합니다.")
+      description =
+          "자료 연결과 받을 금액이 확인된 경매 대금에 잔액까지만 배분하고 초과 수납액은 거래처 미배분 잔액으로 남깁니다. 같은 키·금액·입금일은 중복 수납 없이 현재 조회를 반환합니다.")
   public ApiResponse<AuctionProceedsResponse> confirmPayment(
       @PathVariable Long id, @Valid @RequestBody ManualPaymentCommand command) {
     return ApiResponse.ok(payments.confirm(id, command));

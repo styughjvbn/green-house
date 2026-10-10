@@ -71,6 +71,13 @@ public class AuctionProceedsPaymentTarget
     return partnerId;
   }
 
+  public long remainingAmount(Long id) {
+    var response = reader.get(id);
+    var root = repository.findById(id).orElseThrow();
+    root.requireAllocation(response.paidAmount(), 1L, response.reviewRequired());
+    return root.remainingAmount(response.paidAmount()).longValueExact();
+  }
+
   public Map<String, Object> paymentSnapshot(Long id) {
     var response = reader.get(id);
     var result = new LinkedHashMap<String, Object>();

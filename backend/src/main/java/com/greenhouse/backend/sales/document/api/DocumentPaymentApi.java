@@ -18,6 +18,8 @@ public interface DocumentPaymentApi {
 
   Long lockAndValidate(Long id);
 
+  long remainingAmount(Long id);
+
   Map<String, Object> paymentSnapshot(Long id);
 
   void recordPayment(Long id, Long amount, String worker, LocalDateTime now);

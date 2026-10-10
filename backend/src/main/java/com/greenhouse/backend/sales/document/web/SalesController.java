@@ -175,7 +175,7 @@ public class SalesController {
   @PostMapping("/sales-slips/{salesSlipId}/confirm-payment")
   @Operation(
       description =
-          "대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은 409 IDEMPOTENCY_KEY_REUSED입니다.",
+          "받은 전액을 기록하고 전표 잔액까지만 배분하며 초과액은 거래처 미배분 잔액으로 남깁니다. 대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은 409 IDEMPOTENCY_KEY_REUSED입니다.",
       responses = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
@@ -183,7 +183,7 @@ public class SalesController {
             useReturnTypeSchema = true),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "400",
-            description = "VALIDATION_ERROR: 입력 오류 또는 초과입금 등 기존 업무 검증 실패",
+            description = "VALIDATION_ERROR: 입력 오류 또는 배분할 대상 잔액 없음",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "409",

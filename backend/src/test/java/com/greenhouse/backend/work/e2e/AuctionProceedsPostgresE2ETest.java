@@ -124,6 +124,39 @@ class AuctionProceedsPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
+  void overpaymentAllocatesOnlyTargetBalanceAndKeepsRemainderUnassigned() {
+    var fixture = seed(AuctionInspectionStatus.NORMAL);
+    Long id = service.record(fixture.houseId(), "초과 수납", 1000L, 930L, List.of(fixture.resultId()));
+    service.confirm(id, "확인자");
+
+    var paid = payments.confirm(id, command("overpayment", 1000));
+    assertThat(paid.paidAmount()).isEqualByComparingTo("930");
+    assertThat(paid.remainingAmount()).isZero();
+    assertThat(events.sumUnassignedAmount(fixture.houseId())).isEqualByComparingTo("70");
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from partner_payment_events where target_type = 'AUCTION_PROCEEDS' and target_id = ? and amount = 930",
+                Long.class,
+                id))
+        .isEqualTo(1);
+
+    assertThat(payments.confirm(id, command("overpayment", 1000)).paidAmount())
+        .isEqualByComparingTo("930");
+    var receipt =
+        events.findByExternalUid("MANUAL:AUCTION_PROCEEDS:" + id + ":overpayment").orElseThrow();
+    assertThat(receipt.getAmount()).isEqualTo(1000);
+    assertThat(receipt.getUnappliedAmount()).isEqualTo(70);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from partner_payment_events where id = ? or parent_event_id = ?",
+                Long.class,
+                receipt.getId(),
+                receipt.getId()))
+        .isEqualTo(2);
+    assertThat(events.sumUnassignedAmount(fixture.houseId())).isEqualByComparingTo("70");
+  }
+
+  @Test
   void grossOnlyAndUnconfirmedTargetsDoNotInventReceivablesOrCash() {
     var fixture = seed(AuctionInspectionStatus.NORMAL);
     Long id =
@@ -145,7 +178,7 @@ class AuctionProceedsPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
-  void concurrentPaymentsSerializeTheRemainingAmount() throws Exception {
+  void concurrentPaymentsAllocateOnlyTheRemainingAmountAndLeaveExcessUnassigned() throws Exception {
     var fixture = seed(AuctionInspectionStatus.NORMAL);
     Long id = service.record(fixture.houseId(), "동시 입금", 1000L, 930L, List.of(fixture.resultId()));
     service.confirm(id, "확인자");
@@ -160,27 +193,23 @@ class AuctionProceedsPostgresE2ETest extends WorkE2ETestBase {
                           () -> {
                             ready.countDown();
                             start.await();
-                            try {
-                              payments.confirm(id, command("parallel-" + i, 600));
-                              return true;
-                            } catch (IllegalArgumentException expected) {
-                              return false;
-                            }
+                            payments.confirm(id, command("parallel-" + i, 600));
+                            return true;
                           }))
               .toList();
       assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
       start.countDown();
-      assertThat(List.of(tasks.get(0).get(), tasks.get(1).get()))
-          .containsExactlyInAnyOrder(true, false);
+      assertThat(List.of(tasks.get(0).get(), tasks.get(1).get())).containsExactly(true, true);
     }
-    assertThat(reader.get(id).paidAmount()).isEqualByComparingTo("600");
-    assertThat(reader.get(id).remainingAmount()).isEqualByComparingTo("330");
+    assertThat(reader.get(id).paidAmount()).isEqualByComparingTo("930");
+    assertThat(reader.get(id).remainingAmount()).isZero();
+    assertThat(events.sumUnassignedAmount(fixture.houseId())).isEqualByComparingTo("270");
     assertThat(
             jdbc.queryForObject(
                 "select count(*) from partner_payment_events where target_type = 'AUCTION_PROCEEDS' and target_id = ?",
                 Long.class,
                 id))
-        .isEqualTo(2);
+        .isEqualTo(3);
   }
 
   @Test

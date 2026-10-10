@@ -80,6 +80,15 @@ public class DocumentPaymentTarget implements DocumentPaymentApi {
     return slip.getPartnerId();
   }
 
+  public long remainingAmount(Long id) {
+    accounting.requirePaymentAmount(id, repository.findById(id).orElseThrow().getPartnerId(), 1L);
+    var value = accounting.findFinancials(List.of(id)).get(id);
+    if (value == null)
+      throw new ConflictException(
+          "DIRECT_AMOUNT_SOURCE_MISSING", "일반 판매 금액 자료가 없어 입금을 처리할 수 없습니다.");
+    return value.remainingAmount().longValueExact();
+  }
+
   public Map<String, Object> paymentSnapshot(Long id) {
     var value = accounting.findFinancials(List.of(id)).get(id);
     if (value == null)

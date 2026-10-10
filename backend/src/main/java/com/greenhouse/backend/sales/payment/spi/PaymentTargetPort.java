@@ -7,6 +7,8 @@ import java.util.Map;
 public interface PaymentTargetPort<T> {
   Long lockAndValidate(Long targetId);
 
+  long remainingAmount(Long targetId);
+
   Map<String, Object> paymentSnapshot(Long targetId);
 
   void recordPayment(Long targetId, Long amount, String worker, LocalDateTime now);

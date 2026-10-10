@@ -23,7 +23,7 @@ public class ManualPaymentService implements ManualPaymentApi {
 
   public <T> T confirm(
       Long id, PaymentTargetType type, ManualPaymentCommand command, PaymentTargetPort<T> target) {
-    return receiveAndAllocate(id, type, command, command.amount(), target);
+    return receiveAndAllocateInternal(id, type, command, null, target);
   }
 
   public <T> T receiveAndAllocate(
@@ -32,15 +32,30 @@ public class ManualPaymentService implements ManualPaymentApi {
       ManualPaymentCommand command,
       long allocationAmount,
       PaymentTargetPort<T> target) {
+    return receiveAndAllocateInternal(id, type, command, allocationAmount, target);
+  }
+
+  private <T> T receiveAndAllocateInternal(
+      Long id,
+      PaymentTargetType type,
+      ManualPaymentCommand command,
+      Long requestedAllocation,
+      PaymentTargetPort<T> target) {
     if (command.amount() == null
         || command.amount() <= 0
-        || allocationAmount < 0
-        || allocationAmount > command.amount())
+        || (requestedAllocation != null
+            && (requestedAllocation < 0 || requestedAllocation > command.amount())))
       throw new IllegalArgumentException("수납액은 양수이고 배분액은 수납액 이하여야 합니다.");
     Long partnerId = target.lockAndValidate(id);
     if (ledger.findManualPayment(type, id, command).isPresent()) {
       return target.response(id);
     }
+    long allocationAmount =
+        requestedAllocation == null
+            ? Math.min(command.amount(), target.remainingAmount(id))
+            : requestedAllocation;
+    if (requestedAllocation == null && allocationAmount <= 0)
+      throw new IllegalArgumentException("배분할 대상 잔액이 없습니다.");
     var before = target.paymentSnapshot(id);
     String worker = actors.resolve(command.worker());
     if (allocationAmount > 0)

@@ -27,13 +27,14 @@ import org.junit.jupiter.params.provider.EnumSource;
 class ManualPaymentServiceTest {
   private final PaymentLedgerService ledger = mock(PaymentLedgerService.class);
   private final RequestActorProvider actors = mock(RequestActorProvider.class);
+  private final PartnerBalanceService balances = mock(PartnerBalanceService.class);
 
   @SuppressWarnings("unchecked")
   private final PaymentTargetPort<String> target = mock(PaymentTargetPort.class);
 
   private final Clock clock = Clock.fixed(Instant.parse("2026-09-05T15:30:00Z"), ZoneOffset.UTC);
   private final ManualPaymentService service =
-      new ManualPaymentService(ledger, actors, clock, mock(PartnerBalanceService.class));
+      new ManualPaymentService(ledger, actors, clock, balances);
   private final ManualPaymentCommand command =
       new ManualPaymentCommand(
           100L, LocalDate.of(2026, 9, 6), "same-key", "계좌이체", null, "worker", null);
@@ -47,6 +48,7 @@ class ManualPaymentServiceTest {
     when(ledger.findManualPayment(type, 7L, command)).thenReturn(Optional.empty());
     var before = Map.<String, Object>of("paidAmount", 0L);
     when(target.paymentSnapshot(7L)).thenReturn(before);
+    when(target.remainingAmount(7L)).thenReturn(100L);
     when(actors.resolve("worker")).thenReturn("authenticated-worker");
     when(ledger.recordManualPayment(3L, type, 7L, command)).thenReturn(9L);
     when(target.response(7L)).thenReturn("current-value");
@@ -64,6 +66,31 @@ class ManualPaymentServiceTest {
     order.verify(target).updateBalance(7L, 9L);
     order.verify(target).auditPayment(7L, before);
     order.verify(target).response(7L);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = PaymentTargetType.class,
+      names = {"SALES_SLIP", "AUCTION_PROCEEDS"})
+  void overpaymentAllocatesOnlyRemainingAmountAndRefreshesUnassignedBalance(
+      PaymentTargetType type) {
+    var overpayment =
+        new ManualPaymentCommand(
+            120L, LocalDate.of(2026, 9, 6), "over-key", "계좌이체", null, "worker", null);
+    when(target.lockAndValidate(7L)).thenReturn(3L);
+    when(ledger.findManualPayment(type, 7L, overpayment)).thenReturn(Optional.empty());
+    when(target.remainingAmount(7L)).thenReturn(100L);
+    when(target.paymentSnapshot(7L)).thenReturn(Map.of("paidAmount", 0L));
+    when(actors.resolve("worker")).thenReturn("authenticated-worker");
+    when(ledger.recordManualPayment(3L, type, 7L, overpayment, 100L)).thenReturn(9L);
+    when(target.response(7L)).thenReturn("fully-paid");
+
+    assertThat(service.confirm(7L, type, overpayment, target)).isEqualTo("fully-paid");
+
+    verify(target)
+        .recordPayment(7L, 100L, "authenticated-worker", LocalDateTime.of(2026, 9, 5, 15, 30));
+    verify(ledger).recordManualPayment(3L, type, 7L, overpayment, 100L);
+    verify(balances).refreshUnassignedAmount(3L, 9L);
   }
 
   @ParameterizedTest

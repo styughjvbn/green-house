@@ -326,6 +326,59 @@ test("direct document creation collects cash separately from dispatch and remove
   expect(submitted?.salesStatus).toBe("출고 완료");
 });
 
+test("direct payment records an amount above the slip balance", async ({
+  page,
+}) => {
+  let receivedAmount: number | null = null;
+  await page.route("**/api/sales-slips/11", async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    await route.fulfill({
+      json: {
+        ...body,
+        data: { ...body.data, availableActions: ["CONFIRM_PAYMENT"] },
+      },
+    });
+  });
+  await page.route("**/api/sales-slips/11/confirm-payment", async (route) => {
+    receivedAmount = route.request().postDataJSON().amount;
+    const response = await route.fetch({
+      method: "GET",
+      url: "http://127.0.0.1:14100/api/sales-slips/11",
+    });
+    const body = await response.json();
+    await route.fulfill({
+      json: {
+        ...body,
+        data: {
+          ...body.data,
+          paidAmount: 1000,
+          remainingAmount: 0,
+          availableActions: [],
+        },
+      },
+    });
+  });
+
+  await page.goto("/sales/slips");
+  await page.getByRole("row", { name: /1 26-10-01 일반/ }).click();
+  await page.getByRole("button", { name: "수납 기록", exact: true }).click();
+  const amount = page.getByRole("spinbutton", { name: "수납액", exact: true });
+  await amount.fill("1200");
+  expect(
+    await amount.evaluate((input: HTMLInputElement) => input.checkValidity()),
+  ).toBe(true);
+  await expect(
+    page.getByText(/초과 수납액은 거래처 미배분 잔액으로 남습니다/),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "수납 기록", exact: true })
+    .last()
+    .click();
+  await expect(page.getByText("수납 기록 완료", { exact: true })).toBeVisible();
+  expect(receivedAmount).toBe(1200);
+});
+
 test("fully collected direct documents retain receipt history while new collection is disabled", async ({
   page,
   request,

@@ -68,6 +68,10 @@ public class DirectPaymentAllocationTarget
     return document.lockAndValidate(id);
   }
 
+  public long remainingAmount(Long id) {
+    return document.remainingAmount(id);
+  }
+
   public Map<String, Object> paymentSnapshot(Long id) {
     return document.paymentSnapshot(id);
   }
