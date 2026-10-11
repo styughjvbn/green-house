@@ -28,7 +28,7 @@ test("sales route state reads filters, paging, and create request", () => {
       to: "",
       partnerId: "3",
       salesType: "",
-      paymentStatus: "미입금",
+      paymentStatus: "",
       salesStatus: "",
       keyword: "거래처",
     },
@@ -222,4 +222,18 @@ test("sales type and grouped dispatch filters survive URLs while legacy completi
       .salesType,
     "",
   );
+});
+
+test("paused payment filters are ignored in both server and browser URLs", () => {
+  for (const paymentStatus of ["미입금", "부분입금", "입금 완료"]) {
+    const values = { paymentStatus, slipId: "42", paymentPage: "0" };
+    for (const params of [
+      new URLSearchParams(values),
+      createServerSearchParamReader(values),
+    ]) {
+      const state = readSalesRouteState(params);
+      assert.equal(state.filters.paymentStatus, "");
+      assert.equal(state.selectedSlipId, 42);
+    }
+  }
 });

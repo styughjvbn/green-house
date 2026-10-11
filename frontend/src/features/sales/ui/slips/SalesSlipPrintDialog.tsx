@@ -1,6 +1,6 @@
 "use client";
 
-import { salesDispatchLabel, salesPaymentLabel } from "../../lib/salesDisplay";
+import { salesDispatchLabel } from "../../lib/salesDisplay";
 import { getPartnerSettlementSettings } from "../../api/salesApi";
 
 import { useEffect, useState } from "react";
@@ -280,11 +280,8 @@ function StandardSalesSlipPrintSheet({ salesSlip }: { salesSlip: SalesSlip }) {
         </div>
       </section>
 
-      <footer className="mt-6 grid grid-cols-3 gap-3 text-sm">
-        <PrintInfoBox
-          label="수납"
-          value={salesPaymentLabel(salesSlip.paymentStatus)}
-        />
+      <footer className="mt-6 grid grid-cols-2 gap-3 text-sm">
+        {/* TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정. */}
         <PrintInfoBox
           label="출고·출하"
           value={salesDispatchLabel(salesSlip.salesStatus, salesSlip.salesType)}

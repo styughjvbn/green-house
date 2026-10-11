@@ -79,7 +79,8 @@ export function readSalesRouteState(
       from: params.get("from") ?? "",
       to: params.get("to") ?? "",
       partnerId: params.get("partnerId") ?? "",
-      paymentStatus: params.get("paymentStatus") ?? "",
+      // TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정. 기존 URL의 숨겨진 수납 필터도 무시한다.
+      paymentStatus: "",
       salesStatus: legacyType
         ? "완료"
         : readEnumValue(rawStatus, ["작성중", "완료", "취소"]),

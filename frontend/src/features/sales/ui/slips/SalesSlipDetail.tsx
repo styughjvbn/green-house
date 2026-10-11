@@ -1,4 +1,4 @@
-import { salesDispatchLabel, salesPaymentLabel } from "../../lib/salesDisplay";
+import { salesDispatchLabel } from "../../lib/salesDisplay";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Route } from "next";
@@ -8,8 +8,6 @@ import { Ban, ChevronDown, Copy, Pencil, Printer, Truck } from "lucide-react";
 import type { SalesSlip, SalesSlipItem } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
-import { confirmSalesSlipPayment } from "../../api/salesApi";
-import { ManualPaymentPanel } from "../auction/ManualPaymentPanel";
 import { SalesSlipPrintDialog } from "./SalesSlipPrintDialog";
 import {
   DetailCard,
@@ -168,7 +166,6 @@ export function SalesSlipDetail({
   onCancelSalesSlip,
   onEditSalesSlip,
   onCompleteSalesSlip,
-  onPaymentConfirmed,
 }: {
   loading?: boolean;
   salesSlip: SalesSlip | null;
@@ -176,7 +173,6 @@ export function SalesSlipDetail({
   onCancelSalesSlip: (salesSlipId: number) => Promise<void>;
   onEditSalesSlip: (salesSlipId: number) => void;
   onCompleteSalesSlip: (salesSlipId: number) => Promise<void>;
-  onPaymentConfirmed: (salesSlip: SalesSlip) => void;
 }) {
   const [partnerInfoOpen, setPartnerInfoOpen] = useState(false);
   const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
@@ -190,8 +186,7 @@ export function SalesSlipDetail({
   const canComplete = salesSlip.availableActions.includes("COMPLETE");
   const canEdit = salesSlip.availableActions.includes("EDIT");
   const canCancel = salesSlip.availableActions.includes("CANCEL");
-  const canConfirmPayment =
-    salesSlip.availableActions.includes("CONFIRM_PAYMENT");
+  // TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정.
   return (
     <>
       <DetailCard>
@@ -209,7 +204,7 @@ export function SalesSlipDetail({
             role="status"
             className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           >
-            금액 확인이 필요합니다. 검토가 끝날 때까지 수납과 금액 수정을 할 수
+            금액 확인이 필요합니다. 검토가 끝날 때까지 금액 수정을 할 수
             없습니다.
           </p>
         ) : null}
@@ -219,7 +214,7 @@ export function SalesSlipDetail({
           summary={
             <DetailSummary
               align="left"
-              columns="lg:grid-cols-4"
+              columns="lg:grid-cols-3"
               items={[
                 {
                   label: "판매 유형",
@@ -231,10 +226,6 @@ export function SalesSlipDetail({
                 {
                   label: "판매일자",
                   value: formatShortDate(salesSlip.saleDate),
-                },
-                {
-                  label: "수납",
-                  value: salesPaymentLabel(salesSlip.paymentStatus),
                 },
                 {
                   label: "출고·출하",
@@ -366,26 +357,7 @@ export function SalesSlipDetail({
             </div>
           </div>
 
-          {salesSlip.salesType === "DIRECT" ? (
-            <div className="mt-3 rounded-md border border-[#dfe5dc]">
-              <ManualPaymentPanel
-                key={salesSlip.id}
-                targetType="SALES_SLIP"
-                targetId={salesSlip.id}
-                paymentAllowed={canConfirmPayment}
-                remainingAmount={salesSlip.remainingAmount}
-                expectedPaymentDate={salesSlip.expectedPaymentDate}
-                onConfirm={async (payload) => {
-                  const updated = await confirmSalesSlipPayment(
-                    salesSlip.id,
-                    payload,
-                  );
-                  onPaymentConfirmed(updated);
-                  return updated.remainingAmount;
-                }}
-              />
-            </div>
-          ) : null}
+          {/* TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정. 수납 패널을 마운트하지 않는다. */}
         </div>
       </DetailCard>
 

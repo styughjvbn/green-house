@@ -84,7 +84,6 @@ export function SalesSlipsPage({
             onCancelSalesSlip={sales.handleCancelSalesSlip}
             onEditSalesSlip={sales.startEditSalesSlip}
             onCompleteSalesSlip={sales.handleCompleteSalesSlip}
-            onPaymentConfirmed={sales.updateSalesSlip}
           />
         </TabSplit>
       </TabLayout>

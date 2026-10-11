@@ -336,14 +336,8 @@ export function toCreateSalesSlipPayload(
   form: SalesSlipForm,
 ): CreateSalesSlipPayload {
   return {
-    initialReceipt:
-      form.receiptEnabled && form.salesType === "DIRECT"
-        ? {
-            amount: Number(form.receiptAmount),
-            paymentDate: form.receiptDate,
-            method: form.receiptMethod,
-          }
-        : null,
+    // TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정.
+    initialReceipt: null,
     salesType: form.salesType,
     saleDate: form.saleDate,
     partnerId: form.partnerId ? Number(form.partnerId) : null,

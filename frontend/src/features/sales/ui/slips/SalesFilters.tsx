@@ -30,7 +30,7 @@ export function SalesFilters({
 }) {
   return (
     <FilterPanel>
-      <FilterGrid className="lg:grid-cols-[2.3fr_1fr_1.5fr_0.7fr_0.7fr_1.5fr_auto_auto]">
+      <FilterGrid className="lg:grid-cols-[2.3fr_1fr_1.5fr_0.7fr_1.5fr_auto_auto]">
         <FilterDateRange
           from={filters.from}
           to={filters.to}
@@ -73,16 +73,7 @@ export function SalesFilters({
           <option value="취소">취소</option>
         </FilterSelect>
 
-        <FilterSelect
-          label="수납"
-          value={filters.paymentStatus}
-          onChange={(value) => onChange("paymentStatus", value)}
-        >
-          <option value="">전체</option>
-          <option value="미입금">미수납</option>
-          <option value="부분입금">일부 수납</option>
-          <option value="입금 완료">수납 완료</option>
-        </FilterSelect>
+        {/* TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정. */}
 
         <FilterInput
           label="키워드"

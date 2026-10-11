@@ -65,14 +65,7 @@ export function SalesSlipList({
         size: 120,
         meta: { align: "right", cellClassName: "whitespace-nowrap" },
       },
-      {
-        accessorKey: "paymentStatus",
-        header: "수납",
-        cell: ({ row }) => (
-          <SalesSlipStatusBadge value={row.original.paymentStatus} />
-        ),
-        size: 10,
-      },
+      // TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정.
       {
         accessorKey: "salesStatus",
         header: "출고·출하",

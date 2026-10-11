@@ -7,7 +7,7 @@ import {
 } from "../src/features/sales/lib/salesForm.ts";
 import { salesPaymentLabel } from "../src/features/sales/lib/salesDisplay.ts";
 
-test("receipt payload is independent of dispatch and uses the farm business date", () => {
+test("paused receipts are excluded even when an old draft enables collection", () => {
   const form = createInitialSalesForm("2026-10-09");
   assert.equal(toCreateSalesSlipPayload(form).initialReceipt, null);
   const receipt = {
@@ -18,11 +18,7 @@ test("receipt payload is independent of dispatch and uses the farm business date
   };
   for (const salesStatus of ["작성중", "출고 완료"]) {
     const payload = toCreateSalesSlipPayload({ ...receipt, salesStatus });
-    assert.deepEqual(payload.initialReceipt, {
-      amount: 2000,
-      paymentDate: "2026-10-09",
-      method: "CASH",
-    });
+    assert.equal(payload.initialReceipt, null);
     assert.equal(payload.salesStatus, salesStatus);
     assert.equal(payload.paymentStatus, "미입금");
     assert.equal(payload.paymentMethod, null);

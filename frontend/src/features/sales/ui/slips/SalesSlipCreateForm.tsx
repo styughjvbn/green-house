@@ -189,77 +189,7 @@ export function SalesSlipCreateForm({
             />
           </div>
 
-          {form.salesType === "DIRECT" && mode === "create" ? (
-            <fieldset
-              disabled={saving}
-              className="space-y-3 rounded-md border border-[#d7ddd4] p-4"
-            >
-              <label className="flex items-center gap-2 text-sm font-semibold">
-                <input
-                  type="checkbox"
-                  checked={form.receiptEnabled}
-                  onChange={(event) =>
-                    onChange("receiptEnabled", event.target.checked)
-                  }
-                />
-                수납 함께 기록
-              </label>
-              {form.receiptEnabled ? (
-                <div className="grid gap-3 md:grid-cols-3">
-                  <SelectField
-                    label="수납 방법"
-                    value={form.receiptMethod}
-                    onChange={(value) =>
-                      onChange(
-                        "receiptMethod",
-                        value as SalesSlipForm["receiptMethod"],
-                      )
-                    }
-                  >
-                    <option value="CASH">현금</option>
-                    <option value="BANK_TRANSFER">계좌이체</option>
-                  </SelectField>
-                  <TextField
-                    label="수납액"
-                    type="number"
-                    required
-                    value={form.receiptAmount}
-                    onChange={(value) => onChange("receiptAmount", value)}
-                  />
-                  <TextField
-                    label="수납일"
-                    type="date"
-                    required
-                    value={form.receiptDate}
-                    onChange={(value) => onChange("receiptDate", value)}
-                  />
-                </div>
-              ) : null}
-              <p className="text-sm text-[#66736a]">
-                출고 여부와 별도로 실제 받은 금액만 기록하세요. 부분 수납도
-                가능합니다.
-              </p>
-              {form.receiptEnabled ? (
-                <p className="text-sm text-[#66736a]">
-                  전표 배분액{" "}
-                  {Math.min(
-                    Number(form.receiptAmount) || 0,
-                    totalAmount,
-                  ).toLocaleString()}
-                  원
-                  {Number(form.receiptAmount) > totalAmount ? (
-                    <span className="ml-2">
-                      초과분{" "}
-                      {(
-                        Number(form.receiptAmount) - totalAmount
-                      ).toLocaleString()}
-                      원은 거래처 미배분 잔액으로 남습니다.
-                    </span>
-                  ) : null}
-                </p>
-              ) : null}
-            </fieldset>
-          ) : null}
+          {/* TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정. */}
 
           <section className="space-y-3 rounded-md border border-[#d7ddd4] p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">

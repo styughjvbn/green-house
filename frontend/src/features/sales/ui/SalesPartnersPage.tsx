@@ -12,7 +12,7 @@ import {
 } from "./partners/BusinessPartnerEditSection";
 import { BusinessPartnerFilters } from "./partners/BusinessPartnerFilters";
 import { BusinessPartnerList } from "./partners/BusinessPartnerList";
-import { PartnerSettlementSettingsSection } from "./partners/PartnerSettlementSettingsSection";
+import { PartnerPrintSettingsSection } from "./partners/PartnerPrintSettingsSection";
 export function SalesPartnersPage() {
   const routeState = readBusinessPartnerRouteState(useSearchParams());
   const partners = useBusinessPartners({ routeState, urlSelection: false });
@@ -68,11 +68,11 @@ export function SalesPartnersPage() {
               onModeChange={setPartnerDetailMode}
               onSubmit={partners.handleUpdate}
             >
-              <PartnerSettlementSettingsSection
+              <PartnerPrintSettingsSection
                 key={partners.selectedPartner?.id ?? "empty"}
                 partner={partners.selectedPartner}
                 embedded
-                mode={partnerDetailMode === "settlement" ? "edit" : "read"}
+                mode={partnerDetailMode === "print" ? "edit" : "read"}
                 onSaved={() => setPartnerDetailMode("read")}
               />
             </BusinessPartnerEditSection>

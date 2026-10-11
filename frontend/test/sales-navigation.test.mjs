@@ -7,28 +7,15 @@ import {
 } from "../src/shared/config/routes/sales.ts";
 import { readSelectedBusinessPartnerId } from "../src/features/sales/lib/salesRouteParams.ts";
 
-test("sales keeps auction settlement and adds a payment submenu", () => {
+test("sales exposes only supported menus and rejects paused routes", () => {
   assert.deepEqual(
     SALES_NAV_ITEMS.map((item) => item.href),
-    [
-      "/sales/slips",
-      "/sales/auction",
-      "/sales/settlement",
-      "/sales/payments",
-      "/sales/partners",
-    ],
+    ["/sales/slips", "/sales/auction", "/sales/partners"],
   );
-  assert.equal(
-    SALES_NAV_ITEMS.find((item) => item.tab === "settlement").label,
-    "경매 정산",
-  );
-  assert.equal(
-    SALES_NAV_ITEMS.find((item) => item.tab === "payments").label,
-    "수납 관리",
-  );
-  assert.equal(isSalesTab("payments"), true);
-  assert.equal(isSalesTab("settlement"), true);
-  assert.equal(isSalesTab("constructor"), false);
+  for (const tab of ["slips", "auction", "partners"])
+    assert.equal(isSalesTab(tab), true);
+  for (const tab of ["payments", "settlement", "constructor", "unknown"])
+    assert.equal(isSalesTab(tab), false);
   const url = new URL(
     salesHref("auction", { market: "서울 & 부산", lotId: 42 }),
     "http://localhost",
