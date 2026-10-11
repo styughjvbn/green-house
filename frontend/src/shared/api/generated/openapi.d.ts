@@ -2357,7 +2357,10 @@ export interface components {
             /** @enum {string} */
             salesType?: "DIRECT" | "AUCTION";
             slipNumber?: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
+             */
             totalAmount?: number;
         };
         BusinessPartnerUpdateRequest: {
@@ -4247,7 +4250,10 @@ export interface components {
             /** @enum {string} */
             salesType?: "DIRECT" | "AUCTION";
             slipNumber?: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
+             */
             totalAmount?: number;
         };
         ApiResponseListAuctionShipmentOptionResponse: {

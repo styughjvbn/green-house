@@ -176,6 +176,13 @@ public class SalesSlip extends BaseEntity {
     this.paymentStatus = status;
   }
 
+  /** Current gross auction result sum for shared queries, never a receivable or payment amount. */
+  public void applyAuctionGrossProjection(long grossAmount) {
+    if (salesType != SalesType.AUCTION || grossAmount < 0 || grossAmount > Integer.MAX_VALUE)
+      throw new IllegalArgumentException("경매 전표 낙찰액 합계가 올바르지 않습니다.");
+    this.totalAmount = (int) grossAmount;
+  }
+
   public boolean canEdit(boolean hasPaymentEvent) {
     return editRejectionReason(hasPaymentEvent) == null;
   }

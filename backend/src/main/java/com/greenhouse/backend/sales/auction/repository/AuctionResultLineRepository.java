@@ -14,6 +14,11 @@ public interface AuctionResultLineRepository extends JpaRepository<AuctionResult
           + "join fetch attempt.shipmentLot lot join fetch lot.shipment where line.id in :ids")
   List<AuctionResultLine> findAllWithLotByIdIn(@Param("ids") Collection<Long> ids);
 
+  @Query(
+      "select coalesce(sum(line.amount), 0) from AuctionResultLine line "
+          + "where line.auctionAttempt.shipmentLot.id in :lotIds")
+  long sumGrossAmountByLotIds(@Param("lotIds") Collection<Long> lotIds);
+
   String READ_ROWS =
       """
       select new com.greenhouse.backend.sales.auction.repository.AuctionResultReadRow(

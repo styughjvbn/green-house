@@ -107,6 +107,22 @@ class SalesSlipAmountRulesTest {
     assertThat(slip.getRemainingAmount()).isZero();
   }
 
+  @Test
+  void auctionGrossProjectionNeverRecalculatesPaymentOrItemAmounts() {
+    var slip = slip();
+    slip.addItem(item(10, 0));
+    slip.applyAuctionGrossProjection(12000);
+    assertThat(slip.getTotalAmount()).isEqualTo(12000);
+    assertThat(slip.getRemainingAmount()).isZero();
+    assertThat(slip.getPaidAmount()).isZero();
+    assertThat(slip.getItems().getFirst().getAmount()).isZero();
+    assertThatThrownBy(() -> slip.applyAuctionGrossProjection(-1))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> slip.applyAuctionGrossProjection((long) Integer.MAX_VALUE + 1))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(slip.getTotalAmount()).isEqualTo(12000);
+  }
+
   private SalesSlipItem item(Integer quantity, Integer unitPrice) {
     return new SalesSlipItem(null, "난", "속", "규격", quantity, unitPrice, "메모");
   }

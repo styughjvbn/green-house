@@ -20,12 +20,14 @@ import com.greenhouse.backend.sales.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.sales.auction.repository.AuctionAttemptRepository;
 import com.greenhouse.backend.sales.auction.repository.AuctionCommandReceiptRepository;
 import com.greenhouse.backend.sales.auction.repository.AuctionLotStatusHistoryRepository;
+import com.greenhouse.backend.sales.auction.repository.AuctionResultLineRepository;
 import com.greenhouse.backend.sales.auction.repository.AuctionShipmentLotRepository;
 import com.greenhouse.backend.sales.auction.web.dto.AuctionLotAdjustmentRequest;
 import com.greenhouse.backend.sales.auction.web.dto.AuctionLotResponse;
 import com.greenhouse.backend.sales.auction.web.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.sales.auction.web.dto.AuctionLotStatusRequest;
 import com.greenhouse.backend.sales.auction.web.dto.AuctionTrackingSummaryResponse;
+import com.greenhouse.backend.sales.document.api.AuctionDocumentAmountApi;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
@@ -69,6 +71,10 @@ public class AuctionTrackingService {
   private final RequestActorProvider requestActorProvider;
 
   private final AuctionCommandReceiptRepository receiptRepository;
+
+  private final AuctionDocumentAmountApi documentAmounts;
+
+  private final AuctionResultLineRepository resultLines;
 
   public PageResponse<AuctionLotResponse> getLots(
       LocalDate from,
@@ -181,6 +187,7 @@ public class AuctionTrackingService {
 
   @Transactional
   public AuctionLotResponse addResult(Long id, RecordAuctionResultCommand request) {
+    var document = documentAmounts.lockForLot(id);
     var lot = findLotForUpdate(id);
     String fingerprint = fingerprint(request.idempotencyKey(), request);
     var replay = replay(id, "RESULT", request.idempotencyKey(), fingerprint);
@@ -195,6 +202,13 @@ public class AuctionTrackingService {
         request.memo(),
         TimeConfig.utcNow(clock));
 
+    // Flush new result rows before recomputing all connected lots. The document lock serializes
+    // separate lots of the same document; retries return above without changing the projection.
+    lotRepository.flush();
+    document.ifPresent(
+        target ->
+            documentAmounts.updateGrossAmount(
+                target.documentId(), resultLines.sumGrossAmountByLotIds(target.lotIds())));
     return recordReceipt(lot, "RESULT", request.idempotencyKey(), fingerprint);
   }
 

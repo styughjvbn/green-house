@@ -34,6 +34,11 @@ public interface SalesSlipRepository
       "select s from SalesSlip s where s.partnerId = :partnerId and s.salesType = com.greenhouse.backend.sales.api.document.SalesType.DIRECT and s.salesStatus <> '취소' and (:keyword = '' or lower(s.slipNumber) like lower(concat('%', :keyword, '%')))")
   Page<SalesSlip> findPaymentTargets(Long partnerId, String keyword, Pageable pageable);
 
+  @Query(
+      "select item.salesSlip.id from SalesSlipItem item where item.auctionShipmentLotId = :lotId "
+          + "and item.salesSlip.salesType = com.greenhouse.backend.sales.api.document.SalesType.AUCTION")
+  Optional<Long> findAuctionDocumentIdByLotId(@Param("lotId") Long lotId);
+
   boolean existsByAuctionShipmentId(Long auctionShipmentId);
 
   @Query(

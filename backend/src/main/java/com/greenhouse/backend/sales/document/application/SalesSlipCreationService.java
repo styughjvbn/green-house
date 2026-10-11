@@ -150,6 +150,16 @@ public class SalesSlipCreationService {
           0L,
           quote.totalAmount().longValue(),
           salesSlip.getPaymentStatus());
+    if (type == SalesType.AUCTION) {
+      // Shipment item prices are not auction result amounts or receivables.
+      salesSlip.applyFinancialProjection(
+          0,
+          salesSlip.getExpectedPaymentDate(),
+          salesSlip.getPaymentMethod(),
+          0L,
+          0L,
+          salesSlip.getPaymentStatus());
+    }
     if (type == SalesType.DIRECT) {
       salesSlip.updateExpectedPaymentDate(accounting.calculate(partner.id(), request.saleDate()));
     }

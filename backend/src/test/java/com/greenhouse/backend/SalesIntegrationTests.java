@@ -144,6 +144,8 @@ class SalesIntegrationTests extends FarmFixtureIntegrationTest {
                 .content(policyJson(auctionRequest)))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.data.paymentStatus").value("정산 대기"))
+        .andExpect(jsonPath("$.data.totalAmount").value(0))
+        .andExpect(jsonPath("$.data.remainingAmount").value(0))
         .andExpect(jsonPath("$.data.paymentMethod").value("경매 정산"));
     var direct =
         policyCreation.create(

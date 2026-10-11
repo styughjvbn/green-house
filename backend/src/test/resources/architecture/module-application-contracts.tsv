@@ -544,3 +544,11 @@ CONSTRUCTOR	com.greenhouse.backend.sales.payment.api.ManualPaymentCommand.<init>
 TYPE	com.greenhouse.backend.sales.document.spi.DirectCreationReceiptPort
 METHOD	com.greenhouse.backend.sales.payment.api.ManualPaymentApi.receiveAndAllocate(java.lang.Long, com.greenhouse.backend.sales.payment.api.PaymentTargetType, com.greenhouse.backend.sales.payment.api.ManualPaymentCommand, long, com.greenhouse.backend.sales.payment.spi.PaymentTargetPort)
 METHOD	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$FinancialSnapshot.remainingAmount()
+
+# Auction result transaction updates the owned Document query projection via value contracts.
+METHOD	com.greenhouse.backend.sales.document.api.AuctionDocumentAmountApi$Target.documentId()
+METHOD	com.greenhouse.backend.sales.document.api.AuctionDocumentAmountApi$Target.lotIds()
+METHOD	com.greenhouse.backend.sales.document.api.AuctionDocumentAmountApi.lockForLot(java.lang.Long)
+METHOD	com.greenhouse.backend.sales.document.api.AuctionDocumentAmountApi.updateGrossAmount(java.lang.Long, long)
+TYPE	com.greenhouse.backend.sales.document.api.AuctionDocumentAmountApi
+TYPE	com.greenhouse.backend.sales.document.api.AuctionDocumentAmountApi$Target

@@ -180,6 +180,8 @@ Sales 내부는 document/direct/auction/payment/partner의 소유권을 유지�
 - Auction 후속 결정·실제 도착은 lot 선잠금과 receipt 확인 후 Farm 생성/생성 보상을 최상위 application transaction에서 조율한다. 결정과 실제 도착 이력은 분리하며, 도착은 새 묶음·생성/보상 Mutation ID만 연결한다. Farm에는 안정적인 `AUCTION_RETURN_ARRIVAL` 출처를 사용하고 기존 InboundRecord와 Work 포트 흐름을 거치지 않는다.
 - 저장소·Entity·QueryDSL EntityPath는 내부 소유 경계 밖으로 노출하지 않는다. application 공개 멤버의 중첩 값 계약 검사와 내부 의존 그래프 검사를 함께 실행한다. 구현 의존은 `Direct/Auction → Document/Payment/Partner`, `Document → Partner/Payment 계약`, `Payment → Partner`이며 역방향 구현 의존을 허용하지 않는다.
 
+판매 경매 결과와 공통 전표 금액 projection의 동기화는 Auction의 최상위 결과 등록 트랜잭션에서 조율한다. Document의 공개 금액 API는 caller transaction에 참여하고 거래처→전표 잠금과 연결 lot 식별자를 제공하며 Auction은 이후 lot를 잠그고 결과를 저장·합산한다. Document는 낙찰액을 재계산하거나 받을 금액으로 해석하지 않는다.
+
 - 판매 전표
 - 판매 품목
 - 일반·경매 생성은 하나의 application 유스케이스에서 품목 생성→예약→완료 시 출고를 공유한다. 거래처 검증·기본 결제 정보·일반 판매의 잔액 처리 차이는 명시적으로 유지한다. 현재 두 유형을 위해 별도 생성기 registry를 추가하지 않는다.
