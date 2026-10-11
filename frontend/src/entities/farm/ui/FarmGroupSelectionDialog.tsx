@@ -439,7 +439,7 @@ function FarmSelectionBedCarousel({
         </div>
         <div className="flex items-center justify-end gap-2">
           <select
-            aria-label="동으로 이동"
+            aria-label="동 이동"
             className="h-8 rounded-md border border-[#d7dfd5] bg-white px-2 text-xs font-semibold text-[#344138]"
             value={bedOrder[activeBedIndex]?.houseId ?? ""}
             onChange={(event) => {
@@ -451,7 +451,7 @@ function FarmSelectionBedCarousel({
           >
             {houses.map((house) => (
               <option key={house.houseId} value={house.houseId}>
-                {house.houseNumber}동으로 이동
+                {house.houseNumber}동
               </option>
             ))}
           </select>

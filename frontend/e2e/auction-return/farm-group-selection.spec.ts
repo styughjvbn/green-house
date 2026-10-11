@@ -115,7 +115,7 @@ test("house cards move the shared layout and search moves to the first matching 
   await expect(
     dialog.getByRole("textbox", { name: "난 묶음 검색" }),
   ).toHaveAttribute("placeholder", "위치 또는 품종 검색");
-  const currentHouse = dialog.getByRole("combobox", { name: "동으로 이동" });
+  const currentHouse = dialog.getByRole("combobox", { name: "동 이동" });
   await expect(currentHouse).toHaveValue("1");
   await dialog.getByRole("button", { name: "3동 배치 보기" }).click();
   await expect(currentHouse).toHaveValue("3");
