@@ -11,17 +11,26 @@ import {
   DialogTitle,
 } from "@/shared/ui/primitives/dialog";
 import type {
+  DirectPendingReturn,
+  DirectReturnArrival,
   DirectChangeHistory,
-  DirectChangeType,
   DirectPricePortion,
 } from "../../api/directChangeTypes";
 import { useDirectSaleChanges } from "../../model/useDirectSaleChanges";
 import type { DirectChangeInput } from "../../lib/directChangeRequests";
 
-const labels: Record<DirectChangeType, string> = {
+import { SalesReturnArrivalForm } from "../SalesReturnArrivalForm";
+import {
+  DirectReturnArrivalsPanel,
+  DirectArrivalCancelForm,
+} from "./DirectReturnArrivalsPanel";
+
+const labels: Record<DirectChangeInput["operation"], string> = {
   PRICE_ADJUSTMENT: "가격 조정",
   RETURN: "반품",
   CANCEL: "처리 취소",
+  ARRIVAL: "농장 도착",
+  ARRIVAL_CANCEL: "도착 취소 정정",
 };
 const inputClass =
   "mt-1 h-9 w-full rounded-md border border-[#d9e0d8] bg-white px-2 text-sm";
@@ -39,14 +48,27 @@ export function useDirectSaleChangeActions(documentId: number | null) {
     Number.isSafeInteger(rawPage) && rawPage >= 0 && rawPage <= 2147483647
       ? rawPage
       : 0;
+  const arrivalPageRaw = Number(params.get("returnArrivalPage") ?? "0");
+  const arrivalPage =
+    Number.isSafeInteger(arrivalPageRaw) &&
+    arrivalPageRaw >= 0 &&
+    arrivalPageRaw <= 2147483647
+      ? arrivalPageRaw
+      : 0;
   const changes = useDirectSaleChanges(
     documentId ?? 0,
     page,
     documentId != null,
+    arrivalPage,
   );
-  const [action, setAction] = useState<Action | { type: "HISTORY" } | null>(
-    null,
-  );
+  const [action, setAction] = useState<
+    | Action
+    | { type: "HISTORY" }
+    | { type: "ARRIVALS" }
+    | { type: "ARRIVAL"; returned: DirectPendingReturn }
+    | { type: "ARRIVAL_CANCEL"; arrival: DirectReturnArrival }
+    | null
+  >(null);
   const trigger = useRef<HTMLElement | null>(null);
   const header = useRef<HTMLElement | null>(null);
   function open(next: Action | { type: "HISTORY" }) {
@@ -72,10 +94,10 @@ export function useDirectSaleChangeActions(documentId: number | null) {
       target.focus();
     }
   }
-  function goPage(next: number) {
+  function goPage(next: number, key = "changePage") {
     const query = new URLSearchParams(params.toString());
-    if (next === 0) query.delete("changePage");
-    else query.set("changePage", String(next));
+    if (next === 0) query.delete(key);
+    else query.set(key, String(next));
     router.replace(`/sales/slips?${query}` as Route, { scroll: false });
   }
   const data = changes.query.data;
@@ -122,13 +144,17 @@ export function useDirectSaleChangeActions(documentId: number | null) {
                 가격 조정 및 반품
               </DialogTitle>
               <DialogDescription className="mt-2 text-sm text-[#68756c]">
-                {action.type === "HISTORY"
-                  ? "현재 가격별 수량과 가격 조정·반품·취소 기록을 확인합니다."
-                  : action.type === "RETURN"
-                    ? "반품 수량과 금액을 기록합니다. 실제 농장 도착·재고 반영·환불은 별도 처리입니다."
-                    : action.type === "CANCEL"
-                      ? "원기록을 보존하고 취소 이력을 추가합니다."
-                      : "원품목은 유지하고 선택한 수량의 단가를 조정합니다."}
+                {action.type === "ARRIVALS" ||
+                action.type === "ARRIVAL" ||
+                action.type === "ARRIVAL_CANCEL"
+                  ? "반품의 농장 도착과 재고 반영을 별도로 기록합니다."
+                  : action.type === "HISTORY"
+                    ? "현재 가격별 수량과 가격 조정·반품·취소 기록을 확인합니다."
+                    : action.type === "RETURN"
+                      ? "반품 수량과 금액을 기록합니다. 실제 농장 도착·재고 반영·환불은 별도 처리입니다."
+                      : action.type === "CANCEL"
+                        ? "원기록을 보존하고 취소 이력을 추가합니다."
+                        : "원품목은 유지하고 선택한 수량의 단가를 조정합니다."}
               </DialogDescription>
             </div>
             <div
@@ -165,8 +191,101 @@ export function useDirectSaleChangeActions(documentId: number | null) {
               >
                 변경 이력
               </button>
+              <button
+                type="button"
+                className={`${buttonClass} aria-pressed:border-green-600 aria-pressed:bg-green-50 aria-pressed:text-green-800`}
+                aria-pressed={
+                  action.type === "ARRIVALS" ||
+                  action.type === "ARRIVAL" ||
+                  action.type === "ARRIVAL_CANCEL"
+                }
+                disabled={changes.saving}
+                onClick={() => setAction({ type: "ARRIVALS" })}
+              >
+                농장 도착
+              </button>
             </div>
-            {action.type === "HISTORY" ? (
+            {action.type === "ARRIVAL" ? (
+              <div className="min-h-0 overflow-y-auto p-5">
+                <SalesReturnArrivalForm
+                  pendingQuantity={action.returned.pendingQuantity}
+                  saving={changes.saving}
+                  blocked={!!changes.pending}
+                  onClose={() => setAction({ type: "ARRIVALS" })}
+                  onSubmit={async (payload) => {
+                    await changes.submit({
+                      operation: "ARRIVAL",
+                      returnId: action.returned.returnChangeId,
+                      payload,
+                    });
+                    setAction({ type: "ARRIVALS" });
+                  }}
+                />
+              </div>
+            ) : action.type === "ARRIVAL_CANCEL" ? (
+              <div className="min-h-0 overflow-y-auto">
+                <DirectArrivalCancelForm
+                  arrival={action.arrival}
+                  saving={changes.saving}
+                  blocked={!!changes.pending}
+                  error={changes.error?.message}
+                  onClose={() => setAction({ type: "ARRIVALS" })}
+                  onSubmit={async (payload) => {
+                    await changes.submit({
+                      operation: "ARRIVAL_CANCEL",
+                      arrivalId: action.arrival.id,
+                      payload,
+                    });
+                    setAction({ type: "ARRIVALS" });
+                  }}
+                />
+              </div>
+            ) : action.type === "ARRIVALS" ? (
+              <div className="min-h-0 space-y-3 overflow-y-auto p-5">
+                {changes.pending ? (
+                  <div role="status">
+                    <p>완료 여부를 확인하지 못한 요청이 있습니다.</p>
+                    <button
+                      className={buttonClass}
+                      disabled={changes.saving}
+                      onClick={() =>
+                        void changes.retry().catch(() => undefined)
+                      }
+                    >
+                      이전 요청 다시 확인
+                    </button>
+                  </div>
+                ) : null}
+                {changes.error ? (
+                  <p role="alert">{changes.error.message}</p>
+                ) : null}
+                <DirectReturnArrivalsPanel
+                  query={changes.arrivals}
+                  page={arrivalPage}
+                  blocked={
+                    changes.saving ||
+                    !!changes.pending ||
+                    changes.arrivals.isFetching
+                  }
+                  onPage={(next) => goPage(next, "returnArrivalPage")}
+                  onArrival={(returned) =>
+                    setAction({ type: "ARRIVAL", returned })
+                  }
+                  onCancel={(arrival) =>
+                    setAction({ type: "ARRIVAL_CANCEL", arrival })
+                  }
+                />
+                <div className="flex justify-end">
+                  <button
+                    className={buttonClass}
+                    disabled={changes.saving}
+                    onClick={() => setAction(null)}
+                  >
+                    닫기
+                  </button>
+                </div>
+              </div>
+            ) : action.type === "HISTORY" ? (
               <>
                 <div className="min-h-0 space-y-3 overflow-y-auto p-5 text-sm">
                   {changes.query.isPending ? (

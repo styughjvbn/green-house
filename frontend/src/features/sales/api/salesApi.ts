@@ -1,4 +1,7 @@
-﻿import type { DirectSaleChangeState } from "./directChangeTypes";
+﻿import type {
+  DirectSaleChangeState,
+  DirectReturnArrivalState,
+} from "./directChangeTypes";
 import type { DirectChangePendingRequest } from "../lib/directChangeRequests";
 import { fetchApi, requestApi } from "@/shared/api/client";
 import type {
@@ -628,11 +631,15 @@ export function submitDirectSaleChange(
   request: DirectChangePendingRequest,
 ) {
   const path =
-    request.operation === "CANCEL"
-      ? `${request.changeId}/cancel`
-      : request.operation === "RETURN"
-        ? "returns"
-        : "price-adjustments";
+    request.operation === "ARRIVAL"
+      ? `${request.returnId}/arrivals`
+      : request.operation === "ARRIVAL_CANCEL"
+        ? `return-arrivals/${request.arrivalId}/cancel`
+        : request.operation === "CANCEL"
+          ? `${request.changeId}/cancel`
+          : request.operation === "RETURN"
+            ? "returns"
+            : "price-adjustments";
   return requestApi(
     `/sales-slips/${id}/direct-changes/${path}`,
     {
@@ -644,5 +651,16 @@ export function submitDirectSaleChange(
       body: JSON.stringify(request.payload),
     },
     "가격 조정·반품을 기록하지 못했습니다.",
+  );
+}
+
+export function getDirectReturnArrivals(
+  id: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<DirectReturnArrivalState>(
+    `/sales-slips/${id}/direct-changes/return-arrivals?page=${page}&size=10`,
+    { signal },
   );
 }

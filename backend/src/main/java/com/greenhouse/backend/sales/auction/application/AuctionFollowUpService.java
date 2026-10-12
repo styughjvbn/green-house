@@ -115,7 +115,7 @@ public class AuctionFollowUpService {
         decisions
             .findFirstByLotIdOrderByIdDesc(lotId)
             .orElseThrow(() -> new IllegalArgumentException("농장 반환 결정을 먼저 확인해야 합니다."));
-    int quantity = command.details().quantity();
+    int quantity = command.arrivalQuantity();
     String worker = actors.resolve(command.worker());
     var before = summary(lot);
     lot.recordActualArrival(quantity, command.arrivalDate(), worker, TimeConfig.utcNow(clock));
@@ -128,15 +128,17 @@ public class AuctionFollowUpService {
                 command.arrivalDate(),
                 worker,
                 TimeConfig.utcNow(clock)));
-    var creation =
-        farm.create(
-            new CreateOrchidGroupMutationCommand(
-                OrchidGroupMutationSources.auctionReturnArrival(arrival.getId(), "CREATE"),
-                command.bedZoneId(),
-                command.details(),
-                command.arrivalDate(),
-                "경매 반환품 실제 도착"));
-    arrival.linkCreation(creation.entries().getFirst().orchidGroupId(), creation.mutationId());
+    if (!Boolean.TRUE.equals(command.recordOnly())) {
+      var creation =
+          farm.create(
+              new CreateOrchidGroupMutationCommand(
+                  OrchidGroupMutationSources.auctionReturnArrival(arrival.getId(), "CREATE"),
+                  command.bedZoneId(),
+                  command.details(),
+                  command.arrivalDate(),
+                  "경매 반환품 실제 도착"));
+      arrival.linkCreation(creation.entries().getFirst().orchidGroupId(), creation.mutationId());
+    }
     arrivals.flush();
     var response = new AuctionFollowUpResult(summary(lot), AuctionArrivalResponse.from(arrival));
     audit.record(
@@ -165,23 +167,29 @@ public class AuctionFollowUpService {
     if (arrival.getCanceledAt() != null)
       throw new ConflictException("AUCTION_ARRIVAL_ALREADY_CANCELED", "이미 취소한 도착 기록입니다.");
     var before = AuctionArrivalResponse.from(arrival);
-    OrchidGroupMutationResult compensation;
-    try {
-      compensation =
-          farm.compensateCreations(
-              new CompensateCreateMutationsCommand(
-                  OrchidGroupMutationSources.auctionReturnArrival(arrivalId, "CANCEL"),
-                  List.of(arrival.getCreationMutationId()),
-                  command.correctionDate(),
-                  command.reason()));
-    } catch (IllegalArgumentException failure) {
-      var conflict =
-          new ConflictException(
-              "AUCTION_ARRIVAL_COMPENSATION_BLOCKED", "후속 변경이나 사용을 먼저 정정한 뒤 도착 기록을 취소해야 합니다.");
-      conflict.initCause(failure);
-      throw conflict;
+    Long compensationId = null;
+    if (arrival.getCreationMutationId() != null) {
+      try {
+        OrchidGroupMutationResult compensation;
+        compensation =
+            farm.compensateCreations(
+                new CompensateCreateMutationsCommand(
+                    OrchidGroupMutationSources.auctionReturnArrival(arrivalId, "CANCEL"),
+                    List.of(arrival.getCreationMutationId()),
+                    command.correctionDate(),
+                    command.reason()));
+        compensationId = compensation.mutationId();
+      } catch (IllegalArgumentException failure) {
+        var conflict =
+            new ConflictException(
+                "AUCTION_ARRIVAL_COMPENSATION_BLOCKED", "후속 변경이나 사용을 먼저 정정한 뒤 도착 기록을 취소해야 합니다.");
+        conflict.initCause(failure);
+        throw conflict;
+      }
     }
-    arrival.cancel(compensation.mutationId(), command.reason(), TimeConfig.utcNow(clock));
+    if (command.correctionDate().isBefore(arrival.getArrivalDate()))
+      throw new IllegalArgumentException("정정일은 도착일 이후여야 합니다.");
+    arrival.cancel(compensationId, command.reason(), TimeConfig.utcNow(clock));
     arrivals.flush();
     lot.cancelActualArrival(
         arrival.getQuantity(),

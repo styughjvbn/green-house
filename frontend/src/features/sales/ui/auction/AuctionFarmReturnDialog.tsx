@@ -69,7 +69,7 @@ export function AuctionFarmReturnDialog({
               disabled={blocked || summary.arrivalAllowed !== true}
               onClick={onArrival}
             >
-              반환분 배치
+              실제 도착 등록
             </button>
           </div>
           {summary.inferredReturnQuantity > 0 ? (
@@ -122,8 +122,10 @@ export function AuctionFarmReturnDialog({
                         </button>
                       </div>
                       <p className="mt-1 text-xs text-[#68756c]">
-                        생성 난 묶음 #{arrival.orchidGroupId} ·{" "}
-                        {arrival.worker || "담당자 미지정"}
+                        {arrival.recordOnly
+                          ? "재고 반영 없이 기록만 등록"
+                          : `생성 난 묶음 #${arrival.orchidGroupId}`}{" "}
+                        · {arrival.worker || "담당자 미지정"}
                       </p>
                       {arrival.cancellationReason ? (
                         <p className="mt-1 text-xs">

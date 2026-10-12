@@ -70,6 +70,15 @@ public final class OrchidGroupMutationSources {
         "AUCTION_RETURN_ARRIVAL:" + arrivalId);
   }
 
+  public static OrchidGroupMutationSource directReturnArrival(Long arrivalId, String operationKey) {
+    return stable(
+        OrchidGroupMutationSourceDomain.SALES,
+        "DIRECT_RETURN_ARRIVAL",
+        arrivalId.toString(),
+        operationKey,
+        "DIRECT_RETURN_ARRIVAL:" + arrivalId);
+  }
+
   private static OrchidGroupMutationSource stable(
       OrchidGroupMutationSourceDomain domain,
       String sourceType,

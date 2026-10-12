@@ -2,6 +2,7 @@ import type { FarmPlacementSelection } from "@/entities/farm/model/placement";
 import type { AuctionFollowUpInput } from "./auctionFollowUpRequest";
 
 export function buildAuctionArrivalInput(values: {
+  recordOnly?: boolean;
   arrivalDate: string;
   varietyId: string;
   quantity: string;
@@ -14,6 +15,16 @@ export function buildAuctionArrivalInput(values: {
   worker: string;
   placement: FarmPlacementSelection | null;
 }): AuctionFollowUpInput {
+  if (values.recordOnly)
+    return {
+      operation: "ARRIVAL",
+      payload: {
+        arrivalDate: values.arrivalDate,
+        quantity: Number(values.quantity),
+        recordOnly: true,
+        ...(values.worker.trim() ? { worker: values.worker.trim() } : {}),
+      },
+    };
   if (!values.placement)
     throw new Error("반환품을 배치할 논리 구역과 칸을 선택하세요.");
   if (!values.varietyId) throw new Error("반환품의 품종을 선택하세요.");

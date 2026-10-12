@@ -19,3 +19,21 @@ export type DirectChangePayload = Schema["DirectSaleChangeRequest"];
 export type DirectChangeCancellationPayload =
   Schema["CancelDirectSaleChangeRequest"];
 export type DirectChangeType = NonNullable<DirectChangeHistory["type"]>;
+
+export type DirectReturnArrivalPayload = Schema["DirectReturnArrivalRequest"];
+export type DirectArrivalCancellationPayload =
+  Schema["CancelDirectReturnArrivalRequest"];
+export type DirectReturnArrival = Required<
+  Schema["DirectReturnArrivalResponse"]
+>;
+type ArrivalState = Required<Schema["DirectReturnArrivalState"]>;
+export type DirectPendingReturn = Required<Schema["PendingReturn"]>;
+export type DirectReturnArrivalState = Omit<
+  ArrivalState,
+  "pendingReturns" | "history"
+> & {
+  pendingReturns: DirectPendingReturn[];
+  history: Omit<Required<ArrivalState["history"]>, "content"> & {
+    content: DirectReturnArrival[];
+  };
+};

@@ -76,14 +76,13 @@ public class AuctionReturnArrival {
   }
 
   public boolean isCancellationAllowed() {
-    return canceledAt == null && creationMutationId != null && orchidGroupId != null;
+    return canceledAt == null;
   }
 
   public void cancel(Long mutationId, String reason, LocalDateTime at) {
     if (canceledAt != null)
       throw new ConflictException("AUCTION_ARRIVAL_ALREADY_CANCELED", "이미 취소한 도착 기록입니다.");
-    if (creationMutationId == null
-        || mutationId == null
+    if ((creationMutationId == null) != (mutationId == null)
         || at == null
         || reason == null
         || reason.isBlank()) throw new IllegalArgumentException("도착 취소에는 농장 보상 연결과 사유가 필요합니다.");

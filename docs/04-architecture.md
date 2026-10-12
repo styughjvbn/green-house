@@ -317,6 +317,8 @@ Document의 Payment 접근은 기존 인터페이스 제한을 유지한다. Doc
 
 일반 판매 가격 조정·반품의 최상위 유스케이스는 Direct에 둔다. Document의 공개 계약으로 거래처→전표 잠금과 완료·소유권 검증을 수행한 뒤 Direct를 잠근다. Direct는 원가격·가격 구간·추가 변경 이력을 소유하고 Document는 전달받은 전표 총액을 조회 projection으로 반영하고 원품목 금액은 유지한다. 품종별 분석은 Direct의 공개 계약으로 받은 변경 합계를 Document의 품목 집계와 조합한다. Payment 원장은 수정하지 않는다. 목록 금액 조회는 페이지 ID의 변경 원장을 한 번에 읽고 루프 안에서 조회하지 않는다.
 
+판매 반품 도착의 쓰기 transaction은 소유 기능의 application service가 조율한다. Direct는 Document 값 계약으로 거래처→전표를 잠근 뒤 Direct 거래와 도착을 검증하고 Farm 생성/보상 API를 호출한다. Auction은 기존 lot 잠금 순서를 유지한다. 상업적 반품·실제 도착은 별도 이력이며 도착은 금액 원천을 갱신하지 않는다. 기록만 등록한 도착은 Farm Mutation 연결이 없고 취소에도 Farm API를 호출하지 않는다. Farm Entity·Repository를 판매 내부에 노출하지 않으며 기존 입고 경로를 호출하지 않는다.
+
 계약 선택과 배치 기준:
 
 - 허용된 방향으로 호출할 때는 제공 측 API를 직접 사용한다. 같은 모듈의 허용 API도 전달 Adapter로 감싸지 않는다. 기존 구현이 계약을 직접 제공할 수 있으면 구현과 계약 사이에 별도 위임 service를 만들지 않는다.

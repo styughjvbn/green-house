@@ -39,6 +39,7 @@ public class DirectSaleChangeService {
   private final DirectSaleChangeRepository changes;
   private final DirectSaleFinancialReader financials;
   private final DirectSaleReviewReader reviews;
+  private final DirectReturnArrivalRepository arrivals;
   private final DirectDocumentChangeApi documents;
   private final DocumentPaymentApi projections;
   private final AuditEventWriter audit;
@@ -58,6 +59,10 @@ public class DirectSaleChangeService {
     var items = target.items().stream().collect(Collectors.toMap(i -> i.id(), i -> i));
     var portions = toPortions(ledger.portions(), items);
     var returnedPortions = toPortions(ledger.returnedPortions(), items);
+    var arrivedReturnIds =
+        arrivals.findByDocumentIdAndCanceledAtIsNull(id).stream()
+            .map(DirectReturnArrival::getReturnChangeId)
+            .collect(Collectors.toSet());
     var reversed = new ArrayList<>(history);
     Collections.reverse(reversed);
     long start = (long) page * size;
@@ -83,7 +88,9 @@ public class DirectSaleChangeService {
                       c.getReason(),
                       c.getCreatedAt(),
                       ledger.isCanceled(c.getId()),
-                      allowed && ledger.canCancel(c.getId()));
+                      allowed
+                          && ledger.canCancel(c.getId())
+                          && !arrivedReturnIds.contains(c.getId()));
                 })
             .toList();
     return new DirectSaleChangeResponse(
@@ -182,6 +189,8 @@ public class DirectSaleChangeService {
             .filter(c -> c.getId().equals(changeId))
             .findFirst()
             .orElseThrow(() -> missing());
+    if (arrivals.existsByReturnChangeIdAndCanceledAtIsNull(changeId))
+      throw new ConflictException("DIRECT_RETURN_ARRIVAL_EXISTS", "도착 기록을 먼저 취소한 뒤 반품을 취소해야 합니다.");
     var plan = ledger.cancellationPlan(changeId);
     if (request.changeDate().isBefore(original.getChangeDate()))
       throw new IllegalArgumentException("취소일은 원래 처리일 이후여야 합니다.");

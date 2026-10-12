@@ -1,8 +1,20 @@
 import type {
+  DirectReturnArrivalPayload,
+  DirectArrivalCancellationPayload,
   DirectChangePayload,
   DirectChangeCancellationPayload,
 } from "../api/directChangeTypes";
 export type DirectChangeInput =
+  | {
+      operation: "ARRIVAL";
+      returnId: number;
+      payload: DirectReturnArrivalPayload;
+    }
+  | {
+      operation: "ARRIVAL_CANCEL";
+      arrivalId: number;
+      payload: DirectArrivalCancellationPayload;
+    }
   | { operation: "PRICE_ADJUSTMENT" | "RETURN"; payload: DirectChangePayload }
   | {
       operation: "CANCEL";
@@ -30,9 +42,19 @@ export function createDirectChangeRequests(
       if (
         !request.key ||
         !request.payload ||
-        !["PRICE_ADJUSTMENT", "RETURN", "CANCEL"].includes(request.operation) ||
+        ![
+          "PRICE_ADJUSTMENT",
+          "RETURN",
+          "CANCEL",
+          "ARRIVAL",
+          "ARRIVAL_CANCEL",
+        ].includes(request.operation) ||
         (request.operation === "CANCEL" &&
-          !Number.isSafeInteger(request.changeId))
+          !Number.isSafeInteger(request.changeId)) ||
+        (request.operation === "ARRIVAL" &&
+          !Number.isSafeInteger(request.returnId)) ||
+        (request.operation === "ARRIVAL_CANCEL" &&
+          !Number.isSafeInteger(request.arrivalId))
       )
         return null;
       memory.set(id, request);

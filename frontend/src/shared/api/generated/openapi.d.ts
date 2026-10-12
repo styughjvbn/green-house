@@ -560,6 +560,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sales-slips/{id}/direct-changes/{returnId}/arrivals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 반품 도착을 기록합니다. 새 묶음 생성 또는 이미 재고에 반영된 도착의 기록만 등록을 선택합니다. 원판매·금액·수납은 변경하지 않습니다. */
+        post: operations["recordDirectReturnArrival"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sales-slips/{id}/direct-changes/{changeId}/cancel": {
         parameters: {
             query?: never;
@@ -588,6 +605,23 @@ export interface paths {
         put?: never;
         /** @description 선택한 가격 구간의 수량·금액을 반품 이력으로 기록합니다. 실제 농장 도착·재고 반영·현금 환불을 실행하지 않습니다. */
         post: operations["recordDirectSaleReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/direct-changes/return-arrivals/{arrivalId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 도착 이력을 보존해 취소합니다. 새 묶음을 생성한 경우에만 Farm 생성 Mutation을 보상하며 후속 사용이 있으면 거절합니다. */
+        post: operations["cancelDirectReturnArrival"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1477,6 +1511,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getDirectSaleChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/direct-changes/return-arrivals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDirectReturnArrivals"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3108,6 +3158,43 @@ export interface components {
             paymentMethod?: string;
             worker?: string;
         };
+        DirectReturnArrivalRequest: {
+            /** Format: date */
+            arrivalDate: string;
+            /** Format: int64 */
+            bedZoneId?: number;
+            details?: components["schemas"]["OrchidGroupMutationDetails"];
+            /** Format: int32 */
+            quantity: number;
+            /** @description 이미 재고에 반영된 도착이면 true. Farm 재고를 변경하지 않습니다. */
+            recordOnly?: boolean;
+            worker?: string;
+        };
+        OrchidGroupMutationDetails: {
+            /** Format: int32 */
+            ageYear?: number;
+            endPosition?: number;
+            memo?: string;
+            placementType?: string;
+            potSize?: string;
+            /** Format: int32 */
+            quantity?: number;
+            splitPlacementAllowed?: boolean;
+            startPosition?: number;
+            status?: string;
+            /** Format: int32 */
+            trayCount?: number;
+            /** Format: int64 */
+            varietyId?: number;
+        };
+        ApiResponseDirectReturnArrivalResult: {
+            data?: components["schemas"]["DirectReturnArrivalResult"];
+            message?: string;
+        };
+        DirectReturnArrivalResult: {
+            /** Format: int64 */
+            arrivalId?: number;
+        };
         CancelDirectSaleChangeRequest: {
             /** Format: date */
             changeDate: string;
@@ -3133,6 +3220,11 @@ export interface components {
             sourceChangeId?: number;
             /** Format: int32 */
             unitPrice?: number;
+        };
+        CancelDirectReturnArrivalRequest: {
+            /** Format: date */
+            correctionDate: string;
+            reason: string;
         };
         OrchidGroupCreateRequest: {
             /** Format: int32 */
@@ -3682,7 +3774,7 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             /** Format: int64 */
-            creationMutationId?: number;
+            creationMutationId?: number | null;
             /** Format: int64 */
             decisionId?: number;
             /** Format: int64 */
@@ -3690,9 +3782,10 @@ export interface components {
             /** Format: int64 */
             lotId?: number;
             /** Format: int64 */
-            orchidGroupId?: number;
+            orchidGroupId?: number | null;
             /** Format: int32 */
             quantity?: number;
+            recordOnly: boolean;
             worker?: string;
         };
         AuctionFollowUpResponse: {
@@ -3731,27 +3824,14 @@ export interface components {
             /** Format: date */
             arrivalDate: string;
             /** Format: int64 */
-            bedZoneId: number;
-            details: components["schemas"]["OrchidGroupMutationDetails"];
+            bedZoneId?: number;
+            details?: components["schemas"]["OrchidGroupMutationDetails"];
             idempotencyKey: string;
-            worker?: string;
-        };
-        OrchidGroupMutationDetails: {
-            /** Format: int32 */
-            ageYear?: number;
-            endPosition?: number;
-            memo?: string;
-            placementType?: string;
-            potSize?: string;
             /** Format: int32 */
             quantity?: number;
-            splitPlacementAllowed?: boolean;
-            startPosition?: number;
-            status?: string;
-            /** Format: int32 */
-            trayCount?: number;
-            /** Format: int64 */
-            varietyId?: number;
+            /** @description 이미 재고에 반영된 도착이면 true. Farm 재고를 변경하지 않습니다. */
+            recordOnly?: boolean;
+            worker?: string;
         };
         CancelAuctionArrivalCommand: {
             /** Format: date */
@@ -4381,6 +4461,61 @@ export interface components {
             spec?: string;
             /** Format: int32 */
             unitPrice?: number;
+        };
+        ApiResponseDirectReturnArrivalState: {
+            data?: components["schemas"]["DirectReturnArrivalState"];
+            message?: string;
+        };
+        DirectReturnArrivalResponse: {
+            /** Format: date */
+            arrivalDate?: string;
+            /** Format: date-time */
+            canceledAt?: string | null;
+            cancellationAllowed: boolean;
+            /** Format: int64 */
+            cancellationMutationId?: number | null;
+            cancellationReason?: string | null;
+            /** Format: date */
+            correctionDate?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: int64 */
+            creationMutationId?: number | null;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            orchidGroupId?: number | null;
+            /** Format: int32 */
+            quantity?: number;
+            recordOnly: boolean;
+            /** Format: int64 */
+            returnChangeId?: number;
+            worker?: string;
+        };
+        DirectReturnArrivalState: {
+            history?: components["schemas"]["PageResponseDirectReturnArrivalResponse"];
+            pendingReturns?: components["schemas"]["PendingReturn"][];
+        };
+        PageResponseDirectReturnArrivalResponse: {
+            content?: components["schemas"]["DirectReturnArrivalResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PendingReturn: {
+            arrivalAllowed?: boolean;
+            /** Format: int64 */
+            itemId?: number;
+            itemName?: string;
+            /** Format: int32 */
+            pendingQuantity?: number;
+            /** Format: int64 */
+            returnChangeId?: number;
         };
         ApiResponsePageResponseSalesSlipListItemResponse: {
             data?: components["schemas"]["PageResponseSalesSlipListItemResponse"];
@@ -6543,6 +6678,35 @@ export interface operations {
             };
         };
     };
+    recordDirectReturnArrival: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: number;
+                returnId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectReturnArrivalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectReturnArrivalResult"];
+                };
+            };
+        };
+    };
     cancelDirectSaleChange: {
         parameters: {
             query?: never;
@@ -6596,6 +6760,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseDirectSaleChangeResult"];
+                };
+            };
+        };
+    };
+    cancelDirectReturnArrival: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: number;
+                arrivalId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelDirectReturnArrivalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectReturnArrivalResult"];
                 };
             };
         };
@@ -8364,6 +8557,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseDirectSaleChangeResponse"];
+                };
+            };
+        };
+    };
+    getDirectReturnArrivals: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectReturnArrivalState"];
                 };
             };
         };

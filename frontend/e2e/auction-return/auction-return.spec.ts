@@ -27,7 +27,9 @@ async function fillArrival(page: Page) {
   ) {
     await page.getByRole("button", { name: "농장 반환", exact: true }).click();
   }
-  await page.getByRole("button", { name: "반환분 배치", exact: true }).click();
+  await page
+    .getByRole("button", { name: "실제 도착 등록", exact: true })
+    .click();
   const dialog = page.getByRole("dialog", { name: "실제 반환품 도착 기록" });
   await expect(dialog.getByLabel("실제 도착일")).toHaveValue("2026-10-08");
   await dialog.getByLabel("도착 수량", { exact: true }).fill("10");
@@ -76,7 +78,7 @@ test("decision, partial physical arrival, blocked compensation and cancellation 
   });
   await expect(placementButton).toBeEnabled();
   await expect(
-    page.getByRole("button", { name: "반환분 배치", exact: true }),
+    page.getByRole("button", { name: "실제 도착 등록", exact: true }),
   ).toHaveCount(0);
   await placementButton.click();
   await expect(
@@ -275,4 +277,61 @@ test("follow-up is opened from the current unsold event, excluding older and inf
   await expect(
     page.getByRole("button", { name: "유찰 처리", exact: true }),
   ).toHaveCount(0);
+});
+
+test("record-only arrival needs no Farm fields and cancellation restores the pending lot quantity", async ({
+  page,
+  request,
+}) => {
+  await chooseFarmReturn(page);
+  await page.getByRole("button", { name: "농장 반환", exact: true }).click();
+  await page
+    .getByRole("button", { name: "실제 도착 등록", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "실제 반환품 도착 기록",
+    exact: true,
+  });
+  await dialog
+    .getByRole("radio", {
+      name: "이미 재고에 반영됨 · 기록만 등록",
+      exact: true,
+    })
+    .check();
+  await expect(dialog.getByLabel("반환품 품종")).toHaveCount(0);
+  await dialog.getByLabel("도착 수량", { exact: true }).fill("10");
+  await dialog
+    .getByRole("button", { name: "실제 도착 저장", exact: true })
+    .click();
+  const farm = page.getByRole("dialog", { name: "농장 반환", exact: true });
+  await expect(
+    farm.getByText("재고 반영 없이 기록만 등록", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    farm.getByText("도착 대기 20분", { exact: false }),
+  ).toBeVisible();
+  await farm
+    .getByRole("button", { name: "도착 취소 정정", exact: true })
+    .click();
+  const cancel = page.getByRole("dialog", {
+    name: "도착 취소 정정",
+    exact: true,
+  });
+  await expect(cancel.getByText(/도착 기록만 취소/)).toBeVisible();
+  await cancel.getByLabel("도착 취소 사유").fill("도착 정정");
+  await cancel
+    .getByRole("button", { name: "도착 취소 저장", exact: true })
+    .click();
+  await expect(
+    farm.getByText("도착 대기 30분", { exact: false }),
+  ).toBeVisible();
+  const {
+    data: { calls },
+  } = await control(request, {});
+  const arrival = calls.find((call: { path: string }) =>
+    call.path.endsWith("/arrivals"),
+  );
+  expect(arrival.body).toMatchObject({ quantity: 10, recordOnly: true });
+  expect(arrival.body.details).toBeUndefined();
+  expect(arrival.body.bedZoneId).toBeUndefined();
 });

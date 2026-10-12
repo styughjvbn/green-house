@@ -565,3 +565,6 @@ METHOD	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$Fi
 TYPE	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi
 TYPE	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Item
 TYPE	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Target
+
+# Direct physical return arrival uses Farm create/compensation through its public API.
+METHOD	com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSources.directReturnArrival(java.lang.Long, java.lang.String)

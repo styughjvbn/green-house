@@ -74,6 +74,23 @@ test("partial price adjustment retries the original request and a return uses it
       totalPages: 0,
     },
   };
+  const arrivalState = {
+    pendingReturns: [] as {
+      returnChangeId: number;
+      itemId: number;
+      itemName: string;
+      pendingQuantity: number;
+      arrivalAllowed: boolean;
+    }[],
+    history: {
+      content: [] as Record<string, unknown>[],
+      page: 0,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0,
+    },
+  };
+  let loseArrival = true;
   const calls: { key: string; path: string; body: Record<string, unknown> }[] =
     [];
   await page.route("**/api/sales-slips/page?**", (route) =>
@@ -94,6 +111,14 @@ test("partial price adjustment retries the original request and a return uses it
   );
   await page.route("**/api/sales-slips/900/direct-changes**", async (route) => {
     const req = route.request();
+    if (req.method() === "GET" && req.url().includes("/return-arrivals")) {
+      await route.fulfill({
+        json: {
+          data: arrivalState,
+        },
+      });
+      return;
+    }
     if (req.method() === "GET") {
       await route.fulfill({ json: { data: state } });
       return;
@@ -110,6 +135,57 @@ test("partial price adjustment retries the original request and a return uses it
       });
       return;
     }
+    if (req.url().endsWith("/12/arrivals")) {
+      if (loseArrival) {
+        loseArrival = false;
+        await route.fulfill({
+          status: 503,
+          json: {
+            error: { code: "TEST_FAILURE", message: "도착 응답 확인 필요" },
+          },
+        });
+        return;
+      }
+      arrivalState.pendingReturns[0].pendingQuantity = 0;
+      arrivalState.pendingReturns[0].arrivalAllowed = false;
+      arrivalState.history = {
+        content: [
+          {
+            id: 21,
+            returnChangeId: 12,
+            quantity: 5,
+            arrivalDate: "2026-10-09",
+            orchidGroupId: null,
+            creationMutationId: null,
+            recordOnly: true,
+            canceledAt: null,
+            cancellationAllowed: true,
+          },
+        ],
+        page: 0,
+        size: 10,
+        totalElements: 1,
+        totalPages: 1,
+      };
+      const original = state.history.content.find(
+        (value) => (value as { id: number }).id === 12,
+      );
+      Object.assign(original!, { cancelAllowed: false });
+      await route.fulfill({ json: { data: { arrivalId: 21 } } });
+      return;
+    }
+    if (req.url().endsWith("/return-arrivals/21/cancel")) {
+      arrivalState.history.content[0].canceledAt = "2026-10-10T00:00:00";
+      arrivalState.history.content[0].cancellationAllowed = false;
+      arrivalState.pendingReturns[0].pendingQuantity = 5;
+      arrivalState.pendingReturns[0].arrivalAllowed = true;
+      const original = state.history.content.find(
+        (value) => (value as { id: number }).id === 12,
+      );
+      Object.assign(original!, { cancelAllowed: true });
+      await route.fulfill({ json: { data: { arrivalId: 21 } } });
+      return;
+    }
     const returning = req.url().endsWith("/returns");
     const canceling = req.url().endsWith("/cancel");
     if (canceling) {
@@ -123,6 +199,15 @@ test("partial price adjustment retries the original request and a return uses it
       if (returned)
         Object.assign(returned, { canceled: true, cancelAllowed: false });
     } else if (returning) {
+      arrivalState.pendingReturns = [
+        {
+          returnChangeId: 12,
+          itemId: 901,
+          itemName: "버드로즈",
+          pendingQuantity: 5,
+          arrivalAllowed: true,
+        },
+      ];
       state.portions[1].quantity = 15;
       state.portions[1].amount = 120000;
       state.currentAmount = 920000;
@@ -260,6 +345,67 @@ test("partial price adjustment retries the original request and a return uses it
   await expect(itemRow.locator("del", { hasText: /^8,000$/ })).toBeVisible();
   await expect(itemRow.locator("del", { hasText: /^40,000$/ })).toBeVisible();
   await expect(itemRow.getByText(/원수량/)).toHaveCount(0);
+  await clickHeaderAction("가격 조정 및 반품");
+  await dialog.getByRole("button", { name: "농장 도착", exact: true }).click();
+  await dialog
+    .getByRole("button", { name: "실제 도착 등록", exact: true })
+    .click();
+  await dialog
+    .getByRole("radio", {
+      name: "이미 재고에 반영됨 · 기록만 등록",
+      exact: true,
+    })
+    .check();
+  await expect(dialog.getByLabel("반환품 품종")).toHaveCount(0);
+  await expect(
+    dialog.getByRole("button", { name: "배치 칸", exact: true }),
+  ).toHaveCount(0);
+  await dialog.getByLabel("실제 도착일").fill("2026-10-09");
+  await dialog
+    .getByRole("button", { name: "실제 도착 저장", exact: true })
+    .click();
+  await expect(dialog.getByRole("alert")).toContainText("도착 응답 확인 필요");
+  await dialog.getByRole("button", { name: "닫기", exact: true }).click();
+  await dialog.getByRole("button", { name: "닫기", exact: true }).click();
+  await page.reload();
+  await clickHeaderAction("가격 조정 및 반품");
+  await dialog
+    .getByRole("button", { name: "요청 결과 확인", exact: true })
+    .click();
+  await expect(
+    dialog.getByRole("button", { name: "가격 조정", exact: true }),
+  ).toBeEnabled();
+  await dialog.getByRole("button", { name: "농장 도착", exact: true }).click();
+  await expect(
+    dialog.getByText("재고 반영 없이 기록만 등록", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "실제 도착 등록", exact: true }),
+  ).toBeDisabled();
+  const arrivalCalls = calls.filter((call) =>
+    call.path.endsWith("/12/arrivals"),
+  );
+  expect(arrivalCalls).toHaveLength(2);
+  expect(arrivalCalls[1]).toEqual(arrivalCalls[0]);
+  expect(arrivalCalls[0].body).toMatchObject({ quantity: 5, recordOnly: true });
+  expect(arrivalCalls[0].body.details).toBeUndefined();
+  await dialog.getByRole("button", { name: "변경 이력", exact: true }).click();
+  await expect(
+    dialog.getByRole("button", { name: "처리 취소", exact: true }),
+  ).toHaveCount(1);
+  await dialog.getByRole("button", { name: "농장 도착", exact: true }).click();
+  await dialog
+    .getByRole("button", { name: "도착 취소 정정", exact: true })
+    .click();
+  await expect(dialog.getByLabel("정정일")).toBeFocused();
+  await dialog.getByLabel("정정일").fill("2026-10-10");
+  await dialog.getByLabel("도착 취소 사유").fill("도착 오입력");
+  await dialog
+    .getByRole("button", { name: "도착 취소 저장", exact: true })
+    .click();
+  await expect(dialog.getByText(/도착 취소됨/)).toBeVisible();
+  await dialog.getByRole("button", { name: "닫기", exact: true }).click();
+
   await clickHeaderAction("가격 조정 및 반품");
   await dialog.getByRole("button", { name: "변경 이력", exact: true }).click();
   await expect(

@@ -532,14 +532,18 @@ components:
           type: string
           maxLength: 100
           minLength: 0
+        quantity:
+          type: integer
+          format: int32
+        recordOnly:
+          type: boolean
+          description: 이미 재고에 반영된 도착이면 true. Farm 재고를 변경하지 않습니다.
         worker:
           type: string
           maxLength: 100
           minLength: 0
       required:
       - arrivalDate
-      - bedZoneId
-      - details
       - idempotencyKey
     AuctionArrivalResponse:
       type: object
@@ -567,7 +571,9 @@ components:
           type: string
           format: date-time
         creationMutationId:
-          type: integer
+          type:
+          - integer
+          - 'null'
           format: int64
         decisionId:
           type: integer
@@ -579,15 +585,20 @@ components:
           type: integer
           format: int64
         orchidGroupId:
-          type: integer
+          type:
+          - integer
+          - 'null'
           format: int64
         quantity:
           type: integer
           format: int32
+        recordOnly:
+          type: boolean
         worker:
           type: string
       required:
       - cancellationAllowed
+      - recordOnly
     AuctionAttemptResponse:
       type: object
       properties:

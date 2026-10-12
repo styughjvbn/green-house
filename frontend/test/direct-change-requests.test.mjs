@@ -64,3 +64,35 @@ test("cancel identity is isolated per document and disabled storage preserves re
   assert.notEqual(requests.prepare(901, input).key, first.key);
   assert.equal(requests.prepare(900, { ...input, changeId: 13 }).changeId, 12);
 });
+
+test("unconfirmed physical arrival survives reload and blocks a commercial return or arrival cancellation", () => {
+  const saved = storage();
+  const first = createDirectChangeRequests(
+    () => "arrival-key",
+    () => saved,
+  ).prepare(900, {
+    operation: "ARRIVAL",
+    returnId: 11,
+    payload: { arrivalDate: "2026-10-09", quantity: 5, recordOnly: true },
+  });
+  const reloaded = createDirectChangeRequests(
+    () => "cancel-key",
+    () => saved,
+  );
+  assert.deepEqual(reloaded.read(900), first);
+  assert.deepEqual(reloaded.prepare(900, adjustment), first);
+  reloaded.complete(900, first.key);
+  const cancel = reloaded.prepare(900, {
+    operation: "ARRIVAL_CANCEL",
+    arrivalId: 23,
+    payload: { correctionDate: "2026-10-10", reason: "정정" },
+  });
+  assert.equal(cancel.arrivalId, 23);
+  assert.deepEqual(
+    createDirectChangeRequests(
+      () => "other",
+      () => saved,
+    ).read(900),
+    cancel,
+  );
+});

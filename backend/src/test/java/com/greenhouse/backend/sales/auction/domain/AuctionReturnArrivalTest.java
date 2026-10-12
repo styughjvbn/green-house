@@ -62,6 +62,15 @@ class AuctionReturnArrivalTest {
   }
 
   @Test
+  void recordOnlyArrivalCanBeCanceledWithoutChangingFarm() {
+    var arrival = new AuctionReturnArrival(1L, 2L, 10, DATE, "확인자", AT);
+    assertThat(arrival.isCancellationAllowed()).isTrue();
+    arrival.cancel(null, "기록 정정", AT.plusHours(1));
+    assertThat(arrival.getCancellationMutationId()).isNull();
+    assertThat(arrival.isCancellationAllowed()).isFalse();
+  }
+
+  @Test
   void doesNotAllowCancellationWithoutFarmCompensationOrRelinkingACreation() {
     var arrival = new AuctionReturnArrival(1L, 2L, 30, DATE, "도착 확인자", AT);
     assertThatThrownBy(() -> arrival.cancel(21L, "정정", AT))

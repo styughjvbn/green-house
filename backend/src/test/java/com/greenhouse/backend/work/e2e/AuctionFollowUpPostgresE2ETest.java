@@ -325,6 +325,43 @@ class AuctionFollowUpPostgresE2ETest extends WorkE2ETestBase {
     return new AuctionFollowUpCommand(method, key, "작업자", "경매사와 확인");
   }
 
+  @Test
+  void recordOnlyArrivalAndCancellationNeverModifyFarmButBlockDecisionChanges() {
+    followUp.decide(lotId, decision(AuctionFollowUpMethod.FARM_RETURN, "farm-record"));
+    long mutations = count("orchid_group_mutations");
+    long groups = count("orchid_groups");
+    var input = new AuctionArrivalCommand(DATE, null, null, "record-only", null, 10, true);
+    var result = followUp.arrive(lotId, input);
+    assertThat(result.arrival().recordOnly()).isTrue();
+    assertThat(result.arrival().orchidGroupId()).isNull();
+    assertThat(result.arrival().cancellationAllowed()).isTrue();
+    assertThat(result.followUp().pendingQuantity()).isEqualTo(20);
+    assertThat(followUp.arrive(lotId, input)).isEqualTo(result);
+    assertThatThrownBy(
+            () ->
+                followUp.decide(lotId, decision(AuctionFollowUpMethod.REAUCTION, "blocked-record")))
+        .isInstanceOf(ConflictException.class);
+    assertThatThrownBy(
+            () ->
+                followUp.arrive(
+                    lotId,
+                    new AuctionArrivalCommand(DATE, null, null, "record-only", null, 11, true)))
+        .isInstanceOf(ConflictException.class);
+    var cancel = new CancelAuctionArrivalCommand(DATE, "cancel-record", null, "도착 정정");
+    var canceled = followUp.cancelArrival(lotId, result.arrival().id(), cancel);
+    assertThat(canceled.arrival().cancellationMutationId()).isNull();
+    assertThat(canceled.followUp().pendingQuantity()).isEqualTo(30);
+    assertThat(followUp.cancelArrival(lotId, result.arrival().id(), cancel)).isEqualTo(canceled);
+    assertThat(
+            followUp
+                .decide(lotId, decision(AuctionFollowUpMethod.REAUCTION, "next-record"))
+                .followUp()
+                .method())
+        .isEqualTo(AuctionFollowUpMethod.REAUCTION);
+    assertThat(count("orchid_group_mutations")).isEqualTo(mutations);
+    assertThat(count("orchid_groups")).isEqualTo(groups);
+  }
+
   private AuctionArrivalCommand arrival(String key, int quantity) {
     return new AuctionArrivalCommand(
         DATE,

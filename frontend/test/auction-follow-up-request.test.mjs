@@ -122,3 +122,24 @@ test("arrival payload preserves business dates, placement bounds and unspecified
     /논리 구역/,
   );
 });
+
+test("record-only arrival excludes stale Farm details and does not require placement", () => {
+  const result = buildAuctionArrivalInput({
+    recordOnly: true,
+    arrivalDate: "2026-10-09",
+    quantity: "7",
+    worker: " 엄마 ",
+    varietyId: "9",
+    potSize: '3"',
+    placement: { bedZoneId: 6 },
+  });
+  assert.deepEqual(result, {
+    operation: "ARRIVAL",
+    payload: {
+      arrivalDate: "2026-10-09",
+      quantity: 7,
+      recordOnly: true,
+      worker: "엄마",
+    },
+  });
+});

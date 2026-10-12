@@ -170,6 +170,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/sales-slips/{id}/direct-changes/{returnId}/arrivals:
+    post:
+      tags:
+      - sales-controller
+      description: 반품 도착을 기록합니다. 새 묶음 생성 또는 이미 재고에 반영된 도착의 기록만 등록을 선택합니다. 원판매·금액·수납은 변경하지 않습니다.
+      operationId: recordDirectReturnArrival
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: returnId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirectReturnArrivalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectReturnArrivalResult'
   /api/sales-slips/{id}/direct-changes/{changeId}/cancel:
     post:
       tags:
@@ -238,6 +275,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseDirectSaleChangeResult'
+  /api/sales-slips/{id}/direct-changes/return-arrivals/{arrivalId}/cancel:
+    post:
+      tags:
+      - sales-controller
+      description: 도착 이력을 보존해 취소합니다. 새 묶음을 생성한 경우에만 Farm 생성 Mutation을 보상하며 후속 사용이 있으면 거절합니다.
+      operationId: cancelDirectReturnArrival
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: arrivalId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelDirectReturnArrivalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectReturnArrivalResult'
   /api/sales-slips/{id}/direct-changes/price-adjustments:
     post:
       tags:
@@ -375,6 +449,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseDirectSaleChangeResponse'
+  /api/sales-slips/{id}/direct-changes/return-arrivals:
+    get:
+      tags:
+      - sales-controller
+      operationId: getDirectReturnArrivals
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectReturnArrivalState'
   /api/sales-slips/print:
     get:
       tags:
@@ -492,6 +599,20 @@ paths:
                 $ref: '#/components/schemas/ApiResponseListAuctionShipmentOptionResponse'
 components:
   schemas:
+    ApiResponseDirectReturnArrivalResult:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DirectReturnArrivalResult'
+        message:
+          type: string
+    ApiResponseDirectReturnArrivalState:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DirectReturnArrivalState'
+        message:
+          type: string
     ApiResponseDirectSaleChangeResponse:
       type: object
       properties:
@@ -589,6 +710,19 @@ components:
           - AUCTION_HOUSE
         phone:
           type: string
+    CancelDirectReturnArrivalRequest:
+      type: object
+      properties:
+        correctionDate:
+          type: string
+          format: date
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - correctionDate
+      - reason
     CancelDirectSaleChangeRequest:
       type: object
       properties:
@@ -602,6 +736,101 @@ components:
       required:
       - changeDate
       - reason
+    DirectReturnArrivalRequest:
+      type: object
+      properties:
+        arrivalDate:
+          type: string
+          format: date
+        bedZoneId:
+          type: integer
+          format: int64
+        details:
+          $ref: '#/components/schemas/OrchidGroupMutationDetails'
+        quantity:
+          type: integer
+          format: int32
+        recordOnly:
+          type: boolean
+          description: 이미 재고에 반영된 도착이면 true. Farm 재고를 변경하지 않습니다.
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - arrivalDate
+      - quantity
+    DirectReturnArrivalResponse:
+      type: object
+      properties:
+        arrivalDate:
+          type: string
+          format: date
+        canceledAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        cancellationAllowed:
+          type: boolean
+        cancellationMutationId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        cancellationReason:
+          type:
+          - string
+          - 'null'
+        correctionDate:
+          type:
+          - string
+          - 'null'
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        creationMutationId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        id:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        recordOnly:
+          type: boolean
+        returnChangeId:
+          type: integer
+          format: int64
+        worker:
+          type: string
+      required:
+      - cancellationAllowed
+      - recordOnly
+    DirectReturnArrivalResult:
+      type: object
+      properties:
+        arrivalId:
+          type: integer
+          format: int64
+    DirectReturnArrivalState:
+      type: object
+      properties:
+        history:
+          $ref: '#/components/schemas/PageResponseDirectReturnArrivalResponse'
+        pendingReturns:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingReturn'
     DirectSaleChangeRequest:
       type: object
       properties:
@@ -783,6 +1012,54 @@ components:
       - amount
       - idempotencyKey
       - paymentDate
+    OrchidGroupMutationDetails:
+      type: object
+      properties:
+        ageYear:
+          type: integer
+          format: int32
+        endPosition:
+          type: number
+        memo:
+          type: string
+        placementType:
+          type: string
+        potSize:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        splitPlacementAllowed:
+          type: boolean
+        startPosition:
+          type: number
+        status:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+        varietyId:
+          type: integer
+          format: int64
+    PageResponseDirectReturnArrivalResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirectReturnArrivalResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     PageResponseHistory:
       type: object
       properties:
@@ -821,6 +1098,22 @@ components:
         totalPages:
           type: integer
           format: int32
+    PendingReturn:
+      type: object
+      properties:
+        arrivalAllowed:
+          type: boolean
+        itemId:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        pendingQuantity:
+          type: integer
+          format: int32
+        returnChangeId:
+          type: integer
+          format: int64
     Portion:
       type: object
       properties:
