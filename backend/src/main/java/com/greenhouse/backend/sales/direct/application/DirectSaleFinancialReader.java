@@ -1,7 +1,6 @@
 package com.greenhouse.backend.sales.direct.application;
 
 import com.greenhouse.backend.sales.direct.domain.DirectSaleAmounts;
-import com.greenhouse.backend.sales.direct.repository.DirectSaleAmountReconciliationRepository;
 import com.greenhouse.backend.sales.direct.repository.DirectSaleRepository;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort.FinancialSnapshot;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort.PriceSnapshot;
@@ -12,8 +11,6 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class DirectSaleFinancialReader {
   private final DirectSaleRepository sales;
-  private final DirectSaleAmountReconciliationRepository reconciliations;
   private final PaymentAllocationQueryApi allocations;
 
   public Map<Long, FinancialSnapshot> findAll(Collection<Long> documentIds) {
@@ -35,11 +31,6 @@ public class DirectSaleFinancialReader {
       Map<Long, Long> partners = new LinkedHashMap<>();
       ownedSales.forEach(sale -> partners.put(sale.getDocumentId(), sale.getPartnerId()));
       var amounts = allocations.findAll(PaymentTargetType.SALES_SLIP, partners);
-      Set<Long> reviewed =
-          reconciliations.findAll(batch).stream()
-              .filter(review -> review.requiresReview())
-              .map(review -> review.getDocumentId())
-              .collect(Collectors.toSet());
       for (var sale : ownedSales) {
         var allocation = amounts.get(sale.getDocumentId());
         var prices = new LinkedHashMap<Long, PriceSnapshot>();
@@ -60,8 +51,7 @@ public class DirectSaleFinancialReader {
         }
         BigDecimal total = BigDecimal.valueOf(sale.getTotalAmount());
         boolean review =
-            reviewed.contains(sale.getDocumentId())
-                || sale.getPartnerId() == null
+            sale.getPartnerId() == null
                 || allocation.reviewRequired()
                 || invalidPrice
                 || itemSum != sale.getTotalAmount()

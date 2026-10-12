@@ -270,9 +270,9 @@ class CoreQueryRegressionTest {
                   .allSatisfy(item -> assertThat(item.auctionLot()).isNull());
             });
 
-    // Root/items, allocations/snapshots, Farm states, partners and review evidence
+    // Root/items, allocations/snapshots, Farm states, partners and current financial facts
     // are loaded in bulk, independently of the item count.
-    assertThat(queryCount).isEqualTo(8L);
+    assertThat(queryCount).isEqualTo(7L);
   }
 
   @ParameterizedTest
@@ -315,8 +315,9 @@ class CoreQueryRegressionTest {
                 assertThat(partner.memo()).isEqualTo("메모");
               }
             });
-    // One scalar Partner search, followed by the unchanged page/count/detail queries.
-    assertThat(queries).isEqualTo(7);
+    // One scalar Partner search and bulk financial/partner reads, without migration review
+    // evidence.
+    assertThat(queries).isEqualTo(6);
     assertThat(
             salesQueryService
                 .getSalesSlipPage(null, date, date, null, null, "7890", 0, 1)

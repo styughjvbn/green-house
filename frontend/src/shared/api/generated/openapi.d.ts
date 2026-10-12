@@ -2338,7 +2338,7 @@ export interface components {
             availableActions?: ("EDIT" | "COMPLETE" | "CANCEL" | "CONFIRM_PAYMENT")[];
             /** Format: date */
             expectedPaymentDate?: string;
-            /** @description 현재 금액 검토 필요 여부. 과거 생성 응답에는 미상일 수 있습니다. */
+            /** @description 현재 거래금액·수납 배분의 확인 필요 여부. 수납 기록이 없다는 이유만으로 확인 대상으로 보지 않습니다. 과거 생성 응답에는 미상일 수 있습니다. */
             financialReviewRequired?: boolean | null;
             /** Format: int64 */
             id?: number;

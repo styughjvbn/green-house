@@ -11,7 +11,7 @@ public final class DirectSaleAmounts {
   public static void requireReviewCleared(boolean reviewRequired) {
     if (reviewRequired)
       throw new ConflictException(
-          "DIRECT_AMOUNT_REVIEW_REQUIRED", "과거 금액과 입금 연결의 검토가 끝나기 전에는 새 입금이나 금액 변경을 할 수 없습니다.");
+          "DIRECT_AMOUNT_REVIEW_REQUIRED", "현재 거래금액과 수납 배분을 확인하기 전에는 새 수납이나 금액 변경을 할 수 없습니다.");
   }
 
   public static boolean isPaymentAllowed(int total, BigDecimal allocated, boolean reviewRequired) {

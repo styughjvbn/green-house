@@ -28,5 +28,8 @@ public record SalesSlipDocument(
     String memo,
     List<SalesSlipDocumentItem> items,
     List<SalesSlipAction> availableActions,
-    @Schema(nullable = true, description = "현재 금액 검토 필요 여부. 과거 생성 응답에는 미상일 수 있습니다.")
+    @Schema(
+            nullable = true,
+            description =
+                "현재 거래금액·수납 배분의 확인 필요 여부. 수납 기록이 없다는 이유만으로 확인 대상으로 보지 않습니다. 과거 생성 응답에는 미상일 수 있습니다.")
         Boolean financialReviewRequired) {}

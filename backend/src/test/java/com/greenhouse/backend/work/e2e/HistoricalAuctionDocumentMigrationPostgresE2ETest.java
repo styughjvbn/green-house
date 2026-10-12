@@ -263,7 +263,7 @@ class HistoricalAuctionDocumentMigrationPostgresE2ETest {
                   + table
                   + " row ORDER BY 1",
               String.class));
-    var migration = Flyway.configure().dataSource(source).load();
+    var migration = Flyway.configure().dataSource(source).target("57").load();
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();
