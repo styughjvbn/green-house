@@ -31,6 +31,8 @@
       "itemName" : "Snow White",
       "genus" : "Orchid",
       "spec" : "A",
+      "unit" : null,
+      "boxes" : null,
       "quantity" : 5,
       "unitPrice" : 1000,
       "amount" : 5000,

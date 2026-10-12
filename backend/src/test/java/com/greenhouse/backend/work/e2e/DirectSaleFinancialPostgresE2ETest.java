@@ -259,7 +259,7 @@ class DirectSaleFinancialPostgresE2ETest extends WorkE2ETestBase {
     var rejected =
         post(
             "/api/sales-slips/900/confirm-payment",
-            "{\"amount\":1001,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"owned-too-much\"}");
+            "{\"amount\":0,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"owned-invalid\"}");
     assertThat(rejected.status()).isEqualTo(400);
     assertThat(events.count()).isZero();
     var paid =
@@ -284,6 +284,21 @@ class DirectSaleFinancialPostgresE2ETest extends WorkE2ETestBase {
             "{\"amount\":400,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"owned-cash\"}");
     assertThat(replay.status()).isEqualTo(200);
     assertThat(events.count()).isEqualTo(2);
+    // Current contract records excess receipts and caps allocation at the owned remaining amount.
+    var excess =
+        post(
+            "/api/sales-slips/900/confirm-payment",
+            "{\"amount\":601,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"owned-excess\"}");
+    assertThat(excess.status()).isEqualTo(200);
+    assertThat(excess.data().path("paidAmount").asLong()).isEqualTo(1000);
+    assertThat(excess.data().path("remainingAmount").asLong()).isZero();
+    assertThat(reader.findAll(List.of(900L)).get(900L).allocatedAmount())
+        .isEqualByComparingTo("1000");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT sum(unapplied_amount) FROM partner_payment_events WHERE event_type='PAYMENT_RECEIVED'",
+                Long.class))
+        .isEqualTo(1L);
   }
 
   @Test
