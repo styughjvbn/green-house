@@ -60,7 +60,9 @@ class SalesCreationFingerprintCompatibilityTest {
             schema.getKey().equals(SalesSlipItemInput.class.getName())
                 ? Stream.concat(schema.getValue().stream(), List.of("unit", "boxes").stream())
                     .toList()
-                : schema.getValue();
+                : schema.getKey().equals(SalesSlipCommand.class.getName())
+                    ? Stream.concat(schema.getValue().stream(), Stream.of("recordOnly")).toList()
+                    : schema.getValue();
         assertThat(Arrays.stream(type.getRecordComponents()).map(RecordComponent::getName).toList())
             .as("%s: review versioning/replay before updating the v1 fixture", schema.getKey())
             .containsExactlyInAnyOrderElementsOf(expected);
@@ -85,5 +87,16 @@ class SalesCreationFingerprintCompatibilityTest {
   private String hash(Object request) throws Exception {
     return HexFormat.of()
         .formatHex(MessageDigest.getInstance("SHA-256").digest(mapper.writeValueAsBytes(request)));
+  }
+
+  @Test
+  void recordOnlyIsOptInAndFalseRetainsTheLegacyFingerprint() throws Exception {
+    var legacy = mapper.readValue("{\"items\":[]}", SalesSlipCommand.class);
+    var disabled = mapper.readValue("{\"items\":[],\"recordOnly\":false}", SalesSlipCommand.class);
+    var enabled = mapper.readValue("{\"items\":[],\"recordOnly\":true}", SalesSlipCommand.class);
+    assertThat(hash(SalesCreationRequestPayload.from(disabled)))
+        .isEqualTo(hash(SalesCreationRequestPayload.from(legacy)));
+    assertThat(hash(SalesCreationRequestPayload.from(enabled)))
+        .isNotEqualTo(hash(SalesCreationRequestPayload.from(legacy)));
   }
 }

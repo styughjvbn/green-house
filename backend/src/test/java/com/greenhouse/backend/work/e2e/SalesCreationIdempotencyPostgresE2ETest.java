@@ -538,19 +538,24 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
 
   @ParameterizedTest
   @CsvSource({
-    "false,false,false",
-    "false,true,false",
-    "true,false,false",
-    "false,false,true",
-    "false,true,true",
-    "true,false,true"
+    "false,false,false,false",
+    "false,true,false,false",
+    "true,false,false,false",
+    "false,false,true,false",
+    "false,true,true,false",
+    "true,false,true,false",
+    "false,false,false,true",
+    "false,true,false,true",
+    "true,false,false,true"
   })
   void concurrentCreationWaitsForCommitOrRollbackBeforeDeciding(
-      boolean rollback, boolean changed, boolean collect) throws Exception {
+      boolean rollback, boolean changed, boolean collect, boolean recordOnly) throws Exception {
     var request =
-        collect
-            ? withReceipt(request(5, null), 7000, SalesInitialReceiptInput.Method.CASH)
-            : request(5, null);
+        recordOnly
+            ? recordedRequest(SalesType.DIRECT)
+            : collect
+                ? withReceipt(request(5, null), 7000, SalesInitialReceiptInput.Method.CASH)
+                : request(5, null);
     var competing =
         changed
             ? (collect
@@ -660,11 +665,11 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
                     "select reserved_quantity from orchid_groups where id = ?",
                     Integer.class,
                     groupId))
-            .isEqualTo(5);
+            .isEqualTo(recordOnly ? 0 : 5);
         assertThat(
                 jdbc.queryForObject(
                     "select count(*) from sales_inventory_movements", Integer.class))
-            .isEqualTo(1);
+            .isEqualTo(recordOnly ? 0 : 1);
       } finally {
         resume.countDown();
       }
@@ -745,6 +750,200 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
                 type == SalesType.DIRECT ? 1000 : 0,
                 null,
                 List.of(new SalesSlipAllocationInput(groupId, quantity)))));
+  }
+
+  private SalesSlipCommand recordedRequest(SalesType type) {
+    var source = request(type, type == SalesType.DIRECT ? "출고 완료" : "출하 완료", 150, null);
+    return new SalesSlipCommand(
+        DATE.minusYears(2),
+        type,
+        source.partnerId(),
+        null,
+        type.defaultPaymentStatus(),
+        source.salesStatus(),
+        type.defaultPaymentMethod(),
+        "완료 기록",
+        List.of(
+            new SalesSlipItemInput(
+                "과거 품종",
+                "팔레놉시스",
+                "A",
+                150,
+                type == SalesType.DIRECT ? 1000 : 0,
+                "과거 품목",
+                List.of(),
+                "분",
+                3)),
+        null,
+        true);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"DIRECT", "AUCTION"})
+  void completedRecordsAndCancellationNeverChangeFarmStock(SalesType type) throws Exception {
+    var request = recordedRequest(type);
+    var farm = farmSnapshot();
+    var first =
+        post(
+            "/api/sales-slips",
+            objectMapper.writeValueAsString(request),
+            Map.of("Idempotency-Key", "record"));
+    assertThat(first.status()).isEqualTo(201);
+    assertThat(first.data().path("saleDate").asText()).isEqualTo(DATE.minusYears(2).toString());
+    assertThat(first.data().path("salesStatus").asText()).isEqualTo(request.salesStatus());
+    assertThat(first.data().path("historicalAuctionImport").asBoolean()).isFalse();
+    assertThat(first.data().path("items").get(0).path("allocations")).isEmpty();
+    assertThat(first.data().path("items").get(0).path("unit").asText()).isEqualTo("분");
+    assertThat(first.data().path("items").get(0).path("boxes").asInt()).isEqualTo(3);
+    assertThat(first.data().path("totalAmount").asInt())
+        .isEqualTo(type == SalesType.DIRECT ? 150000 : 0);
+    assertThat(first.data().path("availableActions").toString())
+        .contains("CANCEL")
+        .doesNotContain("EDIT", "COMPLETE");
+    assertThat(farmSnapshot()).isEqualTo(farm);
+    assertThat(
+            post(
+                    "/api/sales-slips",
+                    objectMapper.writeValueAsString(request),
+                    Map.of("Idempotency-Key", "record"))
+                .data())
+        .isEqualTo(first.data());
+    assertThat(jdbc.queryForObject("select count(*) from sales_slips", Integer.class)).isEqualTo(1);
+    if (type == SalesType.AUCTION) {
+      assertThat(first.data().path("auctionShipmentId").asLong()).isPositive();
+      assertThat(first.data().path("items").get(0).path("auctionShipmentLotId").asLong())
+          .isPositive();
+      assertThat(
+              jdbc.queryForObject(
+                  "select shipped_quantity from auction_shipment_lots", Integer.class))
+          .isEqualTo(150);
+    } else {
+      assertThat(jdbc.queryForObject("select total_amount from direct_sales", Integer.class))
+          .isEqualTo(150000);
+    }
+    long id = first.data().path("id").asLong();
+    assertThat(putJson("/api/sales-slips/" + id, objectMapper.writeValueAsString(request)).status())
+        .isEqualTo(400);
+    var canceled =
+        patchJson("/api/sales-slips/" + id + "/sales-status", "{\"salesStatus\":\"취소\"}");
+    assertThat(canceled.status()).isEqualTo(200);
+    assertThat(canceled.data().path("salesStatus").asText()).isEqualTo("취소");
+    assertThat(farmSnapshot()).isEqualTo(farm);
+    assertThat(jdbc.queryForObject("select count(*) from auction_shipments", Integer.class))
+        .isZero();
+    if (type == SalesType.DIRECT)
+      assertThat(
+              jdbc.queryForObject(
+                  "select receivable_balance from partner_balance_summaries where partner_id=?",
+                  Long.class,
+                  partnerId))
+          .isZero();
+  }
+
+  @Test
+  void recordedAuctionResultsUpdateAmountAndBlockCancellation() throws Exception {
+    var request = recordedRequest(SalesType.AUCTION);
+    var farm = farmSnapshot();
+    var first = creation.create(request, "record-auction-result");
+    long lot = first.items().getFirst().auctionShipmentLotId();
+    var result =
+        post(
+            "/api/auction-lots/" + lot + "/results",
+            """
+        {"idempotencyKey":"record-result","auctionDate":"2042-01-02","attemptNo":1,
+         "attemptStatus":"SOLD","resultLines":[{"quantity":150,"unitPrice":2000}]}
+        """);
+    assertThat(result.status()).isEqualTo(200);
+    var detail = get("/api/sales-slips/" + first.id());
+    assertThat(detail.data().path("totalAmount").asInt()).isEqualTo(300000);
+    assertThat(detail.data().path("availableActions").toString()).doesNotContain("CANCEL");
+    var before = snapshot();
+    assertThat(
+            patchJson(
+                    "/api/sales-slips/" + first.id() + "/sales-status", "{\"salesStatus\":\"취소\"}")
+                .status())
+        .isEqualTo(400);
+    assertThat(snapshot()).isEqualTo(before);
+    assertThat(farmSnapshot()).isEqualTo(farm);
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "key",
+        "draft",
+        "wrongStatus",
+        "allocations",
+        "shipment",
+        "normal",
+        "nullAllocations",
+        "quantity",
+        "name",
+        "partnerType"
+      })
+  void invalidRecordedRequestsLeaveNoEffects(String violation) throws Exception {
+    var body = (ObjectNode) objectMapper.valueToTree(recordedRequest(SalesType.DIRECT));
+    switch (violation) {
+      case "draft" -> body.put("salesStatus", "작성중");
+      case "wrongStatus" -> body.put("salesStatus", "출하 완료");
+      case "allocations" ->
+          ((ObjectNode) body.path("items").get(0))
+              .set(
+                  "allocations",
+                  objectMapper.valueToTree(
+                      List.of(Map.of("orchidGroupId", groupId, "quantity", 150))));
+      case "shipment" -> body.put("auctionShipmentId", 123);
+      case "normal" -> body.remove("recordOnly");
+      case "nullAllocations" -> ((ObjectNode) body.path("items").get(0)).putNull("allocations");
+      case "quantity" -> ((ObjectNode) body.path("items").get(0)).put("quantity", 0);
+      case "name" -> ((ObjectNode) body.path("items").get(0)).put("itemName", " ");
+      case "partnerType" -> body.put("salesType", "AUCTION").put("salesStatus", "출하 완료");
+      default -> {}
+    }
+    var before = snapshot();
+    var response =
+        post(
+            "/api/sales-slips",
+            body.toString(),
+            violation.equals("key") ? Map.of() : Map.of("Idempotency-Key", "invalid-record"));
+    assertThat(response.status()).isEqualTo(400);
+    assertThat(response.body().path("error").path("code").asText()).isEqualTo("VALIDATION_ERROR");
+    assertThat(snapshot()).isEqualTo(before);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"DIRECT", "AUCTION"})
+  void recordFailureRollsBackTermsLotsAuditAndReceipt(SalesType type) {
+    var request = recordedRequest(type);
+    var before = snapshot();
+    jdbc.execute(
+        "alter table sales_creation_receipts add constraint test_record_failure check (response_snapshot is null)");
+    try {
+      assertThatThrownBy(() -> creation.create(request, "failed-record"))
+          .isInstanceOf(DataIntegrityViolationException.class);
+      assertThat(snapshot()).isEqualTo(before);
+    } finally {
+      jdbc.execute("alter table sales_creation_receipts drop constraint test_record_failure");
+    }
+    assertThat(creation.create(request, "failed-record").id()).isPositive();
+  }
+
+  private Map<String, List<String>> farmSnapshot() {
+    var rows = new LinkedHashMap<String, List<String>>();
+    for (String table :
+        List.of(
+            "orchid_groups",
+            "orchid_group_mutations",
+            "orchid_group_mutation_entries",
+            "orchid_group_mutation_relations",
+            "sales_inventory_movements",
+            "sales_slip_item_allocations",
+            "sales_orchid_group_snapshots"))
+      rows.put(
+          table,
+          jdbc.queryForList(
+              "select to_jsonb(row)::text from " + table + " row order by 1", String.class));
+    return rows;
   }
 
   private record Outcome(SalesSlipDocument document, RuntimeException error) {}

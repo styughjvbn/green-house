@@ -87,6 +87,9 @@ const salesSlipItemColumns: ColumnDef<SalesSlipItem, unknown>[] = [
             </p>
           </div>
         ))}
+        {row.original.allocations.length === 0 ? (
+          <span className="text-xs text-[#6a766e]">난 묶음 연결 없음</span>
+        ) : null}
       </div>
     ),
     size: 220,

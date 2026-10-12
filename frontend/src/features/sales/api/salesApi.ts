@@ -463,6 +463,23 @@ export function getAuctionReturnVarieties(signal?: AbortSignal) {
   >("/varieties/genera", { signal });
 }
 
+export function getSalesRecordedVarieties(
+  keyword: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({
+    keyword: keyword.trim(),
+    page: String(page),
+    size: "20",
+  });
+  return fetchApi<
+    import("@/shared/api/page").Page<
+      import("@/entities/farm/types").VarietyOption
+    >
+  >(`/varieties?${params}`, { signal });
+}
+
 export function getUnassignedReceiptPage(
   partnerId: number,
   page: number,

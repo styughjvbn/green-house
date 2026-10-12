@@ -215,6 +215,7 @@ BusinessPartner 1 ─ N SalesSlip 1 ─ N SalesSlipItem 1 ─ N SalesSlipItemAll
 
 판매 전표다.
 
+- 이미 완료된 판매·경매 출하는 재고 변경 없이 기록만 등록할 수 있다. 품목의 과거 출처·snapshot을 추정하지 않으며 완료 상태만으로 시스템 재고 반영 여부를 판단하지 않는다. 재고를 반영하는 기존 전표는 allocation·예약·출고 Mutation으로 처리 이력을 유지한다.
 - 일반 판매와 경매 판매를 구분할 수 있다.
 - 판매일, 거래처, 입금 상태, 판매 상태, 총액, 메모를 가진다.
 - A5 출력 대상이다.
@@ -232,7 +233,7 @@ BusinessPartner 1 ─ N SalesSlip 1 ─ N SalesSlipItem 1 ─ N SalesSlipItemAll
 - 수량
 - 단가
 - 금액
-- 하나 이상의 난 묶음 배분과 연결된다.
+- 재고 반영 방식에서는 하나 이상의 난 묶음 배분과 연결된다. 이미 완료된 기록만 등록하는 품목은 배분 없이 저장한다.
 
 ### SalesSlipItemAllocation
 

@@ -26,6 +26,7 @@ export type CreateBusinessPartnerPayload = BusinessPartnerPayload;
 export type UpdateBusinessPartnerPayload = BusinessPartnerPayload;
 
 export type CreateSalesSlipPayload = {
+  recordOnly?: components["schemas"]["SalesSlipCreateRequest"]["recordOnly"];
   initialReceipt?: components["schemas"]["SalesInitialReceiptRequest"] | null;
   salesType: "DIRECT" | "AUCTION";
   saleDate: string;

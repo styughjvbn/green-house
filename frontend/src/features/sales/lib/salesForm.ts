@@ -244,7 +244,10 @@ export function distributeSalesItems(items: SalesItemForm[]): SalesItemForm[] {
   });
 }
 
-export function salesAllocationIssue(items: SalesItemForm[]): string | null {
+export function salesAllocationIssue(
+  items: SalesItemForm[],
+  recordOnly = false,
+): string | null {
   const groups = selectedSalesGroups(items);
   const capacities = new Map(
     groups.map((group) => [group.orchidGroupId, group.availableQuantity]),
@@ -254,6 +257,10 @@ export function salesAllocationIssue(items: SalesItemForm[]): string | null {
     const quantity = Number(item.quantity);
     if (!Number.isSafeInteger(quantity) || quantity < 1)
       return "품목 수량은 1분 이상 입력하세요.";
+    if (recordOnly) {
+      if (!item.itemName.trim()) return "품종명을 입력하세요.";
+      continue;
+    }
     const allocations = item.allocations.filter(
       (allocation) => Number(allocation.quantity) > 0,
     );
@@ -284,6 +291,7 @@ export function salesAllocationIssue(items: SalesItemForm[]): string | null {
 
 export function createInitialSalesForm(businessDate: string): SalesSlipForm {
   return {
+    recordOnly: false,
     salesType: "DIRECT",
     saleDate: businessDate,
     partnerId: "",
@@ -296,6 +304,26 @@ export function createInitialSalesForm(businessDate: string): SalesSlipForm {
     receiptMethod: "CASH",
     memo: "",
     items: [createEmptySalesItem()],
+  };
+}
+
+export function withSalesRecordingMode(
+  form: SalesSlipForm,
+  recordOnly: boolean,
+): SalesSlipForm {
+  return {
+    ...form,
+    recordOnly,
+    salesStatus: recordOnly
+      ? form.salesType === "AUCTION"
+        ? "출하 완료"
+        : "출고 완료"
+      : "작성중",
+    items: form.items.map((item) => ({
+      ...item,
+      allocations: [],
+      allocationMode: "AUTO",
+    })),
   };
 }
 
@@ -338,6 +366,7 @@ export function toCreateSalesSlipPayload(
   return {
     // TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정.
     initialReceipt: null,
+    ...(form.recordOnly ? { recordOnly: true } : {}),
     salesType: form.salesType,
     saleDate: form.saleDate,
     partnerId: form.partnerId ? Number(form.partnerId) : null,
@@ -355,7 +384,7 @@ export function toCreateSalesSlipPayload(
       quantity: Number(item.quantity),
       unitPrice: form.salesType === "AUCTION" ? 0 : Number(item.unitPrice),
       memo: nullableText(item.memo),
-      allocations: item.allocations
+      allocations: (form.recordOnly ? [] : item.allocations)
         .filter((allocation) => Number(allocation.quantity) > 0)
         .map((allocation) => ({
           orchidGroupId: Number(allocation.orchidGroupId),
@@ -370,6 +399,7 @@ export function resetSalesSlipFormAfterSave(
 ): SalesSlipForm {
   return {
     ...form,
+    recordOnly: false,
     salesType: "DIRECT",
     paymentStatus: "미입금",
     salesStatus: "작성중",
@@ -384,6 +414,7 @@ export function resetSalesSlipFormAfterSave(
 
 export function toSalesSlipForm(salesSlip: SalesSlip): SalesSlipForm {
   return {
+    recordOnly: false,
     salesType: salesSlip.salesType,
     saleDate: salesSlip.saleDate,
     partnerId: String(salesSlip.partner.id),

@@ -22,7 +22,8 @@ record SalesCreationRequestPayload(
     String paymentMethod,
     String memo,
     List<Item> items,
-    @JsonInclude(JsonInclude.Include.NON_NULL) SalesInitialReceiptInput initialReceipt) {
+    @JsonInclude(JsonInclude.Include.NON_NULL) SalesInitialReceiptInput initialReceipt,
+    @JsonInclude(JsonInclude.Include.NON_NULL) Boolean recordOnly) {
 
   static SalesCreationRequestPayload from(SalesSlipCommand request) {
     return request == null
@@ -37,7 +38,8 @@ record SalesCreationRequestPayload(
             request.paymentMethod(),
             request.memo(),
             request.items() == null ? null : request.items().stream().map(Item::from).toList(),
-            request.initialReceipt());
+            request.initialReceipt(),
+            Boolean.TRUE.equals(request.recordOnly()) ? true : null);
   }
 
   private record Item(

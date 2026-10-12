@@ -66,6 +66,8 @@ public class SalesSlipCreationService {
 
   public SalesSlipDocument create(SalesSlipCommand request, String idempotencyKey) {
     if (idempotencyKey == null) {
+      if (Boolean.TRUE.equals(request.recordOnly()))
+        throw new IllegalArgumentException("기록만 등록에는 생성 요청 키가 필요합니다.");
       if (request.initialReceipt() != null)
         throw new IllegalArgumentException("수납 함께 기록에는 생성 요청 키가 필요합니다.");
       return createNew(request);
@@ -112,6 +114,14 @@ public class SalesSlipCreationService {
         type, request.initialReceipt() != null, request.paymentStatus());
     SalesSlipInputPolicy.requirePartner(type, request.partnerId());
     SalesSlipInputPolicy.requireItems(type, request.items().size());
+    boolean recordOnly = Boolean.TRUE.equals(request.recordOnly());
+    if (recordOnly)
+      SalesSlipInputPolicy.requireCompletedRecord(
+          type,
+          request.salesStatus(),
+          request.auctionShipmentId(),
+          request.items().stream()
+              .anyMatch(item -> item.allocations() != null && !item.allocations().isEmpty()));
     var partner = partnerReader.getActiveInfo(request.partnerId());
     SalesSlipInputPolicy.requirePartnerType(
         type, partner.partnerType() == PartnerType.AUCTION_HOUSE);
@@ -139,9 +149,12 @@ public class SalesSlipCreationService {
                                 null, item.quantity(), item.unitPrice()))
                     .toList())
             : null;
-    salesSlipAllocationFactory
-        .createItems(request.items(), quote == null ? null : quote.prices())
-        .forEach(salesSlip::addItem);
+    var prices = quote == null ? null : quote.prices();
+    var items =
+        recordOnly
+            ? salesSlipAllocationFactory.createRecordedItems(request.items(), prices)
+            : salesSlipAllocationFactory.createItems(request.items(), prices);
+    items.forEach(salesSlip::addItem);
     if (quote != null)
       salesSlip.applyFinancialProjection(
           quote.totalAmount(),
@@ -182,9 +195,12 @@ public class SalesSlipCreationService {
                               item.getId(), item.getQuantity(), item.getUnitPrice()))
                   .toList()));
     }
-    salesSlipInventoryService.reserve(saved);
-    if (saved.isOutboundCompleted()) {
-      salesSlipOutboundService.complete(saved);
+    if (recordOnly) {
+      salesSlipRepository.flush();
+      salesSlipOutboundService.createAuctionShipment(saved);
+    } else {
+      salesSlipInventoryService.reserve(saved);
+      if (saved.isOutboundCompleted()) salesSlipOutboundService.complete(saved);
     }
     if (type == SalesType.DIRECT) {
       accounting.updateReceivable(

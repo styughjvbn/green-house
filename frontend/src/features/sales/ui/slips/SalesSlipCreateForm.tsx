@@ -11,6 +11,7 @@ import { BusinessPartnerSelect } from "../common/BusinessPartnerSelect";
 import { SelectField, TextField } from "../common/FormFields";
 import { SalesSlipItemEditor } from "./SalesSlipItemEditor";
 import { SalesOrchidGroupSearchSelect } from "./SalesOrchidGroupSearchSelect";
+import { SalesRecordedVarietySelect } from "./SalesRecordedVarietySelect";
 
 export function SalesSlipCreateForm({
   errorMessage,
@@ -30,6 +31,7 @@ export function SalesSlipCreateForm({
   onRemoveItem,
   onSubmit,
   onSalesTypeChange,
+  onRecordingModeChange,
   onUpdateItem,
 }: {
   errorMessage: string | null;
@@ -59,6 +61,7 @@ export function SalesSlipCreateForm({
   onRemoveItem: (index: number) => void;
   onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   onSalesTypeChange: (salesType: SalesSlipForm["salesType"]) => void;
+  onRecordingModeChange: (recordOnly: boolean) => void;
   onUpdateItem: (
     index: number,
     field: keyof SalesItemForm,
@@ -74,7 +77,9 @@ export function SalesSlipCreateForm({
     }
   >();
   form.items.forEach((item, index) => {
-    const key = JSON.stringify([item.genus, item.itemName]);
+    const key = form.recordOnly
+      ? `record-${index}`
+      : JSON.stringify([item.genus, item.itemName]);
     const group = itemGroups.get(key);
     if (group) group.rows.push({ item, index });
     else
@@ -140,6 +145,31 @@ export function SalesSlipCreateForm({
             />
           </div>
 
+          {mode === "create" ? (
+            <div className="space-y-2">
+              <SelectField
+                label="등록 방식"
+                disabled={saving}
+                value={form.recordOnly ? "RECORD_ONLY" : "INVENTORY"}
+                onChange={(value) =>
+                  onRecordingModeChange(value === "RECORD_ONLY")
+                }
+              >
+                <option value="INVENTORY">난 묶음 연결 · 재고 반영</option>
+                <option value="RECORD_ONLY">
+                  이미 완료된 건 · 기록만 등록
+                </option>
+              </SelectField>
+              {form.recordOnly ? (
+                <p className="text-sm text-[#66736a]">
+                  실제 판매·출하일과 품목을 입력하세요. 재고는 예약하거나
+                  차감하지 않습니다. 이미 등록된 전표·경매 출하는 다시 등록하지
+                  마세요.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="grid gap-3 md:grid-cols-3">
             <TextField
               label={form.salesType === "AUCTION" ? "출하일" : "판매일"}
@@ -159,7 +189,7 @@ export function SalesSlipCreateForm({
             />
             <SelectField
               label="출고·출하"
-              disabled={mode === "edit"}
+              disabled={mode === "edit" || form.recordOnly}
               value={form.salesStatus}
               onChange={(value) => onChange("salesStatus", value)}
             >
@@ -191,71 +221,73 @@ export function SalesSlipCreateForm({
 
           {/* TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정. */}
 
-          <section className="space-y-3 rounded-md border border-[#d7ddd4] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-bold text-[#17251b]">
-                  난 묶음 선택
-                </h3>
-                <p className="text-xs text-[#66736a]">
-                  선택한 묶음을 품목 수량에 따라 자동 배분합니다.
+          {!form.recordOnly ? (
+            <section className="space-y-3 rounded-md border border-[#d7ddd4] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-[#17251b]">
+                    난 묶음 선택
+                  </h3>
+                  <p className="text-xs text-[#66736a]">
+                    선택한 묶음을 품목 수량에 따라 자동 배분합니다.
+                  </p>
+                </div>
+                <div className="w-full max-w-[260px]">
+                  <SalesOrchidGroupSearchSelect
+                    disabled={saving}
+                    selectedIds={selectedGroups.map(
+                      (group) => group.orchidGroupId,
+                    )}
+                    onSelect={onSelectGroups}
+                  />
+                </div>
+              </div>
+              {selectedGroups.length === 0 ? (
+                <p className="text-sm text-[#66736a]">
+                  판매할 난 묶음을 선택하세요.
                 </p>
-              </div>
-              <div className="w-full max-w-[260px]">
-                <SalesOrchidGroupSearchSelect
-                  disabled={saving}
-                  selectedIds={selectedGroups.map(
-                    (group) => group.orchidGroupId,
-                  )}
-                  onSelect={onSelectGroups}
-                />
-              </div>
-            </div>
-            {selectedGroups.length === 0 ? (
-              <p className="text-sm text-[#66736a]">
-                판매할 난 묶음을 선택하세요.
-              </p>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {selectedGroups.map((group) => {
-                  const used = form.items
-                    .flatMap((item) => item.allocations)
-                    .filter(
-                      (allocation) =>
-                        allocation.orchidGroupId === group.orchidGroupId,
-                    )
-                    .reduce(
-                      (sum, allocation) =>
-                        sum + (Number(allocation.quantity) || 0),
-                      0,
-                    );
-                  return (
-                    <div
-                      key={group.orchidGroupId}
-                      className="flex items-center justify-between gap-2 rounded-md bg-[#f6f8f5] px-3 py-2 text-sm"
-                    >
-                      <div>
-                        <p className="font-semibold">
-                          {group.genus} / {group.varietyName}
-                        </p>
-                        <p className="text-xs text-[#66736a]">
-                          {group.locationLabel} · 가용 {group.availableQuantity}
-                          분 · 배분 {used}분
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        className="shrink-0 rounded border border-[#d9dfda] px-2 py-1 text-xs"
-                        onClick={() => onRemoveGroup(group.orchidGroupId)}
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {selectedGroups.map((group) => {
+                    const used = form.items
+                      .flatMap((item) => item.allocations)
+                      .filter(
+                        (allocation) =>
+                          allocation.orchidGroupId === group.orchidGroupId,
+                      )
+                      .reduce(
+                        (sum, allocation) =>
+                          sum + (Number(allocation.quantity) || 0),
+                        0,
+                      );
+                    return (
+                      <div
+                        key={group.orchidGroupId}
+                        className="flex items-center justify-between gap-2 rounded-md bg-[#f6f8f5] px-3 py-2 text-sm"
                       >
-                        제거
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+                        <div>
+                          <p className="font-semibold">
+                            {group.genus} / {group.varietyName}
+                          </p>
+                          <p className="text-xs text-[#66736a]">
+                            {group.locationLabel} · 가용{" "}
+                            {group.availableQuantity}분 · 배분 {used}분
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="shrink-0 rounded border border-[#d9dfda] px-2 py-1 text-xs"
+                          onClick={() => onRemoveGroup(group.orchidGroupId)}
+                        >
+                          제거
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          ) : null}
 
           <div className="space-y-4">
             {[...itemGroups.entries()].map(([key, group]) => (
@@ -265,15 +297,35 @@ export function SalesSlipCreateForm({
                 className="rounded-md border border-[#cfd8cc] bg-white p-3"
               >
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-semibold text-[#66736a]">
-                      품종명 / 속
-                    </p>
-                    <h3 className="text-base font-bold text-[#17251b]">
-                      {group.itemName || "난 묶음을 선택하세요"}
-                      {group.genus ? ` / ${group.genus}` : ""}
-                    </h3>
-                  </div>
+                  {form.recordOnly ? (
+                    <SalesRecordedVarietySelect
+                      name={group.itemName}
+                      genus={group.genus}
+                      disabled={saving}
+                      onSelect={(variety) => {
+                        onUpdateItem(
+                          group.rows[0].index,
+                          "itemName",
+                          variety.name,
+                        );
+                        onUpdateItem(
+                          group.rows[0].index,
+                          "genus",
+                          variety.genus,
+                        );
+                      }}
+                    />
+                  ) : (
+                    <div>
+                      <p className="text-xs font-semibold text-[#66736a]">
+                        품종명 / 속
+                      </p>
+                      <h3 className="text-base font-bold text-[#17251b]">
+                        {group.itemName || "난 묶음을 선택하세요"}
+                        {group.genus ? ` / ${group.genus}` : ""}
+                      </h3>
+                    </div>
+                  )}
                   {mode === "create" && group.itemName ? (
                     <button
                       type="button"
@@ -292,7 +344,13 @@ export function SalesSlipCreateForm({
                       item={item}
                       index={index}
                       showPricing={form.salesType === "DIRECT"}
-                      canRemove={mode === "create" && group.rows.length > 1}
+                      showAllocations={!form.recordOnly}
+                      canRemove={
+                        mode === "create" &&
+                        (form.recordOnly
+                          ? form.items.length > 1
+                          : group.rows.length > 1)
+                      }
                       onAutomaticAllocation={onAutomaticAllocation}
                       onAllocationChange={onAllocationChange}
                       onChange={onUpdateItem}
@@ -302,6 +360,16 @@ export function SalesSlipCreateForm({
                 </div>
               </section>
             ))}
+            {form.recordOnly ? (
+              <button
+                type="button"
+                disabled={saving}
+                className="rounded-md border border-[#cfd8cc] px-3 py-2 text-sm font-semibold text-[#29422e] disabled:opacity-50"
+                onClick={() => onAddItem(-1)}
+              >
+                품목 추가
+              </button>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-2">

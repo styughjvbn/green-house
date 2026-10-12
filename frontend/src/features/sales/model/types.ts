@@ -36,6 +36,7 @@ export type SalesItemForm = {
 };
 
 export type SalesSlipForm = {
+  recordOnly: boolean;
   salesType: "DIRECT" | "AUCTION";
   saleDate: string;
   partnerId: string;

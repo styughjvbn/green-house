@@ -34,6 +34,7 @@ import {
   resetSalesSlipFormAfterSave,
   toCreateSalesSlipPayload,
   toSalesSlipForm,
+  withSalesRecordingMode,
 } from "../lib/salesForm";
 import { createPendingCreationRequestKey } from "@/shared/lib/pendingCreationRequestKey";
 import type { SalesSlipsRouteState } from "../lib/salesRouteParams";
@@ -152,7 +153,11 @@ export function useSalesSlips({
       salesType,
       partnerId: "",
       paymentStatus: salesType === "AUCTION" ? "정산 대기" : "미입금",
-      salesStatus: "작성중",
+      salesStatus: current.recordOnly
+        ? salesType === "AUCTION"
+          ? "출하 완료"
+          : "출고 완료"
+        : "작성중",
       paymentMethod: salesType === "AUCTION" ? "경매 정산" : "",
       receiptEnabled: false,
       receiptAmount: "",
@@ -186,7 +191,10 @@ export function useSalesSlips({
       );
       return {
         ...current,
-        items: field === "quantity" ? distributeSalesItems(items) : items,
+        items:
+          field === "quantity" && !current.recordOnly
+            ? distributeSalesItems(items)
+            : items,
       };
     });
   }
@@ -195,6 +203,11 @@ export function useSalesSlips({
     setSalesForm((current) => {
       if (editingSlipId != null) return current;
       const source = current.items[index];
+      if (current.recordOnly && index === -1)
+        return {
+          ...current,
+          items: [...current.items, createEmptySalesItem()],
+        };
       if (!source?.itemName) return current;
       const item = {
         ...createEmptySalesItem(),
@@ -203,7 +216,10 @@ export function useSalesSlips({
       };
       const items = [...current.items];
       items.splice(index + 1, 0, item);
-      return { ...current, items: distributeSalesItems(items) };
+      return {
+        ...current,
+        items: current.recordOnly ? items : distributeSalesItems(items),
+      };
     });
   }
 
@@ -293,7 +309,10 @@ export function useSalesSlips({
     setErrorMessage(null);
 
     try {
-      const allocationError = salesAllocationIssue(salesForm.items);
+      const allocationError = salesAllocationIssue(
+        salesForm.items,
+        salesForm.recordOnly,
+      );
       if (allocationError) throw new Error(allocationError);
       const payload = toCreateSalesSlipPayload(salesForm);
       let salesSlip: SalesSlip;
@@ -315,6 +334,13 @@ export function useSalesSlips({
       setEditingSlipId(null);
       await Promise.all([
         invalidateSalesSlips(),
+        ...(salesSlip.salesType === "AUCTION"
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: salesQueryKeys.auction.all,
+              }),
+            ]
+          : []),
         queryClient.invalidateQueries({
           queryKey: salesQueryKeys.partners.all,
         }),
@@ -476,7 +502,12 @@ export function useSalesSlips({
     removeSalesGroup,
     useAutomaticAllocation,
     selectedGroups: selectedSalesGroups(salesForm.items),
-    allocationIssue: salesAllocationIssue(salesForm.items),
+    allocationIssue: salesAllocationIssue(
+      salesForm.items,
+      salesForm.recordOnly,
+    ),
+    setRecordingMode: (recordOnly: boolean) =>
+      setSalesForm((current) => withSalesRecordingMode(current, recordOnly)),
     addSalesItem,
     removeSalesItem,
     selectSalesSlip,

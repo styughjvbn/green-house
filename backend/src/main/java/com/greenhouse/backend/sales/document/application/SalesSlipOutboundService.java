@@ -31,7 +31,7 @@ public class SalesSlipOutboundService {
     inventoryService.outbound(allocations);
   }
 
-  private void createAuctionShipment(SalesSlip slip) {
+  void createAuctionShipment(SalesSlip slip) {
     if (slip.getSalesType() != SalesType.AUCTION || slip.getAuctionShipmentId() != null) {
       return;
     }

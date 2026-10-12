@@ -8,6 +8,19 @@ public final class SalesSlipInputPolicy {
 
   private SalesSlipInputPolicy() {}
 
+  public static void requireCompletedRecord(
+      SalesType type, String status, Long existingShipmentId, boolean hasAllocations) {
+    String completed =
+        type == SalesType.DIRECT
+            ? SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED
+            : SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED;
+    if (status == null || !completed.equals(status.trim()))
+      throw new IllegalArgumentException("기록만 등록할 때는 판매 유형에 맞는 완료 상태가 필요합니다.");
+    if (hasAllocations) throw new IllegalArgumentException("기록만 등록할 때는 난 묶음 배분을 지정할 수 없습니다.");
+    if (existingShipmentId != null)
+      throw new IllegalArgumentException("기존 경매 출하를 기록 등록으로 다시 생성할 수 없습니다.");
+  }
+
   public static void requireCreationReceipt(SalesType type, boolean hasReceipt, String status) {
     if (hasReceipt && type != SalesType.DIRECT)
       throw new IllegalArgumentException("경매 전표 수납은 경매 정산에서 기록해야 합니다.");

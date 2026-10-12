@@ -41,6 +41,17 @@ public class SalesSlipAllocationFactory {
     return createItems(requests, null);
   }
 
+  public List<SalesSlipItem> createRecordedItems(
+      List<SalesSlipItemInput> requests, List<DirectDocumentAccountingPort.PriceSnapshot> prices) {
+    // No current Farm reads or fabricated historical snapshots for completed records.
+    return IntStream.range(0, requests.size())
+        .mapToObj(
+            index ->
+                createItem(
+                    requests.get(index), Map.of(), null, prices == null ? null : prices.get(index)))
+        .toList();
+  }
+
   public List<SalesSlipItem> createItems(
       List<SalesSlipItemInput> requests, List<DirectDocumentAccountingPort.PriceSnapshot> prices) {
     requests.forEach(this::validateAllocationSum);

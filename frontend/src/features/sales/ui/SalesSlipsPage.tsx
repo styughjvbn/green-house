@@ -57,6 +57,7 @@ export function SalesSlipsPage({
             onRemoveItem={sales.removeSalesItem}
             onSubmit={sales.handleCreateSalesSlip}
             onSalesTypeChange={sales.selectSalesType}
+            onRecordingModeChange={sales.setRecordingMode}
             onUpdateItem={sales.updateItem}
           />
         ) : null}
