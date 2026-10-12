@@ -21,5 +21,4 @@ public record SalesSlipSummary(
     String paymentStatus,
     String salesStatus,
     String paymentMethod,
-    String memo,
-    @Schema(description = "기존 출하로부터 이관한 경매 전표 여부") boolean historicalAuctionImport) {}
+    String memo) {}

@@ -48,11 +48,11 @@ public class SalesSlipUpdateService {
     SalesSlip salesSlip =
         aggregateLoader.getForUpdate(
             salesSlipId, request.partnerId() == null ? List.of() : List.of(request.partnerId()));
-    salesSlip.requireInventoryChangeAllowed();
     Long previousPartnerId = salesSlip.getPartnerId();
     Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
-    accounting.requireFinancialReviewCleared(salesSlipId, salesSlip.getPartnerId());
+    if (salesSlip.getSalesType() == SalesType.DIRECT)
+      accounting.requireFinancialReviewCleared(salesSlipId, salesSlip.getPartnerId());
     validateEditable(salesSlip, request);
     SalesSlipInputPolicy.requirePartner(SalesType.DIRECT, request.partnerId());
     SalesSlipInputPolicy.requireItems(SalesType.DIRECT, request.items().size());

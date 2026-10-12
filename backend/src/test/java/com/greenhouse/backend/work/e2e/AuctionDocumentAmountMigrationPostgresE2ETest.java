@@ -72,7 +72,7 @@ class AuctionDocumentAmountMigrationPostgresE2ETest {
         tables.stream()
             .map(table -> jdbc.queryForList("SELECT * FROM " + table + " ORDER BY id"))
             .toList();
-    var migration = Flyway.configure().dataSource(source).load();
+    var migration = Flyway.configure().dataSource(source).target("56").load();
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();

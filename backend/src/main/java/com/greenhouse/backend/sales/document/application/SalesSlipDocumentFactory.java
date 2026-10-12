@@ -65,7 +65,6 @@ final class SalesSlipDocumentFactory {
                             : lotSummaries.get(item.getAuctionShipmentLotId())))
             .toList(),
         availableActions,
-        financialReviewRequired,
-        salesSlip.isHistoricalAuctionImport());
+        financialReviewRequired);
   }
 }

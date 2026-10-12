@@ -71,7 +71,6 @@ class AuctionDocumentAmountPostgresE2ETest extends WorkE2ETestBase {
 
   @Test
   void currentGrossIncludesEveryAttemptAndLotButDoesNotChangeReceivablesOrReceipts() {
-    jdbc.update("UPDATE sales_slips SET historical_auction_import=true WHERE id=?", documentId);
     var partial = command("partial", AuctionAttemptStatus.PARTIALLY_SOLD, 4, 1000);
     auctions.addResult(lotIds.getFirst(), partial);
     auctions.addResult(lotIds.getFirst(), partial); // Replay must not add the same money twice.

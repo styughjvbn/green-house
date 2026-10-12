@@ -42,7 +42,6 @@ public class SalesSlipStatusService {
     if (nextStatus.equals(salesSlip.getSalesStatus())) {
       return responseAssembler.assemble(salesSlip);
     }
-    salesSlip.requireInventoryChangeAllowed();
     Map<String, Object> before = auditSupport.snapshot(salesSlip);
     if (SalesSlip.STATUS_CANCELED.equals(nextStatus)) {
       cancel(salesSlip);

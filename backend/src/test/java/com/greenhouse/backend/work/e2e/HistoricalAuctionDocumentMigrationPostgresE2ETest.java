@@ -234,6 +234,62 @@ class HistoricalAuctionDocumentMigrationPostgresE2ETest {
     return source;
   }
 
+  @Test
+  void removesOnlyTheImportFlagAndConstraintWithoutChangingHistoricalFacts() {
+    var source = database();
+    var jdbc = new JdbcTemplate(source);
+    seed(jdbc);
+    Flyway.configure().dataSource(source).target("56").load().migrate();
+    var tables =
+        List.of(
+            "sales_slips",
+            "sales_slip_items",
+            "auction_shipments",
+            "auction_shipment_lots",
+            "auction_attempts",
+            "auction_result_lines",
+            "sales_creation_receipts",
+            "sales_inventory_movements",
+            "sales_slip_item_allocations",
+            "sales_orchid_group_snapshots",
+            "orchid_group_mutations",
+            "audit_events");
+    var before = new LinkedHashMap<String, List<String>>();
+    for (var table : tables)
+      before.put(
+          table,
+          jdbc.queryForList(
+              "SELECT (to_jsonb(row) - 'historical_auction_import')::text FROM "
+                  + table
+                  + " row ORDER BY 1",
+              String.class));
+    var migration = Flyway.configure().dataSource(source).load();
+    assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
+    assertThat(migration.migrate().migrationsExecuted).isZero();
+    migration.validate();
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM information_schema.columns WHERE table_name='sales_slips' AND column_name='historical_auction_import'",
+                Integer.class))
+        .isZero();
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM pg_constraint WHERE conname='ck_sales_slips_historical_auction_import'",
+                Integer.class))
+        .isZero();
+    for (var table : tables)
+      assertThat(
+              jdbc.queryForList(
+                  "SELECT to_jsonb(row)::text FROM " + table + " row ORDER BY 1", String.class))
+          .as(table)
+          .isEqualTo(before.get(table));
+    // The old import-specific CHECK no longer blocks ordinary cancellation state.
+    assertThat(
+            jdbc.update(
+                "UPDATE sales_slips SET sales_status='취소' WHERE slip_number='HIST-AUC-99003'"))
+        .isEqualTo(1);
+  }
+
   private void seed(JdbcTemplate jdbc) {
     jdbc.execute(
         """

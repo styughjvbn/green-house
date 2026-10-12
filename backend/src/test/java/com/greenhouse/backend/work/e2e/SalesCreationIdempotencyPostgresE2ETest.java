@@ -791,7 +791,7 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     assertThat(first.status()).isEqualTo(201);
     assertThat(first.data().path("saleDate").asText()).isEqualTo(DATE.minusYears(2).toString());
     assertThat(first.data().path("salesStatus").asText()).isEqualTo(request.salesStatus());
-    assertThat(first.data().path("historicalAuctionImport").asBoolean()).isFalse();
+    assertThat(first.data().has("historicalAuctionImport")).isFalse();
     assertThat(first.data().path("items").get(0).path("allocations")).isEmpty();
     assertThat(first.data().path("items").get(0).path("unit").asText()).isEqualTo("분");
     assertThat(first.data().path("items").get(0).path("boxes").asInt()).isEqualTo(3);
@@ -944,6 +944,36 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
           jdbc.queryForList(
               "select to_jsonb(row)::text from " + table + " row order by 1", String.class));
     return rows;
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void replaysOldResponsesWithTheRemovedImportFieldWithoutRewritingReceipts(boolean imported)
+      throws Exception {
+    var request = request(5, null);
+    creation.create(request, "old-import-field");
+    jdbc.update(
+        "UPDATE sales_creation_receipts SET response_snapshot=jsonb_set(response_snapshot,'{historicalAuctionImport}',?::jsonb) WHERE request_key=?",
+        Boolean.toString(imported),
+        "old-import-field");
+    var expected =
+        (ObjectNode)
+            objectMapper.readTree(
+                jdbc.queryForObject(
+                    "SELECT response_snapshot::text FROM sales_creation_receipts WHERE request_key=?",
+                    String.class,
+                    "old-import-field"));
+    expected.remove("historicalAuctionImport");
+    var before = snapshot();
+    var replay =
+        post(
+            "/api/sales-slips",
+            objectMapper.writeValueAsString(request),
+            Map.of("Idempotency-Key", "old-import-field"));
+    assertThat(replay.status()).isEqualTo(201);
+    assertThat(replay.data().has("historicalAuctionImport")).isFalse();
+    assertThat(replay.data()).isEqualTo(expected);
+    assertThat(snapshot()).isEqualTo(before);
   }
 
   private record Outcome(SalesSlipDocument document, RuntimeException error) {}

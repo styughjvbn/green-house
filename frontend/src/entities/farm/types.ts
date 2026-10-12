@@ -584,7 +584,6 @@ export type SalesSlip = {
   items: SalesSlipItem[];
   availableActions: SalesSlipAction[];
   financialReviewRequired?: ApiSchemas["SalesSlipResponse"]["financialReviewRequired"];
-  historicalAuctionImport?: ApiSchemas["SalesSlipResponse"]["historicalAuctionImport"];
 };
 
 export type SalesSlipListItem = Omit<SalesSlip, "items" | "availableActions">;

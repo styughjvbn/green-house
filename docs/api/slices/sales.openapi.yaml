@@ -57,8 +57,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
         '409':
-          description: 'DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음. HISTORICAL_AUCTION_DOCUMENT_READ_ONLY:
-            과거 이관 경매 전표 수정 차단'
+          description: 'DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음'
           content:
             application/json:
               schema:
@@ -196,12 +195,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
-        '409':
-          description: 'HISTORICAL_AUCTION_DOCUMENT_READ_ONLY: 과거 이관 경매 전표의 재고 변경 차단'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /api/sales/orchid-groups/search:
     get:
       tags:
@@ -849,9 +842,6 @@ components:
         expectedPaymentDate:
           type: string
           format: date
-        historicalAuctionImport:
-          type: boolean
-          description: 기존 출하로부터 이관한 경매 전표 여부
         id:
           type: integer
           format: int64
@@ -910,11 +900,6 @@ components:
           - boolean
           - 'null'
           description: 현재 금액 검토 필요 여부. 과거 생성 응답에는 미상일 수 있습니다.
-        historicalAuctionImport:
-          type:
-          - boolean
-          - 'null'
-          description: 기존 출하로부터 이관한 경매 전표 여부. 재고 근거는 추정 복원하지 않으며 과거 생성 응답에는 미상일 수 있습니다.
         id:
           type: integer
           format: int64

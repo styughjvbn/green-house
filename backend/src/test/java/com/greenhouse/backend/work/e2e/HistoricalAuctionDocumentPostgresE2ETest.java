@@ -6,7 +6,8 @@ import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -15,9 +16,10 @@ class HistoricalAuctionDocumentPostgresE2ETest extends WorkE2ETestBase {
   @Autowired private JdbcTemplate jdbc;
   @Autowired private BusinessPartnerRepository partners;
 
-  @Test
-  void readsAndPrintsImportedDocumentButRejectsCancellationBeforeAnyFarmOrAuctionChange()
-      throws Exception {
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void importedDocumentsUseOrdinaryCancellationRulesWithoutRestoringUnknownInventory(
+      boolean resultRecorded) throws Exception {
     var partner =
         partners.saveAndFlush(
             new BusinessPartner("이관 전표 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
@@ -42,8 +44,8 @@ class HistoricalAuctionDocumentPostgresE2ETest extends WorkE2ETestBase {
         jdbc.queryForObject(
             """
         INSERT INTO sales_slips (id,created_at,updated_at,slip_number,sale_date,sales_type,auction_shipment_id,
-          partner_id,total_amount,paid_amount,remaining_amount,payment_status,sales_status,historical_auction_import)
-        VALUES (nextval('sales_slips_id_seq'),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,DATE '2025-05-04','AUCTION',?, ?,0,0,0,'정산 대기','출하 완료',true) RETURNING id
+          partner_id,total_amount,paid_amount,remaining_amount,payment_status,sales_status)
+        VALUES (nextval('sales_slips_id_seq'),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,DATE '2025-05-04','AUCTION',?, ?,0,0,0,'정산 대기','출하 완료') RETURNING id
         """,
             Long.class,
             "HIST-AUC-" + shipment,
@@ -56,6 +58,16 @@ class HistoricalAuctionDocumentPostgresE2ETest extends WorkE2ETestBase {
         """,
         slip,
         lot);
+    if (resultRecorded) {
+      var result =
+          post(
+              "/api/auction-lots/" + lot + "/results",
+              """
+          {"idempotencyKey":"import-result","auctionDate":"2025-05-05","attemptNo":1,
+           "attemptStatus":"SOLD","resultLines":[{"quantity":10,"unitPrice":1000}]}
+          """);
+      assertThat(result.status()).isEqualTo(200);
+    }
     var shipmentsBefore = jdbc.queryForList("SELECT * FROM auction_shipments ORDER BY id");
     var lotsBefore = jdbc.queryForList("SELECT * FROM auction_shipment_lots ORDER BY id");
     var movementsBefore = jdbc.queryForList("SELECT * FROM sales_inventory_movements ORDER BY id");
@@ -63,8 +75,9 @@ class HistoricalAuctionDocumentPostgresE2ETest extends WorkE2ETestBase {
     var mutationsBefore = jdbc.queryForList("SELECT * FROM orchid_group_mutations ORDER BY id");
     var detail = get("/api/sales-slips/" + slip);
     assertThat(detail.status()).isEqualTo(200);
-    assertThat(detail.data().path("historicalAuctionImport").asBoolean()).isTrue();
-    assertThat(detail.data().path("availableActions")).isEmpty();
+    assertThat(detail.data().has("historicalAuctionImport")).isFalse();
+    assertThat(detail.data().path("availableActions").toString())
+        .isEqualTo(resultRecorded ? "[]" : "[\"CANCEL\"]");
     assertThat(detail.data().path("items").get(0).path("allocations")).isEmpty();
     assertThat(get("/api/sales-slips/" + slip + "/print").data()).isEqualTo(detail.data());
     var edit =
@@ -73,25 +86,36 @@ class HistoricalAuctionDocumentPostgresE2ETest extends WorkE2ETestBase {
             "{\"saleDate\":\"2025-05-04\",\"salesType\":\"DIRECT\",\"partnerId\":"
                 + partner.getId()
                 + ",\"items\":[]}");
-    assertThat(edit.status()).isEqualTo(409);
-    assertThat(edit.body().path("error").path("code").asText())
-        .isEqualTo("HISTORICAL_AUCTION_DOCUMENT_READ_ONLY");
+    assertThat(edit.status()).isEqualTo(400);
     var page = get("/api/sales-slips/page?partnerId=" + partner.getId());
     assertThat(page.status()).isEqualTo(200);
-    assertThat(page.data().path("content").get(0).path("historicalAuctionImport").asBoolean())
-        .isTrue();
-    for (var status : new String[] {"취소", "작성중", "출고 완료"}) {
+    assertThat(page.data().path("content").get(0).has("historicalAuctionImport")).isFalse();
+    for (var status : new String[] {"작성중", "출고 완료"}) {
       var response =
           patchJson(
               "/api/sales-slips/" + slip + "/sales-status", "{\"salesStatus\":\"" + status + "\"}");
-      assertThat(response.status()).isEqualTo(409);
-      assertThat(response.body().path("error").path("code").asText())
-          .isEqualTo("HISTORICAL_AUCTION_DOCUMENT_READ_ONLY");
+      assertThat(response.status()).isEqualTo(400);
     }
-    assertThat(jdbc.queryForList("SELECT * FROM auction_shipments ORDER BY id"))
-        .isEqualTo(shipmentsBefore);
-    assertThat(jdbc.queryForList("SELECT * FROM auction_shipment_lots ORDER BY id"))
-        .isEqualTo(lotsBefore);
+    var cancellation =
+        patchJson("/api/sales-slips/" + slip + "/sales-status", "{\"salesStatus\":\"취소\"}");
+    assertThat(cancellation.status()).isEqualTo(resultRecorded ? 400 : 200);
+    if (!resultRecorded) {
+      assertThat(cancellation.data().path("salesStatus").asText()).isEqualTo("취소");
+      assertThat(cancellation.data().path("auctionShipmentId").isNull()).isTrue();
+      assertThat(
+              jdbc.queryForObject(
+                  "SELECT count(*) FROM auction_shipments WHERE id=?", Integer.class, shipment))
+          .isZero();
+      assertThat(
+              jdbc.queryForObject(
+                  "SELECT count(*) FROM auction_shipment_lots WHERE id=?", Integer.class, lot))
+          .isZero();
+    } else {
+      assertThat(jdbc.queryForList("SELECT * FROM auction_shipments ORDER BY id"))
+          .isEqualTo(shipmentsBefore);
+      assertThat(jdbc.queryForList("SELECT * FROM auction_shipment_lots ORDER BY id"))
+          .isEqualTo(lotsBefore);
+    }
     assertThat(jdbc.queryForList("SELECT * FROM sales_inventory_movements ORDER BY id"))
         .isEqualTo(movementsBefore);
     assertThat(jdbc.queryForList("SELECT * FROM orchid_groups ORDER BY id"))
