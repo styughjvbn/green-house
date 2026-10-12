@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.direct.application;
 
 import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.sales.direct.domain.DirectSaleChangeLedger;
 import com.greenhouse.backend.sales.direct.repository.DirectSaleChangeRepository;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import com.greenhouse.backend.sales.partner.api.ExpectedPaymentDateApi;
@@ -28,10 +29,11 @@ public class DirectDocumentAccountingAdapter implements DirectDocumentAccounting
   private final DirectSaleReviewReader reviews;
   private final DirectSalePaymentPolicy payments;
 
-  public void requireNoChangeHistory(Long id) {
-    if (changes.existsByDocumentId(id))
+  public void requireNoActiveChanges(Long id) {
+    if (DirectSaleChangeLedger.hasActiveChanges(
+        changes.findByDocumentIdInOrderByIdAsc(List.of(id))))
       throw new ConflictException(
-          "DIRECT_CHANGE_HISTORY_EXISTS", "가격 조정·반품 이력이 있는 전표는 전체 취소할 수 없습니다.");
+          "DIRECT_CHANGE_HISTORY_EXISTS", "취소하지 않은 가격 조정·반품이 있는 전표는 전체 취소할 수 없습니다.");
   }
 
   public void requireFinancialReviewCleared(Long id, Long expectedPartnerId) {

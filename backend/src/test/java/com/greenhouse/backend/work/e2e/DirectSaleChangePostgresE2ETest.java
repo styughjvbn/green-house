@@ -95,9 +95,15 @@ class DirectSaleChangePostgresE2ETest extends WorkE2ETestBase {
             jdbc.queryForObject("SELECT total_amount FROM sales_slips WHERE id=900", Integer.class))
         .isEqualTo(1000000);
     assertThat(get("/api/sales-slips/900").data().path("availableActions").toString())
-        .doesNotContain("CANCEL");
+        .contains("CANCEL");
+    var historyBefore = jdbc.queryForList("SELECT * FROM direct_sale_changes ORDER BY id");
     assertThat(patchJson("/api/sales-slips/900/sales-status", "{\"salesStatus\":\"취소\"}").status())
-        .isEqualTo(409);
+        .isEqualTo(200);
+    assertThat(get("/api/sales-slips/900").data().path("salesStatus").asText()).isEqualTo("취소");
+    assertThat(jdbc.queryForList("SELECT * FROM direct_sale_changes ORDER BY id"))
+        .isEqualTo(historyBefore);
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM orchid_group_mutations", Long.class))
+        .isEqualTo(mutations);
   }
 
   @Test
@@ -298,6 +304,87 @@ class DirectSaleChangePostgresE2ETest extends WorkE2ETestBase {
     }
     assertThat(jdbc.queryForObject("SELECT count(*) FROM direct_sale_changes", Long.class))
         .isEqualTo(1);
+  }
+
+  @Test
+  void equalOriginalTotalStillBlocksCancellationUntilEveryChangeIsCanceled() throws Exception {
+    long lower =
+        change("price-adjustments", 10, 9000, null, "lower").data().path("changeId").asLong();
+    long higher =
+        change("price-adjustments", 10, 11000, null, "higher").data().path("changeId").asLong();
+    assertThat(get(base).data().path("currentAmount").asInt()).isEqualTo(1000000);
+    assertThat(get("/api/sales-slips/900").data().path("availableActions").toString())
+        .doesNotContain("CANCEL");
+    assertThat(patchJson("/api/sales-slips/900/sales-status", "{\"salesStatus\":\"취소\"}").status())
+        .isEqualTo(409);
+    assertThat(cancel(lower, "cancel-lower").status()).isEqualTo(200);
+    assertThat(patchJson("/api/sales-slips/900/sales-status", "{\"salesStatus\":\"취소\"}").status())
+        .isEqualTo(409);
+    assertThat(cancel(higher, "cancel-higher").status()).isEqualTo(200);
+    assertThat(get("/api/sales-slips/900").data().path("availableActions").toString())
+        .contains("CANCEL");
+    assertThat(patchJson("/api/sales-slips/900/sales-status", "{\"salesStatus\":\"취소\"}").status())
+        .isEqualTo(200);
+  }
+
+  @Test
+  void zeroAmountReturnBlocksCancellationUntilItIsCanceled() throws Exception {
+    jdbc.execute("UPDATE sales_slip_items SET unit_price=0,amount=0 WHERE id=901");
+    jdbc.execute(
+        "UPDATE direct_sale_prices SET unit_price=0,amount=0 WHERE sales_slip_item_id=901");
+    jdbc.execute("UPDATE direct_sales SET total_amount=0 WHERE sales_slip_id=900");
+    jdbc.execute("UPDATE sales_slips SET total_amount=0,remaining_amount=0 WHERE id=900");
+    long returned =
+        change("returns", 5, null, null, "zero-return").data().path("changeId").asLong();
+    assertThat(get(base).data().path("currentAmount").asInt()).isZero();
+    assertThat(patchJson("/api/sales-slips/900/sales-status", "{\"salesStatus\":\"취소\"}").status())
+        .isEqualTo(409);
+    assertThat(cancel(returned, "cancel-zero-return").status()).isEqualTo(200);
+    assertThat(get("/api/sales-slips/900").data().path("availableActions").toString())
+        .contains("CANCEL");
+  }
+
+  @Test
+  void paymentStillBlocksAfterAllChangesAreCanceled() throws Exception {
+    var adjusted = change("price-adjustments", 10, 9000, null, "adjust");
+    assertThat(adjusted.status()).isEqualTo(200);
+    assertThat(cancel(adjusted.data().path("changeId").asLong(), "cancel-adjust").status())
+        .isEqualTo(200);
+    assertThat(
+            post(
+                    "/api/sales-slips/900/confirm-payment",
+                    "{\"amount\":100000,\"paymentDate\":\"2026-10-07\",\"idempotencyKey\":\"paid\"}")
+                .status())
+        .isEqualTo(200);
+    assertThat(get("/api/sales-slips/900").data().path("availableActions").toString())
+        .doesNotContain("CANCEL");
+    assertThat(patchJson("/api/sales-slips/900/sales-status", "{\"salesStatus\":\"취소\"}").status())
+        .isEqualTo(400);
+  }
+
+  @Test
+  void wholeCancellationAndNewChangeAreSerialized() throws Exception {
+    long returned =
+        change("returns", 10, null, null, "original-return").data().path("changeId").asLong();
+    assertThat(cancel(returned, "cancel-original").status()).isEqualTo(200);
+    try (var executor = Executors.newFixedThreadPool(2)) {
+      var start = new CountDownLatch(1);
+      var cancel =
+          executor.submit(
+              () -> {
+                start.await();
+                return patchJson("/api/sales-slips/900/sales-status", "{\"salesStatus\":\"취소\"}");
+              });
+      var change =
+          executor.submit(
+              () -> {
+                start.await();
+                return change("returns", 10, null, null, "new-return");
+              });
+      start.countDown();
+      assertThat(List.of(cancel.get().status(), change.get().status()))
+          .containsExactlyInAnyOrder(200, 409);
+    }
   }
 
   private ApiResult change(String operation, int quantity, Integer price, Long source, String key)

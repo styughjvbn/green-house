@@ -36,6 +36,7 @@ class DirectReturnArrivalPostgresE2ETest extends WorkE2ETestBase {
   @Autowired WorkTestDataSeeder seeder;
   @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
+  Long sourceId;
   Long zoneId;
   Long varietyId;
   Long partnerId;
@@ -46,6 +47,7 @@ class DirectReturnArrivalPostgresE2ETest extends WorkE2ETestBase {
     jdbc.execute("TRUNCATE sales_slips, partner_payment_events CONTINUE IDENTITY CASCADE");
     seeder.resetKeepingSequences();
     var fixture = seeder.seedContractScenario();
+    sourceId = fixture.orchidGroupId();
     zoneId = fixture.bedZoneId();
     varietyId =
         jdbc.queryForObject(
@@ -94,12 +96,20 @@ class DirectReturnArrivalPostgresE2ETest extends WorkE2ETestBase {
                 .path("cancelAllowed")
                 .asBoolean())
         .isFalse();
+    assertThat(get("/api/sales-slips/900").data().path("availableActions").toString())
+        .doesNotContain("CANCEL");
+    assertThat(patchJson("/api/sales-slips/900/sales-status", "{\"salesStatus\":\"취소\"}").status())
+        .isEqualTo(409);
     assertThat(cancelReturn(returned, "blocked").body().path("error").path("code").asText())
         .isEqualTo("DIRECT_RETURN_ARRIVAL_EXISTS");
     var cancel = cancelArrival(arrivalId, "cancel");
     assertThat(cancel.status()).as(cancel.body().toString()).isEqualTo(200);
     assertThat(cancelArrival(arrivalId, "cancel").data()).isEqualTo(cancel.data());
     assertThat(cancelReturn(returned, "return-cancel").status()).isEqualTo(200);
+    assertThat(get("/api/sales-slips/900").data().path("availableActions").toString())
+        .contains("CANCEL");
+    assertThat(patchJson("/api/sales-slips/900/sales-status", "{\"salesStatus\":\"취소\"}").status())
+        .isEqualTo(200);
     assertThat(arrive(returned, 10, true, "arrive").data()).isEqualTo(first.data());
     assertThat(arrive(returned, 1, true, "late").status()).isEqualTo(409);
     assertThat(jdbc.queryForList("SELECT id,quantity FROM orchid_groups ORDER BY id"))
@@ -309,6 +319,83 @@ class DirectReturnArrivalPostgresE2ETest extends WorkE2ETestBase {
       start.countDown();
       assertThat(List.of(a.get().status(), b.get().status())).containsExactlyInAnyOrder(200, 409);
     }
+  }
+
+  @Test
+  void inventorySaleCanCancelAfterReversingPriceChangesAndRestoresOnlyOriginalOutbound()
+      throws Exception {
+    int before =
+        jdbc.queryForObject(
+            "SELECT quantity FROM orchid_groups WHERE id=?", Integer.class, sourceId);
+    var document =
+        creation.create(
+            new SalesSlipCommand(
+                LocalDate.of(2026, 10, 7),
+                SalesType.DIRECT,
+                partnerId,
+                null,
+                null,
+                SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED,
+                null,
+                null,
+                List.of(
+                    new SalesSlipItemInput(
+                        "E2E 난",
+                        "팔레놉시스",
+                        null,
+                        10,
+                        1000,
+                        null,
+                        List.of(new SalesSlipAllocationInput(sourceId, 10))))));
+    String changesPath = "/api/sales-slips/" + document.id() + "/direct-changes";
+    long itemId = document.items().getFirst().id();
+    var adjusted =
+        post(
+            changesPath + "/price-adjustments",
+            objectMapper.writeValueAsString(
+                Map.of(
+                    "itemId",
+                    itemId,
+                    "quantity",
+                    5,
+                    "unitPrice",
+                    900,
+                    "changeDate",
+                    "2026-10-08",
+                    "reason",
+                    "가격 정정")),
+            Map.of("Idempotency-Key", "stock-adjust"));
+    assertThat(adjusted.status()).as(adjusted.body().toString()).isEqualTo(200);
+    assertThat(
+            post(
+                    changesPath + "/" + adjusted.data().path("changeId").asLong() + "/cancel",
+                    "{\"changeDate\":\"2026-10-09\",\"reason\":\"조정 오입력\"}",
+                    Map.of("Idempotency-Key", "stock-adjust-cancel"))
+                .status())
+        .isEqualTo(200);
+    var history =
+        jdbc.queryForList(
+            "SELECT * FROM direct_sale_changes WHERE sales_slip_id=? ORDER BY id", document.id());
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT quantity FROM orchid_groups WHERE id=?", Integer.class, sourceId))
+        .isEqualTo(before - 10);
+    assertThat(get("/api/sales-slips/" + document.id()).data().path("availableActions").toString())
+        .contains("CANCEL");
+    var canceled =
+        patchJson(
+            "/api/sales-slips/" + document.id() + "/sales-status", "{\"salesStatus\":\"취소\"}");
+    assertThat(canceled.status()).as(canceled.body().toString()).isEqualTo(200);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT quantity FROM orchid_groups WHERE id=?", Integer.class, sourceId))
+        .isEqualTo(before);
+    assertThat(
+            jdbc.queryForList(
+                "SELECT * FROM direct_sale_changes WHERE sales_slip_id=? ORDER BY id",
+                document.id()))
+        .isEqualTo(history);
+    assertThat(reconciliation.reconcile().issues()).isEmpty();
   }
 
   private long returned(int quantity, String key) throws Exception {

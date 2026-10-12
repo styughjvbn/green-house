@@ -9,7 +9,7 @@ import java.util.Set;
 
 /** Document-owned value contract for Direct terms and accounting coordination. */
 public interface DirectDocumentAccountingPort {
-  void requireNoChangeHistory(Long documentId);
+  void requireNoActiveChanges(Long documentId);
 
   void requireFinancialReviewCleared(Long documentId, Long expectedPartnerId);
 
@@ -48,7 +48,7 @@ public interface DirectDocumentAccountingPort {
       boolean paymentAllowed,
       boolean allocationCorrectionAllowed,
       Map<Long, PriceSnapshot> prices,
-      boolean hasChanges) {}
+      boolean hasActiveChanges) {}
 
   record QuotedPrices(Integer totalAmount, List<PriceSnapshot> prices) {}
 

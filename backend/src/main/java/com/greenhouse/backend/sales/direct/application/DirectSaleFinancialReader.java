@@ -87,7 +87,7 @@ public class DirectSaleFinancialReader {
                     sale.getTotalAmount(), allocation.amount(), review),
                 !review && (sale.getTotalAmount() > 0 || allocation.amount().signum() > 0),
                 Map.copyOf(prices),
-                !history.isEmpty()));
+                DirectSaleChangeLedger.hasActiveChanges(history)));
       }
     }
     return Map.copyOf(result);

@@ -20,8 +20,6 @@ public interface DirectSaleChangeRepository extends JpaRepository<DirectSaleChan
       @org.springframework.data.repository.query.Param("from") LocalDate from,
       @org.springframework.data.repository.query.Param("to") LocalDate to);
 
-  boolean existsByDocumentId(Long documentId);
-
   List<DirectSaleChange> findByDocumentIdInOrderByIdAsc(Collection<Long> documentIds);
 
   Optional<DirectSaleChange> findByDocumentIdAndRequestKey(Long documentId, String requestKey);

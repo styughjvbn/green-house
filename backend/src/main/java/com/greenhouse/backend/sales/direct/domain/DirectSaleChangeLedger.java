@@ -138,6 +138,20 @@ public final class DirectSaleChangeLedger {
     return List.copyOf(returned.values());
   }
 
+  /** A canceled original change remains in history but no longer blocks document cancellation. */
+  public static boolean hasActiveChanges(List<DirectSaleChange> changes) {
+    var canceledIds = new HashSet<Long>();
+    for (var change : changes) {
+      if (change.getType() == DirectSaleChangeType.CANCEL)
+        canceledIds.add(change.getCanceledChangeId());
+    }
+    return changes.stream()
+        .anyMatch(
+            change ->
+                change.getType() != DirectSaleChangeType.CANCEL
+                    && !canceledIds.contains(change.getId()));
+  }
+
   public long total() {
     return total;
   }
