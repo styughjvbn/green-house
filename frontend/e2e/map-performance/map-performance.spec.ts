@@ -338,9 +338,7 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
       })),
       selectionType: "HOUSE",
       action: async (target) => {
-        await visibleByLabel(page, "동 이동").selectOption(
-          String(target.id),
-        );
+        await visibleByLabel(page, "동 이동").selectOption(String(target.id));
       },
     });
 

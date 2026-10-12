@@ -476,7 +476,7 @@ export function AppShell({
           className={
             isFarmStatusPage
               ? "app-content farm-status-content p-0"
-              : "app-content px-4 py-4 md:px-8 lg:px-6"
+              : "app-content p-3"
           }
         >
           <PageHeader
