@@ -560,6 +560,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sales-slips/{id}/direct-changes/{changeId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 후속 사용이 없는 가격 조정 또는 반품을 취소 이력으로 되돌립니다. 원기록은 삭제하지 않습니다. */
+        post: operations["cancelDirectSaleChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/direct-changes/returns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 선택한 가격 구간의 수량·금액을 반품 이력으로 기록합니다. 실제 농장 도착·재고 반영·현금 환불을 실행하지 않습니다. */
+        post: operations["recordDirectSaleReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/direct-changes/price-adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 원가격 구간의 일부 수량을 새 단가로 조정합니다. 원품목·재고·수납은 보존하며 현재 거래금액을 갱신합니다. 같은 키·입력은 최초 변경 ID를 반환합니다. */
+        post: operations["adjustDirectSalePrices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orchid-groups": {
         parameters: {
             query?: never;
@@ -1410,6 +1461,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getSalesSlipPrintData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/direct-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDirectSaleChanges"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3041,6 +3108,32 @@ export interface components {
             paymentMethod?: string;
             worker?: string;
         };
+        CancelDirectSaleChangeRequest: {
+            /** Format: date */
+            changeDate: string;
+            reason: string;
+        };
+        ApiResponseDirectSaleChangeResult: {
+            data?: components["schemas"]["DirectSaleChangeResult"];
+            message?: string;
+        };
+        DirectSaleChangeResult: {
+            /** Format: int64 */
+            changeId?: number;
+        };
+        DirectSaleChangeRequest: {
+            /** Format: date */
+            changeDate: string;
+            /** Format: int64 */
+            itemId: number;
+            /** Format: int32 */
+            quantity: number;
+            reason: string;
+            /** Format: int64 */
+            sourceChangeId?: number;
+            /** Format: int32 */
+            unitPrice?: number;
+        };
         OrchidGroupCreateRequest: {
             /** Format: int32 */
             ageYear?: number;
@@ -4210,6 +4303,84 @@ export interface components {
         ApiResponseListSalesSlipResponse: {
             data?: components["schemas"]["SalesSlipResponse"][];
             message?: string;
+        };
+        ApiResponseDirectSaleChangeResponse: {
+            data?: components["schemas"]["DirectSaleChangeResponse"];
+            message?: string;
+        };
+        DirectSaleChangeResponse: {
+            availableTypes?: ("PRICE_ADJUSTMENT" | "RETURN" | "CANCEL")[];
+            /** Format: int32 */
+            currentAmount?: number;
+            /** Format: int64 */
+            documentId?: number;
+            history?: components["schemas"]["PageResponseHistory"];
+            /** Format: int64 */
+            originalAmount?: number;
+            portions?: components["schemas"]["Portion"][];
+            /**
+             * Format: int64
+             * @description 현재 수납 배분이 거래금액을 초과한 환불 필요액. 검토 대상은 미상이며 실제 환불 기록이 아닙니다.
+             */
+            refundDueAmount?: number | null;
+            /** @description 취소되지 않은 반품의 가격 구간별 수량·단가·비음수 금액. 이력 페이지와 무관한 전체 구성이며 현재 거래금액에서 제외됩니다. */
+            returnedPortions?: components["schemas"]["Portion"][];
+        };
+        History: {
+            /** Format: int64 */
+            amountDelta?: number;
+            cancelAllowed?: boolean;
+            canceled?: boolean;
+            /** Format: int64 */
+            canceledChangeId?: number;
+            /** Format: date */
+            changeDate?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            itemId?: number;
+            itemName?: string;
+            /** Format: int32 */
+            nextUnitPrice?: number;
+            /** Format: int32 */
+            previousUnitPrice?: number;
+            /** Format: int32 */
+            quantity?: number;
+            reason?: string;
+            /** Format: int64 */
+            sourceChangeId?: number;
+            /** @enum {string} */
+            type?: "PRICE_ADJUSTMENT" | "RETURN" | "CANCEL";
+        };
+        PageResponseHistory: {
+            content?: components["schemas"]["History"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        Portion: {
+            /** Format: int64 */
+            amount?: number;
+            /** Format: int64 */
+            itemId?: number;
+            itemName?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /**
+             * Format: int64
+             * @description 원가격 구간이면 null, 조정가격 구간이면 해당 가격 조정 ID
+             */
+            sourceChangeId?: number | null;
+            spec?: string;
+            /** Format: int32 */
+            unitPrice?: number;
         };
         ApiResponsePageResponseSalesSlipListItemResponse: {
             data?: components["schemas"]["PageResponseSalesSlipListItemResponse"];
@@ -6372,6 +6543,91 @@ export interface operations {
             };
         };
     };
+    cancelDirectSaleChange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: number;
+                changeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelDirectSaleChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectSaleChangeResult"];
+                };
+            };
+        };
+    };
+    recordDirectSaleReturn: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectSaleChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectSaleChangeResult"];
+                };
+            };
+        };
+    };
+    adjustDirectSalePrices: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectSaleChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectSaleChangeResult"];
+                };
+            };
+        };
+    };
     getOrchidGroups: {
         parameters: {
             query?: {
@@ -8083,6 +8339,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
+                };
+            };
+        };
+    };
+    getDirectSaleChanges: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectSaleChangeResponse"];
                 };
             };
         };

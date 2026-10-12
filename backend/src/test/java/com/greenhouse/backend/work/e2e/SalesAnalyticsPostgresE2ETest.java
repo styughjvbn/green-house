@@ -195,7 +195,8 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 
     var sales = analytics.getSalesAnalytics(FROM, TO);
 
-    assertThat(statistics.getPrepareStatementCount()).isEqualTo(12 + (size + 499) / 500);
+    // One owner-side aggregate query adds Direct price-adjustment/return deltas.
+    assertThat(statistics.getPrepareStatementCount()).isEqualTo(13 + (size + 499) / 500);
     assertThat(statistics.getEntityLoadCount()).isZero();
     assertThat(sales.currentMonthSales()).isEqualTo(3_000_000_000L * size);
     assertThat(sales.shippedQuantity()).isEqualTo(2L * size);

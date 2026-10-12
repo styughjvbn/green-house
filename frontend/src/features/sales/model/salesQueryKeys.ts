@@ -12,6 +12,8 @@ export const salesQueryKeys = {
     pages: ["sales", "slips", "pages"] as const,
     page: (filters: SalesFilterState, page: number, size: number) =>
       ["sales", "slips", "pages", filters, page, size] as const,
+    changes: (id: number, page: number) =>
+      ["sales", "slips", "changes", id, page, 10] as const,
     detail: (salesSlipId: number) =>
       ["sales", "slips", "detail", salesSlipId] as const,
   },

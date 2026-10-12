@@ -85,7 +85,8 @@ class SalesSlipActionResolverTest {
             salesSlip.getPaymentStatus(),
             remainingAmount > 0,
             true,
-            Map.of());
+            Map.of(),
+            false);
     when(paymentEventReader.findFinancials(List.of(id))).thenReturn(Map.of(id, financial));
     return salesSlip;
   }

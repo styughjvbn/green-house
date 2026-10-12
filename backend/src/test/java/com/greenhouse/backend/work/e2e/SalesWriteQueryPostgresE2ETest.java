@@ -183,17 +183,18 @@ class SalesWriteQueryPostgresE2ETest extends WorkE2ETestBase {
           // for 1 and 8 items. Existing explicit duplicate partner locks were removed.
           case "EDIT" -> 33;
           case "OUTBOUND" -> 16;
-          // Current receipt/balance checks remain constant for both 1 and 8 items.
-          case "PAYMENT" -> 26;
-          case "DRAFT_CANCEL" -> 18;
-          case "OUTBOUND_CANCEL" -> 23;
-          case "PAYMENT_REPLAY" -> 12;
-          case "UNCHANGED" -> 11;
+          // Each financial read adds one bulk commercial-ledger query; counts stay fixed for 1 and
+          // 8 items.
+          case "PAYMENT" -> 32;
+          case "DRAFT_CANCEL" -> 19;
+          case "OUTBOUND_CANCEL" -> 24;
+          case "PAYMENT_REPLAY" -> 13;
+          case "UNCHANGED" -> 12;
           default -> throw new IllegalArgumentException(action);
         };
     assertThat(stats.getQueryExecutionCount()).isLessThanOrEqualTo(queryLimit);
-    if (action.equals("UNCHANGED")) assertThat(stats.getPrepareStatementCount()).isEqualTo(11);
-    if (action.equals("PAYMENT_REPLAY")) assertThat(stats.getPrepareStatementCount()).isEqualTo(12);
+    if (action.equals("UNCHANGED")) assertThat(stats.getPrepareStatementCount()).isEqualTo(12);
+    if (action.equals("PAYMENT_REPLAY")) assertThat(stats.getPrepareStatementCount()).isEqualTo(13);
     assertThat(response).isEqualTo(queries.getSalesSlip(first.id()));
     assertThat(response.items()).hasSize(size);
     assertThat(response.items())

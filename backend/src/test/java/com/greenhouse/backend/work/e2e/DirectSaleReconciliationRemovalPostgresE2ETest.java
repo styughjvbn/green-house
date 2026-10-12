@@ -68,7 +68,7 @@ class DirectSaleReconciliationRemovalPostgresE2ETest {
           table,
           jdbc.queryForList(
               "SELECT to_jsonb(row)::text FROM " + table + " row ORDER BY 1", String.class));
-    var migration = Flyway.configure().dataSource(source).load();
+    var migration = Flyway.configure().dataSource(source).target("58").load();
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();

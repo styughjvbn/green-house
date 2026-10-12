@@ -1,3 +1,5 @@
+import type { DirectPricePortion } from "../../api/directChangeTypes";
+import { useDirectSaleChangeActions } from "./DirectSaleChangeActions";
 import { salesDispatchLabel } from "../../lib/salesDisplay";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -101,6 +103,88 @@ const salesSlipItemColumns: ColumnDef<SalesSlipItem, unknown>[] = [
     size: 120,
   },
 ];
+function directItemColumns(
+  portions: DirectPricePortion[] | undefined,
+  returnedPortions: DirectPricePortion[],
+): ColumnDef<SalesSlipItem, unknown>[] {
+  const byItem = new Map<number, DirectPricePortion[]>();
+  for (const portion of portions ?? []) {
+    const group = byItem.get(portion.itemId) ?? [];
+    group.push(portion);
+    byItem.set(portion.itemId, group);
+  }
+  const returnedByItem = new Map<number, DirectPricePortion[]>();
+  for (const portion of returnedPortions) {
+    const group = returnedByItem.get(portion.itemId) ?? [];
+    group.push(portion);
+    returnedByItem.set(portion.itemId, group);
+  }
+  return salesSlipItemColumns.map((column) => {
+    if (
+      !("accessorKey" in column) ||
+      !["quantity", "unitPrice", "amount"].includes(String(column.accessorKey))
+    )
+      return column;
+    const key = column.accessorKey as "quantity" | "unitPrice" | "amount";
+    return {
+      ...column,
+      cell: ({ row }) => {
+        const item = row.original;
+        const current = byItem.get(item.id) ?? [];
+        const returned = returnedByItem.get(item.id) ?? [];
+        const unchanged =
+          current.length === 1 &&
+          current[0].quantity === item.quantity &&
+          current[0].unitPrice === item.unitPrice &&
+          current[0].amount === item.amount;
+        if (portions == null || (unchanged && returned.length === 0))
+          return item[key].toLocaleString();
+        const originalLabel = key === "unitPrice" ? "원단가" : "원금액";
+        return (
+          <div>
+            <div className="space-y-1">
+              {current.map((portion) => (
+                <div
+                  key={portion.sourceChangeId ?? "original"}
+                  className="flex h-7 items-center justify-end gap-1 whitespace-nowrap"
+                >
+                  {key === "unitPrice" ? (
+                    <span className="text-[10px] font-normal text-[#68756c]">
+                      {portion.sourceChangeId == null ? "원가격" : "조정"}
+                    </span>
+                  ) : null}
+                  <span>{portion[key].toLocaleString()}</span>
+                </div>
+              ))}
+              {returned.map((portion) => (
+                <div
+                  key={`returned-${portion.sourceChangeId ?? "original"}`}
+                  className="flex h-7 items-center justify-end gap-1 whitespace-nowrap text-[#8a968d]"
+                >
+                  {key === "unitPrice" ? (
+                    <span className="text-[10px] font-normal">반품</span>
+                  ) : null}
+                  <del>{portion[key].toLocaleString()}</del>
+                </div>
+              ))}
+              {current.length === 0 && returned.length === 0 ? (
+                <div className="flex h-7 items-center justify-end text-[#68756c]">
+                  —
+                </div>
+              ) : null}
+            </div>
+            {key !== "quantity" ? (
+              <p className="mt-2 text-[10px] font-normal whitespace-nowrap text-[#68756c]">
+                {originalLabel} {item[key].toLocaleString()}
+              </p>
+            ) : null}
+          </div>
+        );
+      },
+    };
+  });
+}
+
 function auctionItemColumns(): ColumnDef<SalesSlipItem, unknown>[] {
   const columns = salesSlipItemColumns.filter(
     (column) =>
@@ -162,30 +246,52 @@ function auctionItemColumns(): ColumnDef<SalesSlipItem, unknown>[] {
   ];
   return [...columns.slice(0, 3), ...lotColumns, ...columns.slice(3)];
 }
-export function SalesSlipDetail({
-  loading = false,
-  salesSlip,
-  updatingSalesStatus,
-  onCancelSalesSlip,
-  onEditSalesSlip,
-  onCompleteSalesSlip,
-}: {
+type SalesSlipDetailProps = {
   loading?: boolean;
   salesSlip: SalesSlip | null;
   updatingSalesStatus: boolean;
   onCancelSalesSlip: (salesSlipId: number) => Promise<void>;
   onEditSalesSlip: (salesSlipId: number) => void;
   onCompleteSalesSlip: (salesSlipId: number) => Promise<void>;
-}) {
+};
+
+export function SalesSlipDetail(props: SalesSlipDetailProps) {
+  if (props.loading && !props.salesSlip)
+    return <DetailEmpty>전표 상세를 불러오는 중입니다.</DetailEmpty>;
+  if (!props.salesSlip)
+    return <DetailEmpty>선택한 전표가 없습니다.</DetailEmpty>;
+  return (
+    <SalesSlipLoadedDetail
+      key={props.salesSlip.id}
+      {...props}
+      salesSlip={props.salesSlip}
+    />
+  );
+}
+
+function SalesSlipLoadedDetail({
+  salesSlip,
+  updatingSalesStatus,
+  onCancelSalesSlip,
+  onEditSalesSlip,
+  onCompleteSalesSlip,
+}: Omit<SalesSlipDetailProps, "salesSlip"> & { salesSlip: SalesSlip }) {
   const [partnerInfoOpen, setPartnerInfoOpen] = useState(false);
   const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
   const [slipInfoOpen, setSlipInfoOpen] = useState(false);
-  if (loading) {
-    return <DetailEmpty>전표 상세를 불러오는 중입니다.</DetailEmpty>;
-  }
-  if (!salesSlip) {
-    return <DetailEmpty>선택한 전표가 없습니다.</DetailEmpty>;
-  }
+  const changes = useDirectSaleChangeActions(
+    salesSlip.salesType === "DIRECT" ? salesSlip.id : null,
+  );
+  const currentPortions =
+    salesSlip.financialReviewRequired === true || changes.priceQuery.isError
+      ? undefined
+      : changes.priceQuery.data?.portions;
+  const directColumns = directItemColumns(
+    currentPortions,
+    currentPortions == null
+      ? []
+      : (changes.priceQuery.data?.returnedPortions ?? []),
+  );
   const canComplete = salesSlip.availableActions.includes("COMPLETE");
   const canEdit = salesSlip.availableActions.includes("EDIT");
   const canCancel = salesSlip.availableActions.includes("CANCEL");
@@ -271,6 +377,7 @@ export function SalesSlipDetail({
                   전표 취소
                 </DetailActionButton>
               ) : null}
+              {changes.actions}
               <DetailActionButton
                 icon={Printer}
                 onClick={() => setPrintPreviewOpen(true)}
@@ -318,11 +425,35 @@ export function SalesSlipDetail({
                 lot 상세에서 확인하세요.
               </p>
             ) : null}
+            {salesSlip.salesType === "DIRECT" &&
+            changes.priceQuery.isPending ? (
+              <p className="mb-2 text-xs text-[#68756c]">
+                현재 가격 구성을 불러오는 중입니다. 원판매 내용을 표시합니다.
+              </p>
+            ) : null}
+            {salesSlip.salesType === "DIRECT" && changes.priceQuery.isError ? (
+              <div
+                role="alert"
+                className="mb-2 flex items-center gap-2 text-xs text-red-700"
+              >
+                <span>
+                  현재 가격 구성을 불러오지 못했습니다. 원판매 내용을
+                  표시합니다.
+                </span>
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => void changes.priceQuery.refetch()}
+                >
+                  다시 불러오기
+                </button>
+              </div>
+            ) : null}
             <DataTable
               columns={
                 salesSlip.salesType === "AUCTION"
                   ? auctionItemColumns()
-                  : salesSlipItemColumns
+                  : directColumns
               }
               data={salesSlip.items}
               emptyMessage="품목이 없습니다."
@@ -354,6 +485,8 @@ export function SalesSlipDetail({
           {/* TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정. 수납 패널을 마운트하지 않는다. */}
         </div>
       </DetailCard>
+
+      {changes.dialogs}
 
       {printPreviewOpen ? (
         <SalesSlipPrintDialog

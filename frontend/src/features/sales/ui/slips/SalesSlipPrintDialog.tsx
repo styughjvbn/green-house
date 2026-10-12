@@ -1,5 +1,9 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import { getDirectSaleChanges } from "../../api/salesApi";
+import { salesQueryKeys } from "../../model/salesQueryKeys";
+import type { DirectSaleChangeState } from "../../api/directChangeTypes";
 import { salesDispatchLabel } from "../../lib/salesDisplay";
 import { getPartnerSettlementSettings } from "../../api/salesApi";
 
@@ -18,6 +22,14 @@ export function SalesSlipPrintDialog({
   salesSlip: SalesSlip;
   onClose: () => void;
 }) {
+  const changes = useQuery({
+    queryKey: salesQueryKeys.slips.changes(salesSlip.id, 0),
+    queryFn: ({ signal }) => getDirectSaleChanges(salesSlip.id, 0, signal),
+    enabled: salesSlip.salesType === "DIRECT",
+  });
+  const commercialLoading =
+    salesSlip.salesType === "DIRECT" && changes.isPending;
+  const commercialError = salesSlip.salesType === "DIRECT" && changes.error;
   const [printTemplate, setPrintTemplate] =
     useState<PartnerPrintTemplate>("STANDARD_A5");
   const [shipperCode, setShipperCode] = useState("");
@@ -98,7 +110,9 @@ export function SalesSlipPrintDialog({
             <button
               className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white hover:bg-[#117c3b] disabled:cursor-not-allowed disabled:opacity-50"
               type="button"
-              disabled={settingsLoading}
+              disabled={
+                settingsLoading || commercialLoading || !!commercialError
+              }
               onClick={() => window.print()}
             >
               <Printer
@@ -163,7 +177,20 @@ export function SalesSlipPrintDialog({
         ) : null}
 
         <div className="sales-slip-print-preview min-h-0 overflow-auto p-4">
-          {settingsLoading ? (
+          {commercialError ? (
+            <div role="alert" className="bg-white p-4 text-red-700">
+              <p>
+                현재 거래금액을 불러오지 못했습니다. {commercialError.message}
+              </p>
+              <button type="button" onClick={() => void changes.refetch()}>
+                다시 불러오기
+              </button>
+            </div>
+          ) : commercialLoading ? (
+            <div className="bg-white p-4">
+              현재 거래금액을 불러오는 중입니다.
+            </div>
+          ) : settingsLoading ? (
             <div className="mx-auto flex min-h-[210mm] w-[148mm] items-center justify-center bg-white text-sm font-semibold text-[#68756c] shadow-sm">
               경매장 인쇄 기본값을 불러오는 중입니다.
             </div>
@@ -175,7 +202,10 @@ export function SalesSlipPrintDialog({
               shipperName={shipperName}
             />
           ) : (
-            <StandardSalesSlipPrintSheet salesSlip={salesSlip} />
+            <StandardSalesSlipPrintSheet
+              salesSlip={salesSlip}
+              changes={changes.data}
+            />
           )}
         </div>
       </section>
@@ -183,7 +213,13 @@ export function SalesSlipPrintDialog({
   );
 }
 
-function StandardSalesSlipPrintSheet({ salesSlip }: { salesSlip: SalesSlip }) {
+function StandardSalesSlipPrintSheet({
+  salesSlip,
+  changes,
+}: {
+  salesSlip: SalesSlip;
+  changes?: DirectSaleChangeState;
+}) {
   return (
     <article className="sales-slip-print-sheet a5-sheet mx-auto bg-white p-[12mm] text-[#1f2a24] shadow-sm">
       <div className="border-b-2 border-[#1f2a24] pb-4">
@@ -260,6 +296,27 @@ function StandardSalesSlipPrintSheet({ salesSlip }: { salesSlip: SalesSlip }) {
         </table>
       </section>
 
+      {changes && changes.history.totalElements > 0 ? (
+        <section className="mt-3 text-xs">
+          <p>
+            위 품목은 원판매 내용입니다. 원판매 금액{" "}
+            {changes.originalAmount.toLocaleString()}원
+          </p>
+          <p className="mt-1 font-bold">가격 조정·반품 반영 후 판매 구성</p>
+          {changes.portions.map((portion) => (
+            <p
+              key={`${portion.itemId}:${portion.sourceChangeId ?? "original"}`}
+              className="mt-1"
+            >
+              {portion.itemName} {portion.spec ?? ""} · {portion.quantity}개 ×{" "}
+              {portion.unitPrice.toLocaleString()}원 ={" "}
+              {portion.amount.toLocaleString()}원
+            </p>
+          ))}
+          {changes.portions.length === 0 ? <p>전체 반품</p> : null}
+        </section>
+      ) : null}
+
       <section className="mt-5 grid grid-cols-[1fr_190px] gap-4">
         <div className="rounded-md border border-[#cfd8cc] p-3 text-sm">
           <p className="font-bold">메모</p>
@@ -270,7 +327,8 @@ function StandardSalesSlipPrintSheet({ salesSlip }: { salesSlip: SalesSlip }) {
         <div className="rounded-md border-2 border-[#1f2a24] p-3 text-right">
           <p className="text-sm font-bold">합계 금액</p>
           <p className="mt-3 text-2xl font-bold">
-            {salesSlip.totalAmount.toLocaleString()}원
+            {(changes?.currentAmount ?? salesSlip.totalAmount).toLocaleString()}
+            원
           </p>
         </div>
       </section>

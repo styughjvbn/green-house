@@ -179,6 +179,10 @@ public class SalesSlip extends BaseEntity {
     this.totalAmount = (int) grossAmount;
   }
 
+  public boolean canRecordDirectChange() {
+    return salesType == SalesType.DIRECT && STATUS_DIRECT_OUTBOUND_COMPLETED.equals(salesStatus);
+  }
+
   public boolean canEdit(boolean hasPaymentEvent) {
     return editRejectionReason(hasPaymentEvent) == null;
   }

@@ -85,6 +85,12 @@ public class DirectSale extends BaseEntity {
     this.prices.addAll(prices);
   }
 
+  public void applyChangedTotal(long total) {
+    if (total < 0 || total > Integer.MAX_VALUE)
+      throw new IllegalArgumentException("판매 전표 금액은 0~2,147,483,647원이어야 합니다.");
+    this.totalAmount = (int) total;
+  }
+
   public long remainingAmount(long allocatedAmount) {
     return DirectSaleAmounts.remaining(totalAmount, allocatedAmount);
   }

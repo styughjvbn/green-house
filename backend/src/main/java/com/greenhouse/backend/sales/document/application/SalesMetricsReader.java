@@ -6,12 +6,18 @@ import static com.greenhouse.backend.sales.document.domain.QSalesSlipItem.salesS
 import com.greenhouse.backend.sales.api.document.SalesMetricsApi;
 import com.greenhouse.backend.sales.api.document.SalesPaymentCategory;
 import com.greenhouse.backend.sales.document.domain.SalesSlip;
+import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -26,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SalesMetricsReader implements SalesMetricsApi {
 
   private final JPAQueryFactory queryFactory;
+  private final DirectDocumentAccountingPort accounting;
 
   @Override
   public long sumSales(LocalDate from, LocalDate to) {
@@ -74,7 +81,34 @@ public class SalesMetricsReader implements SalesMetricsApi {
 
   @Override
   public List<NamedAmount> varietySales(LocalDate from, LocalDate to) {
-    var amount = salesSlipItem.amount.sum().longValue();
+    var deltas = accounting.findItemAmountChanges(from, to);
+    var namedDeltas = new LinkedHashMap<String, Long>();
+    var ids = new ArrayList<>(deltas.keySet());
+    for (int offset = 0; offset < ids.size(); offset += 500) {
+      var rows =
+          queryFactory
+              .select(salesSlipItem.id, salesSlipItem.itemName)
+              .from(salesSlipItem)
+              .join(salesSlipItem.salesSlip, salesSlip)
+              .where(
+                  completedInPeriod(from, to),
+                  salesSlipItem.id.in(ids.subList(offset, Math.min(offset + 500, ids.size()))))
+              .fetch();
+      rows.forEach(
+          row ->
+              namedDeltas.merge(
+                  row.get(salesSlipItem.itemName),
+                  deltas.get(row.get(salesSlipItem.id)),
+                  Math::addExact));
+    }
+    NumberExpression<Long> adjustment = Expressions.asNumber(0L);
+    for (var delta : namedDeltas.entrySet())
+      adjustment =
+          new CaseBuilder()
+              .when(salesSlipItem.itemName.eq(delta.getKey()))
+              .then(delta.getValue())
+              .otherwise(adjustment);
+    var amount = salesSlipItem.amount.sum().longValue().add(adjustment);
     return queryFactory
         .select(Projections.constructor(NamedAmount.class, salesSlipItem.itemName, amount))
         .from(salesSlipItem)

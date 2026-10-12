@@ -315,6 +315,8 @@ Sales 내부 구현의 허용 방향도 고정한다. 다른 기능의 applicati
 
 Document의 Payment 접근은 기존 인터페이스 제한을 유지한다. Document 소유 SPI를 Direct·Auction이, Payment 소유 SPI를 Direct·Auction이 구현하는 역방향 협력도 유지한다. Farm·Work 내부의 기존 aggregate 연관과 기능 간 저장소 조회는 이 전환에서 바꾸지 않았으며, 모든 하위 기능에 Sales와 같은 별도 그래프를 새로 강제하지 않는다. Mutation의 OrchidGroup 저장소 접근은 Farm 소유 내부 접근이다.
 
+일반 판매 가격 조정·반품의 최상위 유스케이스는 Direct에 둔다. Document의 공개 계약으로 거래처→전표 잠금과 완료·소유권 검증을 수행한 뒤 Direct를 잠근다. Direct는 원가격·가격 구간·추가 변경 이력을 소유하고 Document는 전달받은 전표 총액을 조회 projection으로 반영하고 원품목 금액은 유지한다. 품종별 분석은 Direct의 공개 계약으로 받은 변경 합계를 Document의 품목 집계와 조합한다. Payment 원장은 수정하지 않는다. 목록 금액 조회는 페이지 ID의 변경 원장을 한 번에 읽고 루프 안에서 조회하지 않는다.
+
 계약 선택과 배치 기준:
 
 - 허용된 방향으로 호출할 때는 제공 측 API를 직접 사용한다. 같은 모듈의 허용 API도 전달 Adapter로 감싸지 않는다. 기존 구현이 계약을 직접 제공할 수 있으면 구현과 계약 사이에 별도 위임 service를 만들지 않는다.

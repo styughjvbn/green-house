@@ -272,7 +272,8 @@ class CoreQueryRegressionTest {
 
     // Root/items, allocations/snapshots, Farm states, partners and current financial facts
     // are loaded in bulk, independently of the item count.
-    assertThat(queryCount).isEqualTo(7L);
+    // One bulk Direct change-ledger read, independent of item count.
+    assertThat(queryCount).isEqualTo(8L);
   }
 
   @ParameterizedTest
@@ -317,7 +318,8 @@ class CoreQueryRegressionTest {
             });
     // One scalar Partner search and bulk financial/partner reads, without migration review
     // evidence.
-    assertThat(queries).isEqualTo(6);
+    // One bulk Direct change-ledger read, independent of page size.
+    assertThat(queries).isEqualTo(7);
     assertThat(
             salesQueryService
                 .getSalesSlipPage(null, date, date, null, null, "7890", 0, 1)

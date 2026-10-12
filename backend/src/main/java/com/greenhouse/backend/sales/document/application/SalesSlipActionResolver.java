@@ -101,7 +101,8 @@ public class SalesSlipActionResolver {
     if (salesSlip.canComplete()) {
       actions.add(SalesSlipAction.COMPLETE);
     }
-    if (canCancel(salesSlip, hasPaymentEvent, nonCancelableShipmentIds)) {
+    if ((financial == null || !financial.hasChanges())
+        && canCancel(salesSlip, hasPaymentEvent, nonCancelableShipmentIds)) {
       actions.add(SalesSlipAction.CANCEL);
     }
     if (!reviewRequired

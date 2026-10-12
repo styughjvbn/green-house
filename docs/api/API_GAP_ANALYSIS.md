@@ -89,6 +89,8 @@
 
 ### 판매 전표
 
+일반 판매의 가격 조정·반품·취소와 가격 구간/이력 조회는 Sales slice의 `direct-changes` 계약으로 구현했다. 실제 반품 농장 도착·재고 반영·현금 환불은 미구현이다.
+
 - `GET /api/sales-slips`
 - `POST /api/sales-slips`
 - `PUT /api/sales-slips/{salesSlipId}`

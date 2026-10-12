@@ -21,7 +21,6 @@ CONSTRUCTOR	com.greenhouse.backend.sales.api.partner.PartnerTextSearch.<init>(co
 CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$CreatedShipment.<init>(java.lang.Long, java.util.Map)
 CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$Lot.<init>(java.lang.Long, java.lang.String, java.lang.String, java.lang.String, java.lang.Integer)
 CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.AuctionDocumentPort$Shipment.<init>(java.lang.Long, java.time.LocalDate, java.lang.Long, java.lang.String, java.util.List)
-CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$FinancialSnapshot.<init>(java.lang.Long, java.lang.Long, java.lang.Integer, java.time.LocalDate, java.lang.String, java.math.BigDecimal, java.math.BigDecimal, boolean, java.lang.String, boolean, boolean, java.util.Map)
 CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$PriceSnapshot.<init>(java.lang.Integer, java.lang.Integer, java.lang.Integer)
 CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$QuotedPrices.<init>(java.lang.Integer, java.util.List)
 CONSTRUCTOR	com.greenhouse.backend.sales.payment.api.PaymentAllocationTargetOption.<init>(java.lang.Long, com.greenhouse.backend.sales.payment.api.PaymentTargetType, java.lang.String, java.lang.Long, java.math.BigDecimal, java.math.BigDecimal, boolean, boolean, boolean)
@@ -552,3 +551,17 @@ METHOD	com.greenhouse.backend.sales.document.api.AuctionDocumentAmountApi.lockFo
 METHOD	com.greenhouse.backend.sales.document.api.AuctionDocumentAmountApi.updateGrossAmount(java.lang.Long, long)
 TYPE	com.greenhouse.backend.sales.document.api.AuctionDocumentAmountApi
 TYPE	com.greenhouse.backend.sales.document.api.AuctionDocumentAmountApi$Target
+CONSTRUCTOR	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$FinancialSnapshot.<init>(java.lang.Long, java.lang.Long, java.lang.Integer, java.time.LocalDate, java.lang.String, java.math.BigDecimal, java.math.BigDecimal, boolean, java.lang.String, boolean, boolean, java.util.Map, boolean)
+METHOD	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Item.id()
+METHOD	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Item.name()
+METHOD	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Item.spec()
+METHOD	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Target.changeAllowed()
+METHOD	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Target.items()
+METHOD	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Target.partnerId()
+METHOD	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Target.saleDate()
+METHOD	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi.find(java.lang.Long)
+METHOD	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi.lock(java.lang.Long)
+METHOD	com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort$FinancialSnapshot.totalAmount()
+TYPE	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi
+TYPE	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Item
+TYPE	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Target

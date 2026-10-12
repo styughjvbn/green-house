@@ -1,5 +1,7 @@
 package com.greenhouse.backend.sales.direct.application;
 
+import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.sales.direct.repository.DirectSaleChangeRepository;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import com.greenhouse.backend.sales.partner.api.ExpectedPaymentDateApi;
 import com.greenhouse.backend.sales.payment.api.PartnerBalanceOperationsApi;
@@ -10,12 +12,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class DirectDocumentAccountingAdapter implements DirectDocumentAccountingPort {
+  private final DirectSaleChangeRepository changes;
   private final PartnerBalanceOperationsApi balances;
   private final PaymentEventQueryApi events;
   private final ExpectedPaymentDateApi dates;
@@ -24,12 +28,23 @@ public class DirectDocumentAccountingAdapter implements DirectDocumentAccounting
   private final DirectSaleReviewReader reviews;
   private final DirectSalePaymentPolicy payments;
 
+  public void requireNoChangeHistory(Long id) {
+    if (changes.existsByDocumentId(id))
+      throw new ConflictException(
+          "DIRECT_CHANGE_HISTORY_EXISTS", "가격 조정·반품 이력이 있는 전표는 전체 취소할 수 없습니다.");
+  }
+
   public void requireFinancialReviewCleared(Long id, Long expectedPartnerId) {
     reviews.requireClear(id, expectedPartnerId);
   }
 
   public void requirePaymentAmount(Long documentId, Long expectedPartnerId, Long amount) {
     payments.requirePaymentAmount(documentId, expectedPartnerId, amount);
+  }
+
+  public Map<Long, Long> findItemAmountChanges(LocalDate from, LocalDate to) {
+    return changes.sumItemChanges(from, to).stream()
+        .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
   }
 
   public Map<Long, FinancialSnapshot> findFinancials(Collection<Long> documentIds) {

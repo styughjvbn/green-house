@@ -1,4 +1,6 @@
-﻿import { fetchApi, requestApi } from "@/shared/api/client";
+﻿import type { DirectSaleChangeState } from "./directChangeTypes";
+import type { DirectChangePendingRequest } from "../lib/directChangeRequests";
+import { fetchApi, requestApi } from "@/shared/api/client";
 import type {
   BusinessPartner,
   BusinessPartnerOption,
@@ -607,5 +609,40 @@ export function submitPaymentRequest(
       body: JSON.stringify(request.payload),
     },
     "배분을 저장하지 못했습니다.",
+  );
+}
+
+// Commercial changes keep original document items, stock and actual cash history intact.
+export function getDirectSaleChanges(
+  id: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return requestApi<DirectSaleChangeState>(
+    `/sales-slips/${id}/direct-changes?page=${page}&size=10`,
+    { signal },
+  );
+}
+export function submitDirectSaleChange(
+  id: number,
+  request: DirectChangePendingRequest,
+) {
+  const path =
+    request.operation === "CANCEL"
+      ? `${request.changeId}/cancel`
+      : request.operation === "RETURN"
+        ? "returns"
+        : "price-adjustments";
+  return requestApi(
+    `/sales-slips/${id}/direct-changes/${path}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": request.key,
+      },
+      body: JSON.stringify(request.payload),
+    },
+    "가격 조정·반품을 기록하지 못했습니다.",
   );
 }

@@ -62,6 +62,8 @@ public class SalesSlipStatusService {
   }
 
   private void cancel(SalesSlip salesSlip) {
+    if (salesSlip.getSalesType() == SalesType.DIRECT)
+      accounting.requireNoChangeHistory(salesSlip.getId());
     if (salesSlip.getSalesType() == SalesType.DIRECT
         && accounting.existsPayment(salesSlip.getId())) {
       throw new IllegalArgumentException("입금 이력이 있는 판매 전표는 취소할 수 없습니다.");

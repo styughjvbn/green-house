@@ -1,6 +1,8 @@
 package com.greenhouse.backend.sales.direct.application;
 
 import com.greenhouse.backend.sales.direct.domain.DirectSaleAmounts;
+import com.greenhouse.backend.sales.direct.domain.DirectSaleChangeLedger;
+import com.greenhouse.backend.sales.direct.repository.DirectSaleChangeRepository;
 import com.greenhouse.backend.sales.direct.repository.DirectSaleRepository;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort.FinancialSnapshot;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort.PriceSnapshot;
@@ -11,6 +13,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class DirectSaleFinancialReader {
   private final DirectSaleRepository sales;
+  private final DirectSaleChangeRepository changes;
   private final PaymentAllocationQueryApi allocations;
 
   public Map<Long, FinancialSnapshot> findAll(Collection<Long> documentIds) {
@@ -28,16 +32,17 @@ public class DirectSaleFinancialReader {
     for (int offset = 0; offset < ids.size(); offset += 500) {
       var batch = ids.subList(offset, Math.min(offset + 500, ids.size()));
       var ownedSales = sales.findAllWithPrices(batch);
+      var changesByDocument =
+          changes.findByDocumentIdInOrderByIdAsc(batch).stream()
+              .collect(Collectors.groupingBy(change -> change.getDocumentId()));
       Map<Long, Long> partners = new LinkedHashMap<>();
       ownedSales.forEach(sale -> partners.put(sale.getDocumentId(), sale.getPartnerId()));
       var amounts = allocations.findAll(PaymentTargetType.SALES_SLIP, partners);
       for (var sale : ownedSales) {
         var allocation = amounts.get(sale.getDocumentId());
         var prices = new LinkedHashMap<Long, PriceSnapshot>();
-        long itemSum = 0;
         boolean invalidPrice = false;
         for (var price : sale.getPrices()) {
-          itemSum = Math.addExact(itemSum, price.getAmount());
           invalidPrice |=
               price.getPricedQuantity() <= 0
                   || price.getUnitPrice() < 0
@@ -49,14 +54,20 @@ public class DirectSaleFinancialReader {
               new PriceSnapshot(
                   price.getPricedQuantity(), price.getUnitPrice(), price.getAmount()));
         }
+        var history = changesByDocument.getOrDefault(sale.getDocumentId(), List.of());
+        var ledger = new DirectSaleChangeLedger(sale.getPrices(), history);
         BigDecimal total = BigDecimal.valueOf(sale.getTotalAmount());
         boolean review =
             sale.getPartnerId() == null
                 || allocation.reviewRequired()
                 || invalidPrice
-                || itemSum != sale.getTotalAmount()
+                || ledger.total() != sale.getTotalAmount()
                 || sale.getTotalAmount() < 0
-                || allocation.amount().compareTo(total.max(BigDecimal.ZERO)) > 0
+                || allocation
+                        .amount()
+                        .compareTo(
+                            BigDecimal.valueOf(ledger.allocationCeiling()).max(BigDecimal.ZERO))
+                    > 0
                 || (allocation.partnerId() != null
                     && !allocation.partnerId().equals(sale.getPartnerId()));
         result.put(
@@ -74,8 +85,9 @@ public class DirectSaleFinancialReader {
                     sale.getTotalAmount(), allocation.amount(), sale.getUnpaidPaymentLabel()),
                 DirectSaleAmounts.isPaymentAllowed(
                     sale.getTotalAmount(), allocation.amount(), review),
-                DirectSaleAmounts.isPaymentAllowed(sale.getTotalAmount(), BigDecimal.ZERO, review),
-                Map.copyOf(prices)));
+                !review && (sale.getTotalAmount() > 0 || allocation.amount().signum() > 0),
+                Map.copyOf(prices),
+                !history.isEmpty()));
       }
     }
     return Map.copyOf(result);
