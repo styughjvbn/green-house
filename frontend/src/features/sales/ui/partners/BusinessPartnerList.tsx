@@ -1,8 +1,8 @@
 import { useMemo, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus } from "lucide-react";
 import type { BusinessPartner } from "@/entities/farm/types";
 import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
+import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 
 export function BusinessPartnerList({
   toolbar,
@@ -74,14 +74,9 @@ export function BusinessPartnerList({
       toolbar={toolbar}
       emptyAction={emptyAction}
       actions={
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
-          type="button"
-          onClick={onCreateBusinessPartner}
-        >
-          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+        <DataTableCreateButton onClick={onCreateBusinessPartner}>
           거래처 등록
-        </button>
+        </DataTableCreateButton>
       }
       columns={columns}
       data={partners}

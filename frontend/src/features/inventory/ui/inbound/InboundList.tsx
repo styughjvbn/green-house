@@ -2,10 +2,10 @@
 
 import { useMemo, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus } from "lucide-react";
 import type { Page } from "@/shared/api/page";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
+import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import type { InboundRecord } from "../../model/types";
 import {
@@ -123,14 +123,9 @@ export function InboundList({
       toolbar={toolbar}
       emptyAction={emptyAction}
       actions={
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
-          type="button"
-          onClick={onOpenCreate}
-        >
-          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />새
-          입고 등록
-        </button>
+        <DataTableCreateButton onClick={onOpenCreate}>
+          새 입고 등록
+        </DataTableCreateButton>
       }
       columns={columns}
       data={pageData.content}

@@ -1,11 +1,12 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Page } from "@/shared/api/page";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
+import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 import {
   DetailActionButton,
   DetailCard,
@@ -125,14 +126,9 @@ export function VarietyView({
           toolbar={toolbar}
           emptyAction={emptyAction}
           actions={
-            <button
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
-              type="button"
-              onClick={onCreate}
-            >
-              <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+            <DataTableCreateButton onClick={onCreate}>
               새 품종 등록
-            </button>
+            </DataTableCreateButton>
           }
           columns={columns}
           data={pageData.content}

@@ -1,10 +1,11 @@
 "use client";
+
 import { useMemo, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus } from "lucide-react";
 import type { SalesSlipListItem } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
+import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 import { SalesSlipStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
 export function SalesSlipList({
   toolbar,
@@ -89,14 +90,9 @@ export function SalesSlipList({
       toolbar={toolbar}
       emptyAction={emptyAction}
       actions={
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
-          type="button"
-          onClick={onCreateSalesSlip}
-        >
-          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+        <DataTableCreateButton onClick={onCreateSalesSlip}>
           전표 작성
-        </button>
+        </DataTableCreateButton>
       }
       columns={columns}
       data={salesSlips}

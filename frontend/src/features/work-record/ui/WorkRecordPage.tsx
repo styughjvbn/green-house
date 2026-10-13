@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CalendarDays, List, Plus } from "lucide-react";
+import { CalendarDays, List } from "lucide-react";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
+import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 import {
   readWorkRecordUrlState,
   setWorkWorkspaceScope,
@@ -37,14 +38,11 @@ export function WorkRecordPage() {
   }
 
   const headerActions = (
-    <button
-      className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#159447] px-3 text-sm font-semibold whitespace-nowrap text-white shadow-sm"
-      type="button"
+    <DataTableCreateButton
       onClick={() => setShowOperationForm(true)}
     >
-      <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
       작업 등록
-    </button>
+    </DataTableCreateButton>
   );
 
   const viewControl = (
