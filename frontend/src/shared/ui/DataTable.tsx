@@ -214,23 +214,18 @@ export function DataTable<TData>({
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col rounded-md border border-[#dfe5dc] bg-white shadow-sm">
       <div
-        className={`shrink-0 border-b border-[#e7ebe5] ${toolbar ? "px-3 py-2" : "px-4 py-3"}`}
+        className={`shrink-0 border-b border-[#e7ebe5] px-3 py-2`}
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex h-8 min-w-0 items-center gap-2">
             <h2 className="text-base font-bold text-[#17251b]">{title}</h2>
-            {toolbar && totalLabel ? (
+            {totalLabel ? (
               <span className="text-xs font-semibold whitespace-nowrap text-[#159447]">
                 {totalLabel}
               </span>
             ) : null}
           </div>
           <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-3">
-            {!toolbar && totalLabel ? (
-              <span className="text-xs font-semibold whitespace-nowrap text-[#159447]">
-                {totalLabel}
-              </span>
-            ) : null}
             {actions}
             {typeof toolbar !== "function" ? (
               <DataTableColumnMenu table={table} />

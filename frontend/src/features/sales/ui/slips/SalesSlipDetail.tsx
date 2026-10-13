@@ -314,14 +314,12 @@ function SalesSlipLoadedDetail({
           summary={
             <DetailSummary
               align="left"
-              columns="lg:grid-cols-3"
+              columns="lg:grid-cols-4"
               items={[
                 {
                   label: "판매 유형",
                   value:
-                    salesSlip.salesType === "AUCTION"
-                      ? "경매 판매"
-                      : "일반 판매",
+                    salesSlip.salesType === "AUCTION" ? "경매" : "일반 판매",
                 },
                 {
                   label: "판매일자",
@@ -333,6 +331,10 @@ function SalesSlipLoadedDetail({
                     salesSlip.salesStatus,
                     salesSlip.salesType,
                   ),
+                },
+                {
+                  label: "거래처",
+                  value: salesSlip.partner.name,
                 },
               ]}
             />
@@ -388,43 +390,15 @@ function SalesSlipLoadedDetail({
           }
         />
 
+        <dl className="border-b border-[#e7ebe5] bg-[#fbfcfa] px-4 py-3">
+          <dt className="text-xs font-semibold text-[#68756c]">전표 메모</dt>
+          <dd className="mt-1 text-sm break-words whitespace-pre-wrap text-[#344138]">
+            {salesSlip.memo?.trim() ? salesSlip.memo : "-"}
+          </dd>
+        </dl>
+
         <div className="p-4">
-          {null}
-          <div className="grid gap-3 lg:grid-cols-2">
-            <InfoBox
-              open={partnerInfoOpen}
-              preview={salesSlip.partner.name}
-              title="거래처"
-              onToggle={() => setPartnerInfoOpen((current) => !current)}
-            >
-              <Description
-                label="대표자명"
-                value={salesSlip.partner.ownerName}
-              />
-              <Description label="연락처" value={salesSlip.partner.phone} />
-              <Description label="주소" value={salesSlip.partner.address} />
-              <Description label="메모" value={salesSlip.partner.memo} />
-            </InfoBox>
-
-            <InfoBox
-              open={slipInfoOpen}
-              title="전표 정보"
-              onToggle={() => setSlipInfoOpen((current) => !current)}
-            >
-              <Description label="경매장" value={salesSlip.auctionMarket} />
-
-              {<Description label="담당자" value="관리자" />}
-              <Description label="메모" value={salesSlip.memo} />
-            </InfoBox>
-          </div>
-
           <div className="mt-4">
-            {salesSlip.salesType === "AUCTION" ? (
-              <p className="mb-2 text-xs text-[#68756c]">
-                현재 lot의 처리 현황입니다. 반환 결정·실제 농장 도착·반환 추정은
-                lot 상세에서 확인하세요.
-              </p>
-            ) : null}
             {salesSlip.salesType === "DIRECT" &&
             changes.priceQuery.isPending ? (
               <p className="mb-2 text-xs text-[#68756c]">
