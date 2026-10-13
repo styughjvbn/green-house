@@ -14,7 +14,8 @@ test.beforeEach(async ({ request, context }) => {
   ]);
 });
 
-test("one sales menu keeps auction settlement and adds payments", async ({
+// TODO: 수납·경매 정산 화면 재연결 시 활성화. 현재 메뉴와 직접 URL 접근이 비활성화되어 있습니다.
+test.skip("one sales menu keeps auction settlement and adds payments", async ({
   page,
 }) => {
   await page.goto("/sales");
@@ -64,7 +65,8 @@ test("auction slip editor omits price and total fields", async ({ page }) => {
     form.getByRole("spinbutton", { name: "수량", exact: true }),
   ).toBeVisible();
 });
-test("payments keep receipt selection across views, allocation and target tracing", async ({
+// TODO: 수납·경매 정산 화면 재연결 시 활성화. 현재 메뉴와 직접 URL 접근이 비활성화되어 있습니다.
+test.skip("payments keep receipt selection across views, allocation and target tracing", async ({
   page,
 }) => {
   await page.goto(
@@ -109,7 +111,8 @@ test("payments keep receipt selection across views, allocation and target tracin
   await expect(history.getByText("1,500원", { exact: true })).toHaveCount(0);
 });
 
-test("payment workspace uses separate panels on desktop and stacks without overflow on mobile", async ({
+// TODO: 수납·경매 정산 화면 재연결 시 활성화. 현재 메뉴와 직접 URL 접근이 비활성화되어 있습니다.
+test.skip("payment workspace uses separate panels on desktop and stacks without overflow on mobile", async ({
   page,
 }) => {
   await page.goto(
@@ -176,7 +179,14 @@ test("document filters scope partners by sales type and keep grouped dispatch se
   page,
 }) => {
   await page.goto("/sales/slips");
-  const partner = page.getByRole("combobox", { name: "거래처", exact: true });
+  const filters = page.getByRole("dialog", { name: "필터", exact: true });
+  const openFilters = () =>
+    page.getByRole("button", { name: /^필터 선택/ }).click();
+  await openFilters();
+  const partner = filters.getByRole("combobox", {
+    name: "거래처",
+    exact: true,
+  });
   await partner.click();
   await expect(
     page.getByRole("option", { name: "수납 테스트 거래처", exact: true }),
@@ -198,11 +208,12 @@ test("document filters scope partners by sales type and keep grouped dispatch se
   await page
     .getByRole("combobox", { name: "출고·출하", exact: true })
     .selectOption({ label: "완료" });
-  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await filters.getByRole("button", { name: "필터 적용", exact: true }).click();
   await expect(page).toHaveURL(/salesType=AUCTION/);
   expect(new URL(page.url()).searchParams.get("salesStatus")).toBe("완료");
   expect(new URL(page.url()).searchParams.get("partnerId")).toBe("8");
   await page.reload();
+  await openFilters();
   await expect(
     page.getByRole("combobox", { name: "판매 유형", exact: true }),
   ).toHaveValue("AUCTION");
@@ -216,19 +227,20 @@ test("document filters scope partners by sales type and keep grouped dispatch se
   await expect(
     page.getByRole("option", { name: "경매 선택지", exact: true }),
   ).toHaveCount(0);
-  await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await filters.getByRole("button", { name: "필터 적용", exact: true }).click();
   await expect(page).toHaveURL(/salesType=DIRECT/);
   expect(new URL(page.url()).searchParams.has("partnerId")).toBe(false);
-  await page
+  await openFilters();
+  await filters
     .getByRole("combobox", { name: "판매 유형", exact: true })
     .selectOption("");
-  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await filters.getByRole("button", { name: "필터 적용", exact: true }).click();
   await expect(page).not.toHaveURL(/salesType=/);
   expect(new URL(page.url()).searchParams.get("salesStatus")).toBe("완료");
 });
 
-test("direct document creation collects cash separately from dispatch and removes status-only completion", async ({
+// TODO: 수납·경매 정산 화면 재연결 시 활성화. 현재 메뉴와 직접 URL 접근이 비활성화되어 있습니다.
+test.skip("direct document creation collects cash separately from dispatch and removes status-only completion", async ({
   page,
   request,
 }) => {
@@ -326,7 +338,8 @@ test("direct document creation collects cash separately from dispatch and remove
   expect(submitted?.salesStatus).toBe("출고 완료");
 });
 
-test("direct payment records an amount above the slip balance", async ({
+// TODO: 수납·경매 정산 화면 재연결 시 활성화. 현재 메뉴와 직접 URL 접근이 비활성화되어 있습니다.
+test.skip("direct payment records an amount above the slip balance", async ({
   page,
 }) => {
   let receivedAmount: number | null = null;
@@ -379,7 +392,8 @@ test("direct payment records an amount above the slip balance", async ({
   expect(receivedAmount).toBe(1200);
 });
 
-test("fully collected direct documents retain receipt history while new collection is disabled", async ({
+// TODO: 수납·경매 정산 화면 재연결 시 활성화. 현재 메뉴와 직접 URL 접근이 비활성화되어 있습니다.
+test.skip("fully collected direct documents retain receipt history while new collection is disabled", async ({
   page,
   request,
 }) => {

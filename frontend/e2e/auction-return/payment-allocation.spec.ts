@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
 
+test.skip(
+  true,
+  "TODO: 수납·경매 정산 화면 재연결 시 활성화. 현재 메뉴와 직접 URL 접근이 비활성화되어 있습니다.",
+);
+
 test.beforeEach(async ({ page, request, context }) => {
   await request.post("http://127.0.0.1:14100/__control", {
     data: { reset: true, allocationSeed: true },
