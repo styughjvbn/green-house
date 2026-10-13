@@ -517,6 +517,15 @@ export function useSalesSlips({
     startEditSalesSlip,
     cancelSalesSlipEditing,
     resetFilters: listState.reset,
+    removeFilters: listState.removeFilters,
+    resetPopupFilters: () =>
+      listState.removeFilters(
+        SALES_FILTER_KEYS.filter((key) => key !== "keyword"),
+      ),
+    hasEmptySalesSlipResult:
+      salesSlipQuery.isSuccess &&
+      !salesSlipQuery.isFetching &&
+      salesSlipPageData.totalElements === 0,
     setSalesSlipPage: listState.changePage,
     setSalesSlipPageSize: listState.changePageSize,
     searchSalesSlips: listState.search,

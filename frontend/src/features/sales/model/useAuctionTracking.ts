@@ -154,6 +154,15 @@ export function useAuctionTracking({
     updateFilter: listState.updateFilter,
     search: listState.search,
     resetFilters: listState.reset,
+    removeFilters: listState.removeFilters,
+    resetPopupFilters: () =>
+      listState.removeFilters(
+        AUCTION_FILTER_KEYS.filter((key) => key !== "keyword"),
+      ),
+    hasEmptyResult:
+      lotsQuery.isSuccess &&
+      !lotsQuery.isFetching &&
+      pageResult.totalElements === 0,
     setPage: listState.changePage,
     setPageSize: listState.changePageSize,
     setSelectedId,

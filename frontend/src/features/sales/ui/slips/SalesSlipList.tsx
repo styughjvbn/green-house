@@ -1,12 +1,14 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import type { SalesSlipListItem } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
-import { DataTable } from "@/shared/ui/DataTable";
+import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
 import { SalesSlipStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
 export function SalesSlipList({
+  toolbar,
+  emptyAction,
   currentPage,
   pageSize,
   salesSlips,
@@ -19,6 +21,8 @@ export function SalesSlipList({
   onPageChange,
   onPageSizeChange,
 }: {
+  toolbar?: DataTableToolbar;
+  emptyAction?: ReactNode;
   currentPage: number;
   pageSize: number;
   salesSlips: SalesSlipListItem[];
@@ -82,6 +86,8 @@ export function SalesSlipList({
   );
   return (
     <DataTable
+      toolbar={toolbar}
+      emptyAction={emptyAction}
       actions={
         <button
           className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"

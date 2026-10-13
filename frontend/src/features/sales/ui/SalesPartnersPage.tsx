@@ -1,6 +1,7 @@
 "use client";
-import type { SubmitEvent } from "react";
+import type { ReactNode, SubmitEvent } from "react";
 import { useState } from "react";
+import { FilterResetButton } from "@/shared/ui/FilterControls";
 import { useSearchParams } from "next/navigation";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { readBusinessPartnerRouteState } from "../lib/salesRouteParams";
@@ -27,18 +28,36 @@ export function SalesPartnersPage() {
       setShowCreatePartner(false);
     }
   }
+  const toolbar = (columnSettings: ReactNode) => (
+    <BusinessPartnerFilters
+      loading={partners.loading}
+      filters={partners.filters}
+      appliedFilters={routeState.filters}
+      columnSettings={columnSettings}
+      onRemove={partners.removeFilters}
+      onResetFilters={partners.resetPopupFilters}
+      onChange={partners.updateFilter}
+      onReset={partners.resetFilters}
+      onSearch={partners.search}
+    />
+  );
+
   return (
     <main className="h-full min-h-0">
       <TabLayout>
-        <BusinessPartnerFilters
-          filters={partners.filters}
-          onChange={partners.updateFilter}
-          onReset={partners.resetFilters}
-          onSearch={partners.search}
-        />
         <TabError message={partners.errorMessage} />
         <TabSplit columns="lg:grid-cols-[520px_minmax(0,1fr)]">
           <BusinessPartnerList
+            toolbar={toolbar}
+            emptyAction={
+              partners.hasEmptyResult && !partners.errorMessage ? (
+                <FilterResetButton
+                  className="lg:mt-0"
+                  label="전체 초기화"
+                  onClick={partners.resetFilters}
+                />
+              ) : undefined
+            }
             currentPage={partners.currentPage}
             loading={partners.loading}
             pageSize={partners.pageSize}

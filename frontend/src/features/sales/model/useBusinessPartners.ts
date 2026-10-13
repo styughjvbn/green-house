@@ -197,6 +197,15 @@ export function useBusinessPartners({
     updateFilter: listState.updateFilter,
     search: listState.search,
     resetFilters: listState.reset,
+    removeFilters: listState.removeFilters,
+    resetPopupFilters: () =>
+      listState.removeFilters(
+        BUSINESS_PARTNER_FILTER_KEYS.filter((key) => key !== "keyword"),
+      ),
+    hasEmptyResult:
+      pageQuery.isSuccess &&
+      !pageQuery.isFetching &&
+      pageData.totalElements === 0,
     setPage: listState.changePage,
     setPageSize: listState.changePageSize,
     selectPartner: setSelectedPartnerId,

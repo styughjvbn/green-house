@@ -1,4 +1,6 @@
 "use client";
+import type { ReactNode } from "react";
+import { FilterResetButton } from "@/shared/ui/FilterControls";
 import { useSearchParams } from "next/navigation";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { readSalesRouteState } from "../lib/salesRouteParams";
@@ -25,17 +27,24 @@ export function SalesSlipsPage({
       sales.cancelSalesSlipEditing();
     }
   }
+  const toolbar = (columnSettings: ReactNode) => (
+    <SalesFilters
+      loading={sales.loadingSalesSlipPage}
+      filters={sales.filters}
+      appliedFilters={routeState.filters}
+      columnSettings={columnSettings}
+      onRemove={sales.removeFilters}
+      onResetFilters={sales.resetPopupFilters}
+      onChange={sales.updateFilters}
+      onSalesTypeChange={sales.setSalesTypeFilter}
+      onReset={sales.resetFilters}
+      onSearch={sales.searchSalesSlips}
+    />
+  );
+
   return (
     <main className="h-full min-h-0">
       <TabLayout>
-        <SalesFilters
-          filters={sales.filters}
-          onChange={sales.updateFilters}
-          onSalesTypeChange={sales.setSalesTypeFilter}
-          onReset={sales.resetFilters}
-          onSearch={sales.searchSalesSlips}
-        />
-
         {sales.showCreateSlip ? (
           <SalesSlipCreateForm
             errorMessage={sales.errorMessage}
@@ -66,6 +75,16 @@ export function SalesSlipsPage({
 
         <TabSplit>
           <SalesSlipList
+            toolbar={toolbar}
+            emptyAction={
+              sales.hasEmptySalesSlipResult && !sales.errorMessage ? (
+                <FilterResetButton
+                  className="lg:mt-0"
+                  label="전체 초기화"
+                  onClick={sales.resetFilters}
+                />
+              ) : undefined
+            }
             currentPage={sales.salesSlipCurrentPage}
             pageSize={sales.salesSlipPageSize}
             salesSlips={sales.salesSlips}

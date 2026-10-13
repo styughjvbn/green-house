@@ -1,10 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import type { BusinessPartner } from "@/entities/farm/types";
-import { DataTable } from "@/shared/ui/DataTable";
+import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
 
 export function BusinessPartnerList({
+  toolbar,
+  emptyAction,
   currentPage,
   loading,
   pageSize,
@@ -17,6 +19,8 @@ export function BusinessPartnerList({
   onPageChange,
   onPageSizeChange,
 }: {
+  toolbar?: DataTableToolbar;
+  emptyAction?: ReactNode;
   currentPage: number;
   loading: boolean;
   pageSize: number;
@@ -67,6 +71,8 @@ export function BusinessPartnerList({
 
   return (
     <DataTable
+      toolbar={toolbar}
+      emptyAction={emptyAction}
       actions={
         <button
           className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
