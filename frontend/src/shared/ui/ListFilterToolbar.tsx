@@ -27,6 +27,7 @@ export function ListFilterToolbar({
   searchLabel = "키워드",
   searchPlaceholder = "검색",
   settingsControl,
+  showSearch = true,
   onClearKeyword,
   onKeywordChange,
   onReset,
@@ -44,6 +45,7 @@ export function ListFilterToolbar({
   searchLabel?: string;
   searchPlaceholder?: string;
   settingsControl?: ReactNode;
+  showSearch?: boolean;
   onClearKeyword: () => void;
   onKeywordChange: (keyword: string) => void;
   onReset: () => void;
@@ -85,48 +87,52 @@ export function ListFilterToolbar({
         {leadingControls ? (
           <div className="shrink-0">{leadingControls}</div>
         ) : null}
-        <form
-          className="group/search flex min-w-0 flex-1 items-center gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSearch();
-          }}
-        >
-          <div ref={searchRef} className="relative min-w-0 flex-1">
-            <FilterInput
-              className="pr-9 pl-3"
-              hideLabel
-              label={searchLabel}
-              placeholder={searchPlaceholder}
-              value={keyword}
-              onChange={onKeywordChange}
+        {showSearch ? (
+          <form
+            className="group/search flex min-w-0 flex-1 items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSearch();
+            }}
+          >
+            <div ref={searchRef} className="relative min-w-0 flex-1">
+              <FilterInput
+                className="pr-9 pl-3"
+                hideLabel
+                label={searchLabel}
+                placeholder={searchPlaceholder}
+                value={keyword}
+                onChange={onKeywordChange}
+              />
+              {keyword.length > 0 || appliedKeyword.length > 0 ? (
+                <button
+                  aria-label="검색어 조건 해제"
+                  className="absolute top-1/2 right-2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-[#657168] hover:bg-[#eef5ed] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16713a]"
+                  type="button"
+                  onClick={() => {
+                    onClearKeyword();
+                    searchRef.current?.querySelector("input")?.focus();
+                  }}
+                >
+                  <X aria-hidden="true" className="h-3 w-3" strokeWidth={1.8} />
+                </button>
+              ) : null}
+            </div>
+            <FilterSearchButton
+              className={cn(
+                "shrink-0 border border-[#dfe5dc] px-0 text-[#435047] group-has-[input:focus]/search:border-[#cfd8cc] group-has-[input:focus]/search:bg-[#eef5ed] group-has-[input:focus]/search:text-[#16713a] group-has-[input:focus]/search:hover:bg-[#e7f0e6] lg:mt-0",
+                hasAppliedSearch
+                  ? "border-[#cfd8cc] bg-[#eef5ed] text-[#16713a] hover:bg-[#e7f0e6]"
+                  : "bg-white hover:bg-[#f6f8f5]",
+              )}
+              disabled={loading}
+              iconOnly
+              label="검색"
             />
-            {keyword.length > 0 || appliedKeyword.length > 0 ? (
-              <button
-                aria-label="검색어 조건 해제"
-                className="absolute top-1/2 right-2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-[#657168] hover:bg-[#eef5ed] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16713a]"
-                type="button"
-                onClick={() => {
-                  onClearKeyword();
-                  searchRef.current?.querySelector("input")?.focus();
-                }}
-              >
-                <X aria-hidden="true" className="h-3 w-3" strokeWidth={1.8} />
-              </button>
-            ) : null}
-          </div>
-          <FilterSearchButton
-            className={cn(
-              "shrink-0 border border-[#dfe5dc] px-0 text-[#435047] group-has-[input:focus]/search:border-[#cfd8cc] group-has-[input:focus]/search:bg-[#eef5ed] group-has-[input:focus]/search:text-[#16713a] group-has-[input:focus]/search:hover:bg-[#e7f0e6] lg:mt-0",
-              hasAppliedSearch
-                ? "border-[#cfd8cc] bg-[#eef5ed] text-[#16713a] hover:bg-[#e7f0e6]"
-                : "bg-white hover:bg-[#f6f8f5]",
-            )}
-            disabled={loading}
-            iconOnly
-            label="검색"
-          />
-        </form>
+          </form>
+        ) : (
+          <div className="flex-1" />
+        )}
         <div
           ref={rootRef}
           className="shrink-0"

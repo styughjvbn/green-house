@@ -87,13 +87,16 @@ export function workOperationCalendarQueryOptions(state: WorkRecordUrlState) {
   const range = workMonthRange(state.month);
   return queryOptions({
     queryKey: workRecordQueryKeys.operations.calendar(state),
-    queryFn: () =>
-      getCalendarWorkOperations({
-        from: range.from,
-        to: range.to,
-        status: state.filters.status,
-        view: state.scope,
-      }),
+    queryFn: ({ signal }) =>
+      getCalendarWorkOperations(
+        {
+          from: range.from,
+          to: range.to,
+          status: state.filters.status,
+          view: state.scope,
+        },
+        signal,
+      ),
   });
 }
 

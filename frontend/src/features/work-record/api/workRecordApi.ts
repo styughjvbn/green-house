@@ -149,6 +149,7 @@ type WorkOperationQuery = {
 
 export function getWorkOperations(
   filters: WorkOperationQuery = {},
+  signal?: AbortSignal,
 ): Promise<Page<WorkOperationSummary>> {
   const params = new URLSearchParams();
   if (filters.from) params.set("from", filters.from);
@@ -165,6 +166,7 @@ export function getWorkOperations(
   const query = params.toString();
   return fetchApi<Page<WorkOperationSummary>>(
     `/work-operations${query ? `?${query}` : ""}`,
+    { signal },
   );
 }
 
@@ -240,6 +242,7 @@ export function getWorkOperationGraph(
 
 export function getCalendarWorkOperations(
   filters: Omit<WorkOperationQuery, "page" | "size"> = {},
+  signal?: AbortSignal,
 ): Promise<WorkOperationSummary[]> {
   const params = new URLSearchParams();
   if (filters.from) params.set("from", filters.from);
@@ -248,6 +251,7 @@ export function getCalendarWorkOperations(
   if (filters.view) params.set("view", filters.view);
   return fetchApi<WorkOperationSummary[]>(
     `/work-operations/calendar?${params}`,
+    { signal },
   );
 }
 

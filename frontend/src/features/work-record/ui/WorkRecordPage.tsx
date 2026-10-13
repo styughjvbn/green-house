@@ -7,16 +7,13 @@ import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter"
 import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 import {
   readWorkRecordUrlState,
-  setWorkWorkspaceScope,
   setWorkWorkspaceView,
-  type WorkWorkspaceScope,
   type WorkWorkspaceView,
 } from "../lib/workRecordUrlState";
 import { useWorkRecordInvalidation } from "../model/useWorkRecordInvalidation";
 import { WorkOperationCalendarView } from "./calendar/WorkOperationCalendarView";
 import { WorkOperationListView } from "./list/WorkOperationListView";
 import { WorkOperationRegistrationDialog } from "./registration/WorkOperationRegistrationDialog";
-import { WorkManagementFilter } from "./WorkManagementFilter";
 
 export function WorkRecordPage() {
   const { invalidateWorkData } = useWorkRecordInvalidation();
@@ -24,10 +21,6 @@ export function WorkRecordPage() {
   const searchParams = useSearchParams();
   const writeUrlParams = useUrlSearchParamsWriter();
   const urlState = readWorkRecordUrlState(searchParams);
-
-  function changeScope(scope: WorkWorkspaceScope) {
-    writeUrlParams((params) => setWorkWorkspaceScope(params, scope));
-  }
 
   function changeView(view: WorkWorkspaceView) {
     writeUrlParams((params) => {
@@ -38,9 +31,7 @@ export function WorkRecordPage() {
   }
 
   const headerActions = (
-    <DataTableCreateButton
-      onClick={() => setShowOperationForm(true)}
-    >
+    <DataTableCreateButton onClick={() => setShowOperationForm(true)}>
       작업 등록
     </DataTableCreateButton>
   );
@@ -67,10 +58,6 @@ export function WorkRecordPage() {
     />
   );
 
-  const scopeControl = (
-    <WorkManagementFilter scope={urlState.scope} onChange={changeScope} />
-  );
-
   return (
     <div className="flex h-full min-h-0 flex-col">
       {showOperationForm ? (
@@ -88,14 +75,9 @@ export function WorkRecordPage() {
         />
       ) : (
         <WorkOperationCalendarView
-          headerActions={
-            <>
-              {viewControl}
-              {headerActions}
-            </>
-          }
+          headerActions={headerActions}
           routeState={urlState}
-          scopeControl={scopeControl}
+          viewControl={viewControl}
         />
       )}
     </div>

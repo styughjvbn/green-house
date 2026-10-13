@@ -2,22 +2,24 @@ import type { ReactNode } from "react";
 import type { WorkOperationStatus } from "@/entities/farm/types";
 import { FilterDateRange, FilterSelect } from "@/shared/ui/FilterControls";
 import { ListFilterToolbar } from "@/shared/ui/ListFilterToolbar";
-import type { WorkOperationFilterState } from "../../model/types";
+import type { WorkOperationFilterState } from "../model/types";
 import type {
   WorkWorkspaceFilterState,
   WorkWorkspaceScope,
   WorkFilterBadgeKey,
-} from "../../lib/workRecordUrlState";
-import { WorkManagementFilter } from "../WorkManagementFilter";
-import { operationStatusLabel } from "../common/workOperationLabels";
+} from "../lib/workRecordUrlState";
+import { WorkManagementFilter } from "./WorkManagementFilter";
+import { operationStatusLabel } from "./common/workOperationLabels";
 
-export function WorkListFilters({
+export function WorkFilters({
   appliedFilters,
   appliedScope,
   columnSettings,
   filters,
   loading,
   viewControl,
+  showSearch = true,
+  showPeriod = true,
   onChange,
   onRemove,
   onReset,
@@ -26,10 +28,12 @@ export function WorkListFilters({
 }: {
   appliedFilters: WorkOperationFilterState;
   appliedScope: WorkWorkspaceScope;
-  columnSettings: ReactNode;
+  columnSettings?: ReactNode;
   filters: WorkWorkspaceFilterState;
   loading: boolean;
   viewControl?: ReactNode;
+  showSearch?: boolean;
+  showPeriod?: boolean;
   onChange: <K extends keyof WorkWorkspaceFilterState>(
     field: K,
     value: WorkWorkspaceFilterState[K],
@@ -40,14 +44,14 @@ export function WorkListFilters({
   onSearch: () => void;
 }) {
   const appliedBadges = [
-    appliedFilters.keyword.trim()
+    showSearch && appliedFilters.keyword.trim()
       ? {
           key: "keyword",
           label: `검색: ${appliedFilters.keyword.trim()}`,
           onRemove: () => onRemove("keyword"),
         }
       : null,
-    appliedFilters.from || appliedFilters.to
+    showPeriod && (appliedFilters.from || appliedFilters.to)
       ? {
           key: "period",
           onRemove: () => onRemove("period"),
@@ -76,7 +80,7 @@ export function WorkListFilters({
       : null,
   ].filter((badge) => badge !== null);
   const activeCount =
-    Number(Boolean(appliedFilters.from || appliedFilters.to)) +
+    Number(showPeriod && Boolean(appliedFilters.from || appliedFilters.to)) +
     Number(Boolean(appliedFilters.status)) +
     Number(appliedScope === "MANAGEMENT");
 
@@ -96,19 +100,22 @@ export function WorkListFilters({
       loading={loading}
       searchPlaceholder="작업 검색"
       settingsControl={columnSettings}
+      showSearch={showSearch}
       onClearKeyword={() => onRemove("keyword")}
       onKeywordChange={(keyword) => onChange("keyword", keyword)}
       onReset={onReset}
       onResetFilters={onResetFilters}
       onSearch={onSearch}
     >
-      <FilterDateRange
-        from={filters.from}
-        layout="row"
-        to={filters.to}
-        onFromChange={(from) => onChange("from", from)}
-        onToChange={(to) => onChange("to", to)}
-      />
+      {showPeriod ? (
+        <FilterDateRange
+          from={filters.from}
+          layout="row"
+          to={filters.to}
+          onFromChange={(from) => onChange("from", from)}
+          onToChange={(to) => onChange("to", to)}
+        />
+      ) : null}
       <FilterSelect
         label="작업 상태"
         layout="row"

@@ -10,7 +10,7 @@ import { workOperationRelationsQueryOptions } from "../../model/workRecordQueryO
 import { useWorkOperationActions } from "../../model/operation/useWorkOperationActions";
 import { useWorkOperations } from "../../model/operation/useWorkOperations";
 import { WorkOperationDetailPanel } from "../detail/WorkOperationDetailPanel";
-import { WorkListFilters } from "./WorkListFilters";
+import { WorkFilters } from "../WorkFilters";
 import { WorkListTable } from "./WorkListTable";
 import { WorkOperationRelationsCard } from "./WorkOperationRelationsCard";
 
@@ -55,7 +55,7 @@ export function WorkOperationListView({
   }
 
   const toolbar = (columnSettings: ReactNode) => (
-    <WorkListFilters
+    <WorkFilters
       appliedFilters={routeState.filters}
       appliedScope={routeState.scope}
       columnSettings={columnSettings}

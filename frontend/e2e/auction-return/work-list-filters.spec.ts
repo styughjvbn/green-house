@@ -142,7 +142,9 @@ test("management checkbox sits below the filter rows and applies, resets, and fo
     .toBe("ALL");
 
   await page.getByRole("button", { name: "캘린더 보기", exact: true }).click();
-  await page.getByRole("checkbox", { name: checkboxName, exact: true }).check();
+  await trigger.click();
+  await checkbox.check();
+  await apply.click();
   await expect
     .poll(() => new URL(page.url()).searchParams.get("scope"))
     .toBe("MANAGEMENT");

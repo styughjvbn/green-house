@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyListState } from "@/shared/ui/EmptyListState";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -12,7 +13,9 @@ import type { WorkRecordUrlState } from "../../lib/workRecordUrlState";
 import { useWorkOperationActions } from "../../model/operation/useWorkOperationActions";
 import { workOperationCalendarQueryOptions } from "../../model/workRecordQueryOptions";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
-import { WorkCalendarFilters } from "./WorkCalendarFilters";
+import { WorkFilters } from "../WorkFilters";
+import { useWorkFilters } from "../../model/operation/useWorkFilters";
+import { FilterResetButton } from "@/shared/ui/FilterControls";
 import { WorkOperationDetailPanel } from "../detail/WorkOperationDetailPanel";
 
 const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
@@ -20,11 +23,11 @@ const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 export function WorkOperationCalendarView({
   headerActions,
   routeState,
-  scopeControl,
+  viewControl,
 }: {
   headerActions?: ReactNode;
   routeState: WorkRecordUrlState;
-  scopeControl?: ReactNode;
+  viewControl?: ReactNode;
 }) {
   const writeUrlParams = useUrlSearchParamsWriter();
   const operationsQuery = useQuery(
@@ -33,7 +36,7 @@ export function WorkOperationCalendarView({
   const operations = operationsQuery.data ?? [];
   const actions = useWorkOperationActions();
   const month = routeState.month;
-  const status = routeState.filters.status;
+  const filters = useWorkFilters(routeState);
   const loading = operationsQuery.isFetching || actions.loading;
   const error =
     actions.error ??
@@ -48,23 +51,15 @@ export function WorkOperationCalendarView({
     writeUrlParams((params) => params.set("month", nextMonth));
   }
 
-  function changeStatus(nextStatus: WorkOperationStatus | "") {
-    writeUrlParams((params) => {
-      if (nextStatus) params.set("status", nextStatus);
-      else params.delete("status");
-    });
+  function resetAllFilters() {
+    actions.clearSelection();
+    filters.reset();
   }
 
   const cells = calendarCells(month);
 
   return (
     <TabLayout>
-      <WorkCalendarFilters
-        scopeControl={scopeControl}
-        status={status}
-        onStatusChange={changeStatus}
-      />
-
       <TabError message={error} />
 
       <TabSplit columns="grid-rows-[minmax(32rem,1fr)_minmax(20rem,auto)] lg:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)] lg:grid-rows-1">
@@ -72,47 +67,96 @@ export function WorkOperationCalendarView({
           aria-busy={loading}
           className="flex h-full min-h-0 min-w-0 flex-col rounded-md border border-[#dfe5dc] bg-white shadow-sm"
         >
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#e7ebe5] px-4 py-3">
-            <div className="flex items-center gap-1">
-              <button
-                aria-label="이전 달"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ded5] bg-white text-[#435047] hover:bg-[#f3f6f2]"
-                type="button"
-                onClick={() => changeMonth(-1)}
-              >
-                <ChevronLeft
-                  className="h-4 w-4"
-                  strokeWidth={1.8}
-                  aria-hidden="true"
-                />
-              </button>
-              <h2 className="min-w-32 text-center text-base font-bold text-[#17251b]">
-                {month}
-              </h2>
-              <button
-                aria-label="다음 달"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ded5] bg-white text-[#435047] hover:bg-[#f3f6f2]"
-                type="button"
-                onClick={() => changeMonth(1)}
-              >
-                <ChevronRight
-                  className="h-4 w-4"
-                  strokeWidth={1.8}
-                  aria-hidden="true"
-                />
-              </button>
+          <div className="shrink-0 border-b border-[#e7ebe5] px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1">
+                <button
+                  aria-label="이전 달"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ded5] bg-white text-[#435047] hover:bg-[#f3f6f2]"
+                  type="button"
+                  onClick={() => changeMonth(-1)}
+                >
+                  <ChevronLeft
+                    className="h-4 w-4"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                </button>
+                <h2 className="min-w-32 text-center text-base font-bold text-[#17251b]">
+                  {month}
+                </h2>
+                <button
+                  aria-label="다음 달"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ded5] bg-white text-[#435047] hover:bg-[#f3f6f2]"
+                  type="button"
+                  onClick={() => changeMonth(1)}
+                >
+                  <ChevronRight
+                    className="h-4 w-4"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+              <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-3">
+                <span className="text-xs font-semibold whitespace-nowrap text-[#159447]">
+                  {loading
+                    ? "확인 중"
+                    : `총 ${operations.length.toLocaleString()}건`}
+                </span>
+                {headerActions}
+              </div>
             </div>
-            <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-3">
-              <span className="text-xs font-semibold whitespace-nowrap text-[#159447]">
-                {loading
-                  ? "확인 중"
-                  : `총 ${operations.length.toLocaleString()}건`}
-              </span>
-              {headerActions}
+            <div className="mt-2">
+              <WorkFilters
+                appliedFilters={routeState.filters}
+                appliedScope={routeState.scope}
+                filters={filters.filters}
+                loading={loading}
+                viewControl={viewControl}
+                showSearch={false}
+                showPeriod={false}
+                onChange={filters.updateFilter}
+                onRemove={(key) => {
+                  actions.clearSelection();
+                  filters.removeAppliedFilter(key);
+                }}
+                onReset={resetAllFilters}
+                onResetFilters={() => {
+                  actions.clearSelection();
+                  filters.removeFilters(["status", "scope"]);
+                }}
+                onSearch={() => {
+                  actions.clearSelection();
+                  filters.search();
+                }}
+              />
             </div>
           </div>
 
           <div className="min-h-0 flex-1 overflow-auto bg-white">
+            {operationsQuery.isSuccess &&
+            !loading &&
+            !error &&
+            operations.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 px-4 py-6 text-sm text-[#738077]">
+                <EmptyListState
+                  message="이번 달에 작업이 없습니다."
+                  filteredMessage="조건에 맞는 작업이 없습니다."
+                  hasAppliedFilters={
+                    Boolean(routeState.filters.status) ||
+                    routeState.scope === "MANAGEMENT"
+                  }
+                  action={
+                    <FilterResetButton
+                      className="lg:mt-0"
+                      label="전체 초기화"
+                      onClick={resetAllFilters}
+                    />
+                  }
+                />
+              </div>
+            ) : null}
             <div className="grid min-w-[700px] grid-cols-7">
               {WEEKDAYS.map((day) => (
                 <div
