@@ -20,9 +20,11 @@ const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 export function WorkOperationCalendarView({
   headerActions,
   routeState,
+  scopeControl,
 }: {
   headerActions?: ReactNode;
   routeState: WorkRecordUrlState;
+  scopeControl?: ReactNode;
 }) {
   const writeUrlParams = useUrlSearchParamsWriter();
   const operationsQuery = useQuery(
@@ -57,7 +59,11 @@ export function WorkOperationCalendarView({
 
   return (
     <TabLayout>
-      <WorkCalendarFilters status={status} onStatusChange={changeStatus} />
+      <WorkCalendarFilters
+        scopeControl={scopeControl}
+        status={status}
+        onStatusChange={changeStatus}
+      />
 
       <TabError message={error} />
 

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { WorkOperationStatus } from "@/entities/farm/types";
 import {
   FilterGrid,
@@ -7,15 +8,25 @@ import {
 } from "@/shared/ui/FilterControls";
 
 export function WorkCalendarFilters({
+  scopeControl,
   status,
   onStatusChange,
 }: {
+  scopeControl?: ReactNode;
   status: WorkOperationStatus | "";
   onStatusChange: (status: WorkOperationStatus | "") => void;
 }) {
   return (
     <FilterPanel>
-      <FilterGrid className="grid-cols-[minmax(12rem,18rem)_max-content]">
+      <FilterGrid className="sm:grid-cols-[auto_minmax(12rem,18rem)_max-content]">
+        {scopeControl ? (
+          <div>
+            <span className="mb-1 block text-sm font-semibold text-[#344138]">
+              조회 범위
+            </span>
+            {scopeControl}
+          </div>
+        ) : null}
         <FilterSelect
           label="상태"
           value={status}

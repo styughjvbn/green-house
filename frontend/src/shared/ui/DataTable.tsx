@@ -19,6 +19,7 @@ import {
 import {
   ArrowDown,
   ArrowUp,
+  Columns3,
   GripVertical,
   RotateCcw,
   Settings2,
@@ -26,10 +27,15 @@ import {
 import { PaginationControls } from "@/shared/ui/PaginationControls";
 import type {} from "./data-table-types";
 
+export type DataTableToolbar =
+  | ReactNode
+  | ((columnSettings: ReactNode) => ReactNode);
+
 type DataTableProps<TData> = {
   actions?: ReactNode;
   columns: ColumnDef<TData, unknown>[];
   data: TData[];
+  emptyAction?: ReactNode;
   emptyMessage: string;
   errorMessage?: string | null;
   getRowId?: (row: TData) => string;
@@ -44,6 +50,7 @@ type DataTableProps<TData> = {
   settingsKey: string;
   sorting?: SortingState;
   title: ReactNode;
+  toolbar?: DataTableToolbar;
   totalLabel?: string;
   totalPages?: number;
   onPageChange?: (pageIndex: number) => void;
@@ -63,6 +70,7 @@ export function DataTable<TData>({
   actions,
   columns,
   data,
+  emptyAction,
   emptyMessage,
   errorMessage = null,
   getRowId,
@@ -77,6 +85,7 @@ export function DataTable<TData>({
   settingsKey,
   sorting = [],
   title,
+  toolbar,
   totalLabel,
   totalPages,
   onPageChange,
@@ -199,17 +208,43 @@ export function DataTable<TData>({
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col rounded-md border border-[#dfe5dc] bg-white shadow-sm">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#e7ebe5] px-4 py-3">
-        <h2 className="text-base font-bold text-[#17251b]">{title}</h2>
-        <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-3">
-          {totalLabel ? (
-            <span className="text-xs font-semibold whitespace-nowrap text-[#159447]">
-              {totalLabel}
-            </span>
-          ) : null}
-          {actions}
-          <DataTableColumnMenu table={table} />
+      <div
+        className={`shrink-0 border-b border-[#e7ebe5] ${toolbar ? "px-3 py-2" : "px-4 py-3"}`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="text-base font-bold text-[#17251b]">{title}</h2>
+            {toolbar && totalLabel ? (
+              <span className="text-xs font-semibold whitespace-nowrap text-[#159447]">
+                {totalLabel}
+              </span>
+            ) : null}
+          </div>
+          <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-3">
+            {!toolbar && totalLabel ? (
+              <span className="text-xs font-semibold whitespace-nowrap text-[#159447]">
+                {totalLabel}
+              </span>
+            ) : null}
+            {actions}
+            {typeof toolbar !== "function" ? (
+              <DataTableColumnMenu table={table} />
+            ) : null}
+          </div>
         </div>
+        {toolbar ? (
+          <div className="mt-2">
+            {typeof toolbar === "function"
+              ? toolbar(
+                  <DataTableColumnMenu
+                    iconOnly
+                    label="목록 설정"
+                    table={table}
+                  />,
+                )
+              : toolbar}
+          </div>
+        ) : null}
       </div>
 
       <div ref={tableBodyRef} className="min-h-0 flex-1 overflow-auto bg-white">
@@ -321,7 +356,14 @@ export function DataTable<TData>({
               </StateRow>
             ) : table.getRowModel().rows.length === 0 ? (
               <StateRow colSpan={table.getVisibleLeafColumns().length + 1}>
-                {emptyMessage}
+                {emptyAction ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <span>{emptyMessage}</span>
+                    {emptyAction}
+                  </div>
+                ) : (
+                  emptyMessage
+                )}
               </StateRow>
             ) : (
               table
@@ -426,7 +468,15 @@ function StateRow({
   );
 }
 
-function DataTableColumnMenu<TData>({ table }: { table: Table<TData> }) {
+function DataTableColumnMenu<TData>({
+  iconOnly = false,
+  label,
+  table,
+}: {
+  iconOnly?: boolean;
+  label?: string;
+  table: Table<TData>;
+}) {
   const [open, setOpen] = useState(false);
   const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
@@ -502,12 +552,23 @@ function DataTableColumnMenu<TData>({ table }: { table: Table<TData> }) {
       }}
     >
       <button
-        className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dfe5dc] text-[#435047] hover:bg-[#f6f8f5]"
+        className={`flex h-8 items-center justify-center rounded-md border border-[#dfe5dc] text-[#435047] hover:bg-[#f6f8f5] ${label && !iconOnly ? "gap-1.5 px-3 text-xs font-medium" : "w-8"}`}
         type="button"
-        aria-label="컬럼 설정"
-        title="컬럼 설정"
+        aria-label={label ?? "컬럼 설정"}
+        aria-expanded={open}
+        title={label ?? "컬럼 설정"}
         onClick={() => setOpen((value) => !value)}
       >
+        {label && !iconOnly ? (
+          <>
+            <Columns3
+              className="h-4 w-4"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+            {label}
+          </>
+        ) : null}
         <Settings2 className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
       </button>
       {open ? (

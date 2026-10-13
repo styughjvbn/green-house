@@ -51,6 +51,25 @@ export function useUrlPagedListState<Filters>({
     });
   }
 
+  function removeFilters(fields: ReadonlyArray<keyof Filters>) {
+    const defaults = emptyFilters();
+    const nextRouteFilters = { ...routeFilters };
+    const nextDraftFilters = { ...filters };
+    fields.forEach((field) => {
+      nextRouteFilters[field] = defaults[field];
+      nextDraftFilters[field] = defaults[field];
+    });
+    setDraft({
+      routeKey: JSON.stringify(nextRouteFilters),
+      filters: nextDraftFilters,
+    });
+    writeUrlParams((params) => {
+      writeFilterParams(params, nextRouteFilters);
+      resetParamKeys.forEach((key) => params.delete(key));
+      params.set("page", "0");
+    });
+  }
+
   function changePage(page: number) {
     writeUrlParams((params) => {
       resetParamKeys.forEach((key) => params.delete(key));
@@ -70,6 +89,7 @@ export function useUrlPagedListState<Filters>({
     changePage,
     changePageSize,
     filters,
+    removeFilters,
     reset,
     search,
     updateFilter,

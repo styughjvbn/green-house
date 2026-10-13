@@ -613,6 +613,7 @@ src/
 - submit 중복을 막고 서버 validation 메시지를 공통 API 오류 처리로 노출한다. loading, empty, error를 동시에 참으로 만들 수 있는 별도 boolean 조합보다 Query 상태나 명시적 union을 사용한다.
 - dialog는 `shared/ui/primitives/dialog.tsx`를 우선 사용한다. 입력에는 label, 아이콘 버튼에는 접근 가능한 이름, 비동기 버튼에는 disabled/pending 상태를 제공한다.
 - 태블릿 주요 동작은 hover 없이 사용할 수 있어야 한다. 반복 사용 버튼과 선택 대상은 충분한 touch target을 확보한다.
+- 목록 필터의 검색 행·팝오버·적용 조건 배지는 `shared/ui/ListFilterToolbar.tsx`로 조합한다. 공통 컴포넌트는 열림·포커스·표현만 소유하며, 입력 중인 값과 적용된 URL 조건·배지 문구·조회 콜백은 feature가 제공한다. 팝오버 입력은 `FilterControls`의 `layout="row"`로 기준명과 선택 항목을 2열로 배치하고, 단순 체크박스는 별도 하단 영역으로 전달한다. 적용된 필터가 있을 때 배지 행 오른쪽 끝에 전체 초기화를 표시하고, 전체 초기화·팝오버 조건 초기화·검색어 해제는 별도 feature 콜백으로 전달한다. 팝오버 조건 초기화는 검색어를 유지한다. 배지별 해제 콜백도 feature가 제공하며, 개별 해제는 해당 URL 조건과 입력값만 초기화하고 나머지 입력 중인 값은 유지한다. `DataTable`의 `emptyAction`은 feature가 성공한 빈 조회 상태에서만 제공한다.
 
 #### 테스트와 변경 완료 기준
 

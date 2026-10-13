@@ -608,6 +608,7 @@ const server = http.createServer(async (req, res) => {
       ...lotOverride,
     });
   if (url.pathname === "/api/work-operations") return send(pageOf([], 0));
+  if (url.pathname === "/api/work-operations/calendar") return send([]);
   if (url.pathname === "/api/houses")
     return send([
       {

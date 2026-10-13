@@ -4,23 +4,28 @@ import { createEmptyPage } from "@/shared/api/page";
 import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import {
   WORK_LIST_FILTER_KEYS,
-  writeWorkListFilterParams,
+  writeWorkWorkspaceFilterParams,
   type WorkRecordUrlState,
+  type WorkFilterBadgeKey,
+  type WorkWorkspaceFilterState,
 } from "../../lib/workRecordUrlState";
-import type { WorkOperationFilterState } from "../types";
 import { workOperationPageQueryOptions } from "../workRecordQueryOptions";
 
 export function useWorkOperations(routeState: WorkRecordUrlState) {
   const query = useQuery(workOperationPageQueryOptions(routeState));
-  const listState = useUrlPagedListState({
+  const listState = useUrlPagedListState<WorkWorkspaceFilterState>({
     emptyFilters: createEmptyWorkOperationFilters,
-    filterKeys: WORK_LIST_FILTER_KEYS,
-    routeFilters: routeState.filters,
-    writeFilterParams: writeWorkListFilterParams,
+    filterKeys: [...WORK_LIST_FILTER_KEYS, "scope"],
+    routeFilters: { ...routeState.filters, scope: routeState.scope },
+    writeFilterParams: writeWorkWorkspaceFilterParams,
   });
 
   return {
     ...listState,
+    resetPopupFilters: () =>
+      listState.removeFilters(["from", "to", "status", "scope"]),
+    removeAppliedFilter: (key: WorkFilterBadgeKey) =>
+      listState.removeFilters(key === "period" ? ["from", "to"] : [key]),
     query,
     pageData:
       query.data ??
@@ -28,11 +33,12 @@ export function useWorkOperations(routeState: WorkRecordUrlState) {
   };
 }
 
-function createEmptyWorkOperationFilters(): WorkOperationFilterState {
+function createEmptyWorkOperationFilters(): WorkWorkspaceFilterState {
   return {
     from: "",
     keyword: "",
     status: "",
     to: "",
+    scope: "ALL",
   };
 }

@@ -47,6 +47,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --font-sans: var(--font-geist-sans);
+  --text-xxs: 0.625rem;
+  --text-xxs--line-height: calc(0.875 / 0.625);
 }
 
 * {
@@ -118,7 +120,7 @@ body {
 
 a,
 button {
-  min-height: 30px;
+  min-height: 20px;
 }
 
 button {
