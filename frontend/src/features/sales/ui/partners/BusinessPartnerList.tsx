@@ -7,6 +7,7 @@ import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 export function BusinessPartnerList({
   toolbar,
   emptyAction,
+  hasAppliedFilters = false,
   currentPage,
   loading,
   pageSize,
@@ -21,6 +22,7 @@ export function BusinessPartnerList({
 }: {
   toolbar?: DataTableToolbar;
   emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   currentPage: number;
   loading: boolean;
   pageSize: number;
@@ -73,6 +75,7 @@ export function BusinessPartnerList({
     <DataTable
       toolbar={toolbar}
       emptyAction={emptyAction}
+      hasAppliedFilters={hasAppliedFilters}
       actions={
         <DataTableCreateButton onClick={onCreateBusinessPartner}>
           거래처 등록
@@ -81,6 +84,7 @@ export function BusinessPartnerList({
       columns={columns}
       data={partners}
       emptyMessage="등록된 거래처가 없습니다."
+      filteredEmptyMessage="조건에 맞는 거래처가 없습니다."
       getRowId={(row) => String(row.id)}
       isLoading={loading}
       pageIndex={currentPage}

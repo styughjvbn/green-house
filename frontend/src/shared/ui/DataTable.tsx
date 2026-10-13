@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
 import type {} from "./data-table-types";
+import { EmptyListState } from "./EmptyListState";
 
 export type DataTableToolbar =
   | ReactNode
@@ -37,6 +38,8 @@ type DataTableProps<TData> = {
   data: TData[];
   emptyAction?: ReactNode;
   emptyMessage: string;
+  filteredEmptyMessage?: string;
+  hasAppliedFilters?: boolean;
   errorMessage?: string | null;
   getRowId?: (row: TData) => string;
   isLoading?: boolean;
@@ -72,6 +75,8 @@ export function DataTable<TData>({
   data,
   emptyAction,
   emptyMessage,
+  filteredEmptyMessage,
+  hasAppliedFilters = false,
   errorMessage = null,
   getRowId,
   isLoading = false,
@@ -212,7 +217,7 @@ export function DataTable<TData>({
         className={`shrink-0 border-b border-[#e7ebe5] ${toolbar ? "px-3 py-2" : "px-4 py-3"}`}
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2 h-8">
+          <div className="flex h-8 min-w-0 items-center gap-2">
             <h2 className="text-base font-bold text-[#17251b]">{title}</h2>
             {toolbar && totalLabel ? (
               <span className="text-xs font-semibold whitespace-nowrap text-[#159447]">
@@ -356,14 +361,12 @@ export function DataTable<TData>({
               </StateRow>
             ) : table.getRowModel().rows.length === 0 ? (
               <StateRow colSpan={table.getVisibleLeafColumns().length + 1}>
-                {emptyAction ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <span>{emptyMessage}</span>
-                    {emptyAction}
-                  </div>
-                ) : (
-                  emptyMessage
-                )}
+                <EmptyListState
+                  message={emptyMessage}
+                  filteredMessage={filteredEmptyMessage}
+                  hasAppliedFilters={hasAppliedFilters}
+                  action={emptyAction}
+                />
               </StateRow>
             ) : (
               table

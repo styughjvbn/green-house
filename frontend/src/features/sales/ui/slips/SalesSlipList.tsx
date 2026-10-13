@@ -10,6 +10,7 @@ import { SalesSlipStatusBadge } from "@/features/sales/ui/common/SalesStatusBadg
 export function SalesSlipList({
   toolbar,
   emptyAction,
+  hasAppliedFilters = false,
   currentPage,
   pageSize,
   salesSlips,
@@ -24,6 +25,7 @@ export function SalesSlipList({
 }: {
   toolbar?: DataTableToolbar;
   emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   currentPage: number;
   pageSize: number;
   salesSlips: SalesSlipListItem[];
@@ -89,6 +91,7 @@ export function SalesSlipList({
     <DataTable
       toolbar={toolbar}
       emptyAction={emptyAction}
+      hasAppliedFilters={hasAppliedFilters}
       actions={
         <DataTableCreateButton onClick={onCreateSalesSlip}>
           전표 작성
@@ -96,7 +99,8 @@ export function SalesSlipList({
       }
       columns={columns}
       data={salesSlips}
-      emptyMessage="조건에 맞는 판매 전표가 없습니다."
+      emptyMessage="등록된 판매 전표가 없습니다."
+      filteredEmptyMessage="조건에 맞는 판매 전표가 없습니다."
       getRowId={(row) => String(row.id)}
       pageIndex={currentPage}
       isLoading={loading}

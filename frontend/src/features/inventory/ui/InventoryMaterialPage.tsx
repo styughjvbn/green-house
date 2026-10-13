@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { FilterResetButton } from "@/shared/ui/FilterControls";
+import { hasFilterConditions } from "@/shared/ui/listFilterBadges";
 import { useSearchParams } from "next/navigation";
 import { TabError } from "@/shared/ui/TabLayout";
 import { readMaterialRouteState } from "../lib/inventoryRouteState";
@@ -51,6 +52,7 @@ export function InventoryMaterialPage() {
     <main className="flex h-full min-h-0 min-w-0 flex-col">
       <TabError message={materials.error} />
       <MaterialView
+        hasAppliedFilters={hasFilterConditions(routeState.filters)}
         toolbar={toolbar}
         emptyAction={emptyAction}
         loading={materials.loading}

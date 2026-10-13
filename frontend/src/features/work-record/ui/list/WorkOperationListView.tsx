@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { hasFilterConditions } from "@/shared/ui/listFilterBadges";
 import { useQuery } from "@tanstack/react-query";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { FilterResetButton } from "@/shared/ui/FilterControls";
@@ -91,6 +92,10 @@ export function WorkOperationListView({
           <div className="flex min-h-0 flex-col gap-3">
             <div className="min-h-0 flex-1">
               <WorkListTable
+                hasAppliedFilters={
+                  hasFilterConditions(routeState.filters) ||
+                  routeState.scope === "MANAGEMENT"
+                }
                 emptyAction={
                   list.query.isSuccess &&
                   !loading &&

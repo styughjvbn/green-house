@@ -27,3 +27,9 @@ export function valueFilterBadge<K extends string>(
   if (typeof value === "string" ? !value.trim() : !value) return [];
   return [{ key, label, onRemove: () => onRemove([key]) }];
 }
+
+export function hasFilterConditions(filters: Record<string, string | boolean>) {
+  return Object.values(filters).some((value) =>
+    typeof value === "string" ? Boolean(value.trim()) : value,
+  );
+}

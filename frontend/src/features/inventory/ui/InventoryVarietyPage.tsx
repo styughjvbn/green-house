@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { FilterResetButton } from "@/shared/ui/FilterControls";
+import { hasFilterConditions } from "@/shared/ui/listFilterBadges";
 import { useSearchParams } from "next/navigation";
 import { TabError } from "@/shared/ui/TabLayout";
 import { readVarietyRouteState } from "../lib/inventoryRouteState";
@@ -52,6 +53,7 @@ export function InventoryVarietyPage() {
     <main className="flex h-full min-h-0 min-w-0 flex-col">
       <TabError message={varieties.error} />
       <VarietyView
+        hasAppliedFilters={hasFilterConditions(routeState.filters)}
         toolbar={toolbar}
         emptyAction={emptyAction}
         connectedGroups={varieties.connectedGroups}

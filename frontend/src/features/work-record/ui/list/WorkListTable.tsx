@@ -6,6 +6,7 @@ import { WorkOperationDataTable } from "./WorkOperationDataTable";
 
 export function WorkListTable({
   emptyAction,
+  hasAppliedFilters = false,
   headerActions,
   toolbar,
   activeRelation,
@@ -23,6 +24,7 @@ export function WorkListTable({
   onShowRelations,
 }: {
   emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   headerActions?: ReactNode;
   toolbar?: DataTableToolbar;
   activeRelation: WorkOperationRelationSelection | null;
@@ -42,9 +44,11 @@ export function WorkListTable({
   return (
     <WorkOperationDataTable
       emptyAction={emptyAction}
+      hasAppliedFilters={hasAppliedFilters}
       actions={headerActions}
       activeRelation={activeRelation}
-      emptyMessage="조건에 맞는 작업이 없습니다."
+      emptyMessage="등록된 작업이 없습니다."
+      filteredEmptyMessage="조건에 맞는 작업이 없습니다."
       loading={loading}
       operations={operations}
       page={page}

@@ -23,6 +23,7 @@ import { PotSizeInput } from "../common/PotSizeInput";
 export function VarietyView({
   toolbar,
   emptyAction,
+  hasAppliedFilters = false,
   loading,
   pageData,
   connectedGroups,
@@ -38,6 +39,7 @@ export function VarietyView({
 }: {
   toolbar: DataTableToolbar;
   emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   loading: boolean;
   pageData: Page<Variety>;
   connectedGroups: Variety["connectedGroups"];
@@ -125,6 +127,7 @@ export function VarietyView({
         <DataTable
           toolbar={toolbar}
           emptyAction={emptyAction}
+          hasAppliedFilters={hasAppliedFilters}
           actions={
             <DataTableCreateButton onClick={onCreate}>
               새 품종 등록
@@ -132,7 +135,8 @@ export function VarietyView({
           }
           columns={columns}
           data={pageData.content}
-          emptyMessage="조건에 맞는 품종이 없습니다."
+          emptyMessage="등록된 품종이 없습니다."
+          filteredEmptyMessage="조건에 맞는 품종이 없습니다."
           getRowId={(row) => String(row.id)}
           isLoading={loading}
           pageIndex={pageData.page}

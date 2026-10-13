@@ -16,6 +16,7 @@ import {
 export function InboundList({
   toolbar,
   emptyAction,
+  hasAppliedFilters = false,
   pageData,
   loading,
   selectedId,
@@ -26,6 +27,7 @@ export function InboundList({
 }: {
   toolbar?: DataTableToolbar;
   emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   pageData: Page<InboundRecord>;
   loading: boolean;
   selectedId?: number;
@@ -122,6 +124,7 @@ export function InboundList({
     <DataTable
       toolbar={toolbar}
       emptyAction={emptyAction}
+      hasAppliedFilters={hasAppliedFilters}
       actions={
         <DataTableCreateButton onClick={onOpenCreate}>
           새 입고 등록
@@ -129,7 +132,8 @@ export function InboundList({
       }
       columns={columns}
       data={pageData.content}
-      emptyMessage="조건에 맞는 입고 기록이 없습니다."
+      emptyMessage="등록된 입고 기록이 없습니다."
+      filteredEmptyMessage="조건에 맞는 입고 기록이 없습니다."
       getRowId={(row) => String(row.id)}
       isLoading={loading}
       pageIndex={pageData.page}

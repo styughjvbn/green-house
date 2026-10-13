@@ -16,6 +16,8 @@ export function WorkOperationDataTable({
   activeRelation,
   emptyAction,
   emptyMessage,
+  filteredEmptyMessage,
+  hasAppliedFilters = false,
   loading,
   operations,
   page,
@@ -36,6 +38,8 @@ export function WorkOperationDataTable({
   activeRelation: WorkOperationRelationSelection | null;
   emptyAction?: ReactNode;
   emptyMessage: string;
+  filteredEmptyMessage?: string;
+  hasAppliedFilters?: boolean;
   loading: boolean;
   operations: WorkOperationSummary[];
   page: number;
@@ -124,6 +128,8 @@ export function WorkOperationDataTable({
       data={operations}
       emptyAction={emptyAction}
       emptyMessage={emptyMessage}
+      filteredEmptyMessage={filteredEmptyMessage}
+      hasAppliedFilters={hasAppliedFilters}
       getRowId={(row) => String(row.id)}
       isLoading={loading}
       pageIndex={page}

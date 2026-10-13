@@ -2,6 +2,7 @@
 import type { ReactNode, SubmitEvent } from "react";
 import { useState } from "react";
 import { FilterResetButton } from "@/shared/ui/FilterControls";
+import { hasFilterConditions } from "@/shared/ui/listFilterBadges";
 import { useSearchParams } from "next/navigation";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { readBusinessPartnerRouteState } from "../lib/salesRouteParams";
@@ -48,6 +49,7 @@ export function SalesPartnersPage() {
         <TabError message={partners.errorMessage} />
         <TabSplit columns="lg:grid-cols-[520px_minmax(0,1fr)]">
           <BusinessPartnerList
+            hasAppliedFilters={hasFilterConditions(routeState.filters)}
             toolbar={toolbar}
             emptyAction={
               partners.hasEmptyResult && !partners.errorMessage ? (

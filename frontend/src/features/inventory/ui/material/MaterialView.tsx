@@ -20,6 +20,7 @@ import { DetailRow, Field, inputClass } from "../common/InventoryPrimitives";
 export function MaterialView({
   toolbar,
   emptyAction,
+  hasAppliedFilters = false,
   loading,
   pageData,
   selectedId,
@@ -33,6 +34,7 @@ export function MaterialView({
 }: {
   toolbar: DataTableToolbar;
   emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   loading: boolean;
   pageData: Page<Material>;
   selectedId: number;
@@ -102,6 +104,7 @@ export function MaterialView({
         <DataTable
           toolbar={toolbar}
           emptyAction={emptyAction}
+          hasAppliedFilters={hasAppliedFilters}
           actions={
             <DataTableCreateButton onClick={onCreate}>
               새 자재 등록
@@ -109,7 +112,8 @@ export function MaterialView({
           }
           columns={columns}
           data={pageData.content}
-          emptyMessage="조건에 맞는 자재가 없습니다."
+          emptyMessage="등록된 자재가 없습니다."
+          filteredEmptyMessage="조건에 맞는 자재가 없습니다."
           getRowId={(row) => String(row.id)}
           isLoading={loading}
           pageIndex={pageData.page}

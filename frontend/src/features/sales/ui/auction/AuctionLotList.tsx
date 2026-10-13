@@ -9,6 +9,7 @@ import { AuctionLotStatusBadge } from "@/features/sales/ui/common/SalesStatusBad
 export function AuctionLotList({
   toolbar,
   emptyAction,
+  hasAppliedFilters = false,
   actions,
   lots,
   loading,
@@ -23,6 +24,7 @@ export function AuctionLotList({
 }: {
   toolbar?: DataTableToolbar;
   emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   actions?: ReactNode;
   lots: AuctionLot[];
   loading: boolean;
@@ -112,10 +114,12 @@ export function AuctionLotList({
     <DataTable
       toolbar={toolbar}
       emptyAction={emptyAction}
+      hasAppliedFilters={hasAppliedFilters}
       actions={actions}
       columns={columns}
       data={lots}
-      emptyMessage="조건에 맞는 출하 lot이 없습니다."
+      emptyMessage="등록된 출하 lot이 없습니다."
+      filteredEmptyMessage="조건에 맞는 출하 lot이 없습니다."
       getRowId={(row) => String(row.id)}
       isLoading={loading}
       pageIndex={page}

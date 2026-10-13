@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { FilterResetButton } from "@/shared/ui/FilterControls";
+import { hasFilterConditions } from "@/shared/ui/listFilterBadges";
 import { useSearchParams } from "next/navigation";
 import { TabError, TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import { readInboundRouteState } from "../lib/inventoryRouteState";
@@ -73,6 +74,7 @@ export function InventoryInboundPage() {
           gap="gap-3"
         >
           <InboundList
+            hasAppliedFilters={hasFilterConditions(routeState.filters)}
             toolbar={toolbar}
             emptyAction={emptyAction}
             loading={inbound.loading}

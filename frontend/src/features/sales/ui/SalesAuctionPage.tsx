@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { FilterResetButton } from "@/shared/ui/FilterControls";
+import { hasFilterConditions } from "@/shared/ui/listFilterBadges";
 import { useSearchParams } from "next/navigation";
 import { TabError, TabLayout, TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import { readAuctionRouteState } from "../lib/salesRouteParams";
@@ -39,6 +40,7 @@ export function SalesAuctionPage({ actions }: { actions?: ReactNode }) {
             gap="gap-3"
           >
             <AuctionLotList
+              hasAppliedFilters={hasFilterConditions(routeState.filters)}
               toolbar={toolbar}
               emptyAction={
                 tracking.hasEmptyResult && !tracking.error ? (
