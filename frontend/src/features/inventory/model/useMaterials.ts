@@ -82,6 +82,8 @@ export function useMaterials({
 
   return {
     ...listState,
+    resetPopupFilters: () =>
+      listState.removeFilters(["category", "manufacturer", "status"]),
     query,
     pageData,
     selected,

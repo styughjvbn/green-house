@@ -156,6 +156,7 @@ export function useInboundRecords({
   });
   return {
     ...listState,
+    resetPopupFilters: () => listState.removeFilters(["inboundType", "status"]),
     query,
     pageData,
     selected,

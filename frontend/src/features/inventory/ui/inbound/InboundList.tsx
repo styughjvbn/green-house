@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import type { Page } from "@/shared/api/page";
 import { formatShortDate } from "@/shared/lib/dateFormat";
-import { DataTable } from "@/shared/ui/DataTable";
+import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import type { InboundRecord } from "../../model/types";
 import {
@@ -14,6 +14,8 @@ import {
 } from "../../lib/inboundUi";
 
 export function InboundList({
+  toolbar,
+  emptyAction,
   pageData,
   loading,
   selectedId,
@@ -22,6 +24,8 @@ export function InboundList({
   onPageChange,
   onPageSizeChange,
 }: {
+  toolbar?: DataTableToolbar;
+  emptyAction?: ReactNode;
   pageData: Page<InboundRecord>;
   loading: boolean;
   selectedId?: number;
@@ -116,6 +120,8 @@ export function InboundList({
 
   return (
     <DataTable
+      toolbar={toolbar}
+      emptyAction={emptyAction}
       actions={
         <button
           className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"

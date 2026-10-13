@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { FilterResetButton } from "@/shared/ui/FilterControls";
 import { useSearchParams } from "next/navigation";
 import { TabError, TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import { readInboundRouteState } from "../lib/inventoryRouteState";
@@ -37,15 +38,34 @@ export function InventoryInboundPage() {
     placementDialogOpen &&
     (!inbound.houses.length || inbound.housesLoading || !!inbound.housesError);
 
+  const toolbar = (columnSettings: ReactNode) => (
+    <InboundFilters
+      filters={inbound.filters}
+      appliedFilters={routeState.filters}
+      columnSettings={columnSettings}
+      loading={inbound.loading}
+      onChange={inbound.updateFilter}
+      onRemove={inbound.removeFilters}
+      onReset={inbound.reset}
+      onResetFilters={inbound.resetPopupFilters}
+      onSearch={inbound.search}
+    />
+  );
+  const emptyAction =
+    inbound.query.isSuccess &&
+    !inbound.loading &&
+    !inbound.error &&
+    inbound.pageData.totalElements === 0 ? (
+      <FilterResetButton
+        className="lg:mt-0"
+        label="전체 초기화"
+        onClick={inbound.reset}
+      />
+    ) : undefined;
+
   return (
     <main className="flex h-full min-h-0 min-w-0 flex-col">
       <TabStack>
-        <InboundFilters
-          filters={inbound.filters}
-          onChange={inbound.updateFilter}
-          onReset={inbound.reset}
-          onSearch={inbound.search}
-        />
         <TabError message={inbound.error} />
 
         <TabSplit
@@ -53,6 +73,8 @@ export function InventoryInboundPage() {
           gap="gap-3"
         >
           <InboundList
+            toolbar={toolbar}
+            emptyAction={emptyAction}
             loading={inbound.loading}
             pageData={inbound.pageData}
             selectedId={selected?.id}
