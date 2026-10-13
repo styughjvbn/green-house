@@ -56,6 +56,7 @@ export function SalesSlipsPage({
             onSelectGroups={sales.selectSalesGroups}
             onRemoveGroup={sales.removeSalesGroup}
             onAutomaticAllocation={sales.useAutomaticAllocation}
+            onResetAllocation={sales.resetSalesAllocation}
             selectedGroups={sales.selectedGroups}
             allocationIssue={sales.allocationIssue}
             onAddItem={sales.addSalesItem}

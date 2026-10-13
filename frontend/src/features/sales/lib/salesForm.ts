@@ -311,6 +311,8 @@ export function withSalesRecordingMode(
   form: SalesSlipForm,
   recordOnly: boolean,
 ): SalesSlipForm {
+  if (form.recordOnly === recordOnly) return form;
+
   return {
     ...form,
     recordOnly,
@@ -319,11 +321,7 @@ export function withSalesRecordingMode(
         ? "출하 완료"
         : "출고 완료"
       : "작성중",
-    items: form.items.map((item) => ({
-      ...item,
-      allocations: [],
-      allocationMode: "AUTO",
-    })),
+    items: [createEmptySalesItem()],
   };
 }
 

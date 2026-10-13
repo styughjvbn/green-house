@@ -27,6 +27,7 @@ export function BusinessPartnerSelect({
   onChange,
   auctionHouse,
   activeOnly = false,
+  required = false,
   disabled = false,
 }: {
   label: string;
@@ -35,6 +36,7 @@ export function BusinessPartnerSelect({
   onChange: (value: string) => void;
   auctionHouse?: boolean;
   activeOnly?: boolean;
+  required?: boolean;
   disabled?: boolean;
 }) {
   const id = useId();
@@ -89,9 +91,11 @@ export function BusinessPartnerSelect({
         htmlFor={id}
       >
         {label}
+        {required ? <span aria-hidden="true"> *</span> : null}
       </label>
       <div className="min-w-0">
         <Select<PartnerSelectOption, false>
+          required={required}
           inputId={id}
           instanceId={id}
           inputValue={keyword}

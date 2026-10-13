@@ -54,7 +54,7 @@ export function SalesRecordedVarietySelect({
     : null;
 
   return (
-    <div className="min-w-0 flex-1 space-y-1">
+    <div className="w-1/2 min-w-0 shrink-0 space-y-1">
       <label
         htmlFor={id}
         className="block text-sm font-semibold text-[#435047]"

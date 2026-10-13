@@ -9,10 +9,12 @@ import { FarmGroupSelectionDialog } from "@/entities/farm/ui/FarmGroupSelectionD
 import { searchSalesOrchidGroups } from "../../api/salesApi";
 
 export function SalesOrchidGroupSearchSelect({
+  label = "난 묶음 선택",
   disabled = false,
   selectedIds = [],
   onSelect,
 }: {
+  label?: string;
   disabled?: boolean;
   selectedIds?: string[];
   onSelect: (value: SalesOrchidGroupOption[]) => void;
@@ -71,7 +73,8 @@ export function SalesOrchidGroupSearchSelect({
         type="button"
         onClick={() => setOpen(true)}
       >
-        <MapPin className="h-4 w-4" />난 묶음 선택
+        <MapPin className="h-4 w-4" aria-hidden="true" />
+        {label}
       </button>
       {open ? (
         <FarmGroupSelectionDialog

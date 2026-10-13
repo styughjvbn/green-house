@@ -276,6 +276,26 @@ export function useSalesSlips({
     }));
   }
 
+  function resetSalesAllocation(index: number) {
+    setSalesForm((current) => ({
+      ...current,
+      items: distributeSalesItems(
+        current.items.map((item, itemIndex) =>
+          itemIndex === index
+            ? {
+                ...item,
+                allocationMode: "MANUAL" as const,
+                allocations: item.allocations.map((allocation) => ({
+                  ...allocation,
+                  quantity: "0",
+                })),
+              }
+            : item,
+        ),
+      ),
+    }));
+  }
+
   function updateAllocation(
     index: number,
     allocationIndex: number,
@@ -501,6 +521,7 @@ export function useSalesSlips({
     selectSalesGroups,
     removeSalesGroup,
     useAutomaticAllocation,
+    resetSalesAllocation,
     selectedGroups: selectedSalesGroups(salesForm.items),
     allocationIssue: salesAllocationIssue(
       salesForm.items,
