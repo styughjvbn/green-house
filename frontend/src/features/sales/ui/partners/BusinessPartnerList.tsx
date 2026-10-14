@@ -1,10 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus } from "lucide-react";
 import type { BusinessPartner } from "@/entities/farm/types";
-import { DataTable } from "@/shared/ui/DataTable";
+import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
+import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 
 export function BusinessPartnerList({
+  toolbar,
+  emptyAction,
+  hasAppliedFilters = false,
   currentPage,
   loading,
   pageSize,
@@ -17,6 +20,9 @@ export function BusinessPartnerList({
   onPageChange,
   onPageSizeChange,
 }: {
+  toolbar?: DataTableToolbar;
+  emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   currentPage: number;
   loading: boolean;
   pageSize: number;
@@ -67,19 +73,18 @@ export function BusinessPartnerList({
 
   return (
     <DataTable
+      toolbar={toolbar}
+      emptyAction={emptyAction}
+      hasAppliedFilters={hasAppliedFilters}
       actions={
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
-          type="button"
-          onClick={onCreateBusinessPartner}
-        >
-          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+        <DataTableCreateButton onClick={onCreateBusinessPartner}>
           거래처 등록
-        </button>
+        </DataTableCreateButton>
       }
       columns={columns}
       data={partners}
       emptyMessage="등록된 거래처가 없습니다."
+      filteredEmptyMessage="조건에 맞는 거래처가 없습니다."
       getRowId={(row) => String(row.id)}
       isLoading={loading}
       pageIndex={currentPage}

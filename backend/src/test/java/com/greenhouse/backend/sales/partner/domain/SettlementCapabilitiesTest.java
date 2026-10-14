@@ -1,0 +1,69 @@
+package com.greenhouse.backend.sales.partner.domain;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.partner.web.dto.PartnerSettlementSettingsResponse;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
+class SettlementCapabilitiesTest {
+  @ParameterizedTest
+  @EnumSource(PartnerType.class)
+  void storedAutomationAndMonthlyPreferencesDoNotEnableExecution(PartnerType type) {
+    var settings = new PartnerSettlementSettings(1L, type);
+    settings.update(
+        SettlementUnit.MONTHLY_BATCH,
+        3,
+        PaymentDayMode.CALENDAR_DAY,
+        true,
+        true,
+        0L,
+        List.of(),
+        true,
+        true,
+        Map.of("enabled", true),
+        null);
+    var response = PartnerSettlementSettingsResponse.from(settings, type);
+    assertThat(response.settlementUnit()).isEqualTo(SettlementUnit.MONTHLY_BATCH);
+    assertThat(response.autoSettleEnabled()).isTrue();
+    assertThat(response.capabilities().executableUnits())
+        .containsExactlyElementsOf(
+            type == PartnerType.AUCTION_HOUSE ? List.of() : List.of(SettlementUnit.SALES_SLIP));
+    assertThat(response.capabilities().autoMatching()).isFalse();
+    assertThat(response.capabilities().autoSettlement()).isFalse();
+    assertThat(response.capabilities().prepayment()).isFalse();
+    assertThat(response.capabilities().creditAutoApply()).isFalse();
+    assertThat(response.capabilities().ruleExecution()).isFalse();
+    assertThat(response.printTemplate()).isEqualTo(PartnerPrintTemplate.STANDARD_A5);
+    assertThat(response.shipperCode()).isNull();
+    assertThat(response.shipperName()).isNull();
+  }
+
+  @Test
+  void updatesAuctionPrintDefaultsIndependentlyFromSettlementRules() {
+    var settings = new PartnerSettlementSettings(1L, PartnerType.AUCTION_HOUSE);
+
+    settings.updatePrintSettings(PartnerPrintTemplate.YANGJAE_AUCTION_SHIPMENT, "16000052", "김출하");
+
+    assertThat(settings.getPrintTemplate())
+        .isEqualTo(PartnerPrintTemplate.YANGJAE_AUCTION_SHIPMENT);
+    assertThat(settings.getShipperCode()).isEqualTo("16000052");
+    assertThat(settings.getShipperName()).isEqualTo("김출하");
+  }
+
+  @Test
+  void callersCannotMutateSupportedUnits() {
+    var units = new ArrayList<>(List.of(SettlementUnit.SALES_SLIP));
+    var capabilities = new SettlementCapabilities(units, false, false, false, false, false);
+    units.add(SettlementUnit.MONTHLY_BATCH);
+    assertThat(capabilities.executableUnits()).containsExactly(SettlementUnit.SALES_SLIP);
+    assertThatThrownBy(() -> capabilities.executableUnits().add(SettlementUnit.MONTHLY_BATCH))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
+}

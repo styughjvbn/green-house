@@ -3,23 +3,24 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.auction.application.AuctionTrackingService;
-import com.greenhouse.backend.auction.application.RecordAuctionResultCommand;
-import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
-import com.greenhouse.backend.auction.domain.AuctionResultLineInput;
-import com.greenhouse.backend.auction.domain.AuctionShipment;
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.sales.application.SalesSlipCreationService;
-import com.greenhouse.backend.sales.application.command.SalesSlipAllocationInput;
-import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
-import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
-import com.greenhouse.backend.sales.domain.SalesType;
+import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.auction.application.AuctionTrackingService;
+import com.greenhouse.backend.sales.auction.application.RecordAuctionResultCommand;
+import com.greenhouse.backend.sales.auction.domain.AuctionAttemptStatus;
+import com.greenhouse.backend.sales.auction.domain.AuctionResultLineInput;
+import com.greenhouse.backend.sales.auction.domain.AuctionShipment;
+import com.greenhouse.backend.sales.auction.domain.AuctionShipmentLot;
+import com.greenhouse.backend.sales.document.application.SalesSlipCreationService;
+import com.greenhouse.backend.sales.document.application.command.SalesSlipAllocationInput;
+import com.greenhouse.backend.sales.document.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.document.application.command.SalesSlipItemInput;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -151,6 +152,7 @@ class InputChannelExtensionPostgresE2ETest extends WorkE2ETestBase {
   private record MarketRow(String date, String quantity, String unitPrice) {
     RecordAuctionResultCommand toCommand() {
       return new RecordAuctionResultCommand(
+          UUID.randomUUID().toString(),
           LocalDate.parse(date),
           null,
           AuctionAttemptStatus.SOLD,

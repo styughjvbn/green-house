@@ -47,6 +47,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --font-sans: var(--font-geist-sans);
+  --text-xxs: 0.625rem;
+  --text-xxs--line-height: calc(0.875 / 0.625);
 }
 
 * {
@@ -88,7 +90,7 @@ body {
 }
 
 .app-content > header {
-  margin: -1rem -1rem 1rem;
+  margin: -0.75rem -0.75rem 0.75rem;
   flex: 0 0 auto;
 }
 
@@ -116,23 +118,9 @@ body {
   display: none;
 }
 
-@media (min-width: 48rem) {
-  .app-content > header {
-    margin-right: -2rem;
-    margin-left: -2rem;
-  }
-}
-
-@media (min-width: 64rem) {
-  .app-content > header {
-    margin-right: -1.5rem;
-    margin-left: -1.5rem;
-  }
-}
-
 a,
 button {
-  min-height: 30px;
+  min-height: 20px;
 }
 
 button {
@@ -201,6 +189,21 @@ button:disabled {
     position: absolute;
     top: 0;
     left: 0;
+  }
+
+  .sales-slip-print-pages {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  .sales-slip-print-pages .sales-slip-print-sheet {
+    position: relative;
+    break-after: page;
+  }
+
+  .sales-slip-print-pages .sales-slip-print-sheet:last-child {
+    break-after: auto;
   }
 
   .a5-sheet {

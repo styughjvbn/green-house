@@ -18,7 +18,7 @@ BEGIN
       AND data_type IN ('character varying', 'text', 'json', 'jsonb')
   LOOP
     EXECUTE format(
-      'SELECT count(*) FROM public.%I WHERE replace(%I::text, ''010-0000-0000'', '''') ~* $1',
+      'SELECT count(*) FROM public.%I WHERE regexp_replace(replace(%I::text, ''010-0000-0000'', ''''), ''\m[0-9]{4}-[0-9]{2}-[0-9]{2}\M'', ''DEMO_DATE'', ''g'') ~* $1',
       target.table_name, target.column_name
     )
     INTO match_count
@@ -52,7 +52,9 @@ BEGIN
     FROM (
       SELECT worker AS actor FROM auction_lot_status_history
       UNION ALL SELECT actor_id FROM audit_events
-      UNION ALL SELECT confirmed_by FROM auction_settlements
+      UNION ALL SELECT confirmed_by FROM auction_proceeds
+      UNION ALL SELECT worker FROM auction_follow_up_decisions
+      UNION ALL SELECT worker FROM auction_return_arrivals
       UNION ALL SELECT worker FROM inbound_records
       UNION ALL SELECT created_by FROM partner_payment_events
       UNION ALL SELECT worker FROM work_records

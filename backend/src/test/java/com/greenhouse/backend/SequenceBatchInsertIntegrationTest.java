@@ -2,9 +2,9 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.List;

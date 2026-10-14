@@ -1,0 +1,7 @@
+package com.greenhouse.backend.farm.transformation.web.dto;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+
+public record MergeSourceInputRequest(
+    @NotNull Long sourceOrchidGroupId, @NotNull @Min(1) Integer inputQuantity) {}

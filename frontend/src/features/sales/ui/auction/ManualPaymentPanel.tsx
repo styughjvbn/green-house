@@ -5,11 +5,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { Banknote, ChevronDown, ChevronUp } from "lucide-react";
 import type { PaymentTargetType } from "@/entities/farm/types";
+import { createUuid } from "@/shared/lib/id";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import { readPaymentHistoryPage } from "../../lib/salesRouteParams";
 import { salesQueryKeys } from "../../model/salesQueryKeys";
-import { receivedPaymentPageQueryOptions } from "../../model/salesQueryOptions";
+import { targetPaymentHistoryPageQueryOptions } from "../../model/salesQueryOptions";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import type { ManualPaymentPayload } from "../../api/salesApi";
@@ -19,13 +20,15 @@ export function ManualPaymentPanel({
   targetId,
   remainingAmount,
   expectedPaymentDate,
+  paymentAllowed = true,
   onConfirm,
 }: {
   targetType: Exclude<PaymentTargetType, "NONE">;
   targetId: number;
-  remainingAmount: number;
+  remainingAmount: number | null;
   expectedPaymentDate: string | null;
-  onConfirm: (payload: ManualPaymentPayload) => Promise<number>;
+  paymentAllowed?: boolean;
+  onConfirm: (payload: ManualPaymentPayload) => Promise<number | null>;
 }) {
   const { businessDate } = useRuntimeContext();
   const queryClient = useQueryClient();
@@ -33,11 +36,15 @@ export function ManualPaymentPanel({
   const historyPage = readPaymentHistoryPage(useSearchParams());
   const open = historyPage != null;
   const eventsQuery = useQuery({
-    ...receivedPaymentPageQueryOptions(targetType, targetId, historyPage ?? 0),
+    ...targetPaymentHistoryPageQueryOptions(
+      targetType,
+      targetId,
+      historyPage ?? 0,
+    ),
     enabled: open,
   });
   const events = eventsQuery.data;
-  const [amount, setAmount] = useState(String(remainingAmount));
+  const [amount, setAmount] = useState(String(remainingAmount ?? ""));
   const [paymentDate, setPaymentDate] = useState(businessDate);
   const [paymentMethod, setPaymentMethod] = useState("계좌이체");
   const [depositorName, setDepositorName] = useState("");
@@ -45,9 +52,7 @@ export function ManualPaymentPanel({
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [idempotencyKey, setIdempotencyKey] = useState(
-    createPaymentIdempotencyKey,
-  );
+  const [idempotencyKey, setIdempotencyKey] = useState(createUuid);
 
   useEffect(() => {
     if (
@@ -62,7 +67,7 @@ export function ManualPaymentPanel({
   }, [historyPage, events, writeUrlParams]);
 
   function toggle() {
-    if (!open) setAmount(String(remainingAmount));
+    if (!open) setAmount(String(remainingAmount ?? ""));
     writeUrlParams((params) => {
       if (open) params.delete("paymentPage");
       else params.set("paymentPage", "0");
@@ -83,16 +88,16 @@ export function ManualPaymentPanel({
         worker: worker.trim() || null,
         memo: memo.trim() || null,
       });
-      setMessage("입금 확인 완료");
-      setAmount(String(remaining));
+      setMessage("수납 기록 완료");
+      setAmount(String(remaining ?? ""));
       setMemo("");
-      setIdempotencyKey(createPaymentIdempotencyKey());
+      setIdempotencyKey(createUuid());
       const queryKey = salesQueryKeys.payments.target(targetType, targetId);
       await queryClient.cancelQueries({ queryKey });
       void queryClient.invalidateQueries({ queryKey });
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "입금을 확인하지 못했습니다.",
+        error instanceof Error ? error.message : "수납을 기록하지 못했습니다.",
       );
     } finally {
       setSaving(false);
@@ -109,7 +114,7 @@ export function ManualPaymentPanel({
       >
         <span className="inline-flex items-center gap-2">
           <Banknote className="h-4 w-4 text-[#159447]" />
-          입금 확인
+          {paymentAllowed ? "수납 기록" : "수납 이력"}
         </span>
         {open ? (
           <ChevronUp className="h-4 w-4" />
@@ -121,28 +126,34 @@ export function ManualPaymentPanel({
       {open ? (
         <div className="space-y-3 border-t border-[#edf0ec] px-4 py-3">
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-[#68756c]">
-            <span>현재 잔액 {remainingAmount.toLocaleString()}원</span>
-            <span>입금 예정일 {formatShortDate(expectedPaymentDate)}</span>
+            <span>
+              현재 잔액{" "}
+              {remainingAmount == null
+                ? "미확인"
+                : `${remainingAmount.toLocaleString()}원`}
+            </span>
+            <span>수납 예정일 {formatShortDate(expectedPaymentDate)}</span>
           </div>
 
-          {remainingAmount > 0 ? (
+          {paymentAllowed && remainingAmount != null && remainingAmount > 0 ? (
             <form onSubmit={submit}>
               <fieldset disabled={saving} className="grid gap-2 sm:grid-cols-2">
-                <Field label="입금액">
+                <Field label="수납액">
                   <input
                     className={controlClass}
                     type="number"
                     min={1}
-                    max={remainingAmount}
+                    max={Number.MAX_SAFE_INTEGER}
+                    step={1}
                     required
                     value={amount}
                     onChange={(event) => {
                       setAmount(event.target.value);
-                      setIdempotencyKey(createPaymentIdempotencyKey());
+                      setIdempotencyKey(createUuid());
                     }}
                   />
                 </Field>
-                <Field label="입금일">
+                <Field label="수납일">
                   <input
                     className={controlClass}
                     type="date"
@@ -150,11 +161,11 @@ export function ManualPaymentPanel({
                     value={paymentDate}
                     onChange={(event) => {
                       setPaymentDate(event.target.value);
-                      setIdempotencyKey(createPaymentIdempotencyKey());
+                      setIdempotencyKey(createUuid());
                     }}
                   />
                 </Field>
-                <Field label="입금 방식">
+                <Field label="수납 방법">
                   <select
                     className={controlClass}
                     value={paymentMethod}
@@ -162,11 +173,9 @@ export function ManualPaymentPanel({
                   >
                     <option>계좌이체</option>
                     <option>현금</option>
-                    <option>카드</option>
-                    <option>기타</option>
                   </select>
                 </Field>
-                <Field label="입금자명">
+                <Field label="납부자명">
                   <input
                     className={controlClass}
                     value={depositorName}
@@ -192,24 +201,32 @@ export function ManualPaymentPanel({
                   type="submit"
                   disabled={saving}
                 >
-                  {saving ? "처리 중" : "입금 확정"}
+                  {saving ? "처리 중" : "수납 기록"}
                 </button>
               </fieldset>
+              <p className="mt-2 text-xs text-[#68756c]">
+                현재 잔액까지만 이 대상에 배분하고, 초과 수납액은 거래처 미배분
+                잔액으로 남습니다.
+              </p>
             </form>
           ) : (
-            <p className="text-xs font-semibold text-[#158442]">입금 완료</p>
+            <p className="text-xs font-semibold">
+              {!paymentAllowed || remainingAmount == null
+                ? "현재 새 수납을 확인할 수 없습니다."
+                : "수납 완료"}
+            </p>
           )}
 
           {message ? <p className="text-xs font-semibold">{message}</p> : null}
 
           <div>
             <p className="mb-1.5 text-xs font-bold">
-              입금 이력
+              수납 이력
               {events ? ` · 총 ${events.totalElements.toLocaleString()}건` : ""}
             </p>
             {eventsQuery.isError ? (
               <p role="alert" className="text-xs text-red-700">
-                입금 이력을 불러오지 못했습니다.{" "}
+                수납 이력을 불러오지 못했습니다.{" "}
                 <button
                   type="button"
                   className="underline"
@@ -220,7 +237,7 @@ export function ManualPaymentPanel({
               </p>
             ) : eventsQuery.isPending ? (
               <p className="text-xs text-[#68756c]">
-                입금 이력을 불러오는 중입니다.
+                수납 이력을 불러오는 중입니다.
               </p>
             ) : events?.content.length ? (
               <div className="divide-y divide-[#edf0ec] rounded-md border border-[#e1e6df] text-xs">
@@ -230,15 +247,25 @@ export function ManualPaymentPanel({
                     className="flex flex-wrap justify-between gap-2 px-3 py-2"
                   >
                     <span>
-                      {formatShortDate(event.eventDate)} ·{" "}
-                      {event.depositorName || "입금자 미기재"}
+                      반영 {formatShortDate(event.eventDate)} ·{" "}
+                      {event.paymentMethod || "방법 미기재"}
+                      {event.depositorName ? ` · ${event.depositorName}` : ""}
                     </span>
-                    <strong>{event.amount.toLocaleString()}원</strong>
+                    <strong
+                      className={
+                        event.status === "CANCELLED"
+                          ? "text-[#68756c]"
+                          : undefined
+                      }
+                    >
+                      {event.status === "CANCELLED" ? "배분 취소 · " : ""}
+                      {event.amount.toLocaleString()}원
+                    </strong>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-[#68756c]">입금 이력이 없습니다.</p>
+              <p className="text-xs text-[#68756c]">수납 이력이 없습니다.</p>
             )}
             {events && events.totalPages > 1 ? (
               <PaginationControls
@@ -257,13 +284,6 @@ export function ManualPaymentPanel({
       ) : null}
     </div>
   );
-}
-
-function createPaymentIdempotencyKey() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `manual-payment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 const controlClass =

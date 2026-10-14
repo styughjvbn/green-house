@@ -10,6 +10,7 @@ paths:
     get:
       tags:
       - sales-controller
+      description: 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.
       operationId: getSalesSlip
       parameters:
       - name: salesSlipId
@@ -20,11 +21,17 @@ paths:
           format: int64
       responses:
         '200':
-          description: OK
+          description: 조회 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     put:
       tags:
       - sales-controller
@@ -44,15 +51,22 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: 수정 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/sales-slips:
     get:
       tags:
       - sales-controller
+      description: 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.
       operationId: getSalesSlips
       parameters:
       - name: partnerId
@@ -75,16 +89,34 @@ paths:
           format: date
       responses:
         '200':
-          description: OK
+          description: 조회 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListSalesSlipResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
       deprecated: true
     post:
       tags:
       - sales-controller
+      description: recordOnly=true는 이미 완료된 판매·출하를 빈 allocation과 완료 상태로 기록하며 재고·예약·Farm snapshot을 만들지 않습니다. 경매는 새 출하·lot를 생성하므로
+        기존 출하를 중복 등록하지 않아야 합니다. 기록 등록의 생성 키는 필수입니다. 출고·출하와 수납은 독립적입니다. 일반 판매의 최초 수납은 전표 생성과 같은 트랜잭션으로 기록하며 생성 키가 필수입니다. 받은
+        전액을 기록하고 전표 총액까지 배분하며 초과분은 거래처 미배분 잔액으로 남깁니다. 수납 상태만으로 완납을 지정할 수 없습니다.
       operationId: createSalesSlip
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: 생성 재전송은 같은 키와 입력을 유지합니다. 키 생략 시 별도 신규 전표를 생성합니다.
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 1
       requestBody:
         content:
           application/json:
@@ -102,6 +134,8 @@ paths:
     post:
       tags:
       - sales-controller
+      description: 받은 전액을 기록하고 전표 잔액까지만 배분하며 초과액은 거래처 미배분 잔액으로 남깁니다. 대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은
+        409 IDEMPOTENCY_KEY_REUSED입니다.
       operationId: confirmPayment
       parameters:
       - name: salesSlipId
@@ -118,11 +152,197 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: 입금 확인 또는 재요청 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+        '400':
+          description: 'VALIDATION_ERROR: 입력 오류 또는 배분할 대상 잔액 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경. DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING:
+            금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/sales-slips/{id}/direct-changes/{returnId}/arrivals:
+    post:
+      tags:
+      - sales-controller
+      description: 반품 도착을 기록합니다. 새 묶음 생성 또는 이미 재고에 반영된 도착의 기록만 등록을 선택합니다. 원판매·금액·수납은 변경하지 않습니다.
+      operationId: recordDirectReturnArrival
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: returnId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirectReturnArrivalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectReturnArrivalResult'
+  /api/sales-slips/{id}/direct-changes/{changeId}/cancel:
+    post:
+      tags:
+      - sales-controller
+      description: 후속 사용이 없는 가격 조정 또는 반품을 취소 이력으로 되돌립니다. 원기록은 삭제하지 않습니다.
+      operationId: cancelDirectSaleChange
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: changeId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelDirectSaleChangeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectSaleChangeResult'
+  /api/sales-slips/{id}/direct-changes/returns:
+    post:
+      tags:
+      - sales-controller
+      description: 선택한 가격 구간의 수량·금액을 반품 이력으로 기록합니다. 실제 농장 도착·재고 반영·현금 환불을 실행하지 않습니다.
+      operationId: recordDirectSaleReturn
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirectSaleChangeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectSaleChangeResult'
+  /api/sales-slips/{id}/direct-changes/return-arrivals/{arrivalId}/cancel:
+    post:
+      tags:
+      - sales-controller
+      description: 도착 이력을 보존해 취소합니다. 새 묶음을 생성한 경우에만 Farm 생성 Mutation을 보상하며 후속 사용이 있으면 거절합니다.
+      operationId: cancelDirectReturnArrival
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: arrivalId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelDirectReturnArrivalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectReturnArrivalResult'
+  /api/sales-slips/{id}/direct-changes/price-adjustments:
+    post:
+      tags:
+      - sales-controller
+      description: 원가격 구간의 일부 수량을 새 단가로 조정합니다. 원품목·재고·수납은 보존하며 현재 거래금액을 갱신합니다. 같은 키·입력은 최초 변경 ID를 반환합니다.
+      operationId: adjustDirectSalePrices
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirectSaleChangeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectSaleChangeResult'
   /api/sales-slips/{salesSlipId}/sales-status:
     patch:
       tags:
@@ -143,7 +363,7 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: 상태 변경 결과
           content:
             application/json:
               schema:
@@ -196,6 +416,72 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+  /api/sales-slips/{id}/direct-changes:
+    get:
+      tags:
+      - sales-controller
+      operationId: getDirectSaleChanges
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectSaleChangeResponse'
+  /api/sales-slips/{id}/direct-changes/return-arrivals:
+    get:
+      tags:
+      - sales-controller
+      operationId: getDirectReturnArrivals
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectReturnArrivalState'
   /api/sales-slips/print:
     get:
       tags:
@@ -227,6 +513,7 @@ paths:
     get:
       tags:
       - sales-controller
+      description: 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.
       operationId: getSalesSlipPage
       parameters:
       - name: partnerId
@@ -254,9 +541,18 @@ paths:
           type: string
       - name: salesStatus
         in: query
+        description: 완료는 출고 완료·출하 완료를 포함하며 판매 유형 조건과 함께 적용합니다. 기존 개별 상태 검색도 지원합니다.
         required: false
         schema:
           type: string
+      - name: salesType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - DIRECT
+          - AUCTION
       - name: keyword
         in: query
         required: false
@@ -278,11 +574,17 @@ paths:
           default: 10
       responses:
         '200':
-          description: OK
+          description: 조회 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePageResponseSalesSlipListItemResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/sales-slips/auction-shipments:
     get:
       tags:
@@ -297,6 +599,34 @@ paths:
                 $ref: '#/components/schemas/ApiResponseListAuctionShipmentOptionResponse'
 components:
   schemas:
+    ApiResponseDirectReturnArrivalResult:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DirectReturnArrivalResult'
+        message:
+          type: string
+    ApiResponseDirectReturnArrivalState:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DirectReturnArrivalState'
+        message:
+          type: string
+    ApiResponseDirectSaleChangeResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DirectSaleChangeResponse'
+        message:
+          type: string
+    ApiResponseDirectSaleChangeResult:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DirectSaleChangeResult'
+        message:
+          type: string
     ApiResponseListAuctionShipmentOptionResponse:
       type: object
       properties:
@@ -380,6 +710,260 @@ components:
           - AUCTION_HOUSE
         phone:
           type: string
+    CancelDirectReturnArrivalRequest:
+      type: object
+      properties:
+        correctionDate:
+          type: string
+          format: date
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - correctionDate
+      - reason
+    CancelDirectSaleChangeRequest:
+      type: object
+      properties:
+        changeDate:
+          type: string
+          format: date
+        reason:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - changeDate
+      - reason
+    DirectReturnArrivalRequest:
+      type: object
+      properties:
+        arrivalDate:
+          type: string
+          format: date
+        bedZoneId:
+          type: integer
+          format: int64
+        details:
+          $ref: '#/components/schemas/OrchidGroupMutationDetails'
+        quantity:
+          type: integer
+          format: int32
+        recordOnly:
+          type: boolean
+          description: 이미 재고에 반영된 도착이면 true. Farm 재고를 변경하지 않습니다.
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - arrivalDate
+      - quantity
+    DirectReturnArrivalResponse:
+      type: object
+      properties:
+        arrivalDate:
+          type: string
+          format: date
+        canceledAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        cancellationAllowed:
+          type: boolean
+        cancellationMutationId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        cancellationReason:
+          type:
+          - string
+          - 'null'
+        correctionDate:
+          type:
+          - string
+          - 'null'
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        creationMutationId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        id:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        recordOnly:
+          type: boolean
+        returnChangeId:
+          type: integer
+          format: int64
+        worker:
+          type: string
+      required:
+      - cancellationAllowed
+      - recordOnly
+    DirectReturnArrivalResult:
+      type: object
+      properties:
+        arrivalId:
+          type: integer
+          format: int64
+    DirectReturnArrivalState:
+      type: object
+      properties:
+        history:
+          $ref: '#/components/schemas/PageResponseDirectReturnArrivalResponse'
+        pendingReturns:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingReturn'
+    DirectSaleChangeRequest:
+      type: object
+      properties:
+        changeDate:
+          type: string
+          format: date
+        itemId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        reason:
+          type: string
+          maxLength: 500
+          minLength: 0
+        sourceChangeId:
+          type: integer
+          format: int64
+        unitPrice:
+          type: integer
+          format: int32
+      required:
+      - changeDate
+      - itemId
+      - quantity
+      - reason
+    DirectSaleChangeResponse:
+      type: object
+      properties:
+        availableTypes:
+          type: array
+          items:
+            type: string
+            enum:
+            - PRICE_ADJUSTMENT
+            - RETURN
+            - CANCEL
+        currentAmount:
+          type: integer
+          format: int32
+        documentId:
+          type: integer
+          format: int64
+        history:
+          $ref: '#/components/schemas/PageResponseHistory'
+        originalAmount:
+          type: integer
+          format: int64
+        portions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Portion'
+        refundDueAmount:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: 현재 수납 배분이 거래금액을 초과한 환불 필요액. 검토 대상은 미상이며 실제 환불 기록이 아닙니다.
+        returnedPortions:
+          type: array
+          description: 취소되지 않은 반품의 가격 구간별 수량·단가·비음수 금액. 이력 페이지와 무관한 전체 구성이며 현재 거래금액에서 제외됩니다.
+          items:
+            $ref: '#/components/schemas/Portion'
+    DirectSaleChangeResult:
+      type: object
+      properties:
+        changeId:
+          type: integer
+          format: int64
+    ErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+    History:
+      type: object
+      properties:
+        amountDelta:
+          type: integer
+          format: int64
+        cancelAllowed:
+          type: boolean
+        canceled:
+          type: boolean
+        canceledChangeId:
+          type: integer
+          format: int64
+        changeDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        id:
+          type: integer
+          format: int64
+        itemId:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        nextUnitPrice:
+          type: integer
+          format: int32
+        previousUnitPrice:
+          type: integer
+          format: int32
+        quantity:
+          type: integer
+          format: int32
+        reason:
+          type: string
+        sourceChangeId:
+          type: integer
+          format: int64
+        type:
+          type: string
+          enum:
+          - PRICE_ADJUSTMENT
+          - RETURN
+          - CANCEL
     Lot:
       type: object
       properties:
@@ -428,6 +1012,73 @@ components:
       - amount
       - idempotencyKey
       - paymentDate
+    OrchidGroupMutationDetails:
+      type: object
+      properties:
+        ageYear:
+          type: integer
+          format: int32
+        endPosition:
+          type: number
+        memo:
+          type: string
+        placementType:
+          type: string
+        potSize:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        splitPlacementAllowed:
+          type: boolean
+        startPosition:
+          type: number
+        status:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+        varietyId:
+          type: integer
+          format: int64
+    PageResponseDirectReturnArrivalResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirectReturnArrivalResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PageResponseHistory:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/History'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     PageResponseSalesSlipListItemResponse:
       type: object
       properties:
@@ -447,6 +1098,66 @@ components:
         totalPages:
           type: integer
           format: int32
+    PendingReturn:
+      type: object
+      properties:
+        arrivalAllowed:
+          type: boolean
+        itemId:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        pendingQuantity:
+          type: integer
+          format: int32
+        returnChangeId:
+          type: integer
+          format: int64
+    Portion:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        itemId:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        sourceChangeId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: 원가격 구간이면 null, 조정가격 구간이면 해당 가격 조정 ID
+        spec:
+          type: string
+        unitPrice:
+          type: integer
+          format: int32
+    SalesInitialReceiptRequest:
+      type: object
+      description: 실제 받은 전액을 기록합니다. 전표 총액까지 배분하고 초과분은 거래처 미배분 잔액으로 남깁니다.
+      properties:
+        amount:
+          type: integer
+          format: int64
+        method:
+          type: string
+          enum:
+          - CASH
+          - BANK_TRANSFER
+        paymentDate:
+          type: string
+          format: date
+      required:
+      - amount
+      - method
+      - paymentDate
     SalesOrchidGroupSearchResponse:
       type: object
       properties:
@@ -549,12 +1260,28 @@ components:
           format: int64
         varietyName:
           type: string
+    SalesSlipAuctionLotResponse:
+      type: object
+      properties:
+        currentStatus:
+          type: string
+        returnedQuantity:
+          type: integer
+          format: int32
+        soldQuantity:
+          type: integer
+          format: int32
+        waitingQuantity:
+          type: integer
+          format: int32
     SalesSlipCreateRequest:
       type: object
       properties:
         auctionShipmentId:
           type: integer
           format: int64
+        initialReceipt:
+          $ref: '#/components/schemas/SalesInitialReceiptRequest'
         items:
           type: array
           items:
@@ -574,6 +1301,9 @@ components:
           type: string
           maxLength: 50
           minLength: 0
+        recordOnly:
+          type: boolean
+          description: 이미 완료된 판매·출하를 재고 변경 없이 기록합니다. 완료 상태와 빈 allocation이 필요하며 생성 요청 키는 필수입니다.
         saleDate:
           type: string
           format: date
@@ -638,6 +1368,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SalesSlipItemAllocationRequest'
+        boxes:
+          type: integer
+          format: int32
+          minimum: 1
         genus:
           type: string
           maxLength: 100
@@ -658,6 +1392,10 @@ components:
           type: string
           maxLength: 100
           minLength: 0
+        unit:
+          type: string
+          maxLength: 30
+          minLength: 0
         unitPrice:
           type: integer
           format: int32
@@ -677,9 +1415,16 @@ components:
         amount:
           type: integer
           format: int32
+        auctionLot:
+          type: 'null'
+          $ref: '#/components/schemas/SalesSlipAuctionLotResponse'
+          description: 현재 경매 lot 요약. 출하 전 또는 과거 생성 응답에는 없을 수 있습니다.
         auctionShipmentLotId:
           type: integer
           format: int64
+        boxes:
+          type: integer
+          format: int32
         genus:
           type: string
         id:
@@ -693,6 +1438,8 @@ components:
           type: integer
           format: int32
         spec:
+          type: string
+        unit:
           type: string
         unitPrice:
           type: integer
@@ -735,11 +1482,10 @@ components:
           enum:
           - DIRECT
           - AUCTION
-        slipNumber:
-          type: string
         totalAmount:
           type: integer
           format: int32
+          description: 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
     SalesSlipResponse:
       type: object
       properties:
@@ -760,6 +1506,11 @@ components:
         expectedPaymentDate:
           type: string
           format: date
+        financialReviewRequired:
+          type:
+          - boolean
+          - 'null'
+          description: 현재 거래금액·수납 배분의 확인 필요 여부. 수납 기록이 없다는 이유만으로 확인 대상으로 보지 않습니다. 과거 생성 응답에는 미상일 수 있습니다.
         id:
           type: integer
           format: int64
@@ -791,11 +1542,10 @@ components:
           enum:
           - DIRECT
           - AUCTION
-        slipNumber:
-          type: string
         totalAmount:
           type: integer
           format: int32
+          description: 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
     SalesSlipStatusUpdateRequest:
       type: object
       properties:

@@ -10,7 +10,7 @@ export function TabLayout({
   className?: string;
 }) {
   return (
-    <div className={`flex h-full min-h-0 flex-col gap-4 ${className}`}>
+    <div className={`flex h-full min-h-0 flex-col gap-3 ${className}`}>
       {children}
     </div>
   );
@@ -33,7 +33,7 @@ export function TabStack({
 export function TabSplit({
   children,
   columns = defaultColumns,
-  gap = "gap-4",
+  gap = "gap-3",
 }: {
   children: ReactNode;
   columns?: string;

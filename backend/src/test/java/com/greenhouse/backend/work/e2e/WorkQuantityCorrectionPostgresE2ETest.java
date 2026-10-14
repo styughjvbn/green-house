@@ -56,6 +56,20 @@ class WorkQuantityCorrectionPostgresE2ETest extends WorkUndoSafetyTestBase {
             jdbc.queryForObject(
                 "SELECT quantity FROM orchid_groups WHERE id=?", Integer.class, source()))
         .isZero();
+    var storedCorrection =
+        objectMapper.readTree(
+            jdbc.queryForObject(
+                "select result_details::text from work_operation_corrections order by id limit 1",
+                String.class));
+    assertThat(storedCorrection.has("quantityBalances")).isTrue();
+    assertThat(storedCorrection.has("identityPreserved")).isFalse();
+    var storedBalance = storedCorrection.path("quantityBalances").get(0);
+    assertThat(storedBalance.path("before").path("inputQuantity").asInt()).isEqualTo(100);
+    assertThat(storedBalance.path("after").path("inputQuantity").asInt()).isEqualTo(120);
+    assertThat(storedCorrection.path("adjustments").get(0).path("beforeQuantity").asInt())
+        .isEqualTo(60);
+    assertThat(storedCorrection.path("adjustments").get(0).path("afterQuantity").asInt())
+        .isEqualTo(65);
     var balances = get(path()).data().path("quantityBalances");
     assertThat(balances.get(0).path("inputQuantity").asInt()).isEqualTo(120);
     assertThat(balances.get(0).path("resultQuantity").asInt()).isEqualTo(105);

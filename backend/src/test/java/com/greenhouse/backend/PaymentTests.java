@@ -9,28 +9,31 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.auction.domain.AuctionAttempt;
-import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
-import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
-import com.greenhouse.backend.auction.domain.AuctionResultLine;
-import com.greenhouse.backend.auction.domain.AuctionShipment;
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
-import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.audit.domain.AuditEventEntity;
 import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.audit.repository.AuditEventRepository;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.repository.SalesSlipRepository;
-import com.greenhouse.backend.settlement.application.AuctionSettlementService;
-import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
-import com.greenhouse.backend.settlement.domain.PaymentEventType;
-import com.greenhouse.backend.settlement.domain.PaymentTargetType;
-import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
+import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.auction.application.AuctionProceedsReader;
+import com.greenhouse.backend.sales.auction.application.AuctionProceedsService;
+import com.greenhouse.backend.sales.auction.domain.AuctionAttempt;
+import com.greenhouse.backend.sales.auction.domain.AuctionAttemptStatus;
+import com.greenhouse.backend.sales.auction.domain.AuctionInspectionStatus;
+import com.greenhouse.backend.sales.auction.domain.AuctionResultLine;
+import com.greenhouse.backend.sales.auction.domain.AuctionShipment;
+import com.greenhouse.backend.sales.auction.domain.AuctionShipmentLot;
+import com.greenhouse.backend.sales.auction.repository.AuctionShipmentRepository;
+import com.greenhouse.backend.sales.document.domain.SalesSlip;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItem;
+import com.greenhouse.backend.sales.document.repository.SalesSlipRepository;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.payment.api.PaymentTargetType;
+import com.greenhouse.backend.sales.payment.domain.PartnerPaymentEvent;
+import com.greenhouse.backend.sales.payment.domain.PaymentEventType;
+import com.greenhouse.backend.sales.payment.repository.PartnerPaymentEventRepository;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,6 +48,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +59,7 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles("test")
 @Transactional
 class PaymentTests {
+  @Autowired JdbcTemplate jdbc;
 
   @Autowired MockMvc mockMvc;
 
@@ -64,7 +69,8 @@ class PaymentTests {
 
   @Autowired AuctionShipmentRepository shipmentRepository;
 
-  @Autowired AuctionSettlementService settlementService;
+  @Autowired AuctionProceedsService proceedsService;
+  @Autowired AuctionProceedsReader proceedsReader;
 
   @Autowired PartnerPaymentEventRepository eventRepository;
 
@@ -83,7 +89,7 @@ class PaymentTests {
       payload.put(field, invalidValue);
     }
     String json = JsonMapper.builder().build().writeValueAsString(payload);
-    for (String target : List.of("sales-slips", "auction-settlements")) {
+    for (String target : List.of("sales-slips", "auction-proceeds")) {
       mockMvc
           .perform(
               post("/api/{target}/-1/confirm-payment", target)
@@ -112,7 +118,7 @@ class PaymentTests {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"sales-slips", "auction-settlements"})
+  @ValueSource(strings = {"sales-slips", "auction-proceeds"})
   void acceptsFieldLengthLimitsAndAbsentOptionalPaymentFields(String target) throws Exception {
     var payload =
         new LinkedHashMap<String, Object>(
@@ -165,7 +171,6 @@ class PaymentTests {
             new BusinessPartner("직거래 화원", PartnerType.WHOLESALE, null, null, null, null));
     var slip =
         new SalesSlip(
-            "S20260706-900",
             LocalDate.of(2026, 7, 6),
             SalesType.DIRECT,
             null,
@@ -175,7 +180,9 @@ class PaymentTests {
             "계좌이체",
             null);
     slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
+    DirectSaleFixtures.refreshProjection(slip);
     slip = salesSlipRepository.saveAndFlush(slip);
+    DirectSaleFixtures.copyTerms(jdbc, slip.getId());
 
     mockMvc
         .perform(get("/api/sales-slips/{id}", slip.getId()))
@@ -230,16 +237,25 @@ class PaymentTests {
     for (String rejectedPayment :
         List.of(
             paymentJson(70_000).replace("\"amount\": 70000", "\"amount\": 60000"),
-            paymentJson(70_000).replace("2026-07-06", "2026-07-07"),
-            paymentJson(1))) {
+            paymentJson(70_000).replace("2026-07-06", "2026-07-07"))) {
       mockMvc
           .perform(
               post("/api/sales-slips/{id}/confirm-payment", slip.getId())
                   .contentType("application/json")
                   .content(rejectedPayment))
-          .andExpect(status().isBadRequest())
-          .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+          .andExpect(status().isConflict())
+          .andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"))
+          .andExpect(jsonPath("$.error.message").value("같은 입금 멱등 키를 다른 금액 또는 입금일에 재사용할 수 없습니다."))
+          .andExpect(jsonPath("$.error.details.length()").value(0));
     }
+
+    mockMvc
+        .perform(
+            post("/api/sales-slips/{id}/confirm-payment", slip.getId())
+                .contentType("application/json")
+                .content(paymentJson(1)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 
     mockMvc
         .perform(get("/api/partner-payment-events").param("partnerId", partner.getId().toString()))
@@ -268,11 +284,66 @@ class PaymentTests {
         .allSatisfy(
             event ->
                 assertThat(event.getAfterData().toString()).doesNotContain("테스트 입금자", "수동 확인"));
+    assertPaymentAudit(
+        audits.get(1),
+        partner.getId(),
+        "SALES_SLIP",
+        "{\"paidAmount\":0,\"remainingAmount\":100000,\"paymentStatus\":\"미입금\"}",
+        "{\"paidAmount\":30000,\"remainingAmount\":70000,\"paymentStatus\":\"부분입금\"}");
+    assertPaymentAudit(
+        audits.get(3),
+        partner.getId(),
+        "SALES_SLIP",
+        "{\"paidAmount\":30000,\"remainingAmount\":70000,\"paymentStatus\":\"부분입금\"}",
+        "{\"paidAmount\":100000,\"remainingAmount\":0,\"paymentStatus\":\"입금 완료\"}");
+    assertThat(audits.get(1).getEntityId()).isEqualTo(slip.getId());
+    assertThat(audits.get(3).getEntityId()).isEqualTo(slip.getId());
 
     mockMvc
         .perform(get("/api/business-partners/{id}/balance-summary", partner.getId()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.receivableBalance").value(0));
+  }
+
+  @Test
+  void overpaidSalesSlipKeepsOnlyItsBalanceAllocatedAndTheRestUnassigned() throws Exception {
+    var partner =
+        partnerRepository.saveAndFlush(
+            new BusinessPartner("초과 수납 거래처", PartnerType.WHOLESALE, null, null, null, null));
+    var slip =
+        new SalesSlip(
+            LocalDate.of(2026, 7, 6),
+            SalesType.DIRECT,
+            null,
+            partner.getId(),
+            "미입금",
+            "작성중",
+            "계좌이체",
+            null);
+    slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
+    DirectSaleFixtures.refreshProjection(slip);
+    slip = salesSlipRepository.saveAndFlush(slip);
+    DirectSaleFixtures.copyTerms(jdbc, slip.getId());
+
+    for (int attempt = 0; attempt < 2; attempt++) {
+      mockMvc
+          .perform(
+              post("/api/sales-slips/{id}/confirm-payment", slip.getId())
+                  .contentType("application/json")
+                  .content(paymentJson(120_000)))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.data.paidAmount").value(100_000))
+          .andExpect(jsonPath("$.data.remainingAmount").value(0));
+    }
+    assertThat(eventRepository.findAll())
+        .extracting(PartnerPaymentEvent::getEventType)
+        .containsExactlyInAnyOrder(
+            PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.PAYMENT_ALLOCATED);
+    assertThat(eventRepository.sumUnassignedAmount(partner.getId())).isEqualByComparingTo("20000");
+    mockMvc
+        .perform(get("/api/business-partners/{id}/balance-summary", partner.getId()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.unappliedPaymentAmount").value(20_000));
   }
 
   @ParameterizedTest
@@ -284,7 +355,6 @@ class PaymentTests {
             new BusinessPartner("입금 거절 거래처", PartnerType.AUCTION_HOUSE, null, null, null, null));
     var slip =
         new SalesSlip(
-            "REJECT-PAYMENT",
             LocalDate.of(2026, 7, 6),
             salesType,
             null,
@@ -294,8 +364,10 @@ class PaymentTests {
             null,
             null);
     slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
+    DirectSaleFixtures.refreshProjection(slip);
     slip.updateSalesStatus(salesStatus);
     salesSlipRepository.saveAndFlush(slip);
+    DirectSaleFixtures.copyTerms(jdbc, slip.getId());
 
     mockMvc
         .perform(get("/api/sales-slips/{id}", slip.getId()))
@@ -316,7 +388,7 @@ class PaymentTests {
   }
 
   @Test
-  void confirmsAuctionPaymentAndRejectsOverpayment() throws Exception {
+  void confirmsAuctionPaymentAndKeepsOverpaymentUnassigned() throws Exception {
     var auctionHouse =
         partnerRepository.saveAndFlush(
             new BusinessPartner("입금 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
@@ -332,36 +404,121 @@ class PaymentTests {
     lot.addAttempt(attempt);
     shipment.addLot(lot);
     shipmentRepository.saveAndFlush(shipment);
-    var settlement = settlementService.rebuild(auctionHouse.getId(), auctionDate);
+    Long id =
+        proceedsService.record(
+            auctionHouse.getId(),
+            "제공 지급 자료",
+            100000L,
+            100000L,
+            List.of(attempt.getResultLines().getFirst().getId()));
+    proceedsService.confirm(id, "확인자");
+    var settlement = proceedsReader.get(id);
 
     mockMvc
         .perform(
-            post("/api/auction-settlements/{id}/confirm-payment", settlement.id())
+            post("/api/auction-proceeds/{id}/confirm-payment", settlement.id())
                 .contentType("application/json")
                 .content(paymentJson(40_000)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.paidAmount").value(40_000))
         .andExpect(jsonPath("$.data.remainingAmount").value(60_000))
-        .andExpect(jsonPath("$.data.status").value("PARTIALLY_PAID"));
+        .andExpect(jsonPath("$.data.paymentAllowed").value(true));
 
     mockMvc
         .perform(
-            post("/api/auction-settlements/{id}/confirm-payment", settlement.id())
+            post("/api/auction-proceeds/{id}/confirm-payment", settlement.id())
+                .contentType("application/json")
+                .content(paymentJson(40_000)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.paidAmount").value(40_000));
+    for (String changed :
+        List.of(
+            paymentJson(40_000).replace("\"amount\": 40000", "\"amount\": 30000"),
+            paymentJson(40_000).replace("2026-07-06", "2026-07-07"))) {
+      mockMvc
+          .perform(
+              post("/api/auction-proceeds/{id}/confirm-payment", settlement.id())
+                  .contentType("application/json")
+                  .content(changed))
+          .andExpect(status().isConflict())
+          .andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"))
+          .andExpect(jsonPath("$.error.details.length()").value(0));
+    }
+
+    mockMvc
+        .perform(
+            post("/api/auction-proceeds/{id}/confirm-payment", settlement.id())
                 .contentType("application/json")
                 .content(paymentJson(70_000)))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.error.message").exists());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.paidAmount").value(100_000))
+        .andExpect(jsonPath("$.data.remainingAmount").value(0));
+    mockMvc
+        .perform(
+            post("/api/auction-proceeds/{id}/confirm-payment", settlement.id())
+                .contentType("application/json")
+                .content(paymentJson(70_000)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.paidAmount").value(100_000))
+        .andExpect(jsonPath("$.data.remainingAmount").value(0));
+    assertThat(eventRepository.sumUnassignedAmount(auctionHouse.getId()))
+        .isEqualByComparingTo("10000");
+    assertThat(eventRepository.findAll())
+        .extracting(PartnerPaymentEvent::getEventType)
+        .containsExactlyInAnyOrder(
+            PaymentEventType.PAYMENT_RECEIVED,
+            PaymentEventType.MANUAL_MATCH_CONFIRMED,
+            PaymentEventType.PAYMENT_RECEIVED,
+            PaymentEventType.PAYMENT_ALLOCATED);
 
     var audits =
         auditEventRepository.findAll().stream()
-            .filter(event -> event.getSource() == AuditSource.SETTLEMENT_MANAGEMENT)
+            .filter(
+                event ->
+                    "AUCTION_PROCEEDS".equals(event.getEntityType())
+                        || "PAYMENT_EVENT".equals(event.getEntityType()))
             .toList();
-    assertThat(audits).hasSize(2);
+    assertThat(audits).hasSize(4);
     assertThat(audits)
         .extracting(event -> event.getEntityType())
-        .containsExactly("PAYMENT_EVENT", "AUCTION_SETTLEMENT");
+        .containsExactly("PAYMENT_EVENT", "AUCTION_PROCEEDS", "PAYMENT_EVENT", "AUCTION_PROCEEDS");
     assertThat(audits.getLast().getChangedFields())
-        .containsExactly("paidAmount", "remainingAmount", "paymentStatus");
+        .containsExactly("paidAmount", "remainingAmount");
+    assertPaymentAudit(
+        audits.getLast(),
+        auctionHouse.getId(),
+        "AUCTION_PROCEEDS",
+        "{\"paidAmount\":40000,\"remainingAmount\":60000}",
+        "{\"paidAmount\":100000,\"remainingAmount\":0}");
+    assertThat(audits.getLast().getEntityId()).isEqualTo(settlement.id());
+  }
+
+  private void assertPaymentAudit(
+      AuditEventEntity event,
+      Long partnerId,
+      String targetType,
+      String beforeJson,
+      String afterJson) {
+    var mapper = JsonMapper.builder().build();
+    assertThat(event.getSource())
+        .isEqualTo(
+            targetType.equals("AUCTION_PROCEEDS")
+                ? AuditSource.SALES_MANAGEMENT
+                : AuditSource.SETTLEMENT_MANAGEMENT);
+    assertThat(event.getAction()).isEqualTo(AuditAction.UPDATED);
+    assertThat(event.getChangedFields())
+        .containsExactlyElementsOf(
+            targetType.equals("AUCTION_PROCEEDS")
+                ? List.of("paidAmount", "remainingAmount")
+                : List.of("paidAmount", "remainingAmount", "paymentStatus"));
+    assertThat(mapper.readTree(mapper.writeValueAsString(event.getBeforeData())))
+        .isEqualTo(mapper.readTree(beforeJson));
+    assertThat(mapper.readTree(mapper.writeValueAsString(event.getAfterData())))
+        .isEqualTo(mapper.readTree(afterJson));
+    assertThat(mapper.readTree(mapper.writeValueAsString(event.getContextData())))
+        .isEqualTo(
+            mapper.readTree(
+                "{\"partnerId\":" + partnerId + ",\"targetType\":\"" + targetType + "\"}"));
   }
 
   @Test

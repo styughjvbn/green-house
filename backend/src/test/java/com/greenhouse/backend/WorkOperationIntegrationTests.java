@@ -1,5 +1,6 @@
 package com.greenhouse.backend;
 
+import static com.greenhouse.backend.support.JsonResponseTestSupport.requiredId;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
@@ -12,20 +13,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
-import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
-import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
-import com.greenhouse.backend.work.repository.WorkOperationRepository;
-import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
-import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.House;
+import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
+import com.greenhouse.backend.farm.variety.domain.Variety;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.effect.repository.WorkAppliedEffectRepository;
+import com.greenhouse.backend.work.effect.repository.WorkEffectOrchidGroupRepository;
+import com.greenhouse.backend.work.operation.domain.WorkType;
+import com.greenhouse.backend.work.operation.domain.WorkTypeDefinition;
+import com.greenhouse.backend.work.operation.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.target.repository.WorkOperationTargetRepository;
+import com.greenhouse.backend.work.target.repository.WorkTargetExecutionRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.assertj.core.api.Assertions;
@@ -507,11 +508,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.workTypeCode").value("DISCARD"))
             .andReturn();
-    return Long.valueOf(
-        result
-            .getResponse()
-            .getContentAsString()
-            .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    return requiredId(result.getResponse().getContentAsString(), "/data/id");
   }
 
   @Test
@@ -537,12 +534,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
             .andExpect(jsonPath("$.data.targets", hasSize(1)))
             .andReturn();
 
-    Long operationId =
-        Long.valueOf(
-            createResult
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(createResult.getResponse().getContentAsString(), "/data/id");
     mockMvc
         .perform(post("/api/work-operations/{id}/start", operationId))
         .andExpect(status().isOk());
@@ -626,8 +618,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
             .andReturn();
 
     String response = createResult.getResponse().getContentAsString();
-    Long operationId =
-        Long.valueOf(response.replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(response, "/data/id");
     Long targetId =
         workOperationTargetRepository
             .findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
@@ -893,12 +884,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
                             .formatted(pesticideType.getId(), sourceHouse.getId())))
             .andExpect(status().isCreated())
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(created.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(get("/api/work-operations").param("view", "MANAGEMENT"))
@@ -953,12 +939,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.targets", hasSize(2)))
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(created.getResponse().getContentAsString(), "/data/id");
     Long completedTargetId =
         workOperationTargetRepository
             .findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)

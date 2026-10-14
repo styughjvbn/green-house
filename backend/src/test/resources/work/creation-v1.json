@@ -1,0 +1,148 @@
+[
+  {
+    "name": "full",
+    "input": {
+      "workTypeId": 3,
+      "title": " title ",
+      "plannedStartDate": "2026-09-08",
+      "plannedEndDate": "2026-09-09",
+      "sourceScopeType": "MANUAL_SELECTION",
+      "sourceScopeId": null,
+      "sourceDerivedGroupKey": null,
+      "sourceOrchidGroupIds": [
+        11,
+        13
+      ],
+      "details": {
+        "materialName": " 물 ",
+        "nested": {
+          "position": 6.0,
+          "amount": 12.5
+        },
+        "nullable": null,
+        "array": [
+          3,
+          1
+        ]
+      },
+      "worker": " worker ",
+      "memo": null,
+      "excludedOrchidGroupIds": [
+        17,
+        19
+      ]
+    },
+    "fingerprint": "ca5ff7b5baec20f64d10731ef8d78c34b4da9ba9dd0d477137d9e9894834cc1a",
+    "batchFingerprint": "3e81558824274402ebdeb611d59376f906aa13939eecd5b1f622aea3cd1b918c"
+  },
+  {
+    "name": "null-optional",
+    "input": {
+      "workTypeId": 3,
+      "title": " title ",
+      "plannedStartDate": "2026-09-08",
+      "plannedEndDate": null,
+      "sourceScopeType": "MANUAL_SELECTION",
+      "sourceScopeId": null,
+      "sourceDerivedGroupKey": null,
+      "sourceOrchidGroupIds": null,
+      "details": null,
+      "worker": null,
+      "memo": null,
+      "excludedOrchidGroupIds": null
+    },
+    "fingerprint": "5664b3e6801b00c8a498ebcdfd71368540a4e3158e956572e1a8f1cc3923ea66",
+    "batchFingerprint": "a609aaa49a43dc8cd730525fa1b14bd6cdf2d7b91cbebdaf1f17215f80ce1bef"
+  },
+  {
+    "name": "empty-optional",
+    "input": {
+      "workTypeId": 3,
+      "title": " title ",
+      "plannedStartDate": "2026-09-08",
+      "plannedEndDate": "2026-09-09",
+      "sourceScopeType": "MANUAL_SELECTION",
+      "sourceScopeId": null,
+      "sourceDerivedGroupKey": null,
+      "sourceOrchidGroupIds": [],
+      "details": {},
+      "worker": "",
+      "memo": null,
+      "excludedOrchidGroupIds": []
+    },
+    "fingerprint": "9f5af29217322c04952057be416590cb77fca3b1a96e4239562cb168a691caa9",
+    "batchFingerprint": "896b7e79b3e160a96522dc0ed0a594c9674abd2b9a11d76f286b4f3f12f7c37c"
+  },
+  {
+    "name": "reordered-selection",
+    "input": {
+      "workTypeId": 3,
+      "title": " title ",
+      "plannedStartDate": "2026-09-08",
+      "plannedEndDate": "2026-09-09",
+      "sourceScopeType": "MANUAL_SELECTION",
+      "sourceScopeId": null,
+      "sourceDerivedGroupKey": null,
+      "sourceOrchidGroupIds": [
+        13,
+        11
+      ],
+      "details": {
+        "materialName": " 물 ",
+        "nested": {
+          "position": 6.0,
+          "amount": 12.5
+        },
+        "nullable": null,
+        "array": [
+          3,
+          1
+        ]
+      },
+      "worker": " worker ",
+      "memo": null,
+      "excludedOrchidGroupIds": [
+        19,
+        17
+      ]
+    },
+    "fingerprint": "10314685b8a163d168b5e42fc38a8b93b4cfccb64f2e8b90852cb1b2207037a3",
+    "batchFingerprint": "1a997aff316e0d0c38fae3d0cea013a2f798c4d9370599af03b64976d844bcf9"
+  },
+  {
+    "name": "scoped-metadata",
+    "input": {
+      "workTypeId": 3,
+      "title": " title ",
+      "plannedStartDate": "2026-09-08",
+      "plannedEndDate": "2026-09-09",
+      "sourceScopeType": "DERIVED_GROUP",
+      "sourceScopeId": 7,
+      "sourceDerivedGroupKey": "original-key",
+      "sourceOrchidGroupIds": [
+        11,
+        13
+      ],
+      "details": {
+        "materialName": " 물 ",
+        "nested": {
+          "position": 6.0,
+          "amount": 12.5
+        },
+        "nullable": null,
+        "array": [
+          3,
+          1
+        ]
+      },
+      "worker": " worker ",
+      "memo": " memo ",
+      "excludedOrchidGroupIds": [
+        17,
+        19
+      ]
+    },
+    "fingerprint": "fdd85a4bfcb664e33c4208b39f17228cadc2acb1c9b313176e06f0209f11c471",
+    "batchFingerprint": "54b865d6af1ee756ee34f3df8e4fb5c5878545b99132609242c154029fc17a04"
+  }
+]

@@ -4,24 +4,25 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.repository.SalesSlipRepository;
-import com.greenhouse.backend.settlement.application.PartnerBalanceService;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
-import com.greenhouse.backend.work.repository.WorkOperationRepository;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.House;
+import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
+import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.document.domain.SalesSlip;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItem;
+import com.greenhouse.backend.sales.document.repository.SalesSlipRepository;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.payment.application.PartnerBalanceService;
+import com.greenhouse.backend.support.DirectSaleFixtures;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.operation.domain.WorkOperation;
+import com.greenhouse.backend.work.operation.domain.WorkType;
+import com.greenhouse.backend.work.operation.repository.WorkOperationRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.hamcrest.Matchers;
@@ -119,10 +120,8 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
         businessPartnerRepository.save(
             new BusinessPartner("분석 거래처", PartnerType.WHOLESALE, null, null, null, null));
     var completed =
-        salesSlipRepository.save(
-            salesSlip("ANALYTICS-COMPLETED", LocalDate.of(2026, 7, 10), partner, "출고 완료", 2, 1000));
-    salesSlipRepository.save(
-        salesSlip("ANALYTICS-DRAFT", LocalDate.of(2026, 7, 11), partner, "작성중", 7, 1000));
+        salesSlipRepository.save(salesSlip(LocalDate.of(2026, 7, 10), partner, "출고 완료", 2, 1000));
+    salesSlipRepository.save(salesSlip(LocalDate.of(2026, 7, 11), partner, "작성중", 7, 1000));
 
     mockMvc
         .perform(get("/api/analytics/sales").param("from", "2026-07-01").param("to", "2026-07-31"))
@@ -199,24 +198,11 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
   }
 
   private SalesSlip salesSlip(
-      String slipNumber,
-      LocalDate saleDate,
-      BusinessPartner partner,
-      String status,
-      int quantity,
-      int unitPrice) {
+      LocalDate saleDate, BusinessPartner partner, String status, int quantity, int unitPrice) {
     var slip =
-        new SalesSlip(
-            slipNumber,
-            saleDate,
-            SalesType.DIRECT,
-            null,
-            partner.getId(),
-            "미입금",
-            status,
-            null,
-            null);
+        new SalesSlip(saleDate, SalesType.DIRECT, null, partner.getId(), "미입금", status, null, null);
     slip.addItem(new SalesSlipItem(null, "분석 품종", "카틀레야", null, quantity, unitPrice, null));
+    DirectSaleFixtures.refreshProjection(slip);
     return slip;
   }
 }

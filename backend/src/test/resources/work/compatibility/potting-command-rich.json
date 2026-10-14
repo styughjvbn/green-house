@@ -1,0 +1,35 @@
+{
+  "pottingDate": [
+    2026,
+    7,
+    18
+  ],
+  "results": [
+    {
+      "bedZoneId": 7,
+      "quantity": 13,
+      "potSize": "2인치",
+      "ageYear": 2,
+      "placementType": "트레이",
+      "trayCount": 3,
+      "splitPlacementAllowed": true,
+      "startPosition": 12.25,
+      "endPosition": 14.75,
+      "memo": "결과 메모"
+    },
+    {
+      "bedZoneId": 9,
+      "quantity": 17,
+      "potSize": null,
+      "ageYear": null,
+      "placementType": null,
+      "trayCount": null,
+      "splitPlacementAllowed": null,
+      "startPosition": 15.25,
+      "endPosition": 17.75,
+      "memo": null
+    }
+  ],
+  "worker": "포트 담당",
+  "memo": "포트 완료"
+}

@@ -464,8 +464,12 @@ export type BusinessPartner = {
 
 export type BusinessPartnerPage = Page<BusinessPartner>;
 
-export type SettlementUnit = "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
+export type SettlementUnit = NonNullable<
+  ApiSchemas["PartnerSettlementSettingsRequest"]["settlementUnit"]
+>;
+export type SettlementCapabilities = ApiSchemas["SettlementCapabilities"];
 export type PaymentDayMode = "CALENDAR_DAY" | "BUSINESS_DAY";
+export type PartnerPrintTemplate = "STANDARD_A5" | "YANGJAE_AUCTION_SHIPMENT";
 
 export type PartnerSettlementSettings = {
   id: number;
@@ -481,14 +485,21 @@ export type PartnerSettlementSettings = {
   creditAutoApplyEnabled: boolean;
   ruleJson: Record<string, unknown> | null;
   memo: string | null;
+  printTemplate: PartnerPrintTemplate;
+  shipperCode: string | null;
+  shipperName: string | null;
+  capabilities: SettlementCapabilities;
 };
 
 export type SalesSlipItem = {
+  auctionLot?: ApiSchemas["SalesSlipItemResponse"]["auctionLot"];
   id: number;
   auctionShipmentLotId: number | null;
   itemName: string;
   genus: string | null;
   spec: string | null;
+  unit: string | null;
+  boxes: number | null;
   quantity: number;
   unitPrice: number;
   amount: number;
@@ -556,7 +567,7 @@ export type SalesSlipAction = NonNullable<
 
 export type SalesSlip = {
   id: number;
-  slipNumber: string;
+
   saleDate: string;
   salesType: "DIRECT" | "AUCTION";
   auctionShipmentId: number | null;
@@ -572,6 +583,7 @@ export type SalesSlip = {
   memo: string | null;
   items: SalesSlipItem[];
   availableActions: SalesSlipAction[];
+  financialReviewRequired?: ApiSchemas["SalesSlipResponse"]["financialReviewRequired"];
 };
 
 export type SalesSlipListItem = Omit<SalesSlip, "items" | "availableActions">;
@@ -592,20 +604,9 @@ export type AuctionShipmentOption = {
   }>;
 };
 
-export type AuctionLotStatus =
-  | "SHIPPED"
-  | "WAITING"
-  | "IN_PROGRESS"
-  | "SOLD"
-  | "PARTIALLY_SOLD"
-  | "FAILED"
-  | "REAUCTION_WAITING"
-  | "RETURN_INFERRED"
-  | "PARTIALLY_RETURNED"
-  | "RETURNED"
-  | "QUANTITY_MISMATCH"
-  | "REVIEW_REQUIRED"
-  | "CANCELLED";
+export type AuctionLotStatus = NonNullable<
+  ApiSchemas["AuctionLotResponse"]["currentStatus"]
+>;
 
 export type AuctionInspectionStatus =
   | "NORMAL"
@@ -652,7 +653,15 @@ export type AuctionStatusHistory = {
   reason: string;
   worker: string | null;
   memo: string | null;
-};
+} & Pick<
+  ApiSchemas["AuctionStatusHistoryResponse"],
+  | "previousSoldQuantity"
+  | "newSoldQuantity"
+  | "previousWaitingQuantity"
+  | "newWaitingQuantity"
+  | "previousReturnedQuantity"
+  | "newReturnedQuantity"
+>;
 
 export type AuctionLot = {
   id: number;
@@ -676,6 +685,8 @@ export type AuctionLot = {
   memo: string | null;
   attempts: AuctionAttempt[];
   statusHistory: AuctionStatusHistory[];
+  quantityAdjustmentAllowed: ApiSchemas["AuctionLotResponse"]["quantityAdjustmentAllowed"];
+  followUpAttemptId?: ApiSchemas["AuctionLotResponse"]["followUpAttemptId"];
 };
 
 export type AuctionLotPage = Page<AuctionLot>;
@@ -690,50 +701,11 @@ export type AuctionTrackingSummary = {
   totalAmount: number;
 };
 
-export type AuctionSettlementStatus = NonNullable<
-  ApiSchemas["AuctionSettlementResponse"]["status"]
+export type AuctionProceeds = Required<ApiSchemas["AuctionProceedsResponse"]>;
+export type AuctionProceedsResult = Required<
+  ApiSchemas["AuctionProceedsResultReference"]
 >;
-
-export type AuctionSettlementListItem = Required<
-  ApiSchemas["AuctionSettlementListItemResponse"]
->;
-export type AuctionSettlementPage = Page<AuctionSettlementListItem>;
-export type AuctionSettlementSummary = Required<
-  ApiSchemas["AuctionSettlementSummaryResponse"]
->;
-
-export type AuctionSettlementLine = {
-  id: number;
-  auctionResultLineId: number;
-  auctionShipmentLotId: number;
-  shipmentDate: string;
-  varietyName: string;
-  shipmentGrade: string | null;
-  quantity: number;
-  unitPrice: number;
-  amount: number;
-  status: "UNPAID" | "PAID" | "PARTIALLY_PAID" | "EXCLUDED" | "REVIEW_REQUIRED";
-};
-
-export type AuctionSettlement = {
-  id: number;
-  auctionHouseId: number;
-  auctionHouseName: string;
-  auctionDate: string;
-  resultReceivedAt: string | null;
-  expectedPaymentDate: string | null;
-  grossAmount: number;
-  feeAmount: number;
-  deductionAmount: number;
-  expectedDepositAmount: number;
-  paidAmount: number;
-  remainingAmount: number;
-  status: AuctionSettlementStatus;
-  memo: string | null;
-  confirmedAt: string | null;
-  confirmedBy: string | null;
-  lines: AuctionSettlementLine[];
-};
+export type AuctionProceedsPage = Page<AuctionProceeds>;
 
 export type PaymentTargetType = NonNullable<
   ApiSchemas["PartnerPaymentEventResponse"]["targetType"]

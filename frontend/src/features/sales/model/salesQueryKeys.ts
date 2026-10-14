@@ -12,6 +12,8 @@ export const salesQueryKeys = {
     pages: ["sales", "slips", "pages"] as const,
     page: (filters: SalesFilterState, page: number, size: number) =>
       ["sales", "slips", "pages", filters, page, size] as const,
+    changes: (id: number, page: number) =>
+      ["sales", "slips", "changes", id, page, 10] as const,
     detail: (salesSlipId: number) =>
       ["sales", "slips", "detail", salesSlipId] as const,
   },
@@ -53,9 +55,15 @@ export const salesQueryKeys = {
       ["sales", "businessPartners", "option", id] as const,
   },
   payments: {
+    unassigned: (partnerId: number) =>
+      ["sales", "unassignedReceipts", partnerId] as const,
+    unassignedPage: (partnerId: number, page: number) =>
+      ["sales", "unassignedReceipts", partnerId, page, 10] as const,
+    balance: (partnerId: number) =>
+      ["sales", "paymentBalance", partnerId] as const,
     target: (targetType: PaymentTargetType, targetId: number) =>
       ["sales", "paymentEvents", targetType, targetId] as const,
-    receivedPage: (
+    historyPage: (
       targetType: PaymentTargetType,
       targetId: number,
       page: number,
@@ -66,7 +74,7 @@ export const salesQueryKeys = {
         "paymentEvents",
         targetType,
         targetId,
-        "PAYMENT_RECEIVED",
+        "TARGET_HISTORY",
         page,
         size,
       ] as const,
@@ -76,11 +84,15 @@ export const salesQueryKeys = {
     lots: (filters: AuctionFilterState, page: number, size: number) =>
       ["sales", "auctionTracking", "lots", filters, page, size] as const,
     summary: ["sales", "auctionTracking", "summary"] as const,
-    settlementPages: ["sales", "auctionSettlements", "pages"] as const,
-    settlementPage: (page: number, size: number) =>
-      ["sales", "auctionSettlements", "pages", page, size] as const,
-    settlementSummary: ["sales", "auctionSettlements", "summary"] as const,
-    settlementDetail: (id: number) =>
-      ["sales", "auctionSettlements", "detail", id] as const,
+    lot: (id: number) => ["sales", "auctionTracking", "lot", id] as const,
+    followUp: (id: number) =>
+      ["sales", "auctionTracking", "followUp", id] as const,
+    arrivals: (id: number, page: number) =>
+      ["sales", "auctionTracking", "arrivals", id, page, 10] as const,
+    proceedsPages: ["sales", "auctionProceeds", "pages"] as const,
+    proceedsPage: (page: number, size: number) =>
+      ["sales", "auctionProceeds", "pages", page, size] as const,
+    proceedsDetail: (id: number) =>
+      ["sales", "auctionProceeds", "detail", id] as const,
   },
 };

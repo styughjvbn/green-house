@@ -1,0 +1,245 @@
+{
+  "transformation-single": {
+    "executionKey": "round",
+    "sourceInputQuantities": {
+      "7": 10
+    },
+    "lossQuantity": 2,
+    "increaseQuantity": 0,
+    "results": [
+      {
+        "orchidGroupId": 31,
+        "quantity": 6,
+        "purpose": "NORMAL"
+      },
+      {
+        "orchidGroupId": 32,
+        "quantity": 2,
+        "purpose": "HELD"
+      }
+    ],
+    "sourceOrchidGroupId": 7,
+    "inputQuantity": 10,
+    "remainingQuantity": 5,
+    "resultOrchidGroupIds": [
+      31,
+      32
+    ]
+  },
+  "transformation-multi": {
+    "executionKey": "round",
+    "sourceInputQuantities": {
+      "7": 4,
+      "9": 6
+    },
+    "lossQuantity": 2,
+    "increaseQuantity": 0,
+    "results": [
+      {
+        "orchidGroupId": 31,
+        "quantity": 6,
+        "purpose": "NORMAL"
+      },
+      {
+        "orchidGroupId": 32,
+        "quantity": 2,
+        "purpose": "HELD"
+      }
+    ]
+  },
+  "movement-identity-single": {
+    "executionKey": "round",
+    "sourceInputQuantities": {
+      "7": 10
+    },
+    "lossQuantity": 2,
+    "increaseQuantity": 0,
+    "results": [
+      {
+        "orchidGroupId": 31,
+        "quantity": 6,
+        "purpose": "NORMAL"
+      },
+      {
+        "orchidGroupId": 32,
+        "quantity": 2,
+        "purpose": "HELD"
+      }
+    ],
+    "sourceOrchidGroupId": 7,
+    "inputQuantity": 10,
+    "remainingQuantity": 5,
+    "resultOrchidGroupIds": [
+      31,
+      32
+    ],
+    "identityPreserved": true
+  },
+  "movement-identity-multi": {
+    "executionKey": "round",
+    "sourceInputQuantities": {
+      "7": 4,
+      "9": 6
+    },
+    "lossQuantity": 2,
+    "increaseQuantity": 0,
+    "results": [
+      {
+        "orchidGroupId": 31,
+        "quantity": 6,
+        "purpose": "NORMAL"
+      },
+      {
+        "orchidGroupId": 32,
+        "quantity": 2,
+        "purpose": "HELD"
+      }
+    ],
+    "identityPreserved": true
+  },
+  "merged": {
+    "sourceOrchidGroupIds": [
+      7,
+      9
+    ],
+    "sourceInputQuantities": {
+      "7": 4,
+      "9": 6
+    },
+    "totalInputQuantity": 10,
+    "lossQuantity": 2,
+    "resultOrchidGroupId": 31
+  },
+  "created": {
+    "createdCount": 2,
+    "createdOrchidGroupIds": [
+      31,
+      32
+    ]
+  },
+  "potted": {
+    "inboundRecordId": 51,
+    "createdOrchidGroupIds": [
+      31,
+      32
+    ],
+    "actualQuantity": 8,
+    "resultCount": 2
+  },
+  "moved-null": {
+    "orchidGroupId": 7,
+    "fromBedZoneId": "legacy-zone",
+    "toBedZoneId": 9,
+    "startPosition": null,
+    "endPosition": null
+  },
+  "discarded-reason": {
+    "orchidGroupId": 7,
+    "beforeQuantity": 10,
+    "discardedQuantity": 2,
+    "remainingQuantity": 8,
+    "beforeStatus": "관리",
+    "status": "관리",
+    "reason": "사유"
+  },
+  "discarded-missing-reason": {
+    "orchidGroupId": 7,
+    "beforeQuantity": 10,
+    "discardedQuantity": 2,
+    "remainingQuantity": 8,
+    "beforeStatus": "관리",
+    "status": "관리"
+  },
+  "corrected": {
+    "originalWorkOperationId": 17,
+    "beforeWorkDate": [
+      2026,
+      7,
+      18
+    ],
+    "afterWorkDate": [
+      2026,
+      7,
+      17
+    ],
+    "adjustments": [
+      {
+        "orchidGroupId": 31,
+        "beforeQuantity": 6,
+        "beforeStatus": "관리",
+        "afterQuantity": 5,
+        "afterStatus": "정상"
+      }
+    ]
+  },
+  "corrected-balances": {
+    "originalWorkOperationId": 17,
+    "beforeWorkDate": [
+      2026,
+      7,
+      18
+    ],
+    "afterWorkDate": [
+      2026,
+      7,
+      17
+    ],
+    "adjustments": [
+      {
+        "orchidGroupId": 31,
+        "beforeQuantity": 6,
+        "beforeStatus": "관리",
+        "afterQuantity": 5,
+        "afterStatus": "정상"
+      }
+    ],
+    "quantityBalances": [
+      {
+        "before": {
+          "executionId": 23,
+          "sourceInputQuantities": {
+            "7": 10
+          },
+          "resultQuantities": {
+            "31": 6,
+            "32": 2
+          },
+          "inputQuantity": 10,
+          "resultQuantity": 8,
+          "lossQuantity": 2,
+          "increaseQuantity": 0,
+          "inputEditable": true,
+          "increaseAllowed": false,
+          "lossEditable": true
+        },
+        "after": {
+          "executionId": 23,
+          "sourceInputQuantities": {
+            "7": 10
+          },
+          "resultQuantities": {
+            "31": 5,
+            "32": 2
+          },
+          "inputQuantity": 10,
+          "resultQuantity": 7,
+          "lossQuantity": 3,
+          "increaseQuantity": 0,
+          "inputEditable": true,
+          "increaseAllowed": false,
+          "lossEditable": true
+        }
+      }
+    ]
+  },
+  "corrected-date-only": {
+    "originalWorkOperationId": 17,
+    "beforeWorkDate": null,
+    "afterWorkDate": [
+      2026,
+      7,
+      18
+    ],
+    "adjustments": []
+  }
+}

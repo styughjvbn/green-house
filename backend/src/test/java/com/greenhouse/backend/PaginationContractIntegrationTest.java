@@ -15,7 +15,7 @@ class PaginationContractIntegrationTest extends AbstractBackendIntegrationTest {
         "/api/business-partners/page",
         "/api/business-partners/options",
         "/api/sales-slips/page",
-        "/api/auction-settlements/page",
+        "/api/auction-proceeds/page",
         "/api/partner-payment-events/page"
       })
   void keepsClampingContracts(String path) throws Exception {

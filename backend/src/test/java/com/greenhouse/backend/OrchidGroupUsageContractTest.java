@@ -2,23 +2,24 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsage;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.api.orchid.OrchidGroupUsage;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.spi.orchid.OrchidGroupUsageInspector;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
-import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
-import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
+import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.document.domain.SalesSlip;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItem;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItemAllocation;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.support.DirectSaleFixtures;
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.api.target.WorkTargetInclusionSource;
+import com.greenhouse.backend.work.operation.domain.WorkOperation;
+import com.greenhouse.backend.work.operation.domain.WorkType;
+import com.greenhouse.backend.work.target.domain.WorkOperationTarget;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -64,7 +65,6 @@ class OrchidGroupUsageContractTest {
     entityManager.persist(partner);
     var slip =
         new SalesSlip(
-            "USAGE-TEST",
             LocalDate.of(2026, 9, 5),
             SalesType.DIRECT,
             null,
@@ -76,6 +76,7 @@ class OrchidGroupUsageContractTest {
     var item = new SalesSlipItem(null, group.getVarietyName(), null, null, 2, 1000, null);
     item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
     slip.addItem(item);
+    DirectSaleFixtures.refreshProjection(slip);
     entityManager.persist(slip);
 
     assertThat(inspect(group.getId(), -1L))

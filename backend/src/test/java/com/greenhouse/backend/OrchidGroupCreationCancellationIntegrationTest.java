@@ -4,24 +4,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
-import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
-import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
-import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
+import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.document.domain.SalesSlip;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItem;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItemAllocation;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.support.DirectSaleFixtures;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.api.target.WorkTargetInclusionSource;
+import com.greenhouse.backend.work.effect.domain.WorkAppliedEffect;
+import com.greenhouse.backend.work.effect.domain.WorkEffectOrchidGroup;
+import com.greenhouse.backend.work.effect.domain.WorkEffectOrchidGroupRelationType;
+import com.greenhouse.backend.work.operation.domain.WorkOperation;
+import com.greenhouse.backend.work.operation.domain.WorkType;
+import com.greenhouse.backend.work.target.domain.WorkOperationTarget;
 import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -109,7 +110,6 @@ class OrchidGroupCreationCancellationIntegrationTest extends FarmFixtureIntegrat
     fixtureEntityManager.persist(partner);
     var slip =
         new SalesSlip(
-            "CANCEL-SALES",
             DATE,
             SalesType.DIRECT,
             null,
@@ -121,6 +121,7 @@ class OrchidGroupCreationCancellationIntegrationTest extends FarmFixtureIntegrat
     var item = new SalesSlipItem(null, group.getVarietyName(), null, null, 2, 1000, null);
     item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
     slip.addItem(item);
+    DirectSaleFixtures.refreshProjection(slip);
     fixtureEntityManager.persist(slip);
     fixtureEntityManager.flush();
     mockMvc

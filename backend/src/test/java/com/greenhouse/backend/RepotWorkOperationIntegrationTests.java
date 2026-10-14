@@ -8,27 +8,27 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
-import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
-import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
-import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionRepository;
-import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
-import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
-import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
-import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
-import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
-import com.greenhouse.backend.work.repository.WorkOperationRepository;
-import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
-import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.farm.collection.domain.OrchidGroupCollection;
+import com.greenhouse.backend.farm.collection.domain.OrchidGroupCollectionMember;
+import com.greenhouse.backend.farm.collection.repository.OrchidGroupCollectionMemberRepository;
+import com.greenhouse.backend.farm.collection.repository.OrchidGroupCollectionRepository;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.House;
+import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
+import com.greenhouse.backend.farm.transformation.domain.OrchidGroupLineageRelationType;
+import com.greenhouse.backend.farm.transformation.repository.OrchidGroupLineageRepository;
+import com.greenhouse.backend.farm.variety.domain.Variety;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.effect.domain.WorkEffectOrchidGroupRelationType;
+import com.greenhouse.backend.work.effect.repository.WorkAppliedEffectRepository;
+import com.greenhouse.backend.work.effect.repository.WorkEffectOrchidGroupRepository;
+import com.greenhouse.backend.work.operation.domain.WorkType;
+import com.greenhouse.backend.work.operation.domain.WorkTypeDefinition;
+import com.greenhouse.backend.work.operation.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.target.repository.WorkOperationTargetRepository;
+import com.greenhouse.backend.work.target.repository.WorkTargetExecutionRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
@@ -346,6 +346,70 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
         .isEqualTo(60);
     assertThat(operationRepository.count()).isEqualTo(1);
     assertThat(lineageRepository.count()).isEqualTo(1);
+  }
+
+  @Test
+  void automaticHistoryTitleTrimsAndTruncatesVarietyWhileKeepingActorNormalization()
+      throws Exception {
+    variety =
+        varietyRepository.save(
+            new Variety(
+                "REPOT-LONG",
+                "팔레놉시스",
+                " " + "가".repeat(148) + " ",
+                null,
+                "3.5치",
+                true,
+                true,
+                null,
+                null));
+    OrchidGroup source = createSource(100, "0", "2");
+    String request =
+        repotRequest("repot-long-title", source.getId(), 40, 0, null, 40, "2", "4", "")
+            .replace("\"worker\": \"테스터\"", "\"worker\": \"  작업자  \"");
+    mockMvc
+        .perform(
+            post("/api/work-operations/repot")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.operation.title").value("가".repeat(144) + " · 분갈이"))
+        .andExpect(jsonPath("$.data.operation.worker").value("작업자"));
+    assertThat(operationRepository.findByRequestKey("repot-long-title").orElseThrow().getTitle())
+        .hasSize(150);
+  }
+
+  @Test
+  void originalRequestedTitleStillParticipatesInIdempotencyDespiteTheAutomaticTitle()
+      throws Exception {
+    OrchidGroup source = createSource(100, "0", "2");
+    String request =
+        repotRequest("repot-title-fingerprint", source.getId(), 40, 0, null, 40, "2", "4", "");
+    mockMvc
+        .perform(
+            post("/api/work-operations/repot")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.operation.title").value("분갈이 테스트 · 분갈이"));
+    mockMvc
+        .perform(
+            post("/api/work-operations/repot")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.operation.title").value("분갈이 테스트 · 분갈이"));
+    mockMvc
+        .perform(
+            post("/api/work-operations/repot")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request.replace("분갈이 실행", "다른 요청 제목")))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"));
+    assertThat(operationRepository.count()).isEqualTo(1);
+    assertThat(lineageRepository.count()).isEqualTo(1);
+    assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity())
+        .isEqualTo(60);
   }
 
   private OrchidGroup createSource(int quantity, String start, String end) {

@@ -1,4 +1,5 @@
 import type { AuctionLotStatus, PartnerType } from "@/entities/farm/types";
+import type { components } from "@/shared/api/generated/openapi";
 import type { SalesTab } from "@/shared/config/routes";
 
 export type { SalesTab };
@@ -25,19 +26,29 @@ export type SalesItemForm = {
   itemName: string;
   genus: string;
   spec: string;
+  unit: string;
+  boxes: string;
   quantity: string;
   unitPrice: string;
   memo: string;
   allocations: SalesAllocationForm[];
+  allocationMode: "AUTO" | "MANUAL";
 };
 
 export type SalesSlipForm = {
+  recordOnly: boolean;
   salesType: "DIRECT" | "AUCTION";
   saleDate: string;
   partnerId: string;
   paymentStatus: string;
   salesStatus: string;
   paymentMethod: string;
+  receiptEnabled: boolean;
+  receiptAmount: string;
+  receiptDate: string;
+  receiptMethod: NonNullable<
+    components["schemas"]["SalesInitialReceiptRequest"]["method"]
+  >;
   memo: string;
   items: SalesItemForm[];
 };
@@ -58,6 +69,9 @@ export type AuctionFilterState = {
 };
 
 export type SalesFilterState = {
+  salesType:
+    | NonNullable<components["schemas"]["SalesSlipResponse"]["salesType"]>
+    | "";
   from: string;
   to: string;
   partnerId: string;

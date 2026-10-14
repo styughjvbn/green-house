@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus } from "lucide-react";
 import type { Page } from "@/shared/api/page";
 import { formatShortDate } from "@/shared/lib/dateFormat";
-import { DataTable } from "@/shared/ui/DataTable";
+import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
+import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
 import type { InboundRecord } from "../../model/types";
 import {
@@ -14,6 +14,9 @@ import {
 } from "../../lib/inboundUi";
 
 export function InboundList({
+  toolbar,
+  emptyAction,
+  hasAppliedFilters = false,
   pageData,
   loading,
   selectedId,
@@ -22,6 +25,9 @@ export function InboundList({
   onPageChange,
   onPageSizeChange,
 }: {
+  toolbar?: DataTableToolbar;
+  emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   pageData: Page<InboundRecord>;
   loading: boolean;
   selectedId?: number;
@@ -116,19 +122,18 @@ export function InboundList({
 
   return (
     <DataTable
+      toolbar={toolbar}
+      emptyAction={emptyAction}
+      hasAppliedFilters={hasAppliedFilters}
       actions={
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
-          type="button"
-          onClick={onOpenCreate}
-        >
-          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />새
-          입고 등록
-        </button>
+        <DataTableCreateButton onClick={onOpenCreate}>
+          새 입고 등록
+        </DataTableCreateButton>
       }
       columns={columns}
       data={pageData.content}
-      emptyMessage="조건에 맞는 입고 기록이 없습니다."
+      emptyMessage="등록된 입고 기록이 없습니다."
+      filteredEmptyMessage="조건에 맞는 입고 기록이 없습니다."
       getRowId={(row) => String(row.id)}
       isLoading={loading}
       pageIndex={pageData.page}

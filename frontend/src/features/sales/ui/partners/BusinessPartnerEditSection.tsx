@@ -11,7 +11,7 @@ import {
 import type { BusinessPartnerForm } from "../../model/types";
 import { TextField } from "../common/FormFields";
 
-export type BusinessPartnerDetailMode = "read" | "basic" | "settlement";
+export type BusinessPartnerDetailMode = "read" | "basic" | "print";
 
 export function BusinessPartnerEditSection({
   partner,
@@ -74,9 +74,9 @@ export function BusinessPartnerEditSection({
               </DetailActionButton>
               <DetailActionButton
                 icon={Pencil}
-                onClick={() => onModeChange("settlement")}
+                onClick={() => onModeChange("print")}
               >
-                정산 수정
+                인쇄 설정 수정
               </DetailActionButton>
             </>
           ) : (
@@ -156,7 +156,7 @@ export function BusinessPartnerEditSection({
               </button>
             </div>
           </form>
-        ) : mode === "settlement" ? (
+        ) : mode === "print" ? (
           children
         ) : (
           <section>
@@ -230,6 +230,6 @@ function partnerTypeLabel(type: BusinessPartner["partnerType"]) {
 
 function modeTitle(mode: BusinessPartnerDetailMode, partnerName: string) {
   if (mode === "basic") return "기본 정보 수정";
-  if (mode === "settlement") return "정산 수정";
+  if (mode === "print") return "인쇄 설정 수정";
   return partnerName;
 }

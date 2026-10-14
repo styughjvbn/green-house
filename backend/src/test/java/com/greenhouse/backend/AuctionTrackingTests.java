@@ -1,6 +1,7 @@
 package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -8,27 +9,29 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.auction.application.AuctionTrackingService;
-import com.greenhouse.backend.auction.application.RecordAuctionResultCommand;
-import com.greenhouse.backend.auction.domain.AuctionAttempt;
-import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
-import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
-import com.greenhouse.backend.auction.domain.AuctionLotStatus;
-import com.greenhouse.backend.auction.domain.AuctionResultLine;
-import com.greenhouse.backend.auction.domain.AuctionResultLineInput;
-import com.greenhouse.backend.auction.domain.AuctionShipment;
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
-import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
-import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
-import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
-import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.auction.application.AuctionTrackingService;
+import com.greenhouse.backend.sales.auction.application.RecordAuctionResultCommand;
+import com.greenhouse.backend.sales.auction.domain.AuctionAttempt;
+import com.greenhouse.backend.sales.auction.domain.AuctionAttemptStatus;
+import com.greenhouse.backend.sales.auction.domain.AuctionInspectionStatus;
+import com.greenhouse.backend.sales.auction.domain.AuctionLotStatus;
+import com.greenhouse.backend.sales.auction.domain.AuctionResultLine;
+import com.greenhouse.backend.sales.auction.domain.AuctionResultLineInput;
+import com.greenhouse.backend.sales.auction.domain.AuctionShipment;
+import com.greenhouse.backend.sales.auction.domain.AuctionShipmentLot;
+import com.greenhouse.backend.sales.auction.repository.AuctionShipmentLotRepository;
+import com.greenhouse.backend.sales.auction.repository.AuctionShipmentRepository;
+import com.greenhouse.backend.sales.auction.web.dto.AuctionLotAdjustmentRequest;
+import com.greenhouse.backend.sales.auction.web.dto.AuctionLotReturnRequest;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -55,6 +58,33 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
   @Autowired OrchidGroupRepository orchidGroupRepository;
 
   @Autowired MockMvc mockMvc;
+
+  @Test
+  void identifiesOnlyTheLatestUnsoldAuctionForFollowUp() {
+    var lot = createLot(LocalDate.of(2026, 6, 1), "양재", "심비디움 A", "A", 50);
+    assertThat(trackingService.getLot(lot.getId()).followUpAttemptId()).isNull();
+
+    addResult(lot, LocalDate.of(2026, 6, 3), 1, 50, 0, "유찰", AuctionAttemptStatus.FAILED);
+    lotRepository.flush();
+    var failed = trackingService.getLot(lot.getId());
+    assertThat(failed.followUpAttemptId()).isEqualTo(failed.attempts().getFirst().id());
+
+    addResult(
+        lot, LocalDate.of(2026, 6, 5), 2, 30, 0, "부분 유찰", AuctionAttemptStatus.PARTIALLY_SOLD);
+    lotRepository.flush();
+    var partial = trackingService.getLot(lot.getId());
+    assertThat(partial.followUpAttemptId()).isEqualTo(partial.attempts().getLast().id());
+    assertThat(partial.followUpAttemptId()).isNotEqualTo(failed.followUpAttemptId());
+
+    addResult(lot, LocalDate.of(2026, 6, 7), 3, 30, 1000, null, AuctionAttemptStatus.SOLD);
+    lotRepository.flush();
+    assertThat(trackingService.getLot(lot.getId()).followUpAttemptId()).isNull();
+
+    addResult(
+        lot, LocalDate.of(2026, 6, 8), 4, 30, 0, "반환 추정", AuctionAttemptStatus.RETURN_INFERRED);
+    lotRepository.flush();
+    assertThat(trackingService.getLot(lot.getId()).followUpAttemptId()).isNull();
+  }
 
   @Test
   void tracksFailedThenSoldAuctionsWithPagination() throws Exception {
@@ -95,7 +125,9 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
 
     var partial =
         trackingService.confirmReturn(
-            lot.getId(), new AuctionLotReturnRequest(20, LocalDate.of(2026, 6, 8), "관리자", "일부 반환"));
+            lot.getId(),
+            new AuctionLotReturnRequest(
+                UUID.randomUUID().toString(), 20, LocalDate.of(2026, 6, 8), "관리자", "일부 반환"));
     assertThat(partial.currentStatus()).isEqualTo(AuctionLotStatus.PARTIALLY_RETURNED);
     assertThat(partial.returnedQuantity()).isEqualTo(20);
     assertThat(partial.waitingQuantity()).isEqualTo(30);
@@ -105,15 +137,17 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
     var returned =
         trackingService.confirmReturn(
             lot.getId(),
-            new AuctionLotReturnRequest(null, LocalDate.of(2026, 6, 9), "관리자", "나머지 반환"));
+            new AuctionLotReturnRequest(
+                UUID.randomUUID().toString(), null, LocalDate.of(2026, 6, 9), "관리자", "나머지 반환"));
     assertThat(returned.currentStatus()).isEqualTo(AuctionLotStatus.RETURNED);
     assertThat(returned.returnedQuantity()).isEqualTo(50);
 
-    var adjusted =
-        trackingService.adjust(
-            lot.getId(), new AuctionLotAdjustmentRequest(10, 0, 40, "관리자", "수량 보정"));
-    assertThat(adjusted.soldQuantity()).isEqualTo(10);
-    assertThat(adjusted.statusHistory()).hasSizeGreaterThanOrEqualTo(2);
+    assertThatThrownBy(
+            () ->
+                trackingService.adjust(
+                    lot.getId(), new AuctionLotAdjustmentRequest(10, 0, 40, "관리자", "수량 보정")))
+        .isInstanceOf(ConflictException.class);
+    assertThat(returned.quantityAdjustmentAllowed()).isFalse();
   }
 
   @Test
@@ -125,7 +159,8 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
     var returned =
         trackingService.confirmReturn(
             lot.getId(),
-            new AuctionLotReturnRequest(30, LocalDate.of(2026, 6, 10), "관리자", "재경매 없이 반환"));
+            new AuctionLotReturnRequest(
+                UUID.randomUUID().toString(), 30, LocalDate.of(2026, 6, 10), "관리자", "재경매 없이 반환"));
 
     assertThat(returned.currentStatus()).isEqualTo(AuctionLotStatus.RETURNED);
     assertThat(returned.returnedQuantity()).isEqualTo(30);
@@ -404,7 +439,13 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
     trackingService.addResult(
         createdLot.getId(),
         new RecordAuctionResultCommand(
-            LocalDate.of(2026, 7, 9), 1, AuctionAttemptStatus.FAILED, "유찰", null, null));
+            UUID.randomUUID().toString(),
+            LocalDate.of(2026, 7, 9),
+            1,
+            AuctionAttemptStatus.FAILED,
+            "유찰",
+            null,
+            null));
 
     mockMvc
         .perform(
@@ -430,6 +471,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
         trackingService.addResult(
             soldLot.getId(),
             new RecordAuctionResultCommand(
+                UUID.randomUUID().toString(),
                 LocalDate.of(2026, 7, 3),
                 null,
                 AuctionAttemptStatus.SOLD,
@@ -448,6 +490,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
         trackingService.addResult(
             partialLot.getId(),
             new RecordAuctionResultCommand(
+                UUID.randomUUID().toString(),
                 LocalDate.of(2026, 7, 4),
                 1,
                 AuctionAttemptStatus.PARTIALLY_SOLD,
@@ -469,6 +512,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
                 .content(
                     """
 						{
+						  "idempotencyKey": "manual-return-inferred",
 						  "auctionDate": "2026-07-05",
 						  "attemptStatus": "RETURN_INFERRED",
 						  "failedReason": "반환 추정 등록",

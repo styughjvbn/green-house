@@ -11,6 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다. */
         get: operations["getSalesSlip"];
         put: operations["updateSalesSlip"];
         post?: never;
@@ -528,9 +529,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @deprecated */
+        /**
+         * @deprecated
+         * @description 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.
+         */
         get: operations["getSalesSlips"];
         put?: never;
+        /** @description recordOnly=true는 이미 완료된 판매·출하를 빈 allocation과 완료 상태로 기록하며 재고·예약·Farm snapshot을 만들지 않습니다. 경매는 새 출하·lot를 생성하므로 기존 출하를 중복 등록하지 않아야 합니다. 기록 등록의 생성 키는 필수입니다. 출고·출하와 수납은 독립적입니다. 일반 판매의 최초 수납은 전표 생성과 같은 트랜잭션으로 기록하며 생성 키가 필수입니다. 받은 전액을 기록하고 전표 총액까지 배분하며 초과분은 거래처 미배분 잔액으로 남깁니다. 수납 상태만으로 완납을 지정할 수 없습니다. */
         post: operations["createSalesSlip"];
         delete?: never;
         options?: never;
@@ -547,7 +552,93 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description 받은 전액을 기록하고 전표 잔액까지만 배분하며 초과액은 거래처 미배분 잔액으로 남깁니다. 대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은 409 IDEMPOTENCY_KEY_REUSED입니다. */
         post: operations["confirmPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/direct-changes/{returnId}/arrivals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 반품 도착을 기록합니다. 새 묶음 생성 또는 이미 재고에 반영된 도착의 기록만 등록을 선택합니다. 원판매·금액·수납은 변경하지 않습니다. */
+        post: operations["recordDirectReturnArrival"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/direct-changes/{changeId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 후속 사용이 없는 가격 조정 또는 반품을 취소 이력으로 되돌립니다. 원기록은 삭제하지 않습니다. */
+        post: operations["cancelDirectSaleChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/direct-changes/returns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 선택한 가격 구간의 수량·금액을 반품 이력으로 기록합니다. 실제 농장 도착·재고 반영·현금 환불을 실행하지 않습니다. */
+        post: operations["recordDirectSaleReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/direct-changes/return-arrivals/{arrivalId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 도착 이력을 보존해 취소합니다. 새 묶음을 생성한 경우에만 Farm 생성 Mutation을 보상하며 후속 사용이 있으면 거절합니다. */
+        post: operations["cancelDirectReturnArrival"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/direct-changes/price-adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 원가격 구간의 일부 수량을 새 단가로 조정합니다. 원품목·재고·수납은 보존하며 현재 거래금액을 갱신합니다. 같은 키·입력은 최초 변경 ID를 반환합니다. */
+        post: operations["adjustDirectSalePrices"];
         delete?: never;
         options?: never;
         head?: never;
@@ -751,6 +842,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/business-partners/{partnerId}/payment-receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["receiptPage"];
+        put?: never;
+        /** @description 대상 미지정 수동 수납. 유효 배분과 전표 입금액은 변경하지 않습니다. */
+        post: operations["receiveUnassignedPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-receipts/{receiptId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 미배분 수납의 오입력 취소. 실제 환불을 기록하지 않습니다. */
+        post: operations["cancelUnassignedPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["allocate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-allocation-corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["correctAllocations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/logout": {
         parameters: {
             query?: never;
@@ -783,7 +940,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auction-settlements/{settlementId}/confirm-payment": {
+    "/api/auction-proceeds/{id}/confirm-payment": {
         parameters: {
             query?: never;
             header?: never;
@@ -792,23 +949,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["confirmAuctionPayment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auction-settlements/rebuild": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["rebuild"];
+        /** @description 자료 연결과 받을 금액이 확인된 경매 대금에 잔액까지만 배분하고 초과 수납액은 거래처 미배분 잔액으로 남깁니다. 같은 키·금액·입금일은 중복 수납 없이 현재 조회를 반환합니다. */
+        post: operations["confirmPayment_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -831,6 +973,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auction-lots/{id}/follow-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getFollowUp"];
+        put?: never;
+        post: operations["decideFollowUp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auction-lots/{id}/confirm-return": {
         parameters: {
             query?: never;
@@ -841,6 +999,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["confirmReturn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auction-lots/{id}/arrivals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getArrivals"];
+        put?: never;
+        post: operations["recordArrival"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auction-lots/{id}/arrivals/{arrivalId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelArrival"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1158,6 +1348,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 노드 수 외에도 작업 대상·효과·정정 참조는 조회별 최대 1,000건, Mutation 관계는 최대 maxNodes × 4건으로 제한한다. 일부 노드·참조·관계가 생략되면 truncated=true이며 전체 이력으로 취급하지 않는다. */
         get: operations["getGraph"];
         put?: never;
         post?: never;
@@ -1222,6 +1413,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 양 끝 날짜를 포함해 최대 366일, 최대 1,000개 작업을 완전한 목록으로 반환한다. 기간 초과는 400, 결과 건수 초과는 422 QUERY_LIMIT_EXCEEDED. 초과 시 기간·필터를 좁히거나 작업 페이지 조회를 사용한다. */
         get: operations["getCalendar"];
         put?: never;
         post?: never;
@@ -1311,6 +1503,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sales-slips/{id}/direct-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDirectSaleChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/direct-changes/return-arrivals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDirectReturnArrivals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sales-slips/print": {
         parameters: {
             query?: never;
@@ -1334,6 +1558,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다. */
         get: operations["getSalesSlipPage"];
         put?: never;
         post?: never;
@@ -1391,6 +1616,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/payment-targets/{targetType}/{targetId}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 대상에 반영한 수납 배분 이력. 대상 미지정 수납에서 배분한 기록과 직접 수납의 배분 기록을 한 번씩 조회합니다. 금액은 해당 대상의 배분액이며 날짜는 반영일입니다. 취소된 배분도 상태와 함께 보존합니다. */
+        get: operations["targetHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payment-allocation-metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 거래처를 지정하면 일반 거래처는 일반 전표, 경매장은 경매 대금만 배분 대상 종류로 반환합니다. */
+        get: operations["getPaymentAllocationMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/partner-payment-events": {
         parameters: {
             query?: never;
@@ -1435,7 +1694,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @deprecated */
+        /**
+         * @deprecated
+         * @description 호환 경로: 작업일·ID 내림차순 최신 500개 작업을 반환한다. 전체 이력은 GET /api/work-history의 페이지 조회를 사용한다.
+         */
         get: operations["getOrchidGroupHistory"];
         put?: never;
         post?: never;
@@ -1548,6 +1810,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 노드·깊이 한도 안에서 탐색하며 표시되는 Mutation 간 관계는 최대 maxNodes × 4건이다. 노드·탐색·관계가 생략되면 truncated=true이며 전체 이력으로 취급하지 않는다. */
         get: operations["getMutationGraph"];
         put?: never;
         post?: never;
@@ -1677,6 +1940,54 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-receipts/{receiptId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["receipt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-receipts/{receiptId}/allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["receiptAllocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/{partnerId}/payment-allocation-targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["allocationTargets"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1831,18 +2142,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auction-settlements": {
+    "/api/auction-proceeds/{id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * @deprecated
-         * @description 호환용 목록. 최신 500건만 반환합니다. 운영 목록은 /page, 전체 합계는 /summary를 사용합니다.
-         */
-        get: operations["getSettlements"];
+        get: operations["get_5"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1851,48 +2158,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/auction-settlements/{settlementId}": {
+    "/api/auction-proceeds/page": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getSettlement"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auction-settlements/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description 조회 조건에 해당하는 전체 정산의 합계. 페이지 크기와 무관하게 집계합니다. */
-        get: operations["getAuctionSettlementSummary"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auction-settlements/page": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description 정산 요약의 서버 페이지 목록. page는 0 이상, size는 1~100으로 보정합니다. 상세 행은 단건 API에서 조회합니다. */
-        get: operations["getAuctionSettlementPage"];
+        get: operations["page"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2017,15 +2290,35 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ErrorBody: {
+            code?: string;
+            details?: string[];
+            message?: string;
+        };
+        ErrorResponse: {
+            error?: components["schemas"]["ErrorBody"];
+        };
+        /** @description 실제 받은 전액을 기록합니다. 전표 총액까지 배분하고 초과분은 거래처 미배분 잔액으로 남깁니다. */
+        SalesInitialReceiptRequest: {
+            /** Format: int64 */
+            amount: number;
+            /** @enum {string} */
+            method: "CASH" | "BANK_TRANSFER";
+            /** Format: date */
+            paymentDate: string;
+        };
         SalesSlipCreateRequest: {
             /** Format: int64 */
             auctionShipmentId?: number;
+            initialReceipt?: components["schemas"]["SalesInitialReceiptRequest"];
             items: components["schemas"]["SalesSlipItemRequest"][];
             memo?: string;
             /** Format: int64 */
             partnerId?: number;
             paymentMethod?: string;
             paymentStatus?: string;
+            /** @description 이미 완료된 판매·출하를 재고 변경 없이 기록합니다. 완료 상태와 빈 allocation이 필요하며 생성 요청 키는 필수입니다. */
+            recordOnly?: boolean;
             /** Format: date */
             saleDate: string;
             salesStatus?: string;
@@ -2040,12 +2333,15 @@ export interface components {
         };
         SalesSlipItemRequest: {
             allocations: components["schemas"]["SalesSlipItemAllocationRequest"][];
+            /** Format: int32 */
+            boxes?: number;
             genus?: string;
             itemName: string;
             memo?: string;
             /** Format: int32 */
             quantity: number;
             spec?: string;
+            unit?: string;
             /** Format: int32 */
             unitPrice: number;
         };
@@ -2103,6 +2399,15 @@ export interface components {
             varietyId?: number;
             varietyName?: string;
         };
+        SalesSlipAuctionLotResponse: {
+            currentStatus?: string;
+            /** Format: int32 */
+            returnedQuantity?: number;
+            /** Format: int32 */
+            soldQuantity?: number;
+            /** Format: int32 */
+            waitingQuantity?: number;
+        };
         SalesSlipItemAllocationResponse: {
             /** Format: int32 */
             allocatedQuantity?: number;
@@ -2125,8 +2430,12 @@ export interface components {
             allocations?: components["schemas"]["SalesSlipItemAllocationResponse"][];
             /** Format: int32 */
             amount?: number;
+            /** @description 현재 경매 lot 요약. 출하 전 또는 과거 생성 응답에는 없을 수 있습니다. */
+            auctionLot?: components["schemas"]["SalesSlipAuctionLotResponse"];
             /** Format: int64 */
             auctionShipmentLotId?: number;
+            /** Format: int32 */
+            boxes?: number;
             genus?: string;
             /** Format: int64 */
             id?: number;
@@ -2135,6 +2444,7 @@ export interface components {
             /** Format: int32 */
             quantity?: number;
             spec?: string;
+            unit?: string;
             /** Format: int32 */
             unitPrice?: number;
         };
@@ -2145,6 +2455,8 @@ export interface components {
             availableActions?: ("EDIT" | "COMPLETE" | "CANCEL" | "CONFIRM_PAYMENT")[];
             /** Format: date */
             expectedPaymentDate?: string;
+            /** @description 현재 거래금액·수납 배분의 확인 필요 여부. 수납 기록이 없다는 이유만으로 확인 대상으로 보지 않습니다. 과거 생성 응답에는 미상일 수 있습니다. */
+            financialReviewRequired?: boolean | null;
             /** Format: int64 */
             id?: number;
             items?: components["schemas"]["SalesSlipItemResponse"][];
@@ -2161,8 +2473,10 @@ export interface components {
             salesStatus?: string;
             /** @enum {string} */
             salesType?: "DIRECT" | "AUCTION";
-            slipNumber?: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
+             */
             totalAmount?: number;
         };
         BusinessPartnerUpdateRequest: {
@@ -2179,11 +2493,15 @@ export interface components {
             message?: string;
         };
         PartnerSettlementSettingsRequest: {
+            /** @description 선입금의 보관용 선호값. 현재 예치금 처리는 제공하지 않는다. */
             allowPrepayment?: boolean;
             /** Format: int64 */
             amountTolerance: number;
+            /** @description 자동 매칭의 보관용 선호값. 현재 자동 매칭 실행은 제공하지 않는다. */
             autoMatchEnabled?: boolean;
+            /** @description 자동 정산의 보관용 선호값. 현재 자동 정산 실행은 제공하지 않는다. */
             autoSettleEnabled?: boolean;
+            /** @description 선입금 자동 차감의 보관용 선호값. 현재 실행은 제공하지 않는다. */
             creditAutoApplyEnabled?: boolean;
             depositorAliases: string[];
             memo?: string;
@@ -2191,11 +2509,24 @@ export interface components {
             paymentDayMode: "CALENDAR_DAY" | "BUSINESS_DAY";
             /** Format: int32 */
             paymentDelayDays: number;
+            /**
+             * @description 거래처 전표의 기본 인쇄 양식. 생략하면 기존 설정을 유지한다.
+             * @enum {string}
+             */
+            printTemplate?: "STANDARD_A5" | "YANGJAE_AUCTION_SHIPMENT";
+            /** @description 보관용 규칙 JSON. 현재 결과 수신/파싱 또는 정산 실행에 적용하지 않는다. */
             ruleJson?: {
                 [key: string]: unknown;
             };
-            /** @enum {string} */
+            /**
+             * @description 저장할 선호 정산 단위. MONTHLY_BATCH 저장은 월간 실행을 활성화하지 않으며 실제 지원 범위는 응답 capabilities를 확인한다.
+             * @enum {string}
+             */
             settlementUnit: "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
+            /** @description 경매장 출하 전표에 사용할 기본 출하자 코드 */
+            shipperCode?: string;
+            /** @description 경매장 출하 전표에 사용할 기본 출하자 성명 */
+            shipperName?: string;
         };
         ApiResponsePartnerSettlementSettingsResponse: {
             data?: components["schemas"]["PartnerSettlementSettingsResponse"];
@@ -2207,6 +2538,8 @@ export interface components {
             amountTolerance?: number;
             autoMatchEnabled?: boolean;
             autoSettleEnabled?: boolean;
+            /** @description 현재 거래처의 정산 실행 지원 범위. 저장된 설정값과 독립적이며 권한 또는 특정 전표의 실행 가능 여부를 뜻하지 않는다. */
+            readonly capabilities: components["schemas"]["SettlementCapabilities"];
             creditAutoApplyEnabled?: boolean;
             depositorAliases?: string[];
             /** Format: int64 */
@@ -2218,11 +2551,23 @@ export interface components {
             paymentDayMode?: "CALENDAR_DAY" | "BUSINESS_DAY";
             /** Format: int32 */
             paymentDelayDays?: number;
+            /** @enum {string} */
+            printTemplate?: "STANDARD_A5" | "YANGJAE_AUCTION_SHIPMENT";
             ruleJson?: {
                 [key: string]: unknown;
             };
             /** @enum {string} */
             settlementUnit?: "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
+            shipperCode?: string;
+            shipperName?: string;
+        };
+        SettlementCapabilities: {
+            autoMatching?: boolean;
+            autoSettlement?: boolean;
+            creditAutoApply?: boolean;
+            executableUnits?: ("SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE")[];
+            prepayment?: boolean;
+            ruleExecution?: boolean;
         };
         BedZoneCapacityRequest: {
             allowed: boolean;
@@ -2812,6 +3157,74 @@ export interface components {
             paymentMethod?: string;
             worker?: string;
         };
+        DirectReturnArrivalRequest: {
+            /** Format: date */
+            arrivalDate: string;
+            /** Format: int64 */
+            bedZoneId?: number;
+            details?: components["schemas"]["OrchidGroupMutationDetails"];
+            /** Format: int32 */
+            quantity: number;
+            /** @description 이미 재고에 반영된 도착이면 true. Farm 재고를 변경하지 않습니다. */
+            recordOnly?: boolean;
+            worker?: string;
+        };
+        OrchidGroupMutationDetails: {
+            /** Format: int32 */
+            ageYear?: number;
+            endPosition?: number;
+            memo?: string;
+            placementType?: string;
+            potSize?: string;
+            /** Format: int32 */
+            quantity?: number;
+            splitPlacementAllowed?: boolean;
+            startPosition?: number;
+            status?: string;
+            /** Format: int32 */
+            trayCount?: number;
+            /** Format: int64 */
+            varietyId?: number;
+        };
+        ApiResponseDirectReturnArrivalResult: {
+            data?: components["schemas"]["DirectReturnArrivalResult"];
+            message?: string;
+        };
+        DirectReturnArrivalResult: {
+            /** Format: int64 */
+            arrivalId?: number;
+        };
+        CancelDirectSaleChangeRequest: {
+            /** Format: date */
+            changeDate: string;
+            reason: string;
+        };
+        ApiResponseDirectSaleChangeResult: {
+            data?: components["schemas"]["DirectSaleChangeResult"];
+            message?: string;
+        };
+        DirectSaleChangeResult: {
+            /** Format: int64 */
+            changeId?: number;
+        };
+        DirectSaleChangeRequest: {
+            /** Format: date */
+            changeDate: string;
+            /** Format: int64 */
+            itemId: number;
+            /** Format: int32 */
+            quantity: number;
+            reason: string;
+            /** Format: int64 */
+            sourceChangeId?: number;
+            /** Format: int32 */
+            unitPrice?: number;
+        };
+        CancelDirectReturnArrivalRequest: {
+            /** Format: date */
+            correctionDate: string;
+            reason: string;
+        };
         OrchidGroupCreateRequest: {
             /** Format: int32 */
             ageYear?: number;
@@ -3081,6 +3494,79 @@ export interface components {
             partnerType: "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
             phone?: string;
         };
+        ApiResponsePartnerPaymentEventResponse: {
+            data?: components["schemas"]["PartnerPaymentEventResponse"];
+            message?: string;
+        };
+        PartnerPaymentEventResponse: {
+            /** Format: int64 */
+            amount?: number;
+            createdBy?: string;
+            depositorName?: string;
+            description?: string;
+            /** Format: date */
+            eventDate?: string;
+            /** @enum {string} */
+            eventType?: "PAYMENT_RECEIVED" | "PAYMENT_ALLOCATED" | "PREPAYMENT_RECEIVED" | "CREDIT_APPLIED" | "CREDIT_REFUND" | "AUTO_MATCH_CANDIDATE" | "AUTO_MATCH_CONFIRMED" | "MANUAL_MATCH_CONFIRMED" | "MATCH_REJECTED" | "PAYMENT_UNLINKED" | "ADJUSTMENT";
+            /** Format: int64 */
+            id?: number;
+            memo?: string;
+            /** Format: int64 */
+            parentEventId?: number;
+            /** Format: int64 */
+            partnerId?: number;
+            partnerName?: string;
+            paymentMethod?: string;
+            /** @enum {string} */
+            status?: "UNAPPLIED" | "PARTIALLY_APPLIED" | "FULLY_APPLIED" | "CANDIDATE" | "CONFIRMED" | "REJECTED" | "CANCELLED";
+            /** Format: int64 */
+            targetId?: number;
+            /** @enum {string} */
+            targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
+            /** Format: int64 */
+            unappliedAmount?: number;
+            unassignedCancellationAllowed?: boolean;
+        };
+        CancelUnassignedReceiptRequest: {
+            /** Format: date */
+            correctionDate: string;
+            idempotencyKey: string;
+            reason: string;
+        };
+        PaymentAllocationLine: {
+            /** Format: int64 */
+            amount: number;
+            /** Format: int64 */
+            receiptId: number;
+            /** Format: int64 */
+            targetId: number;
+            /** @enum {string} */
+            targetType: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
+        };
+        PaymentAllocationRequest: {
+            /** Format: date */
+            allocationDate: string;
+            allocations: components["schemas"]["PaymentAllocationLine"][];
+            idempotencyKey: string;
+            worker?: string;
+        };
+        ApiResponsePaymentAllocationChangeResponse: {
+            data?: components["schemas"]["PaymentAllocationChangeResponse"];
+            message?: string;
+        };
+        PaymentAllocationChangeResponse: {
+            allocationIds?: number[];
+            cancellationIds?: number[];
+        };
+        PaymentAllocationCorrectionRequest: {
+            allocations: components["schemas"]["PaymentAllocationLine"][];
+            cancellationIds: number[];
+            /** Format: date */
+            correctionDate: string;
+            idempotencyKey: string;
+            reason: string;
+            worker?: string;
+        };
         ApiResponseVoid: {
             data?: unknown;
             message?: string;
@@ -3098,61 +3584,48 @@ export interface components {
             role?: "ADMIN" | "WORKER" | "DEMO";
             username?: string;
         };
-        ApiResponseAuctionSettlementResponse: {
-            data?: components["schemas"]["AuctionSettlementResponse"];
+        ApiResponseAuctionProceedsResponse: {
+            data?: components["schemas"]["AuctionProceedsResponse"];
             message?: string;
         };
-        AuctionSettlementLineResponse: {
-            /** Format: int64 */
-            amount?: number;
-            /** Format: int64 */
-            auctionResultLineId?: number;
-            /** Format: int64 */
-            auctionShipmentLotId?: number;
-            /** Format: int64 */
-            id?: number;
-            /** Format: int32 */
-            quantity?: number;
-            /** Format: date */
-            shipmentDate?: string;
-            shipmentGrade?: string;
-            /** @enum {string} */
-            status?: "UNPAID" | "PAID" | "PARTIALLY_PAID" | "EXCLUDED" | "REVIEW_REQUIRED";
-            /** Format: int32 */
-            unitPrice?: number;
-            varietyName?: string;
-        };
-        AuctionSettlementResponse: {
-            /** Format: date */
-            auctionDate?: string;
+        AuctionProceedsResponse: {
             /** Format: int64 */
             auctionHouseId?: number;
             auctionHouseName?: string;
-            /** Format: date-time */
-            confirmedAt?: string;
-            confirmedBy?: string;
-            /** Format: int64 */
-            deductionAmount?: number;
-            /** Format: int64 */
-            expectedDepositAmount?: number;
-            /** Format: date */
-            expectedPaymentDate?: string;
-            /** Format: int64 */
-            feeAmount?: number;
-            /** Format: int64 */
-            grossAmount?: number;
             /** Format: int64 */
             id?: number;
-            lines?: components["schemas"]["AuctionSettlementLineResponse"][];
-            memo?: string;
-            /** Format: int64 */
+            matchingConfirmed?: boolean;
             paidAmount?: number;
+            paymentAllowed?: boolean;
             /** Format: int64 */
-            remainingAmount?: number;
-            /** Format: date-time */
-            resultReceivedAt?: string;
-            /** @enum {string} */
-            status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            receivableAmount?: number | null;
+            remainingAmount?: number | null;
+            /** Format: int64 */
+            reportedGrossAmount?: number | null;
+            resultDetails?: components["schemas"]["AuctionProceedsResultReference"][];
+            resultIds?: number[];
+            reviewRequired?: boolean;
+            sourceReference?: string | null;
+        };
+        AuctionProceedsResultReference: {
+            /** Format: int64 */
+            amount: number;
+            /** Format: date */
+            auctionDate: string;
+            /** Format: int64 */
+            auctionHouseId: number;
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            lotId: number;
+            /** Format: int32 */
+            quantity: number;
+            /** Format: date */
+            shipmentDate: string;
+            shipmentGrade: string | null;
+            /** Format: int32 */
+            unitPrice: number;
+            varietyName: string;
         };
         AuctionLotResultLineRequest: {
             auctionGrade?: string;
@@ -3172,6 +3645,7 @@ export interface components {
             /** Format: date */
             auctionDate: string;
             failedReason?: string;
+            idempotencyKey: string;
             memo?: string;
             resultLines?: components["schemas"]["AuctionLotResultLineRequest"][];
         };
@@ -3198,9 +3672,14 @@ export interface components {
             /** Format: int32 */
             boxes?: number;
             /** @enum {string} */
-            currentStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            currentStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED" | "DISPOSED";
             /** Format: int32 */
             failedCount?: number;
+            /**
+             * Format: int64
+             * @description 현재 유찰 잔량에 대응하는 최신 경매 시도 식별자
+             */
+            followUpAttemptId?: number | null;
             /** Format: int64 */
             id?: number;
             /** @enum {string} */
@@ -3209,6 +3688,7 @@ export interface components {
             /** Format: date */
             latestAuctionDate?: string;
             memo?: string;
+            quantityAdjustmentAllowed?: boolean | null;
             /** Format: int32 */
             returnConfirmableQuantity?: number;
             /** Format: date */
@@ -3251,19 +3731,112 @@ export interface components {
             /** Format: int64 */
             id?: number;
             memo?: string;
+            /** Format: int32 */
+            newReturnedQuantity?: number | null;
+            /** Format: int32 */
+            newSoldQuantity?: number | null;
             /** @enum {string} */
-            newStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            newStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED" | "DISPOSED";
+            /** Format: int32 */
+            newWaitingQuantity?: number | null;
+            /** Format: int32 */
+            previousReturnedQuantity?: number | null;
+            /** Format: int32 */
+            previousSoldQuantity?: number | null;
             /** @enum {string} */
-            previousStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            previousStatus?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED" | "DISPOSED";
+            /** Format: int32 */
+            previousWaitingQuantity?: number | null;
             reason?: string;
             worker?: string;
         };
+        AuctionFollowUpCommand: {
+            idempotencyKey: string;
+            /** @enum {string} */
+            method: "REAUCTION" | "FARM_RETURN" | "AUCTION_DISPOSAL";
+            reason: string;
+            worker?: string;
+        };
+        ApiResponseAuctionFollowUpResult: {
+            data?: components["schemas"]["AuctionFollowUpResult"];
+            message?: string;
+        };
+        AuctionArrivalResponse: {
+            /** Format: date */
+            arrivalDate?: string;
+            /** Format: date-time */
+            canceledAt?: string | null;
+            cancellationAllowed: boolean;
+            /** Format: int64 */
+            cancellationMutationId?: number | null;
+            cancellationReason?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: int64 */
+            creationMutationId?: number | null;
+            /** Format: int64 */
+            decisionId?: number;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            lotId?: number;
+            /** Format: int64 */
+            orchidGroupId?: number | null;
+            /** Format: int32 */
+            quantity?: number;
+            recordOnly: boolean;
+            worker?: string;
+        };
+        AuctionFollowUpResponse: {
+            arrivalAllowed?: boolean;
+            availableMethods?: ("REAUCTION" | "FARM_RETURN" | "AUCTION_DISPOSAL")[];
+            /** Format: int32 */
+            decidedQuantity?: number | null;
+            decisionChangeAllowed?: boolean;
+            /** Format: int64 */
+            decisionId?: number | null;
+            /** Format: int32 */
+            disposedQuantity?: number;
+            /** Format: int32 */
+            inferredReturnQuantity?: number;
+            /** Format: int64 */
+            lotId?: number;
+            /** @enum {string|null} */
+            method?: "REAUCTION" | "FARM_RETURN" | "AUCTION_DISPOSAL" | null;
+            /** Format: int32 */
+            pendingQuantity?: number;
+        };
+        AuctionFollowUpResult: {
+            arrival?: components["schemas"]["AuctionArrivalResponse"];
+            followUp?: components["schemas"]["AuctionFollowUpResponse"];
+        };
         AuctionLotReturnRequest: {
+            idempotencyKey: string;
             memo?: string;
             /** Format: date */
             returnDate: string;
             /** Format: int32 */
             returnedQuantity?: number;
+            worker?: string;
+        };
+        AuctionArrivalCommand: {
+            /** Format: date */
+            arrivalDate: string;
+            /** Format: int64 */
+            bedZoneId?: number;
+            details?: components["schemas"]["OrchidGroupMutationDetails"];
+            idempotencyKey: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** @description 이미 재고에 반영된 도착이면 true. Farm 재고를 변경하지 않습니다. */
+            recordOnly?: boolean;
+            worker?: string;
+        };
+        CancelAuctionArrivalCommand: {
+            /** Format: date */
+            correctionDate: string;
+            idempotencyKey: string;
+            reason: string;
             worker?: string;
         };
         AuctionLotAdjustmentRequest: {
@@ -3364,7 +3937,7 @@ export interface components {
             memo?: string;
             reason: string;
             /** @enum {string} */
-            status: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            status: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED" | "DISPOSED";
             worker?: string;
         };
         ApiResponseWorkTypeMetadataResponse: {
@@ -3810,6 +4383,139 @@ export interface components {
             data?: components["schemas"]["SalesSlipResponse"][];
             message?: string;
         };
+        ApiResponseDirectSaleChangeResponse: {
+            data?: components["schemas"]["DirectSaleChangeResponse"];
+            message?: string;
+        };
+        DirectSaleChangeResponse: {
+            availableTypes?: ("PRICE_ADJUSTMENT" | "RETURN" | "CANCEL")[];
+            /** Format: int32 */
+            currentAmount?: number;
+            /** Format: int64 */
+            documentId?: number;
+            history?: components["schemas"]["PageResponseHistory"];
+            /** Format: int64 */
+            originalAmount?: number;
+            portions?: components["schemas"]["Portion"][];
+            /**
+             * Format: int64
+             * @description 현재 수납 배분이 거래금액을 초과한 환불 필요액. 검토 대상은 미상이며 실제 환불 기록이 아닙니다.
+             */
+            refundDueAmount?: number | null;
+            /** @description 취소되지 않은 반품의 가격 구간별 수량·단가·비음수 금액. 이력 페이지와 무관한 전체 구성이며 현재 거래금액에서 제외됩니다. */
+            returnedPortions?: components["schemas"]["Portion"][];
+        };
+        History: {
+            /** Format: int64 */
+            amountDelta?: number;
+            cancelAllowed?: boolean;
+            canceled?: boolean;
+            /** Format: int64 */
+            canceledChangeId?: number;
+            /** Format: date */
+            changeDate?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            itemId?: number;
+            itemName?: string;
+            /** Format: int32 */
+            nextUnitPrice?: number;
+            /** Format: int32 */
+            previousUnitPrice?: number;
+            /** Format: int32 */
+            quantity?: number;
+            reason?: string;
+            /** Format: int64 */
+            sourceChangeId?: number;
+            /** @enum {string} */
+            type?: "PRICE_ADJUSTMENT" | "RETURN" | "CANCEL";
+        };
+        PageResponseHistory: {
+            content?: components["schemas"]["History"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        Portion: {
+            /** Format: int64 */
+            amount?: number;
+            /** Format: int64 */
+            itemId?: number;
+            itemName?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /**
+             * Format: int64
+             * @description 원가격 구간이면 null, 조정가격 구간이면 해당 가격 조정 ID
+             */
+            sourceChangeId?: number | null;
+            spec?: string;
+            /** Format: int32 */
+            unitPrice?: number;
+        };
+        ApiResponseDirectReturnArrivalState: {
+            data?: components["schemas"]["DirectReturnArrivalState"];
+            message?: string;
+        };
+        DirectReturnArrivalResponse: {
+            /** Format: date */
+            arrivalDate?: string;
+            /** Format: date-time */
+            canceledAt?: string | null;
+            cancellationAllowed: boolean;
+            /** Format: int64 */
+            cancellationMutationId?: number | null;
+            cancellationReason?: string | null;
+            /** Format: date */
+            correctionDate?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: int64 */
+            creationMutationId?: number | null;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            orchidGroupId?: number | null;
+            /** Format: int32 */
+            quantity?: number;
+            recordOnly: boolean;
+            /** Format: int64 */
+            returnChangeId?: number;
+            worker?: string;
+        };
+        DirectReturnArrivalState: {
+            history?: components["schemas"]["PageResponseDirectReturnArrivalResponse"];
+            pendingReturns?: components["schemas"]["PendingReturn"][];
+        };
+        PageResponseDirectReturnArrivalResponse: {
+            content?: components["schemas"]["DirectReturnArrivalResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PendingReturn: {
+            arrivalAllowed?: boolean;
+            /** Format: int64 */
+            itemId?: number;
+            itemName?: string;
+            /** Format: int32 */
+            pendingQuantity?: number;
+            /** Format: int64 */
+            returnChangeId?: number;
+        };
         ApiResponsePageResponseSalesSlipListItemResponse: {
             data?: components["schemas"]["PageResponseSalesSlipListItemResponse"];
             message?: string;
@@ -3846,8 +4552,10 @@ export interface components {
             salesStatus?: string;
             /** @enum {string} */
             salesType?: "DIRECT" | "AUCTION";
-            slipNumber?: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
+             */
             totalAmount?: number;
         };
         ApiResponseListAuctionShipmentOptionResponse: {
@@ -3927,38 +4635,6 @@ export interface components {
             data?: components["schemas"]["PhysicalBedResponse"];
             message?: string;
         };
-        ApiResponseListPartnerPaymentEventResponse: {
-            data?: components["schemas"]["PartnerPaymentEventResponse"][];
-            message?: string;
-        };
-        PartnerPaymentEventResponse: {
-            /** Format: int64 */
-            amount?: number;
-            createdBy?: string;
-            depositorName?: string;
-            description?: string;
-            /** Format: date */
-            eventDate?: string;
-            /** @enum {string} */
-            eventType?: "PAYMENT_RECEIVED" | "PAYMENT_ALLOCATED" | "PREPAYMENT_RECEIVED" | "CREDIT_APPLIED" | "CREDIT_REFUND" | "AUTO_MATCH_CANDIDATE" | "AUTO_MATCH_CONFIRMED" | "MANUAL_MATCH_CONFIRMED" | "MATCH_REJECTED" | "PAYMENT_UNLINKED" | "ADJUSTMENT";
-            /** Format: int64 */
-            id?: number;
-            memo?: string;
-            /** Format: int64 */
-            parentEventId?: number;
-            /** Format: int64 */
-            partnerId?: number;
-            partnerName?: string;
-            paymentMethod?: string;
-            /** @enum {string} */
-            status?: "UNAPPLIED" | "PARTIALLY_APPLIED" | "FULLY_APPLIED" | "CANDIDATE" | "CONFIRMED" | "REJECTED" | "CANCELLED";
-            /** Format: int64 */
-            targetId?: number;
-            /** @enum {string} */
-            targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
-            /** Format: int64 */
-            unappliedAmount?: number;
-        };
         ApiResponsePageResponsePartnerPaymentEventResponse: {
             data?: components["schemas"]["PageResponsePartnerPaymentEventResponse"];
             message?: string;
@@ -3973,6 +4649,17 @@ export interface components {
             totalElements?: number;
             /** Format: int32 */
             totalPages?: number;
+        };
+        ApiResponsePaymentAllocationMetadata: {
+            data?: components["schemas"]["PaymentAllocationMetadata"];
+            message?: string;
+        };
+        PaymentAllocationMetadata: {
+            targetTypes?: ("SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE")[];
+        };
+        ApiResponseListPartnerPaymentEventResponse: {
+            data?: components["schemas"]["PartnerPaymentEventResponse"][];
+            message?: string;
         };
         ApiResponseListOrchidGroupWorkHistoryResponse: {
             data?: components["schemas"]["OrchidGroupWorkHistoryResponse"][];
@@ -4524,6 +5211,109 @@ export interface components {
             data?: components["schemas"]["BusinessPartnerResponse"][];
             message?: string;
         };
+        ApiResponsePageResponsePaymentReceiptResponse: {
+            data?: components["schemas"]["PageResponsePaymentReceiptResponse"];
+            message?: string;
+        };
+        PageResponsePaymentReceiptResponse: {
+            content?: components["schemas"]["PaymentReceiptResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PaymentReceiptResponse: {
+            allocationAllowed?: boolean;
+            /** Format: int64 */
+            amount?: number;
+            /** Format: int64 */
+            availableAmount?: number;
+            correctionAllowed?: boolean;
+            depositorName?: string | null;
+            /** Format: int64 */
+            id?: number;
+            memo?: string | null;
+            /** Format: int64 */
+            originalTargetId?: number | null;
+            /** @enum {string|null} */
+            originalTargetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE" | null;
+            /** Format: int64 */
+            partnerId?: number;
+            /** Format: date */
+            paymentDate?: string;
+            reviewRequired?: boolean;
+            /** @enum {string} */
+            status?: "UNAPPLIED" | "PARTIALLY_APPLIED" | "FULLY_APPLIED" | "CANDIDATE" | "CONFIRMED" | "REJECTED" | "CANCELLED";
+        };
+        ApiResponsePaymentReceiptResponse: {
+            data?: components["schemas"]["PaymentReceiptResponse"];
+            message?: string;
+        };
+        ApiResponsePageResponsePaymentAllocationResponse: {
+            data?: components["schemas"]["PageResponsePaymentAllocationResponse"];
+            message?: string;
+        };
+        PageResponsePaymentAllocationResponse: {
+            content?: components["schemas"]["PaymentAllocationResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PaymentAllocationResponse: {
+            /** Format: date */
+            allocationDate?: string;
+            /** Format: int64 */
+            amount?: number;
+            cancellationAllowed?: boolean;
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            receiptId?: number;
+            /** @enum {string} */
+            status?: "UNAPPLIED" | "PARTIALLY_APPLIED" | "FULLY_APPLIED" | "CANDIDATE" | "CONFIRMED" | "REJECTED" | "CANCELLED";
+            /** Format: int64 */
+            targetId?: number;
+            /** @enum {string} */
+            targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
+        };
+        ApiResponsePageResponsePaymentAllocationTargetOption: {
+            data?: components["schemas"]["PageResponsePaymentAllocationTargetOption"];
+            message?: string;
+        };
+        PageResponsePaymentAllocationTargetOption: {
+            content?: components["schemas"]["PaymentAllocationTargetOption"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PaymentAllocationTargetOption: {
+            allocationAllowed?: boolean;
+            availableAmount?: number | null;
+            correctionAllowed?: boolean;
+            /** Format: int64 */
+            id?: number;
+            paidAmount?: number | null;
+            /** Format: int64 */
+            receivableAmount?: number | null;
+            reviewRequired?: boolean;
+            sourceReference?: string | null;
+            /** @enum {string} */
+            targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
+        };
         ApiResponseBusinessPartnerOptionResponse: {
             data?: components["schemas"]["BusinessPartnerOptionResponse"];
             message?: string;
@@ -4616,43 +5406,12 @@ export interface components {
             /** Format: int32 */
             waitingQuantity?: number;
         };
-        ApiResponseListAuctionSettlementResponse: {
-            data?: components["schemas"]["AuctionSettlementResponse"][];
+        ApiResponsePageResponseAuctionProceedsResponse: {
+            data?: components["schemas"]["PageResponseAuctionProceedsResponse"];
             message?: string;
         };
-        ApiResponseAuctionSettlementSummaryResponse: {
-            data?: components["schemas"]["AuctionSettlementSummaryResponse"];
-            message?: string;
-        };
-        AuctionSettlementSummaryResponse: {
-            /** Format: int64 */
-            expectedDepositAmount?: number;
-            /** Format: int64 */
-            remainingAmount?: number;
-        };
-        ApiResponsePageResponseAuctionSettlementListItemResponse: {
-            data?: components["schemas"]["PageResponseAuctionSettlementListItemResponse"];
-            message?: string;
-        };
-        AuctionSettlementListItemResponse: {
-            /** Format: date */
-            auctionDate?: string;
-            /** Format: int64 */
-            auctionHouseId?: number;
-            auctionHouseName?: string;
-            /** Format: int64 */
-            expectedDepositAmount?: number;
-            /** Format: int64 */
-            grossAmount?: number;
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            remainingAmount?: number;
-            /** @enum {string} */
-            status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-        };
-        PageResponseAuctionSettlementListItemResponse: {
-            content?: components["schemas"]["AuctionSettlementListItemResponse"][];
+        PageResponseAuctionProceedsResponse: {
+            content?: components["schemas"]["AuctionProceedsResponse"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -4668,6 +5427,25 @@ export interface components {
         };
         PageResponseAuctionLotResponse: {
             content?: components["schemas"]["AuctionLotResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        ApiResponseAuctionFollowUpResponse: {
+            data?: components["schemas"]["AuctionFollowUpResponse"];
+            message?: string;
+        };
+        ApiResponsePageResponseAuctionArrivalResponse: {
+            data?: components["schemas"]["PageResponseAuctionArrivalResponse"];
+            message?: string;
+        };
+        PageResponseAuctionArrivalResponse: {
+            content?: components["schemas"]["AuctionArrivalResponse"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -4733,7 +5511,6 @@ export interface components {
             /** Format: date */
             saleDate?: string;
             salesStatus?: string;
-            slipNumber?: string;
             /** Format: int32 */
             totalAmount?: number;
         };
@@ -4821,13 +5598,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
+                };
+            };
+            /** @description DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -4847,13 +5633,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 수정 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
+                };
+            };
+            /** @description DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -5060,7 +5855,10 @@ export interface operations {
     create: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 일반 단건 계획 생성의 재전송 키. 같은 키·입력은 최초 응답을 반환한다. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5527,7 +6325,10 @@ export interface operations {
     createCompletedRecord: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 일반 완료 기록 생성의 재전송 키. 같은 키·입력은 최초 응답을 반환한다. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5695,7 +6496,10 @@ export interface operations {
     createBatch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 일반 일괄 계획 생성의 재전송 키. 품종별 전체 결과의 최초 응답을 반환한다. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5780,7 +6584,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5789,12 +6593,24 @@ export interface operations {
                     "application/json": components["schemas"]["ApiResponseListSalesSlipResponse"];
                 };
             };
+            /** @description DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     createSalesSlip: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 생성 재전송은 같은 키와 입력을 유지합니다. 키 생략 시 별도 신규 전표를 생성합니다. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5830,13 +6646,174 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 입금 확인 또는 재요청 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
+                };
+            };
+            /** @description VALIDATION_ERROR: 입력 오류 또는 배분할 대상 잔액 없음 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경. DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    recordDirectReturnArrival: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: number;
+                returnId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectReturnArrivalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectReturnArrivalResult"];
+                };
+            };
+        };
+    };
+    cancelDirectSaleChange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: number;
+                changeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelDirectSaleChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectSaleChangeResult"];
+                };
+            };
+        };
+    };
+    recordDirectSaleReturn: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectSaleChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectSaleChangeResult"];
+                };
+            };
+        };
+    };
+    cancelDirectReturnArrival: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: number;
+                arrivalId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelDirectReturnArrivalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectReturnArrivalResult"];
+                };
+            };
+        };
+    };
+    adjustDirectSalePrices: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectSaleChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectSaleChangeResult"];
                 };
             };
         };
@@ -6144,7 +7121,10 @@ export interface operations {
     create_5: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 생성 재전송은 같은 키와 입력을 유지합니다. 키 생략 시 별도 신규 입고를 생성합니다. */
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -6290,6 +7270,136 @@ export interface operations {
             };
         };
     };
+    receiptPage: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponsePaymentReceiptResponse"];
+                };
+            };
+        };
+    };
+    receiveUnassignedPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualPaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePartnerPaymentEventResponse"];
+                };
+            };
+        };
+    };
+    cancelUnassignedPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+                receiptId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelUnassignedReceiptRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePartnerPaymentEventResponse"];
+                };
+            };
+        };
+    };
+    allocate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentAllocationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePaymentAllocationChangeResponse"];
+                };
+            };
+        };
+    };
+    correctAllocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentAllocationCorrectionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePaymentAllocationChangeResponse"];
+                };
+            };
+        };
+    };
     logout: {
         parameters: {
             query?: never;
@@ -6334,12 +7444,12 @@ export interface operations {
             };
         };
     };
-    confirmAuctionPayment: {
+    confirmPayment_1: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                settlementId: number;
+                id: number;
             };
             cookie?: never;
         };
@@ -6355,30 +7465,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponseAuctionSettlementResponse"];
-                };
-            };
-        };
-    };
-    rebuild: {
-        parameters: {
-            query: {
-                auctionHouseId: number;
-                auctionDate: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseAuctionSettlementResponse"];
+                    "application/json": components["schemas"]["ApiResponseAuctionProceedsResponse"];
                 };
             };
         };
@@ -6409,6 +7496,54 @@ export interface operations {
             };
         };
     };
+    getFollowUp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionFollowUpResponse"];
+                };
+            };
+        };
+    };
+    decideFollowUp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionFollowUpCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionFollowUpResult"];
+                };
+            };
+        };
+    };
     confirmReturn: {
         parameters: {
             query?: never;
@@ -6431,6 +7566,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseAuctionLotResponse"];
+                };
+            };
+        };
+    };
+    getArrivals: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponseAuctionArrivalResponse"];
+                };
+            };
+        };
+    };
+    recordArrival: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionArrivalCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionFollowUpResult"];
+                };
+            };
+        };
+    };
+    cancelArrival: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                arrivalId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelAuctionArrivalCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionFollowUpResult"];
                 };
             };
         };
@@ -6644,7 +7857,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 상태 변경 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -7178,13 +8391,31 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 범위의 전체 작업 요약 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseListWorkOperationSummaryResponse"];
+                };
+            };
+            /** @description 기간 또는 조회 조건 오류 (VALIDATION_ERROR) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 조회 결과 상한 초과 (QUERY_LIMIT_EXCEEDED) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -7302,6 +8533,56 @@ export interface operations {
             };
         };
     };
+    getDirectSaleChanges: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectSaleChangeResponse"];
+                };
+            };
+        };
+    };
+    getDirectReturnArrivals: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDirectReturnArrivalState"];
+                };
+            };
+        };
+    };
     getPrintableSalesSlips: {
         parameters: {
             query?: {
@@ -7332,7 +8613,9 @@ export interface operations {
                 from?: string;
                 to?: string;
                 paymentStatus?: string;
+                /** @description 완료는 출고 완료·출하 완료를 포함하며 판매 유형 조건과 함께 적용합니다. 기존 개별 상태 검색도 지원합니다. */
                 salesStatus?: string;
+                salesType?: "DIRECT" | "AUCTION";
                 keyword?: string;
                 page?: number;
                 size?: number;
@@ -7343,13 +8626,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 조회 결과 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponsePageResponseSalesSlipListItemResponse"];
+                };
+            };
+            /** @description DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -7418,11 +8710,59 @@ export interface operations {
             };
         };
     };
+    targetHistory: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                targetType: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
+                targetId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponsePartnerPaymentEventResponse"];
+                };
+            };
+        };
+    };
+    getPaymentAllocationMetadata: {
+        parameters: {
+            query?: {
+                partnerId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePaymentAllocationMetadata"];
+                };
+            };
+        };
+    };
     getEvents: {
         parameters: {
             query?: {
                 partnerId?: number;
-                targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
+                targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
                 targetId?: number;
             };
             header?: never;
@@ -7446,7 +8786,7 @@ export interface operations {
         parameters: {
             query?: {
                 partnerId?: number;
-                targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
+                targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
                 targetId?: number;
                 eventType?: "PAYMENT_RECEIVED" | "PAYMENT_ALLOCATED" | "PREPAYMENT_RECEIVED" | "CREDIT_APPLIED" | "CREDIT_REFUND" | "AUTO_MATCH_CANDIDATE" | "AUTO_MATCH_CONFIRMED" | "MANUAL_MATCH_CONFIRMED" | "MATCH_REJECTED" | "PAYMENT_UNLINKED" | "ADJUSTMENT";
                 page?: number;
@@ -7833,6 +9173,82 @@ export interface operations {
             };
         };
     };
+    receipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+                receiptId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePaymentReceiptResponse"];
+                };
+            };
+        };
+    };
+    receiptAllocations: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                partnerId: number;
+                receiptId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponsePaymentAllocationResponse"];
+                };
+            };
+        };
+    };
+    allocationTargets: {
+        parameters: {
+            query: {
+                targetType: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "AUCTION_PROCEEDS" | "NONE";
+                keyword?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponsePaymentAllocationTargetOption"];
+                };
+            };
+        };
+    };
     getOption: {
         parameters: {
             query?: never;
@@ -8034,37 +9450,12 @@ export interface operations {
             };
         };
     };
-    getSettlements: {
-        parameters: {
-            query?: {
-                auctionHouseId?: number;
-                from?: string;
-                to?: string;
-                status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseListAuctionSettlementResponse"];
-                };
-            };
-        };
-    };
-    getSettlement: {
+    get_5: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                settlementId: number;
+                id: number;
             };
             cookie?: never;
         };
@@ -8076,43 +9467,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponseAuctionSettlementResponse"];
+                    "application/json": components["schemas"]["ApiResponseAuctionProceedsResponse"];
                 };
             };
         };
     };
-    getAuctionSettlementSummary: {
+    page: {
         parameters: {
             query?: {
                 auctionHouseId?: number;
-                from?: string;
-                to?: string;
-                status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseAuctionSettlementSummaryResponse"];
-                };
-            };
-        };
-    };
-    getAuctionSettlementPage: {
-        parameters: {
-            query?: {
-                auctionHouseId?: number;
-                from?: string;
-                to?: string;
-                status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
                 page?: number;
                 size?: number;
             };
@@ -8128,7 +9491,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponsePageResponseAuctionSettlementListItemResponse"];
+                    "application/json": components["schemas"]["ApiResponsePageResponseAuctionProceedsResponse"];
                 };
             };
         };
@@ -8141,7 +9504,7 @@ export interface operations {
                 market?: string;
                 variety?: string;
                 grade?: string;
-                status?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+                status?: "SHIPPED" | "WAITING" | "IN_PROGRESS" | "SOLD" | "PARTIALLY_SOLD" | "FAILED" | "REAUCTION_WAITING" | "RETURN_INFERRED" | "PARTIALLY_RETURNED" | "RETURNED" | "QUANTITY_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED" | "DISPOSED";
                 reviewOnly?: boolean;
                 returnOnly?: boolean;
                 waitingOnly?: boolean;

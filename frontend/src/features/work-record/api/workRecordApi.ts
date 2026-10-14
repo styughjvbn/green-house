@@ -19,6 +19,7 @@ import type {
   WorkOperationGraph,
   WorkOperationGraphDetail,
   WorkTargetPreviewPayload,
+  WorkCreationRequestKey,
 } from "../model/types";
 import type { WorkOperationRelationKind } from "../lib/workOperationRelations";
 import { manualWorkTargetSource } from "../model/workTargetSource";
@@ -31,13 +32,15 @@ export function getWorkHouses(): Promise<House[]> {
   return fetchApi<House[]>("/houses");
 }
 
-export async function getWorkTargetGroupOptions(): Promise<{
+export async function getWorkTargetGroupOptions(signal?: AbortSignal): Promise<{
   derivedGroups: WorkDerivedGroupOption[];
   collections: WorkCollectionOption[];
 }> {
   const [derivedGroups, collections] = await Promise.all([
-    fetchApi<WorkDerivedGroupOption[]>("/orchid-groups/derived-groups"),
-    fetchApi<WorkCollectionOption[]>("/orchid-group-collections"),
+    fetchApi<WorkDerivedGroupOption[]>("/orchid-groups/derived-groups", {
+      signal,
+    }),
+    fetchApi<WorkCollectionOption[]>("/orchid-group-collections", { signal }),
   ]);
   return {
     derivedGroups,
@@ -49,9 +52,11 @@ export async function getWorkTargetGroupOptions(): Promise<{
 
 export function getDerivedWorkTargetMembers(
   groupKey: string,
+  signal?: AbortSignal,
 ): Promise<OrchidGroup[]> {
   return fetchApi<OrchidGroup[]>(
     `/orchid-groups/derived-groups/${encodeURIComponent(groupKey)}/members`,
+    { signal },
   );
 }
 
@@ -61,6 +66,7 @@ export function getOrchidGroups(): Promise<OrchidGroup[]> {
 
 export async function createCompletedWorkOperation(
   payload: CompletedWorkOperationPayload,
+  key: WorkCreationRequestKey,
   workTypeName: string,
   title?: string | null,
 ): Promise<WorkOperation> {
@@ -80,6 +86,7 @@ export async function createCompletedWorkOperation(
       worker: payload.worker,
       memo: payload.memo,
     },
+    key,
   );
 }
 
@@ -95,11 +102,13 @@ export async function previewWorkOperationTargets(
 
 export async function createWorkOperationsBatch(
   payload: CreateWorkOperationPayload,
+  key: WorkCreationRequestKey,
 ): Promise<WorkOperation[]> {
   return requestWorkOperation<WorkOperation[]>(
     "/work-operations/batch",
     "POST",
     { operation: payload },
+    key,
   );
 }
 
@@ -140,6 +149,7 @@ type WorkOperationQuery = {
 
 export function getWorkOperations(
   filters: WorkOperationQuery = {},
+  signal?: AbortSignal,
 ): Promise<Page<WorkOperationSummary>> {
   const params = new URLSearchParams();
   if (filters.from) params.set("from", filters.from);
@@ -156,6 +166,7 @@ export function getWorkOperations(
   const query = params.toString();
   return fetchApi<Page<WorkOperationSummary>>(
     `/work-operations${query ? `?${query}` : ""}`,
+    { signal },
   );
 }
 
@@ -231,6 +242,7 @@ export function getWorkOperationGraph(
 
 export function getCalendarWorkOperations(
   filters: Omit<WorkOperationQuery, "page" | "size"> = {},
+  signal?: AbortSignal,
 ): Promise<WorkOperationSummary[]> {
   const params = new URLSearchParams();
   if (filters.from) params.set("from", filters.from);
@@ -239,6 +251,7 @@ export function getCalendarWorkOperations(
   if (filters.view) params.set("view", filters.view);
   return fetchApi<WorkOperationSummary[]>(
     `/work-operations/calendar?${params}`,
+    { signal },
   );
 }
 
@@ -390,12 +403,16 @@ async function requestWorkOperation<T>(
   path: string,
   method: "POST" | "PATCH",
   payload?: unknown,
+  creationKey?: WorkCreationRequestKey,
 ): Promise<T> {
   return requestApi<T>(
     path,
     {
       method,
-      headers: payload ? { "Content-Type": "application/json" } : undefined,
+      headers: {
+        ...(payload ? { "Content-Type": "application/json" } : {}),
+        ...(creationKey ? { "Idempotency-Key": creationKey } : {}),
+      },
       body: payload ? JSON.stringify(payload) : undefined,
     },
     "작업을 처리하지 못했습니다.",

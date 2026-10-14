@@ -1,17 +1,19 @@
 package com.greenhouse.backend;
 
-import com.greenhouse.backend.farm.domain.material.Material;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.farm.material.domain.Material;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.House;
+import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
-import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
+import com.greenhouse.backend.farm.variety.domain.Variety;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.operation.domain.WorkType;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,10 +27,14 @@ abstract class FarmFixtureIntegrationTest extends AbstractBackendIntegrationTest
 
   @Autowired protected EntityManager fixtureEntityManager;
 
+  protected List<Integer> fixtureHouseNumbers() {
+    return IntStream.rangeClosed(1, 15).boxed().toList();
+  }
+
   @BeforeEach
   void createFarmFixture() {
     BedZone occupiedZone = null;
-    for (int number = 1; number <= 15; number++) {
+    for (int number : fixtureHouseNumbers()) {
       var house = new House(number, number + "동");
       for (int bedNumber = 1; bedNumber <= 3; bedNumber++) {
         var bed = new PhysicalBed(bedNumber, bedNumber);

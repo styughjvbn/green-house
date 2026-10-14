@@ -6,7 +6,7 @@ import {
   readBusinessPartnerRouteState,
   readCreateSlip,
   readSalesRouteState,
-  readSettlementRouteState,
+  readProceedsRouteState,
   readPaymentHistoryPage,
 } from "../src/features/sales/lib/salesRouteParams.ts";
 
@@ -27,7 +27,8 @@ test("sales route state reads filters, paging, and create request", () => {
       from: "2026-07-01",
       to: "",
       partnerId: "3",
-      paymentStatus: "미입금",
+      salesType: "",
+      paymentStatus: "",
       salesStatus: "",
       keyword: "거래처",
     },
@@ -38,15 +39,15 @@ test("sales route state reads filters, paging, and create request", () => {
   assert.equal(readCreateSlip(params), true);
 });
 
-test("settlement pages and detail selection have the same server and browser URL state", () => {
-  const values = { page: "2", size: "20", settlementId: "42" };
-  const expected = { page: 2, size: 20, selectedSettlementId: 42 };
+test("proceeds pages and detail selection have the same server and browser URL state", () => {
+  const values = { page: "2", size: "20", proceedsId: "42" };
+  const expected = { page: 2, size: 20, selectedProceedsId: 42 };
   assert.deepEqual(
-    readSettlementRouteState(createServerSearchParamReader(values)),
+    readProceedsRouteState(createServerSearchParamReader(values)),
     expected,
   );
   assert.deepEqual(
-    readSettlementRouteState(new URLSearchParams(values)),
+    readProceedsRouteState(new URLSearchParams(values)),
     expected,
   );
 });
@@ -68,40 +69,39 @@ test("payment history URL distinguishes closed, first, and later pages", () => {
   );
 });
 
-test("settlement URLs normalize page bounds and reject invalid detail identifiers", () => {
-  assert.deepEqual(readSettlementRouteState(new URLSearchParams()), {
+test("proceeds URLs normalize page bounds and reject invalid detail identifiers", () => {
+  assert.deepEqual(readProceedsRouteState(new URLSearchParams()), {
     page: 0,
     size: 10,
-    selectedSettlementId: null,
+    selectedProceedsId: null,
   });
   assert.deepEqual(
-    readSettlementRouteState(
-      new URLSearchParams("page=-1&size=200&settlementId=-2"),
+    readProceedsRouteState(
+      new URLSearchParams("page=-1&size=200&proceedsId=-2"),
     ),
     {
       page: 0,
       size: 100,
-      selectedSettlementId: null,
+      selectedProceedsId: null,
     },
   );
   for (const value of ["NaN", "Infinity", "1.5", "not-a-number"]) {
     assert.deepEqual(
-      readSettlementRouteState(
-        new URLSearchParams({ page: value, size: value, settlementId: value }),
+      readProceedsRouteState(
+        new URLSearchParams({ page: value, size: value, proceedsId: value }),
       ),
       {
         page: 0,
         size: 10,
-        selectedSettlementId: null,
+        selectedProceedsId: null,
       },
     );
   }
   assert.equal(
-    readSettlementRouteState(new URLSearchParams("page=9999999999&size=0"))
-      .page,
+    readProceedsRouteState(new URLSearchParams("page=9999999999&size=0")).page,
     2_147_483_647,
   );
-  assert.equal(readSettlementRouteState(new URLSearchParams("size=0")).size, 1);
+  assert.equal(readProceedsRouteState(new URLSearchParams("size=0")).size, 1);
 });
 
 test("sales route state ignores invalid selected slip identifiers", () => {
@@ -135,6 +135,8 @@ test("partner and auction route state reject unsupported enum values", () => {
     size: 100,
   });
   assert.deepEqual(readAuctionRouteState(params), {
+    selectedLotId: null,
+    arrivalPage: 0,
     filters: {
       from: "",
       to: "",
@@ -150,4 +152,88 @@ test("partner and auction route state reject unsupported enum values", () => {
     page: 0,
     size: 100,
   });
+});
+
+test("legacy settlement identifiers do not select a proceeds target", () => {
+  assert.equal(
+    readProceedsRouteState(new URLSearchParams("settlementId=123"))
+      .selectedProceedsId,
+    null,
+  );
+});
+
+test("auction selection and arrival history survive URL reload and reject invalid identifiers", () => {
+  const state = readAuctionRouteState(
+    new URLSearchParams("lotId=42&arrivalPage=2"),
+  );
+  assert.equal(state.selectedLotId, 42);
+  assert.equal(state.arrivalPage, 2);
+  for (const value of ["0", "-1", "NaN", "1.5", "9007199254740992"]) {
+    assert.equal(
+      readAuctionRouteState(new URLSearchParams({ lotId: value }))
+        .selectedLotId,
+      null,
+    );
+  }
+  assert.equal(
+    readAuctionRouteState(new URLSearchParams("arrivalPage=-1")).arrivalPage,
+    0,
+  );
+});
+
+test("v2 proceeds paging is independent from lot filters and paging", () => {
+  const params = new URLSearchParams(
+    "page=3&size=20&proceedsPage=1&proceedsSize=50&lotId=42&proceedsId=12&market=서울",
+  );
+  assert.deepEqual(readProceedsRouteState(params, "auction"), {
+    page: 1,
+    size: 50,
+    selectedProceedsId: 12,
+  });
+  assert.equal(readAuctionRouteState(params).page, 3);
+  assert.equal(readAuctionRouteState(params).selectedLotId, 42);
+  assert.deepEqual(readProceedsRouteState(params), {
+    page: 3,
+    size: 20,
+    selectedProceedsId: 12,
+  });
+});
+
+test("sales type and grouped dispatch filters survive URLs while legacy completion URLs keep their type", () => {
+  for (const salesType of ["", "DIRECT", "AUCTION"]) {
+    const state = readSalesRouteState(
+      new URLSearchParams({ salesType, salesStatus: "완료" }),
+    );
+    assert.equal(state.filters.salesType, salesType);
+    assert.equal(state.filters.salesStatus, "완료");
+  }
+  for (const [status, type] of [
+    ["출고 완료", "DIRECT"],
+    ["출하 완료", "AUCTION"],
+  ]) {
+    const filters = readSalesRouteState(
+      new URLSearchParams({ salesStatus: status }),
+    ).filters;
+    assert.equal(filters.salesType, type);
+    assert.equal(filters.salesStatus, "완료");
+  }
+  assert.equal(
+    readSalesRouteState(new URLSearchParams("salesType=INVALID")).filters
+      .salesType,
+    "",
+  );
+});
+
+test("paused payment filters are ignored in both server and browser URLs", () => {
+  for (const paymentStatus of ["미입금", "부분입금", "입금 완료"]) {
+    const values = { paymentStatus, slipId: "42", paymentPage: "0" };
+    for (const params of [
+      new URLSearchParams(values),
+      createServerSearchParamReader(values),
+    ]) {
+      const state = readSalesRouteState(params);
+      assert.equal(state.filters.paymentStatus, "");
+      assert.equal(state.selectedSlipId, 42);
+    }
+  }
 });

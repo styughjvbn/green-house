@@ -22,17 +22,21 @@ type PartnerSelectOption = {
 
 export function BusinessPartnerSelect({
   label,
+  layout = "stacked",
   value,
   onChange,
   auctionHouse,
   activeOnly = false,
+  required = false,
   disabled = false,
 }: {
   label: string;
+  layout?: "stacked" | "row";
   value: string;
   onChange: (value: string) => void;
   auctionHouse?: boolean;
   activeOnly?: boolean;
+  required?: boolean;
   disabled?: boolean;
 }) {
   const id = useId();
@@ -75,59 +79,70 @@ export function BusinessPartnerSelect({
   }
 
   return (
-    <div className="min-w-0 space-y-1">
+    <div
+      className={
+        layout === "row"
+          ? "grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-x-3 border-b border-[#edf0ec] py-4 sm:grid-cols-[7rem_minmax(0,1fr)]"
+          : "min-w-0 space-y-1"
+      }
+    >
       <label
         className="block text-sm font-semibold text-[#435047]"
         htmlFor={id}
       >
         {label}
+        {required ? <span aria-hidden="true"> *</span> : null}
       </label>
-      <Select<PartnerSelectOption, false>
-        inputId={id}
-        inputValue={keyword}
-        isClearable
-        isDisabled={disabled}
-        isLoading={optionsQuery.isFetching || selectedQuery.isFetching}
-        isOptionDisabled={(option) => activeOnly && !option.partner.active}
-        loadingMessage={() => `${label} 검색 중`}
-        menuPosition="fixed"
-        noOptionsMessage={() =>
-          optionsQuery.isError
-            ? `${label}를 불러오지 못했습니다.`
-            : "검색 결과가 없습니다."
-        }
-        options={selectOptions}
-        placeholder={activeOnly ? `${label} 검색` : "전체"}
-        styles={selectStyles}
-        value={selectedOption}
-        onChange={handleChange}
-        onInputChange={(nextKeyword, action) => {
-          if (action.action === "input-change") setKeyword(nextKeyword);
-        }}
-        onMenuScrollToBottom={() => {
-          if (optionsQuery.hasNextPage && !optionsQuery.isFetchingNextPage) {
-            void optionsQuery.fetchNextPage();
+      <div className="min-w-0">
+        <Select<PartnerSelectOption, false>
+          required={required}
+          inputId={id}
+          instanceId={id}
+          inputValue={keyword}
+          isClearable
+          isDisabled={disabled}
+          isLoading={optionsQuery.isFetching || selectedQuery.isFetching}
+          isOptionDisabled={(option) => activeOnly && !option.partner.active}
+          loadingMessage={() => `${label} 검색 중`}
+          menuPosition="fixed"
+          noOptionsMessage={() =>
+            optionsQuery.isError
+              ? `${label}를 불러오지 못했습니다.`
+              : "검색 결과가 없습니다."
           }
-        }}
-      />
-      {hasError ? (
-        <p role="alert" className="text-xs text-[#9b341e]">
-          거래처를 불러오지 못했습니다.{" "}
-          <button
-            className="font-semibold underline"
-            type="button"
-            disabled={
-              disabled || optionsQuery.isFetching || selectedQuery.isFetching
+          options={selectOptions}
+          placeholder={activeOnly ? `${label} 검색` : "전체"}
+          styles={selectStyles}
+          value={selectedOption}
+          onChange={handleChange}
+          onInputChange={(nextKeyword, action) => {
+            if (action.action === "input-change") setKeyword(nextKeyword);
+          }}
+          onMenuScrollToBottom={() => {
+            if (optionsQuery.hasNextPage && !optionsQuery.isFetchingNextPage) {
+              void optionsQuery.fetchNextPage();
             }
-            onClick={() => {
-              void optionsQuery.refetch();
-              if (value) void selectedQuery.refetch();
-            }}
-          >
-            다시 조회
-          </button>
-        </p>
-      ) : null}
+          }}
+        />
+        {hasError ? (
+          <p role="alert" className="text-xs text-[#9b341e]">
+            거래처를 불러오지 못했습니다.{" "}
+            <button
+              className="font-semibold underline"
+              type="button"
+              disabled={
+                disabled || optionsQuery.isFetching || selectedQuery.isFetching
+              }
+              onClick={() => {
+                void optionsQuery.refetch();
+                if (value) void selectedQuery.refetch();
+              }}
+            >
+              다시 조회
+            </button>
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

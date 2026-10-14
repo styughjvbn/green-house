@@ -149,6 +149,7 @@ jobs:
             backend/build/reports/tests
             backend/build/test-results
             backend/build/work-benchmark
+            backend/build/test-measurements
           if-no-files-found: ignore
           retention-days: 14
       - name: Write PostgreSQL summary
@@ -192,7 +193,8 @@ jobs:
       - name: Generate OpenAPI
         id: openapi
         continue-on-error: true
-        run: python3 scripts/generate_openapi.py
+        # Cold Gradle dependency resolution, compilation and Spring startup share this deadline.
+        run: python3 scripts/generate_openapi.py --timeout 300
       - name: Generate frontend API types
         id: api-types
         continue-on-error: true

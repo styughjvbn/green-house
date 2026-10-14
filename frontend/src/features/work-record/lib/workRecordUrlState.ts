@@ -3,6 +3,11 @@ import type { WorkOperationFilterState } from "../model/types";
 
 export type WorkWorkspaceScope = "MANAGEMENT" | "ALL";
 export type WorkWorkspaceView = "LIST" | "CALENDAR";
+export type WorkFilterBadgeKey = "keyword" | "period" | "status" | "scope";
+
+export type WorkWorkspaceFilterState = WorkOperationFilterState & {
+  scope: WorkWorkspaceScope;
+};
 
 export type WorkRecordUrlState = {
   filters: WorkOperationFilterState;
@@ -99,7 +104,7 @@ export function readWorkRecordUrlState(
     },
     month: readMonth(params.get("month"), defaultMonth),
     page: readBoundedInteger(params.get("page"), 0, 0, Number.MAX_SAFE_INTEGER),
-    scope: params.get("scope") === "ALL" ? "ALL" : "MANAGEMENT",
+    scope: params.get("scope") === "MANAGEMENT" ? "MANAGEMENT" : "ALL",
     size: readBoundedInteger(params.get("size"), 20, 1, 100),
     view: params.get("view") === "CALENDAR" ? "CALENDAR" : "LIST",
   };
@@ -122,6 +127,14 @@ export function setWorkWorkspaceScope(
 ) {
   params.set("scope", scope);
   params.set("page", "0");
+}
+
+export function writeWorkWorkspaceFilterParams(
+  params: URLSearchParams,
+  filters: WorkWorkspaceFilterState,
+) {
+  writeWorkListFilterParams(params, filters);
+  setWorkWorkspaceScope(params, filters.scope);
 }
 
 export function setWorkWorkspaceView(
