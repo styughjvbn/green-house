@@ -28,7 +28,7 @@ class WorkCreationSnapshotMigrationPostgresE2ETest extends WorkE2ETestBase {
             POSTGRES.getUsername(),
             POSTGRES.getPassword());
     try {
-      Flyway.configure().dataSource(source).target("39").load().migrate();
+      Flyway.configure().dataSource(source).target("34").load().migrate();
       var jdbc = new JdbcTemplate(source);
       jdbc.execute(
           """
@@ -53,7 +53,7 @@ class WorkCreationSnapshotMigrationPostgresE2ETest extends WorkE2ETestBase {
           jdbc.queryForList(
               "select to_jsonb(r)::text from work_command_receipt_memberships r order by 1",
               String.class);
-      var upgrade = Flyway.configure().dataSource(source).target("40").load();
+      var upgrade = Flyway.configure().dataSource(source).target("35").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
       assertThat(
               jdbc.queryForList(

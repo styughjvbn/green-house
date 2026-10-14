@@ -17,11 +17,11 @@ class DirectSaleChangeMigrationPostgresE2ETest {
   static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18-alpine");
 
   @Test
-  void addsEmptyLedgerAndPreservesSignedHistoricalFactsAndAllExistingRows() {
+  void addsEmptyCommercialAndPhysicalLedgersAndPreservesAllExistingRows() {
     var source =
         new DriverManagerDataSource(
             POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
-    Flyway.configure().dataSource(source).target("58").load().migrate();
+    Flyway.configure().dataSource(source).target("40").load().migrate();
     var jdbc = new JdbcTemplate(source);
     jdbc.execute(
         """
@@ -44,10 +44,15 @@ class DirectSaleChangeMigrationPostgresE2ETest {
           table,
           jdbc.queryForList(
               "SELECT to_jsonb(row)::text FROM " + table + " row ORDER BY 1", String.class));
-    var migration = Flyway.configure().dataSource(source).target("59").load();
+    var migration = Flyway.configure().dataSource(source).target("41").load();
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM direct_return_arrivals", Long.class))
+        .isZero();
+    assertThat(
+            jdbc.queryForObject("SELECT count(*) FROM direct_return_command_receipts", Long.class))
+        .isZero();
     assertThat(jdbc.queryForObject("SELECT count(*) FROM direct_sale_changes", Long.class))
         .isZero();
     for (var table : tables)

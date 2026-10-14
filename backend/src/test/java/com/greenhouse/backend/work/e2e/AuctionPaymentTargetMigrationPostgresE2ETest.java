@@ -28,8 +28,7 @@ class AuctionPaymentTargetMigrationPostgresE2ETest {
         jdbc.queryForList(
             "select to_jsonb(e)-'target_type'-'target_id' as fact from partner_payment_events e order by id");
     var results = jdbc.queryForList("select * from auction_result_lines order by id");
-    var legacy = jdbc.queryForList("select * from auction_settlements order by id");
-    var migration = Flyway.configure().dataSource(source).target("47").load();
+    var migration = Flyway.configure().dataSource(source).target("38").load();
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();
@@ -39,8 +38,8 @@ class AuctionPaymentTargetMigrationPostgresE2ETest {
         .isEqualTo(facts);
     assertThat(jdbc.queryForList("select * from auction_result_lines order by id"))
         .isEqualTo(results);
-    assertThat(jdbc.queryForList("select * from auction_settlements order by id"))
-        .isEqualTo(legacy);
+    assertThat(jdbc.queryForObject("SELECT to_regclass('auction_settlements')::text", String.class))
+        .isNull();
     var alias = jdbc.queryForMap("select * from payment_target_aliases");
     assertThat(alias.get("original_target_id")).isEqualTo(906L);
     Long target = ((Number) alias.get("target_id")).longValue();
@@ -77,116 +76,37 @@ class AuctionPaymentTargetMigrationPostgresE2ETest {
     seed(jdbc);
     jdbc.execute("update partner_payment_events set target_id=999999 where id=908");
     var before = jdbc.queryForList("select * from partner_payment_events order by id");
-    assertThatThrownBy(() -> Flyway.configure().dataSource(source).target("47").load().migrate())
+    assertThatThrownBy(() -> Flyway.configure().dataSource(source).target("38").load().migrate())
         .hasStackTraceContaining("Auction payment target is missing");
     assertThat(jdbc.queryForList("select * from partner_payment_events order by id"))
         .isEqualTo(before);
-    assertThat(jdbc.queryForObject("select count(*) from auction_proceeds", Long.class)).isZero();
+    assertThat(jdbc.queryForObject("SELECT to_regclass('auction_proceeds')::text", String.class))
+        .isNull();
     assertThat(
             jdbc.queryForObject("select to_regclass('payment_target_aliases')::text", String.class))
         .isNull();
   }
 
   @Test
-  void alreadyOwnedResultsAbortInsteadOfInferringAMerge() {
+  void overlappingPaidSettlementsAbortInsteadOfInferringResultOwnership() {
     var source = database();
     var jdbc = new JdbcTemplate(source);
     seed(jdbc);
+    // Simulate a damaged legacy source: final result ownership must still reject ambiguity.
     jdbc.execute(
-        "insert into auction_proceeds (id,auction_house_id,created_at,updated_at) values (10000,901,current_timestamp,current_timestamp)");
-    jdbc.execute("insert into auction_proceeds_results values (905,10000)");
-    var before = jdbc.queryForList("select * from partner_payment_events order by id");
-    assertThatThrownBy(() -> Flyway.configure().dataSource(source).target("47").load().migrate())
-        .hasStackTraceContaining("already belong to a proceeds target");
-    assertThat(jdbc.queryForList("select * from partner_payment_events order by id"))
-        .isEqualTo(before);
-    assertThat(jdbc.queryForObject("select count(*) from auction_proceeds", Long.class))
-        .isEqualTo(1);
-  }
-
-  @Test
-  void retirementConvertsLateActualCashAndPreservesAlreadyConfirmedProceeds() {
-    var source = database();
-    var jdbc = new JdbcTemplate(source);
-    seed(jdbc);
-    Flyway.configure().dataSource(source).target("49").load().migrate();
-    Long existingId =
-        jdbc.queryForObject(
-            "select target_id from payment_target_aliases where original_target_id=906",
-            Long.class);
-    jdbc.update(
-        "update auction_proceeds set source_reference='확인된 지급 자료', reported_gross_amount=1000,receivable_amount=930,matching_confirmed=true,confirmed_at=timestamp '2026-10-07 00:00:00',confirmed_by='확인자' where id=?",
-        existingId);
-    var confirmed = jdbc.queryForMap("select * from auction_proceeds where id=?", existingId);
-    jdbc.update(
-        "update partner_payment_events set target_type='AUCTION_SETTLEMENT',target_id=906 where id=909");
+        "ALTER TABLE auction_settlement_lines DROP CONSTRAINT auction_settlement_lines_auction_result_line_id_key");
     jdbc.execute(
-        "insert into auction_attempts(id,shipment_lot_id,auction_date,attempt_no,attempt_status,created_at,updated_at) values(914,903,date '2026-10-08',2,'SOLD',current_timestamp,current_timestamp)");
+        "INSERT INTO auction_settlement_lines(id,settlement_id,auction_result_line_id,auction_shipment_lot_id,quantity,unit_price,amount,status,created_at,updated_at) VALUES(918,907,905,903,10,100,1000,'UNPAID',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
     jdbc.execute(
-        "insert into auction_result_lines(id,auction_attempt_id,auction_date,quantity,unit_price,amount,inspection_status,created_at,updated_at) values(915,914,date '2026-10-08',10,50,500,'NORMAL',current_timestamp,current_timestamp)");
-    jdbc.execute(
-        "insert into auction_settlement_lines(id,settlement_id,auction_result_line_id,auction_shipment_lot_id,quantity,unit_price,amount,status,created_at,updated_at) values(918,907,915,903,10,50,500,'UNPAID',current_timestamp,current_timestamp)");
-    jdbc.execute(
-        "insert into partner_payment_events(id,partner_id,event_type,event_date,amount,unapplied_amount,target_type,target_id,status,external_uid,created_at,updated_at) values(916,901,'PAYMENT_RECEIVED',date '2026-10-08',100,0,'AUCTION_SETTLEMENT',907,'FULLY_APPLIED','MANUAL:AUCTION_SETTLEMENT:907:late',current_timestamp,current_timestamp)");
-    jdbc.execute(
-        "insert into partner_payment_events(id,partner_id,event_type,event_date,amount,unapplied_amount,target_type,target_id,status,parent_event_id,created_at,updated_at) values(917,901,'MANUAL_MATCH_CONFIRMED',date '2026-10-08',100,0,'AUCTION_SETTLEMENT',907,'CONFIRMED',916,current_timestamp,current_timestamp)");
-    var cash =
-        jdbc.queryForList(
-            "select to_jsonb(event)-'target_type'-'target_id' as fact from partner_payment_events event order by id");
-    var results = jdbc.queryForList("select * from auction_result_lines order by id");
-    var migration = Flyway.configure().dataSource(source).target("50").load();
-    assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
-    assertThat(jdbc.queryForMap("select * from auction_proceeds where id=?", existingId))
-        .isEqualTo(confirmed);
-    assertThat(
-            jdbc.queryForList(
-                "select to_jsonb(event)-'target_type'-'target_id' as fact from partner_payment_events event order by id"))
+        "INSERT INTO partner_payment_events(id,partner_id,event_type,event_date,amount,unapplied_amount,target_type,target_id,status,created_at,updated_at) VALUES(916,901,'PAYMENT_RECEIVED',DATE '2026-10-08',100,0,'AUCTION_SETTLEMENT',907,'FULLY_APPLIED',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)");
+    var cash = jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id");
+    assertThatThrownBy(() -> Flyway.configure().dataSource(source).target("38").load().migrate())
+        .hasStackTraceContaining("duplicate key");
+    assertThat(jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id"))
         .isEqualTo(cash);
-    assertThat(jdbc.queryForList("select * from auction_result_lines order by id"))
-        .isEqualTo(results);
-    assertThat(
-            jdbc.queryForObject(
-                "select count(*) from partner_payment_events where target_type='AUCTION_SETTLEMENT'",
-                Long.class))
-        .isZero();
-    Long lateId =
-        jdbc.queryForObject(
-            "select target_id from payment_target_aliases where original_target_id=907",
-            Long.class);
-    var late = jdbc.queryForMap("select * from auction_proceeds where id=?", lateId);
-    assertThat(late.get("source_reference")).isNull();
-    assertThat(late.get("reported_gross_amount")).isNull();
-    assertThat(late.get("receivable_amount")).isNull();
-    assertThat(late.get("matching_confirmed")).isEqualTo(false);
-    assertThat(
-            jdbc.queryForObject(
-                "select auction_result_line_id from auction_proceeds_results where auction_proceeds_id=?",
-                Long.class,
-                lateId))
-        .isEqualTo(915);
-    assertThat(jdbc.queryForObject("select to_regclass('auction_settlements')::text", String.class))
+    assertThat(jdbc.queryForObject("SELECT to_regclass('auction_proceeds')::text", String.class))
         .isNull();
-    assertThat(
-            jdbc.queryForObject(
-                "select to_regclass('auction_settlement_lines')::text", String.class))
-        .isNull();
-    assertThat(migration.migrate().migrationsExecuted).isZero();
-  }
-
-  @Test
-  void retirementAbortsMissingLateTargetsAndKeepsDerivedTablesAndCashIntact() {
-    var source = database();
-    var jdbc = new JdbcTemplate(source);
-    seed(jdbc);
-    Flyway.configure().dataSource(source).target("49").load().migrate();
-    jdbc.update(
-        "update partner_payment_events set target_type='AUCTION_SETTLEMENT',target_id=99999 where id=908");
-    var cash = jdbc.queryForList("select * from partner_payment_events order by id");
-    assertThatThrownBy(() -> Flyway.configure().dataSource(source).target("50").load().migrate())
-        .hasStackTraceContaining("Auction payment target is missing");
-    assertThat(jdbc.queryForList("select * from partner_payment_events order by id"))
-        .isEqualTo(cash);
-    assertThat(jdbc.queryForObject("select count(*) from auction_settlements", Long.class))
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM auction_settlements", Long.class))
         .isEqualTo(2);
   }
 
@@ -202,7 +122,7 @@ class AuctionPaymentTargetMigrationPostgresE2ETest {
             POSTGRES.getJdbcUrl().replace(POSTGRES.getDatabaseName(), name),
             POSTGRES.getUsername(),
             POSTGRES.getPassword());
-    Flyway.configure().dataSource(source).target("46").load().migrate();
+    Flyway.configure().dataSource(source).target("37").load().migrate();
     return source;
   }
 

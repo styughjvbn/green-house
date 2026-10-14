@@ -218,19 +218,15 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
   기존 보정 데이터 이관은 포함하지 않는다. 적용 대상 DB에 보정 작업·관계 또는 보정 상태가 있으면
   마이그레이션을 중단한다. 개발 DB에서 0건을 확인했으며 다른 환경은 배포 전에 별도로 확인한다.
 - V34는 현재 실사 수량의 멱등 접수·감사 기록을 추가한다. 기존 수량이나 과거 작업을 backfill하지 않는다. 배포 시 migration 적용과 새 백엔드 기동 후 프론트를 함께 갱신한다. 실사 API는 기존 상태·위치 동기화 API의 재활성화가 아니다.
-- V35는 0이 아닌 품목 수량·비음수 단가·BIGINT 곱셈과 저장 금액의 일치를 CHECK로 보호한다. 과거 음수 수량/금액 반품과 음수 전표 총액은 그대로 보존한다. `NOT VALID`로 추가하며 최신 백업 복원본에서 위반 대사와 validation을 검증한다. CHECK는 여러 품목의 합계를 검증하지 못하므로 전표 합계의 정확 연산은 Sales 도메인이 담당한다.
-- V36은 경매 결과·반환 확인의 요청 receipt를 추가한다. V35까지의 결과·반환은 그대로 보존하고 요청 키를 추정 backfill하지 않는다. 새 API는 요청 키가 필수이므로 경매 입력을 잠시 중지하고 기존 백엔드의 쓰기를 멈춘 뒤 migration·새 백엔드·키를 유지하는 프론트 버전을 함께 배포한다. 구형 화면·연동의 키 없는 요청은 400으로 거절된다. 새 receipt 생성 후 구버전 writer로 rollback하면 중복 방어를 우회하므로 구버전 쓰기를 재개하지 않는다. receipt의 임의 삭제·TTL 정리와 응답 schema 변경은 replay 보존 검토 없이 수행하지 않는다. 기존 중복 결과·반환과 정산 영향은 별도 대사 대상이다.
-- V37은 경매 이력에 nullable 수량 전후값 6개와 완전성·비음수 CHECK를 추가한다. 기존 이력·receipt·lot·정산·입금을 변경하지 않는다. 이력 테이블의 ALTER/CHECK 적용에는 잠금·검사 시간이 필요하므로 경매 쓰기를 중지한 상태에서 migration·새 백엔드·capability를 사용하는 프론트를 함께 배포한다. 새 Receipt 응답에는 신규 필드가 포함되며 구버전의 strict JSON mapper는 이를 읽지 못하므로, 새 Receipt 생성 이후 호환 검증 없이 구버전 writer를 재개하지 않는다. 기존 Receipt는 새 버전에서 그대로 재조회하며, 과거 누락 수량은 운영 자료 대사 없이 역산하지 않는다.
-- V38은 Sales 소유 생성 접수 테이블을 추가하고 기존 전표·예약·출하를 변경하거나 요청 키를 backfill하지 않는다. migration과 새 백엔드 적용 후 생성 키를 사용하는 프론트를 배포한다. 구버전 writer는 새 header를 무시해 재전송을 신규 생성하므로 전환 시 해당 writer의 판매 생성을 중지하고, 접수가 생긴 뒤 구버전 writer로 재시도하지 않는다. 키 없는 기존 연동은 계속 별도 생성이므로 재전송 정책을 별도로 확인한다. 생성 접수는 임의 삭제·TTL 정리하지 않으며 영속 지문·응답 변경은 이전 버전 replay 검증을 포함한다. 성공 여부가 미확인인 브라우저 생성 키도 임의 초기화하지 않는다.
-- V39는 Farm 소유 입고 생성 접수 테이블을 추가하고 기존 입고·품종·난 묶음·Work·Mutation을 변경하거나 생성 키를 backfill하지 않는다. migration·새 백엔드 적용 후 키를 유지하는 입고 프론트를 배포한다. 구버전 writer는 header를 무시해 재전송 입고·작업을 다시 생성하거나 배치 충돌을 반환하므로 전환 시 해당 writer의 입고 생성을 중지하고, 접수가 생긴 뒤 구버전으로 재시도하지 않는다. 키 없는 기존 연동은 별도 생성 계약을 유지한다. 접수의 임의 삭제/TTL과 브라우저의 미확인 키 초기화를 피하며 영속 지문·응답 변경은 이전 replay 호환을 검증한다.
-- V40은 기존 Work Receipt에 선택형 최초 응답 snapshot과 신규 일반 생성 범위의 완료 쌍/응답 ID 일치 제약을 추가한다. 과거 Receipt의 지문·결과 ID·membership과 업무 행은 수정하지 않으며 미상 응답을 backfill하지 않는다. migration·새 백엔드 적용 후 키를 유지하는 일반 Work 등록 화면을 배포하고, header를 무시하는 구버전 writer의 해당 생성을 중지한다. 완료 접수 뒤 구버전 writer로 재시도하거나 접수·미확인 브라우저 키를 임의 삭제/TTL 정리하지 않는다. 기존 구조 변경·즉시 실행·포트의 ID 기반 replay는 유지한다. 지문·응답 schema 변경은 보존된 최초 응답의 호환 검증을 포함한다.
-- V41은 확인된 참조·날짜 정렬·활성 배치·계보 라벨 조회를 위한 index를 추가한다. 업무 행·원장·접수를 backfill하거나 제약을 변경하지 않는다. 쓰기 중지 시간을 확보하고 아래의 적용 절차를 따른다.
-- V42는 정산별 초기화의 반복 조회를 지원하는 양수 경매 결과의 날짜/ID partial index를 추가한다. 업무 행·원장·입금·제약을 변경하지 않으며 V41과 같은 쓰기 중지·transactional index 적용 절차를 따른다.
+- V35는 경매·판매·입고·작업·배분 명령의 접수와 최종 응답 CHECK를 추가한다. V34까지의 기록은 원래 입력 identity와 응답이 없으므로 이를 추정 backfill하지 않는다. 완료 응답과 과거 snapshot은 현재 Entity로 다시 만들지 않는다.
+- V37은 판매 품목의 정확한 금액 CHECK와 Direct 거래/가격 원천·기존 표시 문구·유효 배분 projection을 전환한다. 과거 음수·overflow 원자료는 보존하며 CHECK는 NOT VALID로 적용한다. 없는 수납을 합성하거나 이전 전용 대사 테이블을 만들지 않는다.
+- V39는 경매 수량 전후 이력과 후속 결정·실제 도착을 추가한다. 기존 이력의 수량 전후값은 미상으로 유지한다. 새 결과·도착·기록 전용 도착·취소는 같은 lot의 수량과 접수를 원자적으로 반영한다.
+- V36은 운영 참조·날짜 정렬·활성 배치·계보·양수 경매 결과 조회 인덱스만 추가한다. 제거할 파생 정산 테이블의 인덱스는 생성하지 않는다.
 - 실사 수량 조정(`features.stock-count.enabled`)과 작업 기록 수량 정정(`features.work-quantity-correction.enabled`)은 기본값 `false`로 보류한다. 운영에서 활성화하지 않는다. V34와 기존 감사 기록은 보존하고, 작업일·상태 정정 및 결과 생성 취소는 계속 허용한다.
 
 V24 전환 시 기존 코드 발급 방식과 새 방식이 동시에 쓰이지 않도록 이전 백엔드 인스턴스의 쓰기를 중지한 후 migration과 새 버전 기동을 진행한다. 신규 코드 생성 후 구버전으로 단순 rollback하지 않는다. 데이터 수입 등으로 코드를 직접 추가하는 운영 변경은 쓰기를 중지하고 코드 sequence가 추가된 숫자 코드보다 큰지 함께 확인한다.
 
-### 조회 index 점검과 V41 적용
+### 조회 index 점검과 V36 적용
 
 배포 전에 read-only 계정으로 실제 DB의 버전·통계·index를 확인한다. repository root에서 실행한다.
 
@@ -240,24 +236,31 @@ psql "$AUDIT_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/performance/inspect-bac
 
 스크립트는 추정 행 수·ANALYZE 시점, FK의 전체 B-tree 선두 열 지원, index 유효성·사용 횟수·크기를 읽는다. partial/index INCLUDE 열은 전체 FK 지원으로 계산하지 않는다. 사용 횟수는 통계 초기화 이후 값이므로 0회라는 이유만으로 기존 index를 삭제하지 않는다. 필요한 실제 요청 조건의 실행 계획은 별도로 확인한다. 로컬 검증은 PostgreSQL 18의 합성 데이터이며 운영 PostgreSQL 버전·분포·통계의 검증을 대신하지 않는다.
 
-V41은 `CREATE INDEX CONCURRENTLY`가 아닌 일반 index 생성 17개를 **하나의 Flyway transaction**에서 실행한다. 업무 writer와 batch를 중지하고 기존 쓰기 transaction 종료를 확인한 뒤 migration을 적용한다. 조회는 일반적으로 가능하지만 index 생성은 대상 테이블의 쓰기와 충돌하고 취득한 잠금을 commit까지 유지한다. `lock_timeout=5s`는 잠금 대기 제한, `statement_timeout=5min`은 각 SQL의 실행 제한이며 migration 전체 중지 시간을 보장하지 않는다. 큰 테이블은 실제 데이터 복제본에서 시간·디스크 여유를 먼저 확인한다.
+V36은 `CREATE INDEX CONCURRENTLY`가 아닌 일반 index 생성 15개를 **하나의 Flyway transaction**에서 실행한다. 업무 writer와 batch를 중지하고 기존 쓰기 transaction 종료를 확인한 뒤 migration을 적용한다. 조회는 일반적으로 가능하지만 index 생성은 대상 테이블의 쓰기와 충돌하고 취득한 잠금을 commit까지 유지한다. `lock_timeout=5s`는 잠금 대기 제한, `statement_timeout=5min`은 각 SQL의 실행 제한이며 migration 전체 중지 시간을 보장하지 않는다. 큰 테이블은 실제 데이터 복제본에서 시간·디스크 여유를 먼저 확인한다.
 
-실패·timeout이면 V41의 index 생성 전체가 rollback된다. 충돌·용량 원인을 해소하고 같은 release의 Flyway로 재시도한다. 기존 migration 파일을 수정하거나 일부 index를 수동으로 생성하여 실패를 우회하지 않는다. 성공 후 catalog의 정의·유효성을 확인하고 쓰기를 재개한다. 신규 index의 크기·WAL·수량 갱신의 HOT 비율도 관찰한다. quantity predicate를 사용하는 활성 배치 partial은 양수 수량 변경에도 HOT update에 영향을 줄 수 있다. 상세 비교와 미측정 범위는 [BE-035 실행 계획 검증](../backend-audit/archive/11-index-plan-validation.md)을 따른다.
+실패·timeout이면 V36의 index 생성 전체가 rollback된다. 충돌·용량 원인을 해소하고 같은 release의 Flyway로 재시도한다. 기존 migration 파일을 수정하거나 일부 index를 수동으로 생성하여 실패를 우회하지 않는다. 성공 후 catalog의 정의·유효성을 확인하고 쓰기를 재개한다. 신규 index의 크기·WAL·수량 갱신의 HOT 비율도 관찰한다. quantity predicate를 사용하는 활성 배치 partial은 양수 수량 변경에도 HOT update에 영향을 줄 수 있다. 상세 비교와 미측정 범위는 [BE-035 실행 계획 검증](../backend-audit/archive/11-index-plan-validation.md)을 따른다.
 
-### Sales 금액 원천 전환과 파생 정산 제거
+### 운영 미적용 마이그레이션 통합
 
-V43–V49는 Direct 전용 거래·가격, 유효 배분 조회, 경매 대금, 후속 결정과 실제 반환 도착을 준비·전환한다.
-V43의 기존 금액 원문·대사와 V49의 전환 직전 불일치 근거를 보존하며 검토 대상은 새 입금·금액 변경이 차단된다.
-원장이나 Farm 수량으로 불일치를 자동 보정하지 않는다. 원천 거래가 누락되면 migration을 중단한다.
+2026-10-14에 `temp/green-house_20261014_030001.dump.gz`(SHA-256 `7c602303a3284969eb6a79176fbe9b71354844d8d74853255f4fa6308b83877c`)의 Flyway 이력을 확인했다. 운영 백업은 V34까지 성공 적용되어 있으며 V1~V34의 파일·checksum은 변경하지 않는다. 미적용 개발 초안 V35~V60은 다음 7개로 통합한다.
 
-V47·V50은 기존 실제 경매 입금의 대상 참조를 경매 대금으로 바꾸고 입금 ID·금액·날짜·부모 연결·멱등키를 유지한다.
-제공 지급액이나 매칭 확인을 추정하지 않으며 기존 확인된 대금을 변경하지 않는다.
-누락된 대상·별칭이나 결과 소유권 충돌은 배포 전에 대사해야 하며 migration 실패 시 해당 migration이 rollback된다.
+| 최종 버전 | 적용 내용 | 통합한 개발 초안 |
+|---|---|---|
+| V35 | 경매·전표·입고·작업·배분 명령 접수와 최종 CHECK | V36·V38·V39·V40·V51, V46의 접수 CHECK |
+| V36 | 운영 조회 인덱스 | V41·V42 중 최종 유지 인덱스 |
+| V37 | 판매 품목 금액 제약·Direct 금액 소유권·기존 표시 문구·유효 배분 projection | V35·V43·V48·V49·V58 |
+| V38 | 경매 대금·실제 입금 참조 전환·파생 정산 제거 | V44·V47·V50 |
+| V39 | 경매 수량 이력·후속 결정·실제 도착·기록 전용 도착 취소 | V37·V45·V46, V60의 경매 취소 CHECK |
+| V40 | 과거 경매 전표·정확한 품종/속·단위/상자·인쇄 설정·낙찰액 projection | V52~V57 |
+| V41 | Direct 가격 조정·반품·실제 도착·도착 명령 접수 | V59, V60의 Direct 도착 원장 |
 
-V50은 파생 정산 테이블을 제거한다. 쓰기를 중지하고 복제본에서 대사·migration을 검증한 뒤
-새 백엔드와 대금 API를 사용하는 프론트를 함께 배포한다. 기존 정산 API·재계산·시작 초기화는 제공하지 않는다.
-`app.settlement.rebuild-on-startup`은 현재 실행 효과가 없는 과거 옵션이다.
-V50 적용 뒤 구버전 정산 writer로 단순 rollback하지 않는다. 되돌리려면 검증된 배포 전 백업과 해당 릴리스를 함께 복원한다.
+이관 전용 `historical_auction_import` 컬럼·CHECK와 `direct_sale_amount_reconciliations` 테이블은 생성하지 않는다. 파생 정산 테이블은 V34에 이미 존재하므로 실제 입금 참조를 먼저 전환한 뒤 V38에서 제거한다. 이 테이블에 잠시 설치했다 제거되는 인덱스는 만들지 않는다. 과거 접수 응답·Farm Mutation·snapshot·식별자와 실제 수납 원장은 보존한다.
+
+최신 운영 백업의 두 격리 PostgreSQL 14 복원본에서 기존 개발 초안 V60과 통합 V41을 각각 적용하고 Hibernate schema validation·원장 startup guard를 검증했다. Flyway history를 제외한 최종 58개 테이블의 행·컬럼·제약·인덱스·시퀀스는 동일했다. 새 미확인 경매 대금의 생성 시각은 migration 실행 시각이므로 신규 대금 비교에서만 제외한다. 전표 이관은 64건·품목 566건이며 난 묶음 320개를 유지한다. 이는 운영 DB에 적용한 것이 아니라 복원본 검증이다.
+
+배포할 때는 최신 백업을 확보하고 writer를 중지한 뒤 V34에서 통합 migration을 적용한다. V38은 실제 입금 ID·금액·날짜·부모 연결·멱등키를 보존하며 지급 근거나 매칭 확인을 추정하지 않는다. 원래 대상 누락이나 결과 소유권 충돌은 전체 migration을 rollback한다. 기존 정산 API·재계산·시작 초기화는 제공하지 않는다. 파생 정산 제거 후 구버전 writer로 단순 rollback하지 않고 검증된 백업과 해당 릴리스를 함께 복원한다.
+
+기존 개발·리허설 DB에 초안 V35~V60이 적용되어 있다면 새 버전과 이력이 충돌한다. 현재 DB를 그대로 보존하고 별도 복원본에서 통합 경로를 검증한다. `repair`만으로 checksum을 덮어쓰거나 기존 개발 데이터를 자동 초기화하지 않는다. 개발 중 새로 만든 기록이 있으면 별도 백업·보존 검토 후 복원 또는 데이터 보존 이력 전환을 진행한다.
 
 ### 저장 지문·스냅샷 형식 변경 기준
 
@@ -541,13 +544,13 @@ blue/green rename과 자동 rollback을 수행하는 별도 systemd timer 절차
 
 ### 기존 데이터의 CHECK 제약 대사와 검증
 
-V14·V21·V35의 재고 수량·예약·revision·판매 상태·품목 계산 CHECK는 기존 행을
+V14·V21·V37의 재고 수량·예약·revision·판매 상태·품목 계산 CHECK는 기존 행을
 보존하기 위해 `NOT VALID`로 추가했다. Flyway 성공과 과거 행 검증 완료를
 구분한다. 설치된 CHECK의 정의와 `convalidated`는 아래 도구로 확인한다.
 신규·갱신 행의 CHECK 적용과 validation의 잠금 의미는
 [PostgreSQL ALTER TABLE](https://www.postgresql.org/docs/18/sql-altertable.html)을 따른다.
 
-V35는 운영 미적용 상태에서 수정했다. 현재 품목 CHECK는 0이 아닌 수량·비음수 단가·정확한 수량×단가를 검사하며, 과거 음수 수량/금액과 음수 전표 총액을 보존한다. 전표 총액의 비음수 CHECK는 설치하지 않는다. 기존 V35를 적용한 개발/리허설 DB는 데이터를 보존한 별도 복원본에서 현재 migration을 재검증한다. checksum만 repair하면 설치 제약은 바뀌지 않으므로 이를 schema 전환으로 취급하지 않는다.
+통합 V37의 품목 CHECK는 0이 아닌 수량·비음수 단가·정확한 수량×단가를 검사하며 기존 행은 NOT VALID로 보존한다. 과거 음수 수량/금액과 음수 전표 총액을 변경하지 않고 전표 총액의 비음수 CHECK는 설치하지 않는다. 기존 개발 초안 적용본의 이력 전환은 위 통합 절차를 따른다.
 
 먼저 최신 백업을 복원한 격리 DB에서 대사·검증을 rehearsal한다. libpq service의
 `greenhouse-audit`는 해당 DB와 SELECT 권한 계정에, `greenhouse-maintenance`는
@@ -653,16 +656,8 @@ PostgreSQL job은 먼저 `docker info`로 실행 환경을 확인하고 Testcont
 Docker가 없으면 PostgreSQL 검사는 실패한다. 벤치마크는 결과 의미와 쿼리 상한을 검사하고 시간·할당량은 참고값으로 기록한다.
 Java 포맷 기준은 Spotless의 Google Java Format이다. `backend`에서 `./gradlew format`으로 적용하고 `./gradlew spotlessCheck`로 검사한다. CI의 `./gradlew check`에도 이 검사가 포함되며 소스를 자동 수정하지 않는다. Java는 2 spaces, Kotlin Gradle 스크립트는 기존 tab 4를 유지한다. VS Code는 `.vscode/extensions.json`의 Spotless Gradle·Gradle for Java 확장을 설치한 뒤 창을 다시 로드한다. Java 저장 포맷도 같은 Gradle 설정으로 처리하며 Red Hat Java 포맷은 끈다. 최초 전체 Java 포맷 적용은 기능 변경과 분리해 커밋한다.
 
-### V52 과거 경매 출하 전표 이관
+### V40 과거 경매 출하 전표 이관
 
-배포 전 백업을 보존하고 애플리케이션 writer를 중지한 상태에서 Flyway를 적용한다. V52는 기존 출하·lot를 읽고 누락된 전표·품목만 생성한다. 과거 데이터의 난 묶음 배분·snapshot을 추정하거나 재고 출고를 재실행하지 않는다. source 표의 읽기·쓰기를 migration 동안 잠그고 한 트랜잭션으로 적용하며, 데이터 충돌은 전체 rollback한다. Flyway 재실행은 완료 이관을 중복 실행하지 않는다. 기존 migration의 checksum을 변경하거나 이관 실패를 수동 성공 처리하지 않는다.
+배포 전 writer를 중지하고 백업을 확보한다. V40은 출하·lot를 잠근 뒤 전표가 없는 출하에 전표·품목만 생성한다. 이관 전용 컬럼 없이 원출하일·timestamp·식별자·수량·등급·메모를 사용하고 기록된 품종명·속·상자 수를 바로 반영한다. 비어 있는 원본 값이나 난 묶음 배분·과거 snapshot·재고 이동을 추정하지 않는다. 이미 전표가 있는 출하와 별도 보정한 기존 품목 이름은 보존한다.
 
-2026-10-09에 `temp/green-house_20261006_030001.dump.gz`(SHA-256 `06be57e9a0998738866b040bcdb28d7d4a9acd7fe655688069d37c595622eac5`)를 별도 PostgreSQL 18.4에 복원해 V34→V51→V52를 검증했다. V52로 경매 전표 64건·품목 566건(출하 수량 39,016개)이 생성됐고 전표 없는 출하 및 품목 없는 lot는 각각 0건이 됐다. V51 기준 기존 일반 전표 148건과 전표·품목·Flyway 이력을 제외한 public 54개 테이블 행(난 묶음 320개 포함)은 V52 후 동일했다. 기존 source 표의 상태값도 변경하지 않았다. 실제 적용할 백업에서도 동일한 대사와 재고·원장 불변을 확인한다. 이 복원 검증은 운영 DB 적용을 뜻하지 않는다.
-
-복원본 HTTP 목록에서 64건을 조회하고 각 전표의 상세·인쇄 응답, 빈 재고 배분과 사용 가능한 재고 변경 action 부재를 확인했다. PostgreSQL 회귀는 기존 전표·품목 보존, 완료 migration 재실행, 수량·lot 연결·거래처·번호 충돌의 rollback, 이관 전표의 조회·출력 및 수정·상태 변경 차단을 검증한다. 백엔드 전체 779개·PostgreSQL 전체 회귀 824개(실패·오류·skip 0), 프론트 `npm run check`와 OpenAPI·생성 타입 갱신이 완료됐다.
-
-### V53 이관 경매 전표 품종명·속 보완
-
-V52는 lot의 품목명을 전표 품종명으로 복사했다. V53은 이관 표시와 출하·lot 연결이 일치하며 기존 품목명이 그대로인 전표 품목에 한해 원본 lot의 비어 있지 않은 품종명으로 보완한다. 이어서 품종명이 원본 lot과 일치하는 이관 전표의 빈 속을 원본 CSV의 속·분류에 해당하는 lot 품목명으로 복원한다. 품목명과 품종명이 같거나 원본이 비어 있으면 속을 추정하지 않는다. 별도로 보정한 품목명·속과 일반·신규 경매 전표는 보존한다. 현재 Farm 기준정보를 조회하지 않으며 재고·배분·수량·금액·출하·lot·접수 기록은 변경하지 않는다. writer를 중지하고 백업을 확보한 뒤 Flyway로 적용하며 V52 파일은 수정하지 않는다.
-
-개발 중 미커밋 V53·V54를 통합해 V53 하나로 정리했다. 분리본을 이미 적용한 개발 DB는 백업과 보정 결과 대사 뒤 Flyway `repair`에서 기본 future 무시 설정을 해제해 통합 V53 checksum과 제거한 V54의 삭제 표시를 맞춘 뒤 `validate`와 pending 부재를 확인한다. 이는 해당 개발 이력 정리를 위한 절차이며 운영 migration checksum 변경 지침이 아니다.
+연결된 결과의 누적 낙찰액을 공통 총액 projection에 합산하되 실제 받을 금액·수납·품목 단가와 혼동하지 않는다. 수량·lot 연결·거래처·전표번호 충돌은 V40 전체를 rollback하며, schema 확장이나 부분 전표를 남기지 않는다. 동일 Flyway 이력의 재실행은 이관을 반복하지 않는다. 데이터 대사와 재고·원장 불변 검증은 위 운영 미적용 마이그레이션 통합 절차를 따른다.

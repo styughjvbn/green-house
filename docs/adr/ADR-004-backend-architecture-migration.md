@@ -789,7 +789,7 @@ P5 완료 검증 결과:
 
 P6 검증 중 발견한 기존 벤치마크 fixture 누락:
 
-- 첫 `workBenchmark`의 검색 테스트가 `DIRECT_AMOUNT_SOURCE_MISSING`으로 실패했다. 수만 건의 DIRECT 전표만 SQL로 생성하고 V43 이후 Direct 소유 금액 행을 생성하지 않아 첫 목록 조회에서 정합성 검증이 실패한 것이다. Work 벤치마크와 PostgreSQL 전체 E2E는 통과했다.
+- 첫 `workBenchmark`의 검색 테스트가 `DIRECT_AMOUNT_SOURCE_MISSING`으로 실패했다. 수만 건의 DIRECT 전표만 SQL로 생성하고 Direct 금액 소유권 전환 이후 소유 금액 행을 생성하지 않아 첫 목록 조회에서 정합성 검증이 실패한 것이다. Work 벤치마크와 PostgreSQL 전체 E2E는 통과했다.
 - 검색 fixture에 동일 전표의 원문 금액을 가진 direct_sales 행을 추가했다. 한 행짜리 마지막 페이지에서 기존 Direct 가격·Payment 유효 배분·대사 evidence의 일괄 조회 3회를 포함하도록 판매 쿼리 기대값을 `count / 500 + 4`에서 `count / 500 + 7`로 수정했다. 경매 기대값 `count / 500 + 6`, bind 상한 500, 총건수·페이지 크기·501/5001/70001건·keyword 공백 1/20 검증은 유지한다. 프로덕션 조회·업무 정책은 변경하지 않는다.
 - 두 벤치마크 재실행 통과. 501/5001/70001건의 판매 쿼리는 8/17/147회, 경매 쿼리는 7/16/146회로 정확한 일괄 조회 식과 일치하며, 공백 수에 따라 쿼리가 추가되지 않는다.
 
@@ -822,7 +822,7 @@ P6 완료 검증 결과:
 ### 2026-10-08: 재감사 보류 항목 보완 및 최종 완료
 
 1. **저장소 기본 CI 재현성 확보.** 기본 512 MiB를 유지하고 OOM 즉시 종료 옵션만 추가한 진단 실행에서 `OutOfMemoryError: Java heap space`와 worker 종료 코드 3을 확인했다. 앞선 SIGTERM 종료 코드 143과 구분되는 실제 메모리 부족 근거다. 모든 Gradle Test task의 기본 heap을 2 GiB로 명시하고 `backendTestHeap`으로 조정 가능하게 했으며 OOM 즉시 종료 옵션을 적용했다. 애플리케이션 실행 heap은 변경하지 않았다. 임시 init script 없이 `./gradlew clean check bootJar --no-daemon`이 성공했다. 전체 테스트 779개·실패/오류/skip 0, Spotless와 패키징 통과.
-2. **실제 백업 복원본 검증 완료.** 프로젝트에 보관된 2026-10-06 운영 백업을 별도의 폐기 가능한 PostgreSQL 18.6에 복원했다. 원본 V34에 기존 V35~V51 migration 17개를 적용하고 Hibernate schema validation을 통과했다. ACTIVE 원장·난 묶음 320개가 있는 복원본에서 실제 Gradle `orchidLedgerReconcile`, `orchidLedgerStartupVerify` task가 모두 종료 코드 0으로 성공했다. 대사는 `ACTIVE`, `ready=true`, `issues=[]`이고 기동 검증은 startup guard를 통과했다. 각 CLI 실행 전후 public 57개 테이블의 모든 행·시퀀스·스키마 정의가 동일했다. 백업 원본과 기존 DB는 보존했으며 임시 컨테이너는 제거했다. 백업 식별자·해시와 데이터 보존 검증 해시는 [복원 검증 근거](../archive/plans/backend-architecture-restore-verification-20261008.md)에 남긴다.
+2. **실제 백업 복원본 검증 완료.** 프로젝트에 보관된 2026-10-06 운영 백업을 별도의 폐기 가능한 PostgreSQL 18.6에 복원했다. 원본 V34에 당시 개발 초안 V35~V51 migration 17개를 적용하고 Hibernate schema validation을 통과했다. ACTIVE 원장·난 묶음 320개가 있는 복원본에서 실제 Gradle `orchidLedgerReconcile`, `orchidLedgerStartupVerify` task가 모두 종료 코드 0으로 성공했다. 대사는 `ACTIVE`, `ready=true`, `issues=[]`이고 기동 검증은 startup guard를 통과했다. 각 CLI 실행 전후 public 57개 테이블의 모든 행·시퀀스·스키마 정의가 동일했다. 백업 원본과 기존 DB는 보존했으며 임시 컨테이너는 제거했다. 백업 식별자·해시와 데이터 보존 검증 해시는 [복원 검증 근거](../archive/plans/backend-architecture-restore-verification-20261008.md)에 남긴다.
 
 검증을 지속할 수 있도록 기존 CLI PostgreSQL 테스트도 ACTIVE fixture를 `pg_dump`/`pg_restore`로 별도 DB에 복원한 뒤 두 CLI를 실행하도록 강화했다. 모든 public 테이블·시퀀스가 원본과 같고 실행 후에도 보존되는지 검사한다. 새로운 업무 계약·Port·Adapter를 추가하지 않았다.
 

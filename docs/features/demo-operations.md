@@ -249,7 +249,7 @@ coverage의 ID·FK·행 순서·revision chain·mutation/correlation 연결을 �
 연결된 수량·금액과 JSON snapshot은 같은 배율로 바꾼다. Direct 거래·가격·대사 근거,
 경매 대금·후속 결정·반환 도착도 같은 변환을 적용하며 미확인 지급액의 null과 검토 상태를 유지한다.
 판매 접수 snapshot의 날짜는 DB와 같은 일수로 이동한다. 스키마 허용 목록과 검증 SQL은
-V50의 파생 정산 제거를 반영한다. opaque fingerprint와 idempotency key는
+V38의 파생 정산 제거를 반영한다. opaque fingerprint와 idempotency key는
 참조 안정성을 위해 보존하고 ACTIVE baseline fingerprint는 변환된 snapshot으로 다시 계산한다.
 작업 타입의 code·name과 `work_records.work_type`은 개인정보가 아닌 업무 분류 기준이므로
 사용자 정의 타입을 포함해 원문을 보존한다.

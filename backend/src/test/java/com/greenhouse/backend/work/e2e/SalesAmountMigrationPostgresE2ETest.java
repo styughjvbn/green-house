@@ -52,12 +52,13 @@ class SalesAmountMigrationPostgresE2ETest extends WorkE2ETestBase {
           """,
           quantity,
           amount);
+      Flyway.configure().dataSource(dataSource).target("36").load().migrate();
       var oldSlip = jdbc.queryForList("SELECT * FROM sales_slips WHERE id = 900");
       var oldItems = jdbc.queryForList("SELECT * FROM sales_slip_items WHERE id = 900");
 
-      var upgrade = Flyway.configure().dataSource(dataSource).target("35").load();
+      var upgrade = Flyway.configure().dataSource(dataSource).target("37").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
-      assertThat(upgrade.info().current().getVersion().getVersion()).isEqualTo("35");
+      assertThat(upgrade.info().current().getVersion().getVersion()).isEqualTo("37");
       assertThat(jdbc.queryForList("SELECT * FROM sales_slips WHERE id = 900")).isEqualTo(oldSlip);
       assertThat(jdbc.queryForList("SELECT * FROM sales_slip_items WHERE id = 900"))
           .isEqualTo(oldItems);
@@ -130,9 +131,11 @@ class SalesAmountMigrationPostgresE2ETest extends WorkE2ETestBase {
                  (902, 900, '반품 3', -80, 15000, -1200000),
                  (903, 900, '반품 4', -168, 15000, -2520000);
           """);
+      Flyway.configure().dataSource(dataSource).target("36").load().migrate();
       var oldSlip = jdbc.queryForList("SELECT * FROM sales_slips WHERE id = 900");
       var oldItems = jdbc.queryForList("SELECT * FROM sales_slip_items ORDER BY id");
-      var upgrade = Flyway.configure().dataSource(dataSource).target("35").load();
+      oldSlip.getFirst().put("paid_amount", 0L);
+      var upgrade = Flyway.configure().dataSource(dataSource).target("37").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
       jdbc.execute("ALTER TABLE sales_slip_items VALIDATE CONSTRAINT ck_sales_slip_items_amount");
       assertThat(

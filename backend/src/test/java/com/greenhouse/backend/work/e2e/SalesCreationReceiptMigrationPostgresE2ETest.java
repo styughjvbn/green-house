@@ -28,7 +28,7 @@ class SalesCreationReceiptMigrationPostgresE2ETest extends WorkE2ETestBase {
             POSTGRES.getUsername(),
             POSTGRES.getPassword());
     try {
-      Flyway.configure().dataSource(source).target("37").load().migrate();
+      Flyway.configure().dataSource(source).target("34").load().migrate();
       var jdbc = new JdbcTemplate(source);
       jdbc.execute(
           "INSERT INTO business_partners (id, name, partner_type, created_at, updated_at) VALUES (900, '기존 거래처', 'WHOLESALE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
@@ -42,7 +42,7 @@ class SalesCreationReceiptMigrationPostgresE2ETest extends WorkE2ETestBase {
       var itemBefore =
           jdbc.queryForList(
               "select to_jsonb(r)::text from sales_slip_items r order by id", String.class);
-      var upgrade = Flyway.configure().dataSource(source).target("38").load();
+      var upgrade = Flyway.configure().dataSource(source).target("35").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
       assertThat(
               jdbc.queryForList(

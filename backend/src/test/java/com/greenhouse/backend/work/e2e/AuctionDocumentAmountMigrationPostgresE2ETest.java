@@ -32,7 +32,7 @@ class AuctionDocumentAmountMigrationPostgresE2ETest {
             POSTGRES.getJdbcUrl().replace(POSTGRES.getDatabaseName(), name),
             POSTGRES.getUsername(),
             POSTGRES.getPassword());
-    Flyway.configure().dataSource(source).target("55").load().migrate();
+    Flyway.configure().dataSource(source).target("39").load().migrate();
     var jdbc = new JdbcTemplate(source);
     jdbc.execute(
         """
@@ -53,10 +53,10 @@ class AuctionDocumentAmountMigrationPostgresE2ETest {
              (99009,99005,DATE '2026-10-02',6,0,0,'NORMAL',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
              (99010,99006,DATE '2026-10-03',10,2000,20000,'NORMAL',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
              (99011,99007,DATE '2026-10-03',10,9000,90000,'NORMAL',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
-      INSERT INTO sales_slips (id,slip_number,sale_date,sales_type,auction_shipment_id,partner_id,total_amount,paid_amount,remaining_amount,payment_status,sales_status,historical_auction_import,created_at,updated_at)
-      VALUES (99012,'HIST-AUC-99001',DATE '2026-10-01','AUCTION',99001,99000,0,123,456,'정산 대기','출하 완료',true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
-             (99013,'EMPTY',DATE '2026-10-01','AUCTION',NULL,99000,1234,0,0,'정산 대기','작성중',false,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
-             (99014,'DIRECT',DATE '2026-10-01','DIRECT',NULL,99000,3000,1000,2000,'부분입금','출고 완료',false,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+      INSERT INTO sales_slips (id,slip_number,sale_date,sales_type,auction_shipment_id,partner_id,total_amount,paid_amount,remaining_amount,payment_status,sales_status,created_at,updated_at)
+      VALUES (99012,'HIST-AUC-99001',DATE '2026-10-01','AUCTION',99001,99000,0,123,456,'정산 대기','출하 완료',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+             (99013,'EMPTY',DATE '2026-10-01','AUCTION',NULL,99000,1234,0,0,'정산 대기','작성중',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
+             (99014,'DIRECT',DATE '2026-10-01','DIRECT',NULL,99000,3000,1000,2000,'부분입금','출고 완료',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
       INSERT INTO sales_slip_items (id,sales_slip_id,auction_shipment_lot_id,item_name,quantity,unit_price,amount)
       VALUES (99015,99012,99002,'품종1',10,0,0),(99016,99012,99003,'품종2',10,0,0);
       """);
@@ -72,7 +72,14 @@ class AuctionDocumentAmountMigrationPostgresE2ETest {
         tables.stream()
             .map(table -> jdbc.queryForList("SELECT * FROM " + table + " ORDER BY id"))
             .toList();
-    var migration = Flyway.configure().dataSource(source).target("56").load();
+    facts
+        .get(0)
+        .forEach(
+            row -> {
+              row.put("unit", null);
+              row.put("boxes", null);
+            });
+    var migration = Flyway.configure().dataSource(source).target("40").load();
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();

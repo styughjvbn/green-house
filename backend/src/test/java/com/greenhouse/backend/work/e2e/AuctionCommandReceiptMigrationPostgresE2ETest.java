@@ -27,7 +27,7 @@ class AuctionCommandReceiptMigrationPostgresE2ETest extends WorkE2ETestBase {
     String url = POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database);
     var source = new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
     try {
-      Flyway.configure().dataSource(source).target("35").load().migrate();
+      Flyway.configure().dataSource(source).target("34").load().migrate();
       var jdbc = new JdbcTemplate(source);
       jdbc.execute(
           """
@@ -61,9 +61,9 @@ class AuctionCommandReceiptMigrationPostgresE2ETest extends WorkE2ETestBase {
           VALUES (900, 900, 'REAUCTION_WAITING', 'PARTIALLY_RETURNED', CURRENT_TIMESTAMP, '기존 부분 반환')
           """);
       var before = snapshot(jdbc);
-      var upgrade = Flyway.configure().dataSource(source).target("36").load();
+      var upgrade = Flyway.configure().dataSource(source).target("35").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
-      assertThat(upgrade.info().current().getVersion().getVersion()).isEqualTo("36");
+      assertThat(upgrade.info().current().getVersion().getVersion()).isEqualTo("35");
       assertThat(snapshot(jdbc)).isEqualTo(before);
       assertThat(
               jdbc.queryForObject("SELECT count(*) FROM auction_command_receipts", Integer.class))
@@ -77,7 +77,7 @@ class AuctionCommandReceiptMigrationPostgresE2ETest extends WorkE2ETestBase {
           "auction_command_receipts_lot_id_fkey");
       rejects(
           () -> insert(jdbc, 2, 900, "OTHER", "new", "a".repeat(64), "{\"id\":900}"),
-          "ck_auction_command_type");
+          "ck_auction_command_");
       rejects(
           () -> insert(jdbc, 2, 900, "RESULT", " ", "a".repeat(64), "{\"id\":900}"),
           "ck_auction_command_key");

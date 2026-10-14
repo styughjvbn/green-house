@@ -27,7 +27,7 @@ class AuctionQuantityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
             POSTGRES.getUsername(),
             POSTGRES.getPassword());
     try {
-      Flyway.configure().dataSource(source).target("36").load().migrate();
+      Flyway.configure().dataSource(source).target("38").load().migrate();
       var jdbc = new JdbcTemplate(source);
       jdbc.execute(
           "INSERT INTO business_partners (id, name, partner_type, created_at, updated_at) VALUES (900, '기존 경매장', 'AUCTION_HOUSE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
@@ -41,7 +41,8 @@ class AuctionQuantityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
           "INSERT INTO auction_command_receipts (id, lot_id, command_type, request_key, request_fingerprint, response_snapshot, created_at) VALUES (900, 900, 'RETURN', 'old', repeat('a', 64), '{\"id\":900,\"statusHistory\":[]}', CURRENT_TIMESTAMP)");
       var lotBefore =
           jdbc.queryForObject(
-              "SELECT to_jsonb(r)::text FROM auction_shipment_lots r WHERE id = 900", String.class);
+              "SELECT (to_jsonb(r)-'follow_up_method'-'disposed_quantity'-'inferred_return_quantity')::text FROM auction_shipment_lots r WHERE id = 900",
+              String.class);
       var receiptBefore =
           jdbc.queryForObject(
               "SELECT to_jsonb(r)::text FROM auction_command_receipts r WHERE id = 900",
@@ -50,11 +51,11 @@ class AuctionQuantityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
           jdbc.queryForObject(
               "SELECT to_jsonb(r)::text FROM auction_lot_status_history r WHERE id = 900",
               String.class);
-      var upgrade = Flyway.configure().dataSource(source).target("37").load();
+      var upgrade = Flyway.configure().dataSource(source).target("39").load();
       assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
       assertThat(
               jdbc.queryForObject(
-                  "SELECT to_jsonb(r)::text FROM auction_shipment_lots r WHERE id = 900",
+                  "SELECT (to_jsonb(r)-'follow_up_method'-'disposed_quantity'-'inferred_return_quantity')::text FROM auction_shipment_lots r WHERE id = 900",
                   String.class))
           .isEqualTo(lotBefore);
       assertThat(

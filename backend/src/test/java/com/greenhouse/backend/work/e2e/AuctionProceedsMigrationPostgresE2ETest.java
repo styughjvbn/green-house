@@ -34,17 +34,16 @@ class AuctionProceedsMigrationPostgresE2ETest {
             POSTGRES.getUsername(),
             POSTGRES.getPassword());
     var jdbc = new JdbcTemplate(source);
-    Flyway.configure().dataSource(source).target("43").load().migrate();
+    Flyway.configure().dataSource(source).target("37").load().migrate();
     var payments = jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id");
-    var settlements = jdbc.queryForList("SELECT * FROM auction_settlements ORDER BY id");
-    var migration = Flyway.configure().dataSource(source).target("44").load();
+    var migration = Flyway.configure().dataSource(source).target("38").load();
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();
     assertThat(jdbc.queryForList("SELECT * FROM partner_payment_events ORDER BY id"))
         .isEqualTo(payments);
-    assertThat(jdbc.queryForList("SELECT * FROM auction_settlements ORDER BY id"))
-        .isEqualTo(settlements);
+    assertThat(jdbc.queryForObject("SELECT to_regclass('auction_settlements')::text", String.class))
+        .isNull();
     assertThat(jdbc.queryForObject("SELECT count(*) FROM auction_proceeds", Long.class)).isZero();
     jdbc.execute(
         "INSERT INTO business_partners (id, name, partner_type, is_active, created_at, updated_at) VALUES (901, '경매장', 'AUCTION_HOUSE', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");

@@ -34,7 +34,7 @@ class AuctionArrivalMigrationPostgresE2ETest {
             POSTGRES.getUsername(),
             POSTGRES.getPassword());
     var jdbc = new JdbcTemplate(source);
-    Flyway.configure().dataSource(source).target("44").load().migrate();
+    Flyway.configure().dataSource(source).target("38").load().migrate();
     jdbc.execute(
         "INSERT INTO business_partners (id, name, partner_type, created_at, updated_at) VALUES (901, '경매장', 'AUCTION_HOUSE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
     jdbc.execute(
@@ -43,10 +43,16 @@ class AuctionArrivalMigrationPostgresE2ETest {
         "INSERT INTO auction_shipment_lots (id, shipment_id, item_name, variety_name, shipped_quantity, sold_quantity, waiting_quantity, returned_quantity, current_status, return_confirmed_date, created_at, updated_at) VALUES (903, 902, '난', '품종', 40, 0, 10, 30, 'PARTIALLY_RETURNED', DATE '2026-10-07', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
     var lots = jdbc.queryForList("SELECT * FROM auction_shipment_lots ORDER BY id");
     var mutations = jdbc.queryForList("SELECT * FROM orchid_group_mutations ORDER BY id");
-    var migration = Flyway.configure().dataSource(source).target("45").load();
+    var migration = Flyway.configure().dataSource(source).target("39").load();
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();
+    lots.forEach(
+        row -> {
+          row.put("follow_up_method", null);
+          row.put("disposed_quantity", 0);
+          row.put("inferred_return_quantity", 0);
+        });
     assertThat(jdbc.queryForList("SELECT * FROM auction_shipment_lots ORDER BY id"))
         .isEqualTo(lots);
     assertThat(jdbc.queryForList("SELECT * FROM orchid_group_mutations ORDER BY id"))
