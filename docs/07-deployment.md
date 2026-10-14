@@ -268,7 +268,7 @@ V36은 `CREATE INDEX CONCURRENTLY`가 아닌 일반 index 생성 15개를 **하�
 
 후속 V42의 번호 제거는 운영 미적용 V40으로 통합했다. V40은 `sales_slips.slip_number`와 `sales_slip_daily_sequences`를 먼저 제거하고 경매 전표를 번호 없이 이관한다. 운영 적용된 V1·V17은 변경하지 않는다. 임시 `HIST-AUC-*` 번호 생성·충돌 검사는 더 이상 수행하지 않는다. 전표 식별·검색·화면·인쇄·분석은 기존 전표 ID를 사용하며 날짜별 발급 코드는 제거한다. 전표·품목·allocation·Mutation·경매·수납 연결 ID는 유지하고 과거 생성 receipt·감사 JSON은 다시 쓰지 않는다. 과거 생성 응답의 번호 필드는 재전송 역직렬화에서만 제외한다.
 
-배포 전에 백업을 확보하고 API 소비자를 함께 갱신한다. 위 V34→V41 복원본 대사는 번호 제거 전 기준이다. V39→V40은 PostgreSQL 회귀에서 전표 ID·연결·기존 행과 receipt 원문 보존을 검증한다. 번호가 필수인 구버전 애플리케이션으로 DB만 그대로 rollback하지 않는다. 데모 비식별화는 번호 컬럼이 남은 과거 백업의 번호만 처리한다. `scripts/seed_tools/generate_direct_sales_seed.py`는 V34 이전 스키마로 자료를 이관한 뒤 migration하는 과거 도구이며 현행 DB seed로 사용하지 않는다.
+배포 전에 백업을 확보하고 API 소비자를 함께 갱신한다. 위 V34→V41 복원본 대사는 번호 제거 전 기준이다. V39→V40은 PostgreSQL 회귀에서 전표 ID·연결·기존 행과 receipt 원문 보존을 검증한다. 번호가 필수인 구버전 애플리케이션으로 DB만 그대로 rollback하지 않는다. 현행 V41 데모 비식별화는 제거된 번호 컬럼을 참조하지 않으며, 정기 생성은 운영 migration 완료 후의 백업을 사용한다. `scripts/seed_tools/generate_direct_sales_seed.py`는 V34 이전 스키마로 자료를 이관한 뒤 migration하는 과거 도구이며 현행 DB seed로 사용하지 않는다.
 
 ### 저장 지문·스냅샷 형식 변경 기준
 

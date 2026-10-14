@@ -171,6 +171,19 @@ jobs:
           test "${{ steps.e2e.outcome }}" = success
           test "${{ steps.benchmark.outcome }}" = success
 
+  demo-sanitization:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r scripts/demo/requirements.txt
+      - name: Verify sanitization against the current PostgreSQL schema
+        env:
+          DEMO_SANITIZE_POSTGRES_TEST: '1'
+        run: python -m unittest discover -s scripts/demo -p 'test_sanitize_demo*.py'
+
   api-contract:
     runs-on: ubuntu-latest
     steps:
