@@ -3,8 +3,8 @@ package com.greenhouse.backend.work.operation.application;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.operation.domain.WorkCommandReceipt;
 import com.greenhouse.backend.work.operation.domain.WorkOperation;
-import com.greenhouse.backend.work.operation.repository.WorkCommandReceiptMembershipRepository;
 import com.greenhouse.backend.work.operation.repository.WorkCommandReceiptRepository;
+import com.greenhouse.backend.work.operation.repository.WorkCreationBatchMembershipRepository;
 import com.greenhouse.backend.work.operation.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.operation.web.dto.WorkOperationRelationKind;
 import com.greenhouse.backend.work.operation.web.dto.WorkOperationSummaryResponse;
@@ -29,7 +29,7 @@ public class WorkOperationRelationQueryService {
 
   private final WorkOperationRepository operationRepository;
 
-  private final WorkCommandReceiptMembershipRepository membershipRepository;
+  private final WorkCreationBatchMembershipRepository membershipRepository;
 
   private final WorkCommandReceiptRepository receiptRepository;
 

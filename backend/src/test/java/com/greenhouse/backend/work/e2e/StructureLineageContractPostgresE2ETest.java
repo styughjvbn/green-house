@@ -210,7 +210,7 @@ class StructureLineageContractPostgresE2ETest extends WorkE2ETestBase {
             "work_applied_effects",
             "work_effect_orchid_groups",
             "work_command_receipts",
-            "work_command_receipt_memberships",
+            "work_creation_batch_memberships",
             "audit_events")) {
       snapshot.put(
           table,

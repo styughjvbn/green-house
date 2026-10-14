@@ -175,7 +175,7 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     assertThat(snapshot()).isEqualTo(before);
     assertCounts(mode, 1);
     assertThat(count("work_command_receipts")).isEqualTo(1);
-    assertThat(count("work_command_receipt_memberships")).isEqualTo(1);
+    assertThat(count("work_creation_batch_memberships")).isEqualTo(1);
   }
 
   @ParameterizedTest
@@ -249,7 +249,7 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
   void membershipFailureAlsoRollsBackCompletedReceiptAndBusiness(Mode mode) {
     var before = snapshot();
     jdbc.execute(
-        "alter table work_command_receipt_memberships add constraint test_work_membership_failure check (operation_id < 0)");
+        "alter table work_creation_batch_memberships add constraint test_work_membership_failure check (operation_id < 0)");
     try {
       assertThatThrownBy(() -> create(mode, request("실패"), "membership"))
           .isInstanceOf(DataIntegrityViolationException.class)
@@ -257,7 +257,7 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
       assertThat(snapshot()).isEqualTo(before);
     } finally {
       jdbc.execute(
-          "alter table work_command_receipt_memberships drop constraint test_work_membership_failure");
+          "alter table work_creation_batch_memberships drop constraint test_work_membership_failure");
     }
     assertThat(create(mode, request("실패"), "membership")).hasSize(1);
     assertCounts(mode, 1);
@@ -286,7 +286,7 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     assertThat(retry.data()).isNotEqualTo(first.data());
     assertCounts(mode, 2);
     assertThat(count("work_command_receipts")).isZero();
-    assertThat(count("work_command_receipt_memberships")).isZero();
+    assertThat(count("work_creation_batch_memberships")).isZero();
   }
 
   @ParameterizedTest
@@ -364,7 +364,7 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     }
     assertThat(count("work_operations")).isEqualTo(6);
     assertThat(count("work_command_receipts")).isEqualTo(6);
-    assertThat(count("work_command_receipt_memberships")).isEqualTo(6);
+    assertThat(count("work_creation_batch_memberships")).isEqualTo(6);
   }
 
   @Test
@@ -395,7 +395,7 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     assertThat(http(Mode.BATCH, request, "mixed").data()).isEqualTo(first.data());
     assertThat(snapshot()).isEqualTo(before);
     assertThat(count("work_operations")).isEqualTo(2);
-    assertThat(count("work_command_receipt_memberships")).isEqualTo(2);
+    assertThat(count("work_creation_batch_memberships")).isEqualTo(2);
   }
 
   @Test
@@ -416,7 +416,7 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
             List.of());
     var before = snapshot();
     jdbc.execute(
-        "alter table work_command_receipt_memberships add constraint test_mixed_membership_failure check (operation_id < 0)");
+        "alter table work_creation_batch_memberships add constraint test_mixed_membership_failure check (operation_id < 0)");
     try {
       assertThatThrownBy(() -> create(Mode.BATCH, request, "mixed-failure"))
           .isInstanceOf(DataIntegrityViolationException.class)
@@ -424,11 +424,11 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
       assertThat(snapshot()).isEqualTo(before);
     } finally {
       jdbc.execute(
-          "alter table work_command_receipt_memberships drop constraint test_mixed_membership_failure");
+          "alter table work_creation_batch_memberships drop constraint test_mixed_membership_failure");
     }
     assertThat(create(Mode.BATCH, request, "mixed-failure")).hasSize(2);
     assertThat(count("work_operations")).isEqualTo(2);
-    assertThat(count("work_command_receipt_memberships")).isEqualTo(2);
+    assertThat(count("work_creation_batch_memberships")).isEqualTo(2);
   }
 
   @Test
@@ -569,7 +569,7 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
         }
         assertCounts(mode, 1);
         assertThat(count("work_command_receipts")).isEqualTo(1);
-        assertThat(count("work_command_receipt_memberships")).isEqualTo(1);
+        assertThat(count("work_creation_batch_memberships")).isEqualTo(1);
       } finally {
         resume.countDown();
       }
@@ -613,7 +613,7 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     for (String table :
         List.of(
             "work_command_receipts",
-            "work_command_receipt_memberships",
+            "work_creation_batch_memberships",
             "work_operations",
             "work_operation_targets",
             "work_target_executions",

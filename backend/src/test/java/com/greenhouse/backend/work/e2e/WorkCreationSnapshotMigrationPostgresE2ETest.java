@@ -66,7 +66,7 @@ class WorkCreationSnapshotMigrationPostgresE2ETest extends WorkE2ETestBase {
           .isEqualTo(workBefore);
       assertThat(
               jdbc.queryForList(
-                  "select to_jsonb(r)::text from work_command_receipt_memberships r order by 1",
+                  "select to_jsonb(r)::text from work_creation_batch_memberships r order by 1",
                   String.class))
           .isEqualTo(membershipBefore);
       assertThat(

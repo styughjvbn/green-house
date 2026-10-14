@@ -24,7 +24,7 @@ class SalesDocumentIdentityMigrationPostgresE2ETest {
     var source =
         new DriverManagerDataSource(
             POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
-    Flyway.configure().dataSource(source).target("41").load().migrate();
+    Flyway.configure().dataSource(source).target("39").load().migrate();
     var jdbc = new JdbcTemplate(source);
     jdbc.execute(
         """
@@ -52,7 +52,7 @@ class SalesDocumentIdentityMigrationPostgresE2ETest {
             String.class);
     var before = new LinkedHashMap<String, List<String>>();
     for (var table : tables) before.put(table, rows(jdbc, table));
-    var migration = Flyway.configure().dataSource(source).target("42").load();
+    var migration = Flyway.configure().dataSource(source).target("40").load();
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();
@@ -71,7 +71,14 @@ class SalesDocumentIdentityMigrationPostgresE2ETest {
   }
 
   private List<String> rows(JdbcTemplate jdbc, String table) {
-    String value = table.equals("sales_slips") ? "to_jsonb(row) - 'slip_number'" : "to_jsonb(row)";
+    String value =
+        switch (table) {
+          case "sales_slips" -> "to_jsonb(row) - 'slip_number'";
+          case "sales_slip_items" -> "to_jsonb(row) - 'unit' - 'boxes'";
+          case "partner_settlement_settings" ->
+              "to_jsonb(row) - 'print_template' - 'shipper_code' - 'shipper_name'";
+          default -> "to_jsonb(row)";
+        };
     return jdbc.queryForList(
         "SELECT (" + value + ")::text FROM " + table + " row ORDER BY 1", String.class);
   }

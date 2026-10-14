@@ -1,3 +1,7 @@
+-- Documents are identified by their existing primary keys. Keep historical receipt/audit JSON intact.
+ALTER TABLE sales_slips DROP COLUMN slip_number;
+DROP TABLE sales_slip_daily_sequences;
+
 ALTER TABLE sales_slip_items
     ADD COLUMN unit varchar(30),
     ADD COLUMN boxes integer;
@@ -37,20 +41,14 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Historical auction document import: partner is not an auction house';
     END IF;
-    IF EXISTS (
-        SELECT 1 FROM historical_auction_document_sources a
-        JOIN sales_slips s ON s.slip_number = 'HIST-AUC-' || a.id::text
-    ) THEN
-        RAISE EXCEPTION 'Historical auction document import: document number conflict';
-    END IF;
 END $$;
 INSERT INTO sales_slips (
-    id, created_at, updated_at, version, slip_number, sale_date, sales_type,
+    id, created_at, updated_at, version, sale_date, sales_type,
     auction_shipment_id, partner_id, total_amount, expected_payment_date,
     paid_amount, remaining_amount, payment_status, sales_status, payment_method, memo
 )
 SELECT nextval('sales_slips_id_seq'), a.created_at, a.updated_at, 0,
-       'HIST-AUC-' || a.id::text, a.shipment_date, 'AUCTION', a.id, a.auction_house_id,
+       a.shipment_date, 'AUCTION', a.id, a.auction_house_id,
        0, NULL, 0, 0, '정산 대기', '출하 완료', '경매 정산', a.memo
 FROM historical_auction_document_sources a ORDER BY a.id;
 INSERT INTO sales_slip_items (

@@ -8,17 +8,18 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "work_command_receipt_memberships")
+@Table(name = "work_creation_batch_memberships")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class WorkCommandReceiptMembership {
+// Groups operations created by one request; replay protection belongs to WorkCommandReceipt.
+public class WorkCreationBatchMembership {
 
-  @EmbeddedId private WorkCommandReceiptMembershipId id;
+  @EmbeddedId private WorkCreationBatchMembershipId id;
 
-  public WorkCommandReceiptMembership(String receiptKey, Long operationId) {
+  public WorkCreationBatchMembership(String receiptKey, Long operationId) {
     if (receiptKey == null || operationId == null) {
       throw new IllegalArgumentException("작업 요청과 결과 작업 ID가 필요합니다.");
     }
-    this.id = new WorkCommandReceiptMembershipId(receiptKey, operationId);
+    this.id = new WorkCreationBatchMembershipId(receiptKey, operationId);
   }
 }

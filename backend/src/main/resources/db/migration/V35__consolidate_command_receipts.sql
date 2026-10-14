@@ -111,3 +111,13 @@ ALTER TABLE partner_payment_events ADD CONSTRAINT ck_new_payment_allocation_fact
      target_type IN ('SALES_SLIP', 'AUCTION_PROCEEDS') AND
      event_type IN ('PAYMENT_ALLOCATED', 'PAYMENT_UNLINKED'))
 );
+
+-- Creation grouping is separate from request replay. Preserve receipt keys and operation IDs.
+ALTER TABLE work_command_receipt_memberships RENAME TO work_creation_batch_memberships;
+ALTER TABLE work_creation_batch_memberships
+    RENAME CONSTRAINT work_command_receipt_memberships_pkey TO work_creation_batch_memberships_pkey;
+ALTER TABLE work_creation_batch_memberships
+    RENAME CONSTRAINT fk_work_command_receipt_membership_receipt TO fk_work_creation_batch_receipt;
+ALTER TABLE work_creation_batch_memberships
+    RENAME CONSTRAINT fk_work_command_receipt_membership_operation TO fk_work_creation_batch_operation;
+ALTER INDEX idx_work_command_receipt_memberships_operation RENAME TO idx_work_creation_batch_operation;

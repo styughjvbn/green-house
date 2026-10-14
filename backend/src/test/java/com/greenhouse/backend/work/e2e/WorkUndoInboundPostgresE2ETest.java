@@ -129,7 +129,7 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
     long original = execute(inbound, "legacy-potting");
     var memberships =
         jdbc.queryForList(
-            "SELECT * FROM work_command_receipt_memberships ORDER BY receipt_key, operation_id");
+            "SELECT * FROM work_creation_batch_memberships ORDER BY receipt_key, operation_id");
     String receiptKey = "INBOUND_POTTING_VOID:" + inbound + ":original-undo";
     String legacyFingerprint =
         HexFormat.of()
@@ -166,7 +166,7 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
         .isEqualTo("COMPLETED");
     assertThat(
             jdbc.queryForList(
-                "SELECT * FROM work_command_receipt_memberships ORDER BY receipt_key, operation_id"))
+                "SELECT * FROM work_creation_batch_memberships ORDER BY receipt_key, operation_id"))
         .isEqualTo(memberships);
     var changed =
         post(
@@ -245,7 +245,7 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
     state.put(
         "memberships",
         jdbc.queryForList(
-            "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM work_command_receipt_memberships ORDER BY receipt_key, operation_id) snapshot",
+            "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM work_creation_batch_memberships ORDER BY receipt_key, operation_id) snapshot",
             String.class));
     return state;
   }

@@ -660,7 +660,7 @@ class WorkRecordBatchLockOrderPostgresE2ETest extends WorkE2ETestBase {
         .isEqualTo(receipts);
     assertThat(
             jdbc.queryForObject(
-                "SELECT count(*) FROM work_command_receipt_memberships", Integer.class))
+                "SELECT count(*) FROM work_creation_batch_memberships", Integer.class))
         .isEqualTo(operations);
     assertThat(reconciliation.reconcile().ready()).isTrue();
   }
@@ -670,7 +670,7 @@ class WorkRecordBatchLockOrderPostgresE2ETest extends WorkE2ETestBase {
     for (String table :
         List.of(
             "work_command_receipts",
-            "work_command_receipt_memberships",
+            "work_creation_batch_memberships",
             "work_operations",
             "work_operation_targets",
             "work_target_executions",

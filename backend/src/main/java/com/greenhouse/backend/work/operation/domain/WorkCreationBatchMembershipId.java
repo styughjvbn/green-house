@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class WorkCommandReceiptMembershipId implements Serializable {
+public class WorkCreationBatchMembershipId implements Serializable {
 
   @Column(name = "receipt_key", length = 255)
   private String receiptKey;
@@ -20,7 +20,7 @@ public class WorkCommandReceiptMembershipId implements Serializable {
   @Column(name = "operation_id")
   private Long operationId;
 
-  public WorkCommandReceiptMembershipId(String receiptKey, Long operationId) {
+  public WorkCreationBatchMembershipId(String receiptKey, Long operationId) {
     this.receiptKey = receiptKey;
     this.operationId = operationId;
   }

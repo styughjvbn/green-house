@@ -703,7 +703,7 @@ def transform_work_data(cursor: Any, key: str) -> None:
         "UPDATE inbound_records SET temp_location=CASE WHEN temp_location IS NULL "
         "THEN NULL ELSE '데모 임시 위치' END"
     )
-    # Operational backups before V42 still contain the retired display number.
+    # Older operational backups still contain the retired display number.
     if fetch_all(cursor, """
         SELECT 1 FROM information_schema.columns
         WHERE table_schema='public' AND table_name='sales_slips' AND column_name='slip_number'

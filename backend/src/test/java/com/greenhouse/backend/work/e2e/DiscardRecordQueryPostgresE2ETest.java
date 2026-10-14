@@ -442,7 +442,7 @@ class DiscardRecordQueryPostgresE2ETest extends WorkE2ETestBase {
     for (String table :
         List.of(
             "work_command_receipts",
-            "work_command_receipt_memberships",
+            "work_creation_batch_memberships",
             "work_operations",
             "work_operation_targets",
             "work_target_executions",

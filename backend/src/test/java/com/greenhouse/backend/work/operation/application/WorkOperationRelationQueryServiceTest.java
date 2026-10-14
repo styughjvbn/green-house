@@ -9,8 +9,8 @@ import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.work.operation.domain.WorkCommandReceipt;
 import com.greenhouse.backend.work.operation.domain.WorkOperation;
-import com.greenhouse.backend.work.operation.repository.WorkCommandReceiptMembershipRepository;
 import com.greenhouse.backend.work.operation.repository.WorkCommandReceiptRepository;
+import com.greenhouse.backend.work.operation.repository.WorkCreationBatchMembershipRepository;
 import com.greenhouse.backend.work.operation.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.operation.web.dto.WorkOperationRelationKind;
 import java.util.List;
@@ -27,7 +27,7 @@ class WorkOperationRelationQueryServiceTest {
 
   @Mock WorkOperationRepository operationRepository;
 
-  @Mock WorkCommandReceiptMembershipRepository membershipRepository;
+  @Mock WorkCreationBatchMembershipRepository membershipRepository;
 
   @Mock WorkCommandReceiptRepository receiptRepository;
 

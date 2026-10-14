@@ -83,6 +83,7 @@ class AuctionDocumentAmountMigrationPostgresE2ETest {
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();
+    documents.forEach(row -> row.remove("slip_number"));
     documents.get(0).put("total_amount", 24000);
     documents.get(1).put("total_amount", 0);
     assertThat(jdbc.queryForList("SELECT * FROM sales_slips ORDER BY id")).isEqualTo(documents);

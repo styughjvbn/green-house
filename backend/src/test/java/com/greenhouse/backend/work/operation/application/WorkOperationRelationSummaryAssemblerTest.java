@@ -6,10 +6,10 @@ import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.work.api.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.operation.domain.WorkCommandReceipt;
-import com.greenhouse.backend.work.operation.domain.WorkCommandReceiptMembership;
+import com.greenhouse.backend.work.operation.domain.WorkCreationBatchMembership;
 import com.greenhouse.backend.work.operation.domain.WorkOperation;
-import com.greenhouse.backend.work.operation.repository.WorkCommandReceiptMembershipRepository;
 import com.greenhouse.backend.work.operation.repository.WorkCommandReceiptRepository;
+import com.greenhouse.backend.work.operation.repository.WorkCreationBatchMembershipRepository;
 import com.greenhouse.backend.work.operation.repository.WorkOperationChildCount;
 import com.greenhouse.backend.work.operation.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.operation.web.dto.WorkOperationOriginType;
@@ -30,7 +30,7 @@ class WorkOperationRelationSummaryAssemblerTest {
 
   @Mock WorkCommandReceiptRepository receiptRepository;
 
-  @Mock WorkCommandReceiptMembershipRepository membershipRepository;
+  @Mock WorkCreationBatchMembershipRepository membershipRepository;
 
   @Mock WorkOperationRepository operationRepository;
 
@@ -56,8 +56,8 @@ class WorkOperationRelationSummaryAssemblerTest {
     when(membershipRepository.findByOperationIdIn(List.of(1L, 2L, 3L, 4L)))
         .thenReturn(
             List.of(
-                new WorkCommandReceiptMembership("receipt", 1L),
-                new WorkCommandReceiptMembership("receipt", 4L)));
+                new WorkCreationBatchMembership("receipt", 1L),
+                new WorkCreationBatchMembership("receipt", 4L)));
     WorkCommandReceipt receipt = mock(WorkCommandReceipt.class);
     when(receipt.getResultOperationIds()).thenReturn(List.of(1L, 4L));
     when(receiptRepository.findByReceiptKeyIn(List.of("receipt"))).thenReturn(List.of(receipt));

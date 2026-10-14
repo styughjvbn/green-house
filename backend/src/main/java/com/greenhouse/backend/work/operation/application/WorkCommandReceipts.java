@@ -7,9 +7,9 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.work.api.operation.WorkOperationView;
-import com.greenhouse.backend.work.operation.domain.WorkCommandReceiptMembership;
-import com.greenhouse.backend.work.operation.repository.WorkCommandReceiptMembershipRepository;
+import com.greenhouse.backend.work.operation.domain.WorkCreationBatchMembership;
 import com.greenhouse.backend.work.operation.repository.WorkCommandReceiptRepository;
+import com.greenhouse.backend.work.operation.repository.WorkCreationBatchMembershipRepository;
 import java.time.Clock;
 import java.util.List;
 import java.util.function.Supplier;
@@ -31,7 +31,7 @@ public class WorkCommandReceipts {
 
   private final WorkCommandReceiptRepository repository;
 
-  private final WorkCommandReceiptMembershipRepository membershipRepository;
+  private final WorkCreationBatchMembershipRepository membershipRepository;
 
   private final WorkRequestFingerprint fingerprints;
 
@@ -105,7 +105,7 @@ public class WorkCommandReceipts {
   private void saveMemberships(String identity, List<Long> ids) {
     membershipRepository.saveAll(
         ids.stream()
-            .map(operationId -> new WorkCommandReceiptMembership(identity, operationId))
+            .map(operationId -> new WorkCreationBatchMembership(identity, operationId))
             .toList());
   }
 

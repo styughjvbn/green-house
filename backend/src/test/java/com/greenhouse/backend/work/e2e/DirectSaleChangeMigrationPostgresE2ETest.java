@@ -27,8 +27,8 @@ class DirectSaleChangeMigrationPostgresE2ETest {
         """
         INSERT INTO business_partners(id,name,partner_type,created_at,updated_at)
         VALUES(900,'과거 거래처','WHOLESALE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
-        INSERT INTO sales_slips(id,slip_number,sale_date,sales_type,partner_id,total_amount,paid_amount,remaining_amount,payment_status,sales_status,created_at,updated_at)
-        VALUES(901,'SIGNED',DATE '2020-01-01','DIRECT',900,-100,0,0,'미입금','출고 완료',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+        INSERT INTO sales_slips(id,sale_date,sales_type,partner_id,total_amount,paid_amount,remaining_amount,payment_status,sales_status,created_at,updated_at)
+        VALUES(901,DATE '2020-01-01','DIRECT',900,-100,0,0,'미입금','출고 완료',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
         INSERT INTO sales_slip_items(id,sales_slip_id,item_name,quantity,unit_price,amount) VALUES(902,901,'반품 표현',-1,100,-100);
         INSERT INTO direct_sales(sales_slip_id,partner_id,sale_date,total_amount,created_at,updated_at)
         VALUES(901,900,DATE '2020-01-01',-100,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);

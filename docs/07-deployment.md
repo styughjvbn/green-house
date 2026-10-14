@@ -246,17 +246,19 @@ V36은 `CREATE INDEX CONCURRENTLY`가 아닌 일반 index 생성 15개를 **하�
 
 | 최종 버전 | 적용 내용 | 통합한 개발 초안 |
 |---|---|---|
-| V35 | 경매·전표·입고·작업·배분 명령 접수와 최종 CHECK | V36·V38·V39·V40·V51, V46의 접수 CHECK |
+| V35 | 경매·전표·입고·작업·배분 명령 접수와 최종 CHECK·작업 생성 묶음 명명 | V36·V38·V39·V40·V51, V46의 접수 CHECK, 후속 V43 |
 | V36 | 운영 조회 인덱스 | V41·V42 중 최종 유지 인덱스 |
 | V37 | 판매 품목 금액 제약·Direct 금액 소유권·기존 표시 문구·유효 배분 projection | V35·V43·V48·V49·V58 |
 | V38 | 경매 대금·실제 입금 참조 전환·파생 정산 제거 | V44·V47·V50 |
 | V39 | 경매 수량 이력·후속 결정·실제 도착·기록 전용 도착 취소 | V37·V45·V46, V60의 경매 취소 CHECK |
-| V40 | 과거 경매 전표·정확한 품종/속·단위/상자·인쇄 설정·낙찰액 projection | V52~V57 |
+| V40 | 별도 전표번호 제거·과거 경매 전표·정확한 품종/속·단위/상자·인쇄 설정·낙찰액 projection | V52~V57, 후속 V42 |
 | V41 | Direct 가격 조정·반품·실제 도착·도착 명령 접수 | V59, V60의 Direct 도착 원장 |
 
 이관 전용 `historical_auction_import` 컬럼·CHECK와 `direct_sale_amount_reconciliations` 테이블은 생성하지 않는다. 파생 정산 테이블은 V34에 이미 존재하므로 실제 입금 참조를 먼저 전환한 뒤 V38에서 제거한다. 이 테이블에 잠시 설치했다 제거되는 인덱스는 만들지 않는다. 과거 접수 응답·Farm Mutation·snapshot·식별자와 실제 수납 원장은 보존한다.
 
-최신 운영 백업의 두 격리 PostgreSQL 14 복원본에서 기존 개발 초안 V60과 통합 V41을 각각 적용하고 Hibernate schema validation·원장 startup guard를 검증했다. Flyway history를 제외한 최종 58개 테이블의 행·컬럼·제약·인덱스·시퀀스는 동일했다. 새 미확인 경매 대금의 생성 시각은 migration 실행 시각이므로 신규 대금 비교에서만 제외한다. 전표 이관은 64건·품목 566건이며 난 묶음 320개를 유지한다. 이는 운영 DB에 적용한 것이 아니라 복원본 검증이다.
+최초 통합 검증에서는 최신 운영 백업의 두 격리 PostgreSQL 14 복원본에서 기존 개발 초안 V60과 당시 통합 V41을 각각 적용하고 Hibernate schema validation·원장 startup guard를 검증했다. Flyway history를 제외한 최종 58개 테이블의 행·컬럼·제약·인덱스·시퀀스는 동일했다. 새 미확인 경매 대금의 생성 시각은 migration 실행 시각이므로 신규 대금 비교에서만 제외한다. 전표 이관은 64건·품목 566건이며 난 묶음 320개를 유지한다. 이는 운영 DB에 적용한 것이 아니라 복원본 검증이다.
+
+후속 V42·V43을 추가 통합한 뒤 같은 운영 백업의 두 격리 PostgreSQL 14 복원본에 기존 V43 경로와 최종 V41 경로를 각각 적용했다. Hibernate schema validation·ACTIVE 원장 startup guard를 포함한 기동을 통과했으며 최종 57개 테이블의 데이터·컬럼·제약·인덱스·시퀀스가 일치했다. 새 경매 대금의 생성·수정 시각만 migration 실행 시각으로 비교에서 제외했다. 연결 경매 전표 64건·품목 566건·난 묶음 320개를 유지했다. 운영 적용된 V1~V34는 변경하지 않았다.
 
 배포할 때는 최신 백업을 확보하고 writer를 중지한 뒤 V34에서 통합 migration을 적용한다. V38은 실제 입금 ID·금액·날짜·부모 연결·멱등키를 보존하며 지급 근거나 매칭 확인을 추정하지 않는다. 원래 대상 누락이나 결과 소유권 충돌은 전체 migration을 rollback한다. 기존 정산 API·재계산·시작 초기화는 제공하지 않는다. 파생 정산 제거 후 구버전 writer로 단순 rollback하지 않고 검증된 백업과 해당 릴리스를 함께 복원한다.
 
@@ -264,11 +266,13 @@ V36은 `CREATE INDEX CONCURRENTLY`가 아닌 일반 index 생성 15개를 **하�
 
 ### 별도 전표번호 제거
 
-V42는 `sales_slips.slip_number`와 `sales_slip_daily_sequences`를 제거한다. 운영 적용된 V1·V17과 기존 V40 이관 단계는 변경하지 않는다. 전표 식별·검색·화면·인쇄·분석은 기존 전표 ID를 사용하며 날짜별 발급 코드는 제거한다. 전표·품목·allocation·Mutation·경매·수납 연결 ID는 유지하고 과거 생성 receipt·감사 JSON은 다시 쓰지 않는다. 과거 생성 응답의 번호 필드는 재전송 역직렬화에서만 제외한다.
+후속 V42의 번호 제거는 운영 미적용 V40으로 통합했다. V40은 `sales_slips.slip_number`와 `sales_slip_daily_sequences`를 먼저 제거하고 경매 전표를 번호 없이 이관한다. 운영 적용된 V1·V17은 변경하지 않는다. 임시 `HIST-AUC-*` 번호 생성·충돌 검사는 더 이상 수행하지 않는다. 전표 식별·검색·화면·인쇄·분석은 기존 전표 ID를 사용하며 날짜별 발급 코드는 제거한다. 전표·품목·allocation·Mutation·경매·수납 연결 ID는 유지하고 과거 생성 receipt·감사 JSON은 다시 쓰지 않는다. 과거 생성 응답의 번호 필드는 재전송 역직렬화에서만 제외한다.
 
-배포 전에 백업을 확보하고 API 소비자를 함께 갱신한다. 위 V34→V41 복원본 대사는 번호 제거 전 기준이다. V41→V42는 PostgreSQL 회귀에서 전표 ID·연결·기존 행과 receipt 원문 보존을 검증한다. 번호가 필수인 구버전 애플리케이션으로 DB만 그대로 rollback하지 않는다. 데모 비식별화는 V42 이전 백업의 번호만 처리한다. `scripts/seed_tools/generate_direct_sales_seed.py`는 V34 이전 스키마로 자료를 이관한 뒤 migration하는 과거 도구이며 현행 DB seed로 사용하지 않는다.
+배포 전에 백업을 확보하고 API 소비자를 함께 갱신한다. 위 V34→V41 복원본 대사는 번호 제거 전 기준이다. V39→V40은 PostgreSQL 회귀에서 전표 ID·연결·기존 행과 receipt 원문 보존을 검증한다. 번호가 필수인 구버전 애플리케이션으로 DB만 그대로 rollback하지 않는다. 데모 비식별화는 번호 컬럼이 남은 과거 백업의 번호만 처리한다. `scripts/seed_tools/generate_direct_sales_seed.py`는 V34 이전 스키마로 자료를 이관한 뒤 migration하는 과거 도구이며 현행 DB seed로 사용하지 않는다.
 
 ### 저장 지문·스냅샷 형식 변경 기준
+
+후속 V43의 작업 생성 묶음 명명은 운영 미적용 V35에 통합했다. V35에서 `work_command_receipt_memberships` → `work_creation_batch_memberships`로 rename한다. 적용된 V30·V31은 변경하지 않으며 PK·FK·작업별 UNIQUE 인덱스와 기존 행을 유지한다. 요청 키·지문·결과 ID·응답 snapshot을 재작성하거나 별도 묶음 식별자를 발급하지 않는다. 중복 실행 방지용 `work_command_receipts`는 유지하며 API·화면의 묶음 조회 계약도 바뀌지 않는다. V42·V43 별도 파일은 제공하지 않으며 최종 버전은 V41이다. 기존 V35·V40 또는 후속 V42·V43이 적용된 개발 DB는 checksum·이력이 충돌하므로 데이터와 이력을 보존한 별도 전환이 필요하다. 이 통합 작업으로 현재 개발 DB를 초기화하거나 `repair`하지 않는다.
 
 현재 Mutation 지문은 중첩 입력까지, Sales 생성과 일반 Work 세 생성 경로의 지문은 기존 요청 필드까지 v1 형식으로 고정한다. Work 자유 details는 기존 전체 JSON 비교를 유지한다. 저장 hash에 version 접두사를 추가하거나 기존 hash를 재계산하지 않는다. coverage의 engine/snapshot schema version(현재 각각 1), state-chain manifest schema version(현재 2), 최소 writer version은 각각 다른 계약이다. coverage metadata와 writer 기동 검사가 개별 Mutation·Work·Sales receipt의 다중 형식 reader를 제공하는 것은 아니다.
 
@@ -666,4 +670,4 @@ Java 포맷 기준은 Spotless의 Google Java Format이다. `backend`에서 `./g
 
 배포 전 writer를 중지하고 백업을 확보한다. V40은 출하·lot를 잠근 뒤 전표가 없는 출하에 전표·품목만 생성한다. 이관 전용 컬럼 없이 원출하일·timestamp·식별자·수량·등급·메모를 사용하고 기록된 품종명·속·상자 수를 바로 반영한다. 비어 있는 원본 값이나 난 묶음 배분·과거 snapshot·재고 이동을 추정하지 않는다. 이미 전표가 있는 출하와 별도 보정한 기존 품목 이름은 보존한다.
 
-연결된 결과의 누적 낙찰액을 공통 총액 projection에 합산하되 실제 받을 금액·수납·품목 단가와 혼동하지 않는다. 수량·lot 연결·거래처·전표번호 충돌은 V40 전체를 rollback하며, schema 확장이나 부분 전표를 남기지 않는다. 동일 Flyway 이력의 재실행은 이관을 반복하지 않는다. 데이터 대사와 재고·원장 불변 검증은 위 운영 미적용 마이그레이션 통합 절차를 따른다.
+연결된 결과의 누적 낙찰액을 공통 총액 projection에 합산하되 실제 받을 금액·수납·품목 단가와 혼동하지 않는다. 수량·lot 연결·거래처 오류는 V40 전체를 rollback하며, schema 확장이나 부분 전표를 남기지 않는다. 동일 Flyway 이력의 재실행은 이관을 반복하지 않는다. 데이터 대사와 재고·원장 불변 검증은 위 운영 미적용 마이그레이션 통합 절차를 따른다.

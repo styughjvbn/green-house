@@ -78,7 +78,11 @@ class ConsolidatedWorkMigrationPostgresE2ETest extends WorkE2ETestBase {
           .containsOnly("사용자 작업명");
       assertThat(
               jdbc.queryForList(
-                  "SELECT operation_id FROM work_command_receipt_memberships WHERE receipt_key='legacy' ORDER BY operation_id",
+                  "SELECT operation_id FROM "
+                      + (latest
+                          ? "work_creation_batch_memberships"
+                          : "work_command_receipt_memberships")
+                      + " WHERE receipt_key='legacy' ORDER BY operation_id",
                   Long.class))
           .containsExactly(900L, 901L);
       assertThat(

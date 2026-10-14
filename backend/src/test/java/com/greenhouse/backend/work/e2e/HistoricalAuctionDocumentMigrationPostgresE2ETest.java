@@ -9,8 +9,6 @@ import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.junit.jupiter.Container;
@@ -49,6 +47,7 @@ class HistoricalAuctionDocumentMigrationPostgresE2ETest {
     var lots = jdbc.queryForList("SELECT * FROM auction_shipment_lots ORDER BY id");
     var shipments = jdbc.queryForList("SELECT * FROM auction_shipments ORDER BY id");
     var migration = Flyway.configure().dataSource(source).target("40").load();
+    existing.forEach(row -> row.remove("slip_number"));
     assertThat(migration.migrate().migrationsExecuted).isEqualTo(1);
     assertThat(migration.migrate().migrationsExecuted).isZero();
     migration.validate();
@@ -65,9 +64,8 @@ class HistoricalAuctionDocumentMigrationPostgresE2ETest {
         });
     assertThat(jdbc.queryForList("SELECT * FROM sales_slip_items WHERE sales_slip_id=99001"))
         .isEqualTo(existingItems);
-    var imported = jdbc.queryForMap("SELECT * FROM sales_slips WHERE slip_number='HIST-AUC-99003'");
+    var imported = jdbc.queryForMap("SELECT * FROM sales_slips WHERE auction_shipment_id=99003");
     assertThat(imported)
-        .containsEntry("slip_number", "HIST-AUC-99003")
         .containsEntry("auction_shipment_id", 99003L)
         .containsEntry("sales_status", "출하 완료")
         .containsEntry("total_amount", 0)
@@ -75,7 +73,7 @@ class HistoricalAuctionDocumentMigrationPostgresE2ETest {
         .containsEntry("remaining_amount", 0L);
     assertThat(
             jdbc.queryForObject(
-                "SELECT sum(i.quantity) FROM sales_slip_items i JOIN sales_slips s ON s.id=i.sales_slip_id WHERE s.slip_number='HIST-AUC-99003'",
+                "SELECT sum(i.quantity) FROM sales_slip_items i JOIN sales_slips s ON s.id=i.sales_slip_id WHERE s.auction_shipment_id=99003",
                 Long.class))
         .isEqualTo(40);
     assertThat(
@@ -104,8 +102,7 @@ class HistoricalAuctionDocumentMigrationPostgresE2ETest {
                 Integer.class))
         .isZero();
     assertThat(
-            jdbc.update(
-                "UPDATE sales_slips SET sales_status='취소' WHERE slip_number='HIST-AUC-99003'"))
+            jdbc.update("UPDATE sales_slips SET sales_status='취소' WHERE auction_shipment_id=99003"))
         .isEqualTo(1);
   }
 
@@ -139,7 +136,7 @@ class HistoricalAuctionDocumentMigrationPostgresE2ETest {
   }
 
   @Test
-  void invalidPhysicalQuantityRollsBackAllDocumentsAndTheMarkerColumn() {
+  void invalidPhysicalQuantityRollsBackDocumentsAndSchemaChanges() {
     var source = database();
     var jdbc = new JdbcTemplate(source);
     seed(jdbc);
@@ -147,6 +144,17 @@ class HistoricalAuctionDocumentMigrationPostgresE2ETest {
     assertThatThrownBy(() -> Flyway.configure().dataSource(source).load().migrate())
         .hasStackTraceContaining("invalid quantity or conflicting lot ownership");
     assertThat(jdbc.queryForObject("SELECT count(*) FROM sales_slips", Integer.class)).isZero();
+    assertThat(
+            jdbc.queryForObject(
+                """
+        SELECT count(*) FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='sales_slips' AND column_name='slip_number'
+        """,
+                Long.class))
+        .isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject("SELECT to_regclass('sales_slip_daily_sequences')", String.class))
+        .isEqualTo("sales_slip_daily_sequences");
     assertThat(
             jdbc.queryForObject(
                 "SELECT count(*) FROM information_schema.columns WHERE table_name='sales_slips' AND column_name='historical_auction_import'",
@@ -178,27 +186,44 @@ class HistoricalAuctionDocumentMigrationPostgresE2ETest {
     assertThat(jdbc.queryForObject("SELECT count(*) FROM sales_slips", Integer.class)).isEqualTo(1);
   }
 
-  @ParameterizedTest
-  @ValueSource(strings = {"NUMBER", "PARTNER"})
-  void rejectsAmbiguousNumberOrWrongPartnerInsteadOfInventingAnotherMapping(String scenario) {
+  @Test
+  void rejectsWrongPartnerInsteadOfInventingAnotherMapping() {
     var source = database();
     var jdbc = new JdbcTemplate(source);
     seed(jdbc);
-    if (scenario.equals("PARTNER")) {
-      jdbc.execute("UPDATE business_partners SET partner_type='WHOLESALE' WHERE id=99000");
-    } else {
-      jdbc.execute(
-          """
-          INSERT INTO sales_slips (id,created_at,updated_at,slip_number,sale_date,sales_type,partner_id,total_amount,payment_status,sales_status)
-          VALUES (99001,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'HIST-AUC-99003',DATE '2026-10-01','AUCTION',99000,0,'정산 대기','작성중')
-          """);
-    }
+    jdbc.execute("UPDATE business_partners SET partner_type='WHOLESALE' WHERE id=99000");
     assertThatThrownBy(() -> Flyway.configure().dataSource(source).load().migrate())
-        .hasStackTraceContaining(
-            scenario.equals("PARTNER")
-                ? "partner is not an auction house"
-                : "document number conflict");
+        .hasStackTraceContaining("partner is not an auction house");
     assertThat(jdbc.queryForObject("SELECT count(*) FROM sales_slip_items", Integer.class))
+        .isZero();
+  }
+
+  @Test
+  void ignoresRetiredNumbersAndLinksHistoricalDocumentsByShipmentId() {
+    var source = database();
+    var jdbc = new JdbcTemplate(source);
+    seed(jdbc);
+    jdbc.execute(
+        """
+        INSERT INTO sales_slips(id,created_at,updated_at,slip_number,sale_date,sales_type,partner_id,total_amount,payment_status,sales_status)
+        VALUES (99001,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'HIST-AUC-99003',DATE '2026-10-01','AUCTION',99000,0,'정산 대기','작성중')
+        """);
+    Flyway.configure().dataSource(source).load().migrate();
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM sales_slips", Integer.class)).isEqualTo(2);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT id FROM sales_slips WHERE auction_shipment_id=99003", Long.class))
+        .isNotEqualTo(99001L);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT auction_shipment_id FROM sales_slips WHERE id=99001", Long.class))
+        .isNull();
+    assertThat(
+            jdbc.queryForObject(
+                """
+        SELECT count(*) FROM information_schema.columns WHERE table_name='sales_slips' AND column_name='slip_number'
+        """,
+                Long.class))
         .isZero();
   }
 

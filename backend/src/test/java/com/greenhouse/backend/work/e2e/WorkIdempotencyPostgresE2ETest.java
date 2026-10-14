@@ -104,7 +104,7 @@ class WorkIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     assertThat(count("work_operations")).isEqualTo(1);
     assertThat(count("work_applied_effects")).isEqualTo(1);
     assertThat(count("work_command_receipts")).isEqualTo(1);
-    assertThat(count("work_command_receipt_memberships")).isEqualTo(1);
+    assertThat(count("work_creation_batch_memberships")).isEqualTo(1);
     assertThat(quantity()).isEqualTo(60);
   }
 
@@ -113,7 +113,7 @@ class WorkIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     var invalid = post("/api/work-operations/repot", immediate("retry", 1));
     assertThat(invalid.status()).as(invalid.body().toString()).isEqualTo(400);
     assertThat(count("work_command_receipts")).isZero();
-    assertThat(count("work_command_receipt_memberships")).isZero();
+    assertThat(count("work_creation_batch_memberships")).isZero();
     assertThat(count("work_operations")).isZero();
     String valid = immediate("retry", 6);
     assertThat(post("/api/work-operations/repot", valid).status()).isEqualTo(201);
@@ -207,7 +207,7 @@ class WorkIdempotencyPostgresE2ETest extends WorkE2ETestBase {
             "work_target_executions",
             "work_applied_effects",
             "work_command_receipts",
-            "work_command_receipt_memberships",
+            "work_creation_batch_memberships",
             "orchid_group_mutations",
             "orchid_group_mutation_entries",
             "orchid_group_mutation_relations",
@@ -261,7 +261,7 @@ class WorkIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     conflict(post(path, batch.replace("idempotency test", "different title")));
     assertThat(count("work_operations")).isEqualTo(2);
     assertThat(count("work_applied_effects")).isEqualTo(2);
-    assertThat(count("work_command_receipt_memberships")).isEqualTo(2);
+    assertThat(count("work_creation_batch_memberships")).isEqualTo(2);
   }
 
   @Test
@@ -277,7 +277,7 @@ class WorkIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     var result = post("/api/work-operations/structure-change-records/batch", batch);
     assertThat(result.status()).as(result.body().toString()).isEqualTo(400);
     assertThat(count("work_command_receipts")).isZero();
-    assertThat(count("work_command_receipt_memberships")).isZero();
+    assertThat(count("work_creation_batch_memberships")).isZero();
     assertThat(count("work_operations")).isZero();
     assertThat(quantity()).isEqualTo(100);
   }

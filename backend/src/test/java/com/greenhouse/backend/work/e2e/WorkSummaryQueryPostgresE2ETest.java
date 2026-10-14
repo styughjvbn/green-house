@@ -80,7 +80,7 @@ class WorkSummaryQueryPostgresE2ETest extends WorkE2ETestBase {
         receiptIds);
     for (long id : List.of(firstId, roots.get(1), childId))
       jdbc.update(
-          "insert into work_command_receipt_memberships (receipt_key, operation_id) values ('summary-query', ?)",
+          "insert into work_creation_batch_memberships (receipt_key, operation_id) values ('summary-query', ?)",
           id);
 
     var stats = emf.unwrap(SessionFactory.class).getStatistics();
