@@ -232,6 +232,32 @@ APP_URL=https://green-house-demo.sjw-project.site \
 비식별 DB에서 V27 같은 운영 데이터 의존 migration을 다시 실행하지 않는다. 코드의 migration
 파일과 checksum이 다르거나 최신 버전이 아니면 `flyway validate` 단계에서 중단한다.
 
+### 새 운영 버전 배포 후 수동 데모 갱신
+
+새 운영 버전을 배포한 뒤에는 다음 순서를 지킨다. 데모 애플리케이션을 먼저 배포하면 기존
+데모 DB를 대상으로 Flyway가 실행되므로 순서를 바꾸지 않는다.
+
+1. 운영 backend 배포와 운영 DB Flyway migration 완료를 확인한다.
+2. 운영 PC 저장소를 배포한 릴리스 코드와 동일한 commit으로 맞춘다.
+3. 운영 DB를 비식별화하여 데모 DB를 갱신하고 성공을 확인한다.
+4. 같은 릴리스 tag의 backend/frontend 이미지를 데모에 배포한다.
+
+```bash
+sudo systemctl start green-house-demo-refresh.service
+systemctl show green-house-demo-refresh.service \
+  -p Result -p ExecMainStatus
+journalctl -u green-house-demo-refresh.service -n 200 --no-pager
+
+NAMESPACE=green-house-demo \
+APP_URL=https://green-house-demo.sjw-project.site \
+bash ./scripts/deploy/deploy.sh sha-xxxx
+```
+
+`Result=success`, `ExecMainStatus=0`과 `Scheduled demo refresh completed` 로그를 확인한 뒤에만
+데모 이미지를 배포한다. systemd service는 `/etc/green-house/demo-refresh.env`를 자동으로
+읽으므로 수동으로 환경 파일을 source하지 않는다. 데이터 리프레시와 이미지 배포는 같은
+operation lock을 사용하므로 동시에 실행하지 않는다.
+
 전체 흐름은 다음과 같다.
 
 ```text
@@ -246,13 +272,34 @@ greenhouse dump → 격리 PostgreSQL 복원 → Flyway/schema 확인 → 전체
 result/status history, Direct 거래·가격/경매 대금/payment/balance, audit event와 OrchidGroup mutation/entry/relation/
 coverage의 ID·FK·행 순서·revision chain·mutation/correlation 연결을 보존한다. 작업자·입금자·
 거래처·연락처·자유문자열은 제거 또는 결정적 데모 값으로 바꾸며 날짜는 같은 일수만큼,
-연결된 수량·금액과 JSON snapshot은 같은 배율로 바꾼다. Direct 거래·가격·대사 근거,
-경매 대금·후속 결정·반환 도착도 같은 변환을 적용하며 미확인 지급액의 null과 검토 상태를 유지한다.
-판매 접수 snapshot의 날짜는 DB와 같은 일수로 이동한다. 스키마 허용 목록과 검증 SQL은
-V38의 파생 정산 제거를 반영한다. opaque fingerprint와 idempotency key는
-참조 안정성을 위해 보존하고 ACTIVE baseline fingerprint는 변환된 snapshot으로 다시 계산한다.
+연결된 수량·금액과 JSON snapshot은 같은 배율로 바꾼다. Direct 원가격·가격 조정·반품·도착/취소,
+경매 대금·후속 결정·반환 도착·수량 변경 snapshot, 작업 보정·실사·제거 묶음 snapshot까지 함께
+변환한다. 미확인 경매 지급액의 null·매칭 상태와 생성 당시 receipt의 금액·업무 상태는 유지한다.
+출하자 이름·코드도 제거하며 인쇄 양식 선택은 보존한다.
+
+허용 목록과 검증 SQL은 현행 V41의 57개 업무 테이블을 기준으로 한다. 삭제된 대사 테이블·
+전표 번호/일일 번호 테이블은 참조하지 않으며 `work_creation_batch_memberships`를 검증한다.
+일반 판매 총액은 원가격과 전체 조정/취소 이력으로, 경매 전표 총액은 연결된 lot 결과의 저장된
+낙찰금 합계로 검증한다. 경매 낙찰금은 받을 금액이나 품목 금액 합계로 대체하지 않는다.
+과거 경매 결과에 저장된 낙찰금과 수량×단가의 차이가 있으면 금액과 검수 상태를 함께 보존하며
+비식별화 과정에서 자동 보정하지 않는다. 일반 판매의 과거 음수 거래·초과 수납도 보존한다.
+
+판매·입고·작업 생성 및 경매 명령 receipt와 수납 배분 결과 JSON의 날짜·수량·금액도 같은 변환을
+적용한다. opaque fingerprint와 idempotency key는 참조 안정성을 위해 보존하고, key 안에 포함된
+날짜는 변경하지 않는다. 개인정보 패턴 검사의 날짜/UUID 예외는 업무 날짜와 식별자 위치에만
+적용하며 메모·사유의 같은 문자열은 계속 거절한다. ACTIVE baseline fingerprint는 변환된
+snapshot으로 다시 계산한다. 모든 변환은 격리 DB의 한 transaction에서 처리하며 변환 중 실패하면
+행·trigger·marker 변경을 함께 rollback한다.
+
+비식별화 회귀는 `python3 -m unittest discover -s scripts/demo -p 'test_sanitize_demo*.py'`로 실행한다.
+실제 PostgreSQL 검증은 Docker와 `scripts/demo/requirements.txt`의 드라이버 설치 후
+`DEMO_SANITIZE_POSTGRES_TEST=1`로 같은 명령을 실행하며 CI에서도 수행한다. 최신 운영 백업
+V34의 격리 복원본을 현행 V41로 migration한 뒤 비식별화하는 리허설로 운영 자료 호환성을 확인한다.
+정기 데모 생성에서는 앞서 명시한 운영 migration 완료·Flyway validate 조건을 그대로 유지한다.
 작업 타입의 code·name과 `work_records.work_type`은 개인정보가 아닌 업무 분류 기준이므로
 사용자 정의 타입을 포함해 원문을 보존한다.
+
+입고는 접수 모델의 `estimated_quantity`를 변환하며 삭제된 포트 결과 컬럼은 참조하지 않는다.
 
 비식별화 key와 날짜 이동값은 실행마다 바꾸지 않는다. 32자 이상의 key, 0이 아닌 날짜 이동,
 수량·가격 배율 2~9를 `/etc/green-house/demo-refresh.env` 같은 root 관리 파일에 고정한다.
@@ -324,6 +371,8 @@ service는 `User=sjw`, `WorkingDirectory=/home/sjw/projects/green-house`, snap D
 04:00(Asia/Seoul)에 실행해 매일 03:00 운영 DB backup과 겹치지 않게 하고, 실패로 놓친 실행을
 `Persistent=true`로 보완한다. 이미지 배포도
 같은 `sjw` 계정으로 실행해야 공유 `/tmp/green-house-operation.lock`이 정상 동작한다.
+Snap Docker의 `snap-confine`은 기동 중 capability를 사용하므로 이 service에는
+`NoNewPrivileges=false`를 명시한다. `true`로 설정하면 Docker Compose 확인 단계에서 실패한다.
 
 ## 9. 모니터링
 

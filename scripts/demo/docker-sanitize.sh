@@ -45,7 +45,11 @@ main() {
 
   require_command docker
   require_command openssl
-  docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is required"
+  local compose_version_output
+  if ! compose_version_output="$(docker compose version 2>&1)"; then
+    printf '%s\n' "${compose_version_output}" >&2
+    fail "Docker Compose v2 check failed"
+  fi
   validate_environment
 
   local source_dump output_dump
