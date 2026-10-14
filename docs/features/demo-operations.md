@@ -232,6 +232,32 @@ APP_URL=https://green-house-demo.sjw-project.site \
 비식별 DB에서 V27 같은 운영 데이터 의존 migration을 다시 실행하지 않는다. 코드의 migration
 파일과 checksum이 다르거나 최신 버전이 아니면 `flyway validate` 단계에서 중단한다.
 
+### 새 운영 버전 배포 후 수동 데모 갱신
+
+새 운영 버전을 배포한 뒤에는 다음 순서를 지킨다. 데모 애플리케이션을 먼저 배포하면 기존
+데모 DB를 대상으로 Flyway가 실행되므로 순서를 바꾸지 않는다.
+
+1. 운영 backend 배포와 운영 DB Flyway migration 완료를 확인한다.
+2. 운영 PC 저장소를 배포한 릴리스 코드와 동일한 commit으로 맞춘다.
+3. 운영 DB를 비식별화하여 데모 DB를 갱신하고 성공을 확인한다.
+4. 같은 릴리스 tag의 backend/frontend 이미지를 데모에 배포한다.
+
+```bash
+sudo systemctl start green-house-demo-refresh.service
+systemctl show green-house-demo-refresh.service \
+  -p Result -p ExecMainStatus
+journalctl -u green-house-demo-refresh.service -n 200 --no-pager
+
+NAMESPACE=green-house-demo \
+APP_URL=https://green-house-demo.sjw-project.site \
+bash ./scripts/deploy/deploy.sh sha-xxxx
+```
+
+`Result=success`, `ExecMainStatus=0`과 `Scheduled demo refresh completed` 로그를 확인한 뒤에만
+데모 이미지를 배포한다. systemd service는 `/etc/green-house/demo-refresh.env`를 자동으로
+읽으므로 수동으로 환경 파일을 source하지 않는다. 데이터 리프레시와 이미지 배포는 같은
+operation lock을 사용하므로 동시에 실행하지 않는다.
+
 전체 흐름은 다음과 같다.
 
 ```text
@@ -272,6 +298,8 @@ V34의 격리 복원본을 현행 V41로 migration한 뒤 비식별화하는 리
 정기 데모 생성에서는 앞서 명시한 운영 migration 완료·Flyway validate 조건을 그대로 유지한다.
 작업 타입의 code·name과 `work_records.work_type`은 개인정보가 아닌 업무 분류 기준이므로
 사용자 정의 타입을 포함해 원문을 보존한다.
+
+입고는 접수 모델의 `estimated_quantity`를 변환하며 삭제된 포트 결과 컬럼은 참조하지 않는다.
 
 비식별화 key와 날짜 이동값은 실행마다 바꾸지 않는다. 32자 이상의 key, 0이 아닌 날짜 이동,
 수량·가격 배율 2~9를 `/etc/green-house/demo-refresh.env` 같은 root 관리 파일에 고정한다.
@@ -343,6 +371,8 @@ service는 `User=sjw`, `WorkingDirectory=/home/sjw/projects/green-house`, snap D
 04:00(Asia/Seoul)에 실행해 매일 03:00 운영 DB backup과 겹치지 않게 하고, 실패로 놓친 실행을
 `Persistent=true`로 보완한다. 이미지 배포도
 같은 `sjw` 계정으로 실행해야 공유 `/tmp/green-house-operation.lock`이 정상 동작한다.
+Snap Docker의 `snap-confine`은 기동 중 capability를 사용하므로 이 service에는
+`NoNewPrivileges=false`를 명시한다. `true`로 설정하면 Docker Compose 확인 단계에서 실패한다.
 
 ## 9. 모니터링
 

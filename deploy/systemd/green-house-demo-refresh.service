@@ -13,5 +13,6 @@ Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/s
 ExecStart=/home/sjw/projects/green-house/scripts/demo/scheduled-demo-refresh.sh
 TimeoutStartSec=2h
 UMask=0077
-NoNewPrivileges=true
+# Snap Docker's snap-confine requires capabilities during startup.
+NoNewPrivileges=false
 PrivateTmp=false
