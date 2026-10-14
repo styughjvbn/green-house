@@ -9,32 +9,35 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.audit.repository.AuditEventRepository;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-import com.greenhouse.backend.sales.domain.SalesInventoryMovementType;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
-import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
-import com.greenhouse.backend.sales.repository.SalesSlipRepository;
-import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.House;
+import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
+import com.greenhouse.backend.farm.variety.domain.Variety;
+import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.document.domain.SalesInventoryMovementType;
+import com.greenhouse.backend.sales.document.domain.SalesSlip;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItem;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItemAllocation;
+import com.greenhouse.backend.sales.document.repository.SalesInventoryMovementRepository;
+import com.greenhouse.backend.sales.document.repository.SalesSlipRepository;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.payment.repository.PartnerBalanceSummaryRepository;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
 class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
+  @Autowired JdbcTemplate jdbc;
 
   @Autowired AuditEventRepository auditEventRepository;
 
@@ -89,7 +92,6 @@ class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
             new BusinessPartner("판매 수정 거래처", PartnerType.WHOLESALE, null, null, null, null));
     SalesSlip slip =
         new SalesSlip(
-            "AUDIT-" + System.nanoTime(),
             LocalDate.of(2026, 8, 1),
             SalesType.DIRECT,
             null,
@@ -102,7 +104,9 @@ class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
         new SalesSlipItem(null, variety.getName(), variety.getGenus(), "4인치", 2, 1000, "품목");
     item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
     slip.addItem(item);
+    DirectSaleFixtures.refreshProjection(slip);
     salesSlipRepository.saveAndFlush(slip);
+    DirectSaleFixtures.copyTerms(jdbc, slip.getId());
 
     mockMvc
         .perform(

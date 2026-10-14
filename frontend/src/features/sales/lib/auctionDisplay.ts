@@ -17,6 +17,7 @@ const statusLabels: Record<AuctionLotStatus, string> = {
   QUANTITY_MISMATCH: "수량불일치",
   REVIEW_REQUIRED: "확인필요",
   CANCELLED: "취소",
+  DISPOSED: "경매장 처리 완료",
 };
 
 const inspectionLabels: Record<AuctionInspectionStatus, string> = {
@@ -41,8 +42,10 @@ export const auctionStatusOptions = Object.entries(statusLabels) as Array<
   [AuctionLotStatus, string]
 >;
 
-export function auctionStatusLabel(status: AuctionLotStatus) {
-  return statusLabels[status];
+export function auctionStatusLabel(status: string) {
+  return Object.hasOwn(statusLabels, status)
+    ? statusLabels[status as AuctionLotStatus]
+    : status;
 }
 
 export function auctionInspectionLabel(status: AuctionInspectionStatus) {
@@ -53,7 +56,7 @@ export function auctionAttemptStatusLabel(status: string) {
   return attemptStatusLabels[status] ?? status;
 }
 
-export function auctionStatusTone(status: AuctionLotStatus) {
+export function auctionStatusTone(status: string) {
   if (["SOLD", "RETURNED"].includes(status)) return "green";
   if (
     [
@@ -68,3 +71,12 @@ export function auctionStatusTone(status: AuctionLotStatus) {
     return "orange";
   return "blue";
 }
+
+export const followUpLabels: Record<
+  import("../api/types").AuctionFollowUpMethod,
+  string
+> = {
+  REAUCTION: "재경매",
+  FARM_RETURN: "농장 반환",
+  AUCTION_DISPOSAL: "경매장 처리",
+};

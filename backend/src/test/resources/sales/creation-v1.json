@@ -1,0 +1,153 @@
+[
+  {
+    "name": "full",
+    "input": {
+      "saleDate": "2026-09-08",
+      "salesType": "DIRECT",
+      "partnerId": 3,
+      "auctionShipmentId": null,
+      "paymentStatus": "미입금",
+      "salesStatus": "작성중",
+      "paymentMethod": null,
+      "memo": " memo ",
+      "items": [
+        {
+          "itemName": "등록 당시 이름",
+          "genus": "춘란",
+          "spec": "2치",
+          "quantity": 5,
+          "unitPrice": 1250,
+          "memo": null,
+          "allocations": [
+            {
+              "orchidGroupId": 11,
+              "quantity": 3
+            },
+            {
+              "orchidGroupId": 13,
+              "quantity": 2
+            }
+          ]
+        }
+      ]
+    },
+    "fingerprint": "9d749fffd3c31ce90ad8dc8431dfdae0482ee788af87b502c0280747c32aa8c7"
+  },
+  {
+    "name": "null-defaults",
+    "input": {
+      "saleDate": "2026-09-08",
+      "salesType": null,
+      "partnerId": 3,
+      "auctionShipmentId": null,
+      "paymentStatus": null,
+      "salesStatus": null,
+      "paymentMethod": null,
+      "memo": " memo ",
+      "items": []
+    },
+    "fingerprint": "ebed34c1fe2d816ede456fd5bc3a673e81cbc69a4ac05d03855346e33d45ca43"
+  },
+  {
+    "name": "auction",
+    "input": {
+      "saleDate": "2026-09-08",
+      "salesType": "AUCTION",
+      "partnerId": 3,
+      "auctionShipmentId": 7,
+      "paymentStatus": "미입금",
+      "salesStatus": "작성중",
+      "paymentMethod": "계좌이체",
+      "memo": " memo ",
+      "items": [
+        {
+          "itemName": "등록 당시 이름",
+          "genus": "춘란",
+          "spec": "2치",
+          "quantity": 5,
+          "unitPrice": 1250,
+          "memo": null,
+          "allocations": [
+            {
+              "orchidGroupId": 11,
+              "quantity": 3
+            },
+            {
+              "orchidGroupId": 13,
+              "quantity": 2
+            }
+          ]
+        }
+      ]
+    },
+    "fingerprint": "52c3fd6ee292fc11e972c17f68749e01949bea241c61ea8e543737e5036e39cb"
+  },
+  {
+    "name": "allocation-order",
+    "input": {
+      "saleDate": "2026-09-08",
+      "salesType": "DIRECT",
+      "partnerId": 3,
+      "auctionShipmentId": null,
+      "paymentStatus": "미입금",
+      "salesStatus": "작성중",
+      "paymentMethod": null,
+      "memo": " memo ",
+      "items": [
+        {
+          "itemName": "등록 당시 이름",
+          "genus": "춘란",
+          "spec": "2치",
+          "quantity": 5,
+          "unitPrice": 1250,
+          "memo": null,
+          "allocations": [
+            {
+              "orchidGroupId": 13,
+              "quantity": 2
+            },
+            {
+              "orchidGroupId": 11,
+              "quantity": 3
+            }
+          ]
+        }
+      ]
+    },
+    "fingerprint": "e7460935b45d6fc544c5776afa336ecc02f633f9ea324b4bdac479610ae210c3"
+  },
+  {
+    "name": "scoped-metadata",
+    "input": {
+      "saleDate": "2026-09-08",
+      "salesType": "DIRECT",
+      "partnerId": 3,
+      "auctionShipmentId": null,
+      "paymentStatus": "미입금",
+      "salesStatus": "작성중",
+      "paymentMethod": null,
+      "memo": " memo ",
+      "items": [
+        {
+          "itemName": "등록 당시 이름",
+          "genus": "춘란",
+          "spec": "2치",
+          "quantity": 5,
+          "unitPrice": 1250,
+          "memo": " item memo ",
+          "allocations": [
+            {
+              "orchidGroupId": 11,
+              "quantity": 3
+            },
+            {
+              "orchidGroupId": 13,
+              "quantity": 2
+            }
+          ]
+        }
+      ]
+    },
+    "fingerprint": "773c19f1d993c1be25d14aedec6cf7fa459d7bf044126316a65d7deae3e0542d"
+  }
+]

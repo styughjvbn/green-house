@@ -10,16 +10,16 @@ import com.greenhouse.backend.analytics.dto.VarietyInventoryAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsResponse;
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
-import com.greenhouse.backend.partner.application.BusinessPartnerReader;
-import com.greenhouse.backend.partner.application.BusinessPartnerReader.Identity;
-import com.greenhouse.backend.sales.application.SalesMetricsReader;
-import com.greenhouse.backend.sales.application.SalesMetricsReader.NamedAmount;
-import com.greenhouse.backend.sales.application.SalesMetricsReader.PartnerSales;
-import com.greenhouse.backend.sales.application.SalesMetricsReader.SlipSummary;
-import com.greenhouse.backend.settlement.application.PartnerBalanceService;
-import com.greenhouse.backend.settlement.application.PartnerBalanceService.Balance;
-import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
+import com.greenhouse.backend.farm.api.status.FarmMetricsApi;
+import com.greenhouse.backend.sales.api.document.SalesMetricsApi;
+import com.greenhouse.backend.sales.api.document.SalesMetricsApi.NamedAmount;
+import com.greenhouse.backend.sales.api.document.SalesMetricsApi.PartnerSales;
+import com.greenhouse.backend.sales.api.document.SalesMetricsApi.SlipSummary;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi.Identity;
+import com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi;
+import com.greenhouse.backend.sales.api.payment.PartnerBalanceQueryApi.Balance;
+import com.greenhouse.backend.work.api.operation.WorkOperationMetricsApi;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -37,15 +37,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AnalyticsQueryService {
 
-  private final SalesMetricsReader salesMetrics;
+  private final SalesMetricsApi salesMetrics;
 
-  private final FarmMetricsReader farmMetricsReader;
+  private final FarmMetricsApi farmMetricsReader;
 
-  private final WorkOperationMetricsReader workMetricsReader;
+  private final WorkOperationMetricsApi workMetricsReader;
 
-  private final BusinessPartnerReader partnerReader;
+  private final BusinessPartnerQueryApi partnerReader;
 
-  private final PartnerBalanceService balanceService;
+  private final PartnerBalanceQueryApi balanceService;
 
   private final Clock clock;
 
@@ -199,7 +199,6 @@ public class AnalyticsQueryService {
             row ->
                 new AnalyticsSlipSummaryResponse(
                     row.id(),
-                    row.slipNumber(),
                     row.saleDate(),
                     partners.get(row.partnerId()).name(),
                     row.totalAmount(),

@@ -1,27 +1,32 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerReconciliationService;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
 import com.greenhouse.backend.support.MovementTestSupport;
 import com.greenhouse.backend.support.MovementTestSupport.MoveTestRequest;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
+import com.greenhouse.backend.work.operation.application.WorkOperationVoidService;
+import com.greenhouse.backend.work.operation.web.dto.WorkOperationBatchCancellationRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Tag("work-e2e")
 @org.springframework.context.annotation.Import(MovementTestSupport.class)
@@ -29,15 +34,19 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired WorkTestDataSeeder seeder;
 
+  @MockitoSpyBean WorkOperationVoidService cancellations;
+
+  @Autowired DataSource dataSource;
+
+  @Autowired PlatformTransactionManager transactionManager;
+
   @Autowired JdbcTemplate jdbc;
 
   @Autowired MovementTestSupport movement;
 
   @Autowired OrchidGroupRepository groups;
 
-  @Autowired OrchidGroupStateChainMigrationService migration;
-
-  @Autowired OrchidGroupLedgerCutoverService cutover;
+  @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
 
   @Autowired OrchidGroupLedgerReconciliationService reconciliation;
 
@@ -69,11 +78,8 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
             Long.class,
             scenario.orchidGroupId());
     UUID key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        migration, groups, key, LocalDate.of(2026, 8, 20), "1.0.0");
-    cutover.execute(
-        new OrchidGroupLedgerCutoverCommand(
-            key, LocalDate.of(2026, 8, 20), "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, LocalDate.of(2026, 8, 20), "1.0.0");
+    ledgerFixture.activate(key);
     Long second = createGroup(zone, 50, 6, 8);
     sourceIds = List.of(scenario.orchidGroupId(), second);
     Long outsideId =
@@ -196,22 +202,42 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
   void concurrentRetriesCreateOnlyOneCompensationAndAuditSet() throws Exception {
     prepare();
     String payload = request(workIds, sourceIds, "parallel");
-    var start = new CountDownLatch(1);
-    try (var executor = Executors.newFixedThreadPool(2)) {
-      Callable<ApiResult> task =
-          () -> {
-            start.await();
-            return post("/api/work-operations/cancel-batch", payload);
-          };
-      var first = executor.submit(task);
-      var second = executor.submit(task);
-      start.countDown();
-      var firstResult = first.get(30, TimeUnit.SECONDS);
-      var secondResult = second.get(30, TimeUnit.SECONDS);
-      assertThat(firstResult.status()).as(firstResult.body().toString()).isEqualTo(200);
-      assertThat(secondResult.status()).as(secondResult.body().toString()).isEqualTo(200);
-      assertThat(firstResult.data().path("compensationMutationId"))
-          .isEqualTo(secondResult.data().path("compensationMutationId"));
+    var firstWorker = new PostgresLockTestSupport.Worker();
+    var secondWorker = new PostgresLockTestSupport.Worker();
+    var invocationOrder = new AtomicInteger();
+    doAnswer(
+            invocation -> {
+              (invocationOrder.getAndIncrement() == 0 ? firstWorker : secondWorker).capture(jdbc);
+              return invocation.callRealMethod();
+            })
+        .when(cancellations)
+        .cancelBatch(any());
+    try (var connection = dataSource.getConnection();
+        var executor = Executors.newFixedThreadPool(2)) {
+      connection.setAutoCommit(false);
+      int owner = PostgresLockTestSupport.backendPid(connection);
+      try (var statement =
+          connection.prepareStatement("SELECT id FROM work_operations WHERE id = ? FOR UPDATE")) {
+        statement.setLong(1, workIds.stream().min(Long::compareTo).orElseThrow());
+        try (var rows = statement.executeQuery()) {
+          assertThat(rows.next()).isTrue();
+        }
+      }
+      try {
+        var first = executor.submit(() -> post("/api/work-operations/cancel-batch", payload));
+        firstWorker.awaitBlockedBy(jdbc, owner, first);
+        var second = executor.submit(() -> post("/api/work-operations/cancel-batch", payload));
+        secondWorker.awaitBlockedBy(jdbc, owner, second);
+        connection.commit();
+        var a = first.get(30, TimeUnit.SECONDS);
+        var b = second.get(30, TimeUnit.SECONDS);
+        assertThat(a.status()).as(a.body().toString()).isEqualTo(200);
+        assertThat(b.status()).as(b.body().toString()).isEqualTo(200);
+        assertThat(a.data().path("compensationMutationId"))
+            .isEqualTo(b.data().path("compensationMutationId"));
+      } finally {
+        connection.rollback();
+      }
     }
     assertThat(
             jdbc.queryForObject(
@@ -266,21 +292,55 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
   @Test
   void failureAfterMutationFlushRollsBackGroupsWorkAndAudit() throws Exception {
     prepare();
+    var before = cancellationState();
     jdbc.execute(
         "ALTER TABLE work_operations ADD CONSTRAINT test_batch_failure CHECK (status <> 'VOIDED')");
     try {
+      PostgresWriteTestSupport.assertStandaloneCheckFailure(
+          () ->
+              cancellations.cancelBatch(
+                  new WorkOperationBatchCancellationRequest(
+                      workIds, Set.copyOf(sourceIds), "rollback", "오등록")),
+          "test_batch_failure");
+      assertThat(cancellationState()).isEqualTo(before);
       var response =
           post("/api/work-operations/cancel-batch", request(workIds, sourceIds, "rollback"));
-      assertThat(response.status()).isGreaterThanOrEqualTo(400);
+      assertThat(response.status()).as(response.body().toString()).isEqualTo(409);
+      assertThat(response.body().path("error").path("code").asText())
+          .isEqualTo("DATA_INTEGRITY_CONFLICT");
+      assertThat(cancellationState()).isEqualTo(before);
       assertUnchanged();
-      assertThat(
-              jdbc.queryForObject(
-                  "SELECT count(*) FROM audit_events WHERE context_data ? 'compensationMutationId'",
-                  Long.class))
-          .isZero();
     } finally {
       jdbc.execute("ALTER TABLE work_operations DROP CONSTRAINT test_batch_failure");
     }
+    var retry = post("/api/work-operations/cancel-batch", request(workIds, sourceIds, "rollback"));
+    assertThat(retry.status()).as(retry.body().toString()).isEqualTo(200);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+    var committed = cancellationState();
+    assertThat(
+            post("/api/work-operations/cancel-batch", request(workIds, sourceIds, "rollback"))
+                .data())
+        .isEqualTo(retry.data());
+    assertThat(cancellationState()).isEqualTo(committed);
+  }
+
+  private Map<String, List<String>> cancellationState() {
+    return PostgresWriteTestSupport.snapshot(
+        jdbc,
+        transactionManager,
+        List.of(
+            "orchid_groups",
+            "orchid_group_mutations",
+            "orchid_group_mutation_entries",
+            "orchid_group_mutation_relations",
+            "work_operations",
+            "work_operation_targets",
+            "work_target_executions",
+            "work_applied_effects",
+            "work_effect_orchid_groups",
+            "work_command_receipts",
+            "work_creation_batch_memberships",
+            "audit_events"));
   }
 
   private void assertUnchanged() {
@@ -436,11 +496,8 @@ class WorkBatchCancellationPostgresE2ETest extends WorkE2ETestBase {
             Long.class,
             scenario.orchidGroupId());
     UUID key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        migration, groups, key, LocalDate.of(2026, 8, 20), "1.0.0");
-    cutover.execute(
-        new OrchidGroupLedgerCutoverCommand(
-            key, LocalDate.of(2026, 8, 20), "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, LocalDate.of(2026, 8, 20), "1.0.0");
+    ledgerFixture.activate(key);
     Long destination =
         jdbc.queryForObject(
             "SELECT id FROM bed_zones WHERE id <> ? ORDER BY id LIMIT 1", Long.class, zone);

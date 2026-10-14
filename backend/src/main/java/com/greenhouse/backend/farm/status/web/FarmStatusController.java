@@ -1,0 +1,56 @@
+package com.greenhouse.backend.farm.status.web;
+
+import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidManagementBedOrderResponse;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidManagementViewportResponse;
+import com.greenhouse.backend.farm.status.application.FarmStatusService;
+import com.greenhouse.backend.farm.status.domain.FarmStatusTargetType;
+import com.greenhouse.backend.farm.status.domain.FarmZoomLevel;
+import com.greenhouse.backend.farm.status.web.dto.FarmStatusMapResponse;
+import com.greenhouse.backend.farm.status.web.dto.FarmStatusOrchidGroupListResponse;
+import com.greenhouse.backend.farm.status.web.dto.FarmStatusZoomResponse;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/farm-status")
+@RequiredArgsConstructor
+public class FarmStatusController {
+
+  private final FarmStatusService farmStatusService;
+
+  @GetMapping("/map")
+  public ApiResponse<FarmStatusMapResponse> getMap() {
+    return ApiResponse.ok(farmStatusService.getMap());
+  }
+
+  @GetMapping("/orchid-groups")
+  public ApiResponse<FarmStatusOrchidGroupListResponse> getOrchidGroups(
+      @RequestParam FarmStatusTargetType targetType, @RequestParam Long targetId) {
+    return ApiResponse.ok(farmStatusService.getOrchidGroups(targetType, targetId));
+  }
+
+  @GetMapping("/orchid-management")
+  public ApiResponse<OrchidManagementViewportResponse> getOrchidManagementViewport(
+      @RequestParam(required = false) Long startBedId,
+      @RequestParam(defaultValue = "3") int bedCount) {
+    return ApiResponse.ok(farmStatusService.getOrchidManagementViewport(startBedId, bedCount));
+  }
+
+  @GetMapping("/orchid-management/bed-order")
+  public ApiResponse<List<OrchidManagementBedOrderResponse>> getOrchidManagementBedOrder() {
+    return ApiResponse.ok(farmStatusService.getOrchidManagementBedOrder());
+  }
+
+  @GetMapping("/zoom")
+  public ApiResponse<FarmStatusZoomResponse> getZoom(
+      @RequestParam FarmZoomLevel level,
+      @RequestParam(required = false) Long houseId,
+      @RequestParam(required = false) Long physicalBedId) {
+    return ApiResponse.ok(farmStatusService.getZoom(level, houseId, physicalBedId));
+  }
+}

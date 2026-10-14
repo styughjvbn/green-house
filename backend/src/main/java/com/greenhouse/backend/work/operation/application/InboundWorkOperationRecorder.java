@@ -1,0 +1,108 @@
+package com.greenhouse.backend.work.operation.application;
+
+import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.WorkEffectResults;
+import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.api.effect.WorkMutationLink;
+import com.greenhouse.backend.work.api.operation.InboundWorkOperationRecordingApi;
+import com.greenhouse.backend.work.api.operation.RecordInboundWorkCommand;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.effect.application.WorkEffectStore;
+import com.greenhouse.backend.work.operation.domain.WorkOperation;
+import com.greenhouse.backend.work.operation.domain.WorkType;
+import com.greenhouse.backend.work.operation.domain.WorkTypeDefinition;
+import com.greenhouse.backend.work.operation.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.target.domain.WorkOperationTarget;
+import com.greenhouse.backend.work.target.domain.WorkTargetExecution;
+import com.greenhouse.backend.work.target.repository.WorkOperationTargetRepository;
+import com.greenhouse.backend.work.target.repository.WorkTargetExecutionRepository;
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class InboundWorkOperationRecorder implements InboundWorkOperationRecordingApi {
+
+  private final WorkTypeService workTypeService;
+
+  private final WorkOperationRepository workOperationRepository;
+
+  private final WorkOperationTargetRepository workOperationTargetRepository;
+
+  private final WorkTargetExecutionRepository workTargetExecutionRepository;
+
+  private final WorkEffectStore workEffectStore;
+
+  private final WorkOperationSupport support;
+
+  public void record(RecordInboundWorkCommand request) {
+    record(request, null);
+  }
+
+  @Override
+  public void record(RecordInboundWorkCommand request, WorkMutationLink mutationLink) {
+    WorkType workType = workTypeService.getByCode(WorkTypeDefinition.INBOUND.name());
+    if (!workType.isActive()) {
+      throw new IllegalArgumentException("입고 작업 유형이 비활성화되어 있습니다.");
+    }
+    Map<String, Object> details = new LinkedHashMap<>(request.details());
+    if (!request.createdOrchidGroupIds().isEmpty()) {
+      details.put("createdOrchidGroupIds", request.createdOrchidGroupIds());
+    }
+    WorkOperation operation =
+        workOperationRepository.save(
+            new WorkOperation(
+                workType,
+                support.varietyHistoryTitle(request.varietyName(), WorkTypeDefinition.INBOUND),
+                request.workDate(),
+                request.workDate(),
+                WorkSourceScopeType.INBOUND_RECORD_SELECTION,
+                null,
+                Map.of("inboundRecordIds", List.of(request.inboundRecordId())),
+                details,
+                support.actor(request.worker()),
+                normalize(request.memo()),
+                support.now()));
+    WorkOperationTarget target =
+        workOperationTargetRepository.save(
+            WorkOperationTarget.inboundRecord(
+                operation,
+                request.inboundRecordId(),
+                request.varietyId(),
+                request.varietyName(),
+                request.quantity(),
+                request.potSize(),
+                request.locationSnapshot(),
+                support.now()));
+    WorkTargetExecution execution =
+        workTargetExecutionRepository.save(new WorkTargetExecution(target));
+    LocalDateTime executedAt = support.now();
+    String worker = support.actor(request.worker());
+    operation.start(executedAt);
+    workEffectStore.save(
+        operation,
+        target,
+        new WorkEffectCommand(executedAt, worker, details, null),
+        "TARGET:" + target.getId(),
+        List.of(),
+        WorkEffectKind.RECORD_ONLY,
+        new WorkExecutionResult(
+            workType.handlerCode(),
+            new WorkEffectResults.Json(details),
+            request.createdOrchidGroupIds(),
+            mutationLink));
+    execution.completeWithEffect(executedAt, worker, details);
+    operation.complete(executedAt);
+  }
+
+  private String normalize(String value) {
+    return value == null || value.isBlank() ? null : value.trim();
+  }
+}

@@ -63,14 +63,14 @@ export default function BedNavigationToolbar({
         <ChevronLeft className="h-4 w-4" />
       </button>
       <select
-        aria-label="동으로 빠른 이동"
+        aria-label="동 이동"
         className="h-8 rounded-md border border-[#dfe5dc] bg-white px-3 text-sm font-semibold text-[#17251b]"
         value={startHouseId ?? ""}
         onChange={(event) => onGoToHouse(Number(event.target.value))}
       >
         {uniqueHouses(houses).map((house) => (
           <option key={house.houseId} value={house.houseId}>
-            {house.houseNumber}동으로 이동
+            {house.houseNumber}동
           </option>
         ))}
       </select>

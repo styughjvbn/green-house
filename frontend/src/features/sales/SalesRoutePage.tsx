@@ -9,13 +9,12 @@ import {
   readBusinessPartnerRouteState,
   readCreateSlip,
   readSalesRouteState,
-  readSettlementRouteState,
+  readProceedsRouteState,
 } from "./lib/salesRouteParams";
 import {
   auctionLotPageQueryOptions,
-  auctionSettlementPageQueryOptions,
-  auctionSettlementSummaryQueryOptions,
-  auctionSettlementDetailQueryOptions,
+  auctionProceedsPageQueryOptions,
+  auctionProceedsDetailQueryOptions,
   auctionSummaryQueryOptions,
   businessPartnerOptionsQueryOptions,
   businessPartnerPageQueryOptions,
@@ -26,6 +25,7 @@ import type { SalesTab } from "./model/types";
 import { SalesAuctionPage } from "./ui/SalesAuctionPage";
 import { SalesPartnersPage } from "./ui/SalesPartnersPage";
 import { SalesSettlementPage } from "./ui/SalesSettlementPage";
+import { SalesPaymentsPage } from "./ui/SalesPaymentsPage";
 import { SalesSlipsPage } from "./ui/SalesSlipsPage";
 
 export async function SalesRoutePage({
@@ -71,16 +71,17 @@ export async function SalesRoutePage({
         </HydrationBoundary>
       );
     }
+    case "payments":
+      return <SalesPaymentsPage />;
     case "settlement": {
-      const state = readSettlementRouteState(reader);
+      const state = readProceedsRouteState(reader);
       await Promise.all([
-        queryClient.prefetchQuery(auctionSettlementPageQueryOptions(state)),
-        queryClient.prefetchQuery(auctionSettlementSummaryQueryOptions()),
-        ...(state.selectedSettlementId == null
+        queryClient.prefetchQuery(auctionProceedsPageQueryOptions(state)),
+        ...(state.selectedProceedsId == null
           ? []
           : [
               queryClient.prefetchQuery(
-                auctionSettlementDetailQueryOptions(state.selectedSettlementId),
+                auctionProceedsDetailQueryOptions(state.selectedProceedsId),
               ),
             ]),
       ]);

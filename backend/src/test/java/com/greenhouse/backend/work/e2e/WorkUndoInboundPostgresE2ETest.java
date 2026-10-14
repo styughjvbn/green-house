@@ -1,48 +1,56 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.application.collection.OrchidGroupCollectionService;
-import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
-import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.domain.inbound.InboundType;
-import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionCreateRequest;
-import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberAddRequest;
-import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberResponse;
-import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
-import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
-import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
-import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
-import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
+import com.greenhouse.backend.farm.collection.application.OrchidGroupCollectionService;
+import com.greenhouse.backend.farm.collection.web.dto.OrchidGroupCollectionCreateRequest;
+import com.greenhouse.backend.farm.collection.web.dto.OrchidGroupCollectionMemberAddRequest;
+import com.greenhouse.backend.farm.collection.web.dto.OrchidGroupCollectionMemberResponse;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordCreateCommand;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordService;
+import com.greenhouse.backend.farm.inbound.domain.InboundType;
+import com.greenhouse.backend.farm.orchid.application.OrchidGroupCommandService;
+import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.effect.InboundPottingResultInput;
+import com.greenhouse.backend.work.effect.web.dto.InboundPottingPlanCreateRequest;
+import com.greenhouse.backend.work.operation.application.InboundPottingOperationService;
+import com.greenhouse.backend.work.operation.application.InboundPottingPlanService;
+import com.greenhouse.backend.work.spi.operation.InboundPottingVoidPort;
 import java.math.BigDecimal;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDate;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.IllegalTransactionStateException;
 
 class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
 
   @Autowired InboundRecordService inbounds;
 
-  @Autowired InboundPottingOperationService potting;
+  @MockitoSpyBean InboundPottingOperationService potting;
 
   @Autowired InboundPottingPlanService plans;
+
+  @Autowired InboundPottingVoidPort voidPort;
 
   @Autowired OrchidGroupCommandService groupCommands;
 
   @Autowired OrchidGroupCollectionService collections;
-
-  @org.springframework.boot.test.web.server.LocalServerPort int auditPort;
 
   private final LocalDate date = LocalDate.of(2026, 8, 20);
 
@@ -100,6 +108,149 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
   }
 
   @Test
+  void inboundPottingVoidBusinessApiAndFarmPortRequireTheCallerTransaction() {
+    long inbound = inbound();
+    execute(inbound, "mandatory-potting");
+    var before = pottingState();
+    assertThat(
+            Assertions.catchThrowable(
+                () -> potting.voidForInbound(inbound, "mandatory-void", "audit")))
+        .isInstanceOf(IllegalTransactionStateException.class);
+    assertThat(
+            Assertions.catchThrowable(
+                () -> voidPort.voidPotting(inbound, "mandatory-void", "audit")))
+        .isInstanceOf(IllegalTransactionStateException.class);
+    assertThat(pottingState()).isEqualTo(before);
+  }
+
+  @Test
+  void legacyPottingVoidReceiptKeepsItsFingerprintAndNeverCreatesMembership() throws Exception {
+    long inbound = inbound();
+    long original = execute(inbound, "legacy-potting");
+    var memberships =
+        jdbc.queryForList(
+            "SELECT * FROM work_creation_batch_memberships ORDER BY receipt_key, operation_id");
+    String receiptKey = "INBOUND_POTTING_VOID:" + inbound + ":original-undo";
+    String legacyFingerprint =
+        HexFormat.of()
+            .formatHex(
+                MessageDigest.getInstance("SHA-256")
+                    .digest(
+                        ("{\"inboundRecordId\":" + inbound + ",\"reason\":\"audit\"}")
+                            .getBytes(StandardCharsets.UTF_8)));
+    var first =
+        post(
+            "/api/inbound-records/" + inbound + "/potting-void",
+            "{\"idempotencyKey\":\" original-undo \",\"reason\":\" audit \"}");
+    assertThat(first.status()).as(first.body().toString()).isEqualTo(200);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT request_fingerprint FROM work_command_receipts WHERE receipt_key = ?",
+                String.class,
+                receiptKey))
+        .isEqualTo(legacyFingerprint);
+    jdbc.update("DELETE FROM work_command_receipts WHERE receipt_key = ?", receiptKey);
+    // Reinstall the old completed identity directly; current entities cannot reconstruct it.
+    jdbc.update(
+        "INSERT INTO work_command_receipts (receipt_key, request_fingerprint, result_operation_ids, created_at) VALUES (?, ?, CAST(? AS jsonb), CURRENT_TIMESTAMP)",
+        receiptKey,
+        legacyFingerprint,
+        "[" + original + "]");
+    long replacement = execute(inbound, "legacy-replacement");
+    var beforeReplay = pottingState();
+    assertThat(voidPotting(inbound).status()).isEqualTo(200);
+    assertThat(pottingState()).isEqualTo(beforeReplay);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM work_operations WHERE id = ?", String.class, replacement))
+        .isEqualTo("COMPLETED");
+    assertThat(
+            jdbc.queryForList(
+                "SELECT * FROM work_creation_batch_memberships ORDER BY receipt_key, operation_id"))
+        .isEqualTo(memberships);
+    var changed =
+        post(
+            "/api/inbound-records/" + inbound + "/potting-void",
+            "{\"idempotencyKey\":\"original-undo\",\"reason\":\"different\"}");
+    assertThat(changed.status()).isEqualTo(409);
+    assertThat(changed.body().path("error").path("code").asText())
+        .isEqualTo("IDEMPOTENCY_KEY_REUSED");
+    assertThat(pottingState()).isEqualTo(beforeReplay);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  @Test
+  void inboundAuditFailureRollsBackPottingVoidAndAllowsTheSameKeyRetry() throws Exception {
+    long inbound = inbound();
+    execute(inbound, "rollback-potting");
+    var before = pottingState();
+    jdbc.execute(
+        "ALTER TABLE audit_events ADD CONSTRAINT test_potting_void_audit CHECK (source <> 'INBOUND_MANAGEMENT' OR entity_type <> 'INBOUND_RECORD' OR entity_id <> "
+            + inbound
+            + " OR action <> 'UPDATED')");
+    ApiResult failed;
+    try {
+      failed = voidPotting(inbound);
+    } finally {
+      jdbc.execute("ALTER TABLE audit_events DROP CONSTRAINT test_potting_void_audit");
+    }
+    assertThat(failed.status()).as(failed.body().toString()).isBetween(400, 599);
+    assertThat(pottingState()).isEqualTo(before);
+    var retry = voidPotting(inbound);
+    assertThat(retry.status()).as(retry.body().toString()).isEqualTo(200);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM inbound_records WHERE id = ?", String.class, inbound))
+        .isEqualTo("POTTING_PENDING");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM orchid_group_mutations WHERE mutation_type = 'COMPENSATION'",
+                Long.class))
+        .isEqualTo(1);
+    var after = pottingState();
+    assertThat(voidPotting(inbound).status()).isEqualTo(200);
+    assertThat(pottingState()).isEqualTo(after);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  private Map<String, Object> pottingState() {
+    var state = new LinkedHashMap<String, Object>();
+    for (String table :
+        List.of(
+            "inbound_records",
+            "work_operations",
+            "work_operation_targets",
+            "work_target_executions",
+            "work_applied_effects",
+            "work_effect_orchid_groups",
+            "orchid_groups",
+            "orchid_group_mutations",
+            "orchid_group_mutation_entries",
+            "orchid_group_mutation_relations",
+            "orchid_group_lineage",
+            "audit_events")) {
+      state.put(
+          table,
+          jdbc.queryForList(
+              "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM "
+                  + table
+                  + " ORDER BY id) snapshot",
+              String.class));
+    }
+    state.put(
+        "receipts",
+        jdbc.queryForList(
+            "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM work_command_receipts ORDER BY receipt_key) snapshot",
+            String.class));
+    state.put(
+        "memberships",
+        jdbc.queryForList(
+            "SELECT row_to_json(snapshot)::text FROM (SELECT * FROM work_creation_batch_memberships ORDER BY receipt_key, operation_id) snapshot",
+            String.class));
+    return state;
+  }
+
+  @Test
   void concurrentPottingUndoCreatesOneCompensationAndRejectsChangedReason() throws Exception {
     long inbound = inbound();
     execute(inbound, "concurrent-potting");
@@ -124,16 +275,28 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
     assertThat(reconciliation.reconcile().ready()).isTrue();
   }
 
-  @Test
-  void siblingPottingExecutionsUseTheSameInboundLockOrder() throws Exception {
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void siblingPottingExecutionsUseTheSameInboundLockOrder(boolean siblingFirst) throws Exception {
     long first = inbound(), sibling = inbound();
     var plan =
         plans.create(
             new InboundPottingPlanCreateRequest(
                 "병렬 포트", date, date, List.of(first, sibling), "audit", null));
+    var firstWorker = new PostgresLockTestSupport.Worker();
+    var secondWorker = new PostgresLockTestSupport.Worker();
+    doAnswer(
+            invocation -> {
+              InboundPottingCommand command = invocation.getArgument(0);
+              (command.inboundRecordId().equals(first) ? firstWorker : secondWorker).capture(jdbc);
+              return invocation.callRealMethod();
+            })
+        .when(potting)
+        .executeNow(any());
     try (var connection = dataSource.getConnection();
         var executor = Executors.newFixedThreadPool(2)) {
       connection.setAutoCommit(false);
+      int owner = PostgresLockTestSupport.backendPid(connection);
       try (var statement =
           connection.prepareStatement("select id from inbound_records where id = ? for update")) {
         statement.setLong(1, first);
@@ -142,16 +305,20 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
         }
       }
       try {
-        var one = executor.submit(() -> executeAt(first, "sibling-one", 12, 14));
-        var two = executor.submit(() -> executeAt(sibling, "sibling-two", 15, 17));
-        long until = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-        while (jdbc.queryForObject(
-                "select count(*) from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'",
-                Integer.class)
-            < 2) {
-          if (System.nanoTime() > until) throw new AssertionError("포트 병렬 잠금 대기 누락");
-          Thread.sleep(25);
-        }
+        var one =
+            executor.submit(
+                () ->
+                    siblingFirst
+                        ? executeAt(sibling, "sibling-two", 15, 17)
+                        : executeAt(first, "sibling-one", 12, 14));
+        (siblingFirst ? secondWorker : firstWorker).awaitBlockedBy(jdbc, owner, one);
+        var two =
+            executor.submit(
+                () ->
+                    siblingFirst
+                        ? executeAt(first, "sibling-one", 12, 14)
+                        : executeAt(sibling, "sibling-two", 15, 17));
+        (siblingFirst ? firstWorker : secondWorker).awaitBlockedBy(jdbc, owner, two);
         connection.commit();
         assertThat(one.get(20, TimeUnit.SECONDS)).isEqualTo(plan.id());
         assertThat(two.get(20, TimeUnit.SECONDS)).isEqualTo(plan.id());
@@ -238,19 +405,13 @@ class WorkUndoInboundPostgresE2ETest extends WorkUndoSafetyTestBase {
         jdbc.queryForObject("select variety_id from orchid_groups where id = ?", Long.class, group);
     assertThat(Assertions.catchThrowable(() -> groupCommands.delete(group)))
         .isInstanceOf(ConflictException.class);
-    var request =
-        HttpRequest.newBuilder(
-                URI.create("http://localhost:" + auditPort + "/api/orchid-groups/" + group))
-            .header("Content-Type", "application/json")
-            .method(
-                "PATCH",
-                HttpRequest.BodyPublishers.ofString(
-                    "{\"varietyId\":"
-                        + variety
-                        + ",\"quantity\":60,\"potSize\":\"4치\",\"ageYear\":3,\"status\":\"생성 취소\",\"startPosition\":6,\"endPosition\":8}"))
-            .build();
-    var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-    assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
+    var response =
+        patchJson(
+            "/api/orchid-groups/" + group,
+            "{\"varietyId\":"
+                + variety
+                + ",\"quantity\":60,\"potSize\":\"4치\",\"ageYear\":3,\"status\":\"생성 취소\",\"startPosition\":6,\"endPosition\":8}");
+    assertThat(response.status()).as(response.body().toString()).isEqualTo(400);
     assertThat(
             jdbc.queryForObject(
                 "select quantity from orchid_groups where id = ?", Integer.class, group))

@@ -1,0 +1,94 @@
+package com.greenhouse.backend.farm.orchid.web;
+
+import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.farm.orchid.application.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.orchid.application.OrchidStockCountService;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupBatchUpdateRequest;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupCreateRequest;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupReconciliationRequest;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupResponse;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupUpdateRequest;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidStockCountContext;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidStockCountRequest;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidStockCountResponse;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
+import jakarta.validation.Valid;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/orchid-groups")
+@RequiredArgsConstructor
+public class OrchidGroupCommandController {
+
+  private final OrchidGroupCommandService orchidGroupCommandService;
+
+  private final OrchidStockCountService stockCounts;
+
+  @GetMapping("/{orchidGroupId}/stock-count-context")
+  public ApiResponse<OrchidStockCountContext> stockCountContext(@PathVariable Long orchidGroupId) {
+    return ApiResponse.ok(stockCounts.context(orchidGroupId));
+  }
+
+  @GetMapping("/{orchidGroupId}/stock-counts")
+  public ApiResponse<Page<OrchidStockCountResponse>> stockCountHistory(
+      @PathVariable Long orchidGroupId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return ApiResponse.ok(stockCounts.history(orchidGroupId, page, size));
+  }
+
+  @PostMapping("/{orchidGroupId}/stock-counts")
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<OrchidStockCountResponse> stockCount(
+      @PathVariable Long orchidGroupId, @Valid @RequestBody OrchidStockCountRequest request) {
+    return ApiResponse.ok(stockCounts.count(orchidGroupId, request));
+  }
+
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<OrchidGroupResponse> create(
+      @Valid @RequestBody OrchidGroupCreateRequest request) {
+    return ApiResponse.ok(orchidGroupCommandService.create(request));
+  }
+
+  @PatchMapping("/{orchidGroupId}")
+  public ApiResponse<OrchidGroupResponse> update(
+      @PathVariable Long orchidGroupId, @Valid @RequestBody OrchidGroupUpdateRequest request) {
+    return ApiResponse.ok(orchidGroupCommandService.update(orchidGroupId, request));
+  }
+
+  @PatchMapping("/batch")
+  public ApiResponse<List<OrchidGroupResponse>> updateBatch(
+      @Valid @RequestBody OrchidGroupBatchUpdateRequest request) {
+    return ApiResponse.ok(orchidGroupCommandService.updateBatch(request));
+  }
+
+  @DeleteMapping("/{orchidGroupId}")
+  public ApiResponse<Void> delete(@PathVariable Long orchidGroupId) {
+    orchidGroupCommandService.delete(orchidGroupId);
+    return ApiResponse.ok(null);
+  }
+
+  @PostMapping("/{orchidGroupId}/reconciliations")
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<WorkOperationView> reconcile(
+      @PathVariable Long orchidGroupId,
+      @Valid @RequestBody OrchidGroupReconciliationRequest request) {
+    // TODO: 보류 - 현장 상태 동기화 정책을 재검토한 뒤 다시 활성화한다.
+    throw new ConflictException("FEATURE_ON_HOLD", "현장 상태 동기화 기능은 보류 중입니다.");
+  }
+}

@@ -1,0 +1,143 @@
+[
+  {
+    "name": "full-numeric",
+    "input": {
+      "quantity": 10,
+      "reservedQuantity": 2,
+      "status": "정상",
+      "bedZoneId": 2,
+      "sortOrder": 3,
+      "startPosition": 6,
+      "endPosition": 8,
+      "varietyId": 3,
+      "genus": "춘란",
+      "varietyName": "등록 당시 이름",
+      "ageYear": 1,
+      "potSizeCode": "INCH_4",
+      "placementType": "TRAY",
+      "trayCount": 1,
+      "splitPlacementAllowed": false,
+      "inboundRecordId": 42,
+      "memo": " memo "
+    },
+    "canonical": {
+      "quantity": 10,
+      "reservedQuantity": 2,
+      "status": "정상",
+      "bedZoneId": 2,
+      "sortOrder": 3,
+      "startPosition": 6.0,
+      "endPosition": 8.0,
+      "varietyId": 3,
+      "genus": "춘란",
+      "varietyName": "등록 당시 이름",
+      "ageYear": 1,
+      "potSizeCode": "INCH_4",
+      "placementType": "TRAY",
+      "trayCount": 1,
+      "splitPlacementAllowed": false,
+      "inboundRecordId": 42,
+      "memo": " memo "
+    },
+    "fingerprint": "dacfcc90faf1f3a0275f04454eec59917d9d894b60132dac34910ae161f85359"
+  },
+  {
+    "name": "decimal-strings",
+    "input": {
+      "quantity": 10,
+      "reservedQuantity": 2,
+      "status": "정상",
+      "bedZoneId": 2,
+      "sortOrder": 3,
+      "startPosition": "6.000",
+      "endPosition": "8.0",
+      "varietyId": 3,
+      "genus": "춘란",
+      "varietyName": "등록 당시 이름",
+      "ageYear": 1,
+      "potSizeCode": "INCH_4",
+      "placementType": "TRAY",
+      "trayCount": 1,
+      "splitPlacementAllowed": false,
+      "inboundRecordId": 42,
+      "memo": " memo "
+    },
+    "canonical": {
+      "quantity": 10,
+      "reservedQuantity": 2,
+      "status": "정상",
+      "bedZoneId": 2,
+      "sortOrder": 3,
+      "startPosition": 6.0,
+      "endPosition": 8.0,
+      "varietyId": 3,
+      "genus": "춘란",
+      "varietyName": "등록 당시 이름",
+      "ageYear": 1,
+      "potSizeCode": "INCH_4",
+      "placementType": "TRAY",
+      "trayCount": 1,
+      "splitPlacementAllowed": false,
+      "inboundRecordId": 42,
+      "memo": " memo "
+    },
+    "fingerprint": "dacfcc90faf1f3a0275f04454eec59917d9d894b60132dac34910ae161f85359"
+  },
+  {
+    "name": "sparse",
+    "input": {
+      "quantity": 10,
+      "status": "정상"
+    },
+    "canonical": {
+      "quantity": 10,
+      "reservedQuantity": null,
+      "status": "정상",
+      "bedZoneId": null,
+      "sortOrder": null,
+      "startPosition": null,
+      "endPosition": null,
+      "varietyId": null,
+      "genus": null,
+      "varietyName": null,
+      "ageYear": null,
+      "potSizeCode": null,
+      "placementType": null,
+      "trayCount": null,
+      "splitPlacementAllowed": null,
+      "inboundRecordId": null,
+      "memo": null
+    },
+    "fingerprint": "ba67886028560cb4fc6f6f14cef69a9dfdcc4e7c61cdecd1ac9bc7c33d4c048f"
+  },
+  {
+    "name": "explicit-null",
+    "input": {
+      "quantity": 10,
+      "status": "정상",
+      "reservedQuantity": null,
+      "splitPlacementAllowed": null,
+      "memo": null
+    },
+    "canonical": {
+      "quantity": 10,
+      "reservedQuantity": null,
+      "status": "정상",
+      "bedZoneId": null,
+      "sortOrder": null,
+      "startPosition": null,
+      "endPosition": null,
+      "varietyId": null,
+      "genus": null,
+      "varietyName": null,
+      "ageYear": null,
+      "potSizeCode": null,
+      "placementType": null,
+      "trayCount": null,
+      "splitPlacementAllowed": null,
+      "inboundRecordId": null,
+      "memo": null
+    },
+    "fingerprint": "ba67886028560cb4fc6f6f14cef69a9dfdcc4e7c61cdecd1ac9bc7c33d4c048f"
+  }
+]

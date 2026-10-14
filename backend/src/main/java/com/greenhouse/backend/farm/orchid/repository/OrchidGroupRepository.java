@@ -1,0 +1,389 @@
+package com.greenhouse.backend.farm.orchid.repository;
+
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import jakarta.persistence.LockModeType;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
+
+  @Query(
+      """
+      select new com.greenhouse.backend.farm.orchid.repository.ReconciliationGroupRow(
+        g.id, g.stateRevision, g.quantity, g.reservedQuantity, g.status, g.bedZone.id, g.sortOrder,
+        g.startPosition, g.endPosition, g.variety.id, g.genus, g.varietyName, g.ageYear, g.potSizeCode,
+        g.placementType, g.trayCount, g.splitPlacementAllowed, g.inboundRecord.id, g.memo, bed.positionUnitCount)
+      from OrchidGroup g left join g.bedZone z left join z.physicalBed bed
+      where g.id > :afterId order by g.id
+      """)
+  List<ReconciliationGroupRow> findReconciliationGroupsAfter(long afterId, Pageable pageable);
+
+  @Query(
+      "select new com.greenhouse.backend.farm.orchid.repository.OrchidPlacementRow("
+          + "g.id, g.bedZone.id, g.startPosition, g.endPosition, g.sortOrder) "
+          + "from OrchidGroup g where g.bedZone.id in :zoneIds and g.quantity > 0")
+  List<OrchidPlacementRow> findActivePlacements(Collection<Long> zoneIds);
+
+  @Query(
+      """
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house
+			join fetch g.inboundRecord inbound
+			where inbound.id in :inboundRecordIds
+			  and g.quantity > 0
+			order by inbound.id, g.id
+			""")
+  List<OrchidGroup> findInboundResultDetailsByInboundRecordIdIn(
+      @Param("inboundRecordIds") Collection<Long> inboundRecordIds);
+
+  long countByIdInAndInboundRecordIsNotNull(Collection<Long> orchidGroupIds);
+
+  @Query(
+      """
+			select count(g) from OrchidGroup g
+			where g.id in :orchidGroupIds
+			  and g.inboundRecord is not null
+			  and g.inboundRecord.id not in :allowedInboundRecordIds
+			""")
+  long countInboundReferencesOutside(
+      @Param("orchidGroupIds") Collection<Long> orchidGroupIds,
+      @Param("allowedInboundRecordIds") Collection<Long> allowedInboundRecordIds);
+
+  boolean existsByInboundRecordIdAndQuantityGreaterThan(Long inboundRecordId, Integer quantity);
+
+  boolean existsByStateRevisionIsNull();
+
+  @Query(
+      """
+			select g.id as orchidGroupId, h.id as houseId, b.id as physicalBedId, z.id as bedZoneId,
+			       g.startPosition as startPosition, g.endPosition as endPosition,
+			       v.id as varietyId, v.color as varietyColor, coalesce(v.name, g.varietyName) as varietyName,
+			       g.quantity as quantity, g.status as status, g.ageYear as ageYear,
+			       g.potSize as potSize, g.sortOrder as sortOrder,
+			       i.id as inboundRecordId, i.inboundDate as inboundDate, g.createdAt as createdAt
+			from OrchidGroup g join g.bedZone z join z.physicalBed b join b.house h
+			left join g.variety v left join g.inboundRecord i
+			where g.quantity > 0
+			order by h.number, b.displayOrder, z.sortOrder, g.sortOrder
+			""")
+  List<MapRow> findMapRows();
+
+  interface MapRow {
+
+    Long getOrchidGroupId();
+
+    Long getHouseId();
+
+    Long getPhysicalBedId();
+
+    Long getBedZoneId();
+
+    BigDecimal getStartPosition();
+
+    BigDecimal getEndPosition();
+
+    Long getVarietyId();
+
+    String getVarietyColor();
+
+    String getVarietyName();
+
+    Integer getQuantity();
+
+    String getStatus();
+
+    Integer getAgeYear();
+
+    String getPotSize();
+
+    Integer getSortOrder();
+
+    Long getInboundRecordId();
+
+    LocalDate getInboundDate();
+
+    LocalDateTime getCreatedAt();
+  }
+
+  @Query(
+      """
+			select g.varietyName as varietyName,
+			       sum(case when g.status not in :unavailableStatuses then g.quantity - g.reservedQuantity else 0 end) as saleableQuantity,
+			       sum(case when g.status in :warningStatuses then 1 else 0 end) as warningGroupCount
+			from OrchidGroup g
+			where g.quantity > 0
+			group by g.varietyName
+			order by saleableQuantity desc, g.varietyName asc
+			""")
+  List<VarietyInventory> summarizeInventory(
+      @Param("unavailableStatuses") Collection<String> unavailableStatuses,
+      @Param("warningStatuses") Collection<String> warningStatuses);
+
+  interface VarietyInventory {
+
+    String getVarietyName();
+
+    long getSaleableQuantity();
+
+    long getWarningGroupCount();
+  }
+
+  @Query("select g.id from OrchidGroup g where g.id > :afterId order by g.id")
+  List<Long> findIdsAfter(@Param("afterId") Long afterId, Pageable pageable);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select g from OrchidGroup g where g.id in :orchidGroupIds order by g.id")
+  List<OrchidGroup> findAllForUpdateByIdIn(
+      @Param("orchidGroupIds") Collection<Long> orchidGroupIds);
+
+  boolean existsByVarietyName(String varietyName);
+
+  @Query("select coalesce(max(g.sortOrder), 0) from OrchidGroup g where g.bedZone.id = :bedZoneId")
+  int findMaxSortOrderByBedZoneId(@Param("bedZoneId") Long bedZoneId);
+
+  @Query(
+      """
+			select new com.greenhouse.backend.farm.orchid.repository.OrchidGroupZoneMaxSortOrderRow(
+				g.bedZone.id, max(g.sortOrder))
+			from OrchidGroup g
+			where g.bedZone.id in :bedZoneIds
+			group by g.bedZone.id
+			order by g.bedZone.id
+			""")
+  List<OrchidGroupZoneMaxSortOrderRow> findMaxSortOrdersByBedZoneIdIn(
+      @Param("bedZoneIds") Collection<Long> bedZoneIds);
+
+  @Query(
+      """
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house h
+			left join fetch g.variety
+			left join fetch g.inboundRecord
+			where (:houseId is null or h.id = :houseId)
+			    and (:keyword = ''
+			        or lower(g.varietyName) like concat('%', lower(:keyword), '%')
+			        or lower(coalesce(g.genus, '')) like concat('%', lower(:keyword), '%')
+			        or lower(coalesce(g.memo, '')) like concat('%', lower(:keyword), '%'))
+			    and (:physicalBedId is null or b.id = :physicalBedId)
+			    and (:bedZoneId is null or z.id = :bedZoneId)
+			    and (:status is null or g.status = :status)
+			    and g.quantity > 0
+			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+  List<OrchidGroup> search(
+      @Param("houseId") Long houseId,
+      @Param("keyword") String keyword,
+      @Param("physicalBedId") Long physicalBedId,
+      @Param("bedZoneId") Long bedZoneId,
+      @Param("status") String status);
+
+  @Query(
+      """
+			select count(g) from OrchidGroup g
+			join g.bedZone z
+			join z.physicalBed b
+			where b.house.id = :houseId
+			  and g.quantity > 0
+			""")
+  long countByHouseId(@Param("houseId") Long houseId);
+
+  @Query(
+      """
+			select count(g) from OrchidGroup g
+			where g.status in :warningStatuses
+			  and g.quantity > 0
+			""")
+  long countWarningStatus(@Param("warningStatuses") Collection<String> warningStatuses);
+
+  @Query(
+      """
+			select count(g) from OrchidGroup g
+			join g.bedZone z
+			join z.physicalBed b
+			where b.house.id = :houseId and g.status in :warningStatuses and g.quantity > 0
+			""")
+  long countWarningStatusByHouseId(
+      @Param("houseId") Long houseId, @Param("warningStatuses") Collection<String> warningStatuses);
+
+  @Query(
+      """
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house h
+			where g.variety.id = :varietyId
+			  and g.quantity > 0
+			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+  List<OrchidGroup> findByVarietyIdOrderByLocation(@Param("varietyId") Long varietyId);
+
+  @Query(
+      """
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house h
+			where g.variety.id in :varietyIds
+			  and g.quantity > 0
+			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+  List<OrchidGroup> findByVarietyIdInOrderByLocation(
+      @Param("varietyIds") Collection<Long> varietyIds);
+
+  @Query(
+      """
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house h
+			left join fetch g.variety
+			left join fetch g.inboundRecord
+			where b.id in :physicalBedIds
+			  and g.quantity > 0
+			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+  List<OrchidGroup> findByPhysicalBedIdInOrderByLocation(
+      @Param("physicalBedIds") Collection<Long> physicalBedIds);
+
+  boolean existsByVarietyId(Long varietyId);
+
+  List<OrchidGroup> findByVarietyIsNull();
+
+  List<OrchidGroup> findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+      Long bedZoneId, Integer quantity);
+
+  List<OrchidGroup> findByBedZoneIdInAndQuantityGreaterThan(
+      Collection<Long> bedZoneIds, Integer quantity);
+
+  @Query(
+      """
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house h
+			left join fetch g.variety v
+			where (:keyword = ''
+				or lower(g.varietyName) like lower(concat('%', :keyword, '%'))
+				or lower(coalesce(g.genus, '')) like lower(concat('%', :keyword, '%'))
+				or lower(concat(cast(h.number as string), '동 ', cast(b.number as string), '배드 ', z.name)) like lower(concat('%', :keyword, '%')))
+			  and (:varietyId is null or v.id = :varietyId)
+			  and (:status = '' or g.status = :status)
+			  and (g.quantity - g.reservedQuantity) > 0
+			  and g.status not in :unavailableStatuses
+			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+  List<OrchidGroup> searchSellable(
+      @Param("keyword") String keyword,
+      @Param("varietyId") Long varietyId,
+      @Param("status") String status,
+      @Param("unavailableStatuses") Collection<String> unavailableStatuses);
+
+  @Query(
+      """
+			select g from OrchidGroup g
+			left join fetch g.variety
+			left join fetch g.bedZone z
+			left join fetch z.physicalBed b
+			left join fetch b.house
+			where g.id = :orchidGroupId
+			""")
+  Optional<OrchidGroup> findDetailById(@Param("orchidGroupId") Long orchidGroupId);
+
+  @Query(
+      """
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house h
+			left join fetch g.variety
+			left join fetch g.inboundRecord
+			where h.id = :houseId
+			  and g.quantity > 0
+			  and g.status not in :inactiveStatuses
+			order by b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+  List<OrchidGroup> findActiveWorkTargetsByHouseId(
+      @Param("houseId") Long houseId,
+      @Param("inactiveStatuses") Collection<String> inactiveStatuses);
+
+  @Query(
+      """
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house
+			left join fetch g.variety
+			left join fetch g.inboundRecord
+			where (:physicalBedId is null or b.id = :physicalBedId)
+			  and (:bedZoneId is null or z.id = :bedZoneId)
+			  and g.quantity > 0
+			  and g.status not in :inactiveStatuses
+			order by b.house.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+  List<OrchidGroup> findActiveWorkTargets(
+      @Param("physicalBedId") Long physicalBedId,
+      @Param("bedZoneId") Long bedZoneId,
+      @Param("inactiveStatuses") Collection<String> inactiveStatuses);
+
+  @Query(
+      """
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house
+			left join fetch g.variety
+			left join fetch g.inboundRecord
+			where g.id in :orchidGroupIds
+			  and g.quantity > 0
+			  and g.status not in :inactiveStatuses
+			""")
+  List<OrchidGroup> findActiveWorkTargetsByIds(
+      @Param("orchidGroupIds") Collection<Long> orchidGroupIds,
+      @Param("inactiveStatuses") Collection<String> inactiveStatuses);
+
+  @Query(
+      """
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house
+			left join fetch g.variety
+			left join fetch g.inboundRecord
+			where g.id in :orchidGroupIds
+			""")
+  List<OrchidGroup> findDetailsByIds(@Param("orchidGroupIds") Collection<Long> orchidGroupIds);
+
+  default List<OrchidGroup> findDetailsInBatches(Collection<Long> orchidGroupIds) {
+    var ids = new ArrayList<>(new LinkedHashSet<>(orchidGroupIds));
+    var details = new ArrayList<OrchidGroup>();
+    for (int start = 0; start < ids.size(); start += 500) {
+      details.addAll(findDetailsByIds(ids.subList(start, Math.min(start + 500, ids.size()))));
+    }
+    return details;
+  }
+
+  @Query(
+      """
+			select new com.greenhouse.backend.farm.orchid.repository.OrchidGroupNameRow(g.id, g.varietyName)
+			from OrchidGroup g
+			where g.id in :orchidGroupIds
+			order by g.id asc
+			""")
+  List<OrchidGroupNameRow> findNameRowsByIdIn(
+      @Param("orchidGroupIds") Collection<Long> orchidGroupIds);
+}

@@ -2,10 +2,10 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.application.collection.OrchidGroupCollectionService;
-import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
-import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
-import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberResponse;
+import com.greenhouse.backend.farm.collection.application.OrchidGroupCollectionService;
+import com.greenhouse.backend.farm.collection.domain.OrchidGroupCollection;
+import com.greenhouse.backend.farm.collection.domain.OrchidGroupCollectionMember;
+import com.greenhouse.backend.farm.collection.web.dto.OrchidGroupCollectionMemberResponse;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;

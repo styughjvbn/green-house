@@ -22,56 +22,64 @@ BEGIN
 
   IF EXISTS (
     SELECT 1 FROM sales_slip_items
-    WHERE amount <> quantity * unit_price
+    WHERE amount::bigint <> quantity::bigint * unit_price
   ) THEN
     RAISE EXCEPTION 'Sales item amount does not match quantity and unit price';
   END IF;
 
   IF EXISTS (
-    SELECT 1
-    FROM sales_slips slip
-    JOIN (
-      SELECT sales_slip_id, sum(amount) AS item_total
-      FROM sales_slip_items
-      GROUP BY sales_slip_id
-    ) items ON items.sales_slip_id = slip.id
-    WHERE slip.total_amount <> items.item_total
+    SELECT 1 FROM direct_sales sale
+    LEFT JOIN (
+      SELECT sales_slip_id, sum(amount::bigint) AS original_total
+      FROM direct_sale_prices GROUP BY sales_slip_id
+    ) prices ON prices.sales_slip_id=sale.sales_slip_id
+    LEFT JOIN (
+      SELECT sales_slip_id, sum(amount_delta) AS delta
+      FROM direct_sale_changes GROUP BY sales_slip_id
+    ) changes ON changes.sales_slip_id=sale.sales_slip_id
+    JOIN sales_slips document ON document.id=sale.sales_slip_id
+    WHERE sale.total_amount <> coalesce(prices.original_total,0) + coalesce(changes.delta,0)
+       OR document.total_amount <> sale.total_amount
   ) THEN
-    RAISE EXCEPTION 'Sales slip total does not match item total';
+    RAISE EXCEPTION 'Direct financial total does not match original prices and change history';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM sales_slips document
+    LEFT JOIN (
+      SELECT item.sales_slip_id, sum(result.amount::bigint) AS gross
+      FROM sales_slip_items item
+      JOIN auction_attempts attempt ON attempt.shipment_lot_id=item.auction_shipment_lot_id
+      JOIN auction_result_lines result ON result.auction_attempt_id=attempt.id
+      GROUP BY item.sales_slip_id
+    ) results ON results.sales_slip_id=document.id
+    WHERE document.sales_type='AUCTION' AND document.total_amount <> coalesce(results.gross,0)
+  ) THEN
+    RAISE EXCEPTION 'Auction document gross does not match linked lot results';
   END IF;
 
   IF EXISTS (
     SELECT 1 FROM sales_slips
-    WHERE coalesce(remaining_amount, 0) <> greatest(0, total_amount::bigint - coalesce(paid_amount, 0))
+    WHERE coalesce(sales_type, 'DIRECT')='DIRECT'
+      AND coalesce(remaining_amount, 0) <> greatest(0, total_amount::bigint - coalesce(paid_amount, 0))
   ) THEN
     RAISE EXCEPTION 'Sales slip remaining amount is inconsistent';
   END IF;
 
-  IF EXISTS (
-    SELECT 1 FROM auction_result_lines
-    WHERE amount <> quantity * unit_price
-  ) OR EXISTS (
-    SELECT 1 FROM auction_settlement_lines
-    WHERE amount <> quantity::bigint * unit_price
-  ) THEN
-    RAISE EXCEPTION 'Auction line amount is inconsistent';
-  END IF;
+  -- Imported auction amounts can differ from quantity * unit_price. Preserve
+  -- the recorded amount and inspection flag; validate the document's gross
+  -- against those recorded results above instead of repairing historical data.
 
   IF EXISTS (
     SELECT 1
-    FROM auction_settlements settlement
-    LEFT JOIN (
-      SELECT settlement_id, coalesce(sum(amount), 0) AS line_total
-      FROM auction_settlement_lines
-      GROUP BY settlement_id
-    ) lines ON lines.settlement_id = settlement.id
-    WHERE settlement.gross_amount <> coalesce(lines.line_total, 0)
-       OR settlement.expected_deposit_amount <>
-          greatest(0, settlement.gross_amount - settlement.fee_amount - settlement.deduction_amount)
-       OR settlement.remaining_amount <>
-          greatest(0, settlement.expected_deposit_amount - settlement.paid_amount)
+    FROM auction_proceeds proceeds
+    WHERE proceeds.reported_gross_amount < 0 OR proceeds.receivable_amount < 0
+       OR (proceeds.matching_confirmed AND (
+         proceeds.source_reference IS NULL OR proceeds.reported_gross_amount IS NULL
+         OR NOT EXISTS (SELECT 1 FROM auction_proceeds_results reference
+           WHERE reference.auction_proceeds_id=proceeds.id)))
   ) THEN
-    RAISE EXCEPTION 'Auction settlement total is inconsistent';
+    RAISE EXCEPTION 'Auction proceeds evidence is inconsistent';
   END IF;
 
   IF EXISTS (
@@ -80,6 +88,8 @@ BEGIN
        OR sold_quantity < 0
        OR returned_quantity < 0
        OR waiting_quantity < 0
+       OR disposed_quantity < 0
+       OR inferred_return_quantity < 0
        OR sold_quantity > shipped_quantity
        OR returned_quantity > shipped_quantity
        OR waiting_quantity > shipped_quantity

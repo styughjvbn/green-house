@@ -1,0 +1,213 @@
+[
+  {
+    "name": "full",
+    "request": {
+      "idempotencyKey": " legacy-key ",
+      "title": "기존 제목",
+      "workDate": "2026-07-15",
+      "worker": " 작업자 ",
+      "memo": " 원문 ",
+      "sourceOrchidGroupId": 31,
+      "inputQuantity": 13,
+      "results": [
+        {
+          "bedZoneId": 7,
+          "quantity": 13,
+          "potSize": "4치",
+          "ageYear": 2,
+          "placementType": "TRAY",
+          "trayCount": 3,
+          "splitPlacementAllowed": true,
+          "startPosition": 12.25,
+          "endPosition": 14.75,
+          "memo": " 결과 "
+        }
+      ],
+      "inheritCollectionIds": [
+        9,
+        3
+      ]
+    },
+    "serialized": {
+      "idempotencyKey": "legacy-key",
+      "title": "기존 제목",
+      "workDate": [
+        2026,
+        7,
+        15
+      ],
+      "worker": " 작업자 ",
+      "memo": " 원문 ",
+      "sourceOrchidGroupId": 31,
+      "inputQuantity": 13,
+      "results": [
+        {
+          "bedZoneId": 7,
+          "quantity": 13,
+          "potSize": "4치",
+          "ageYear": 2,
+          "placementType": "TRAY",
+          "trayCount": 3,
+          "splitPlacementAllowed": true,
+          "startPosition": 12.25,
+          "endPosition": 14.75,
+          "memo": " 결과 "
+        }
+      ],
+      "inheritCollectionIds": [
+        3,
+        9
+      ]
+    },
+    "fingerprint": "fde4ea9fa74c08d304831dbe43d224b754e6ae783396204d4997c483c7ebb100"
+  },
+  {
+    "name": "missing-optionals",
+    "request": {
+      "idempotencyKey": " sparse ",
+      "title": "기존 제목",
+      "workDate": "2026-07-15",
+      "sourceOrchidGroupId": 31,
+      "inputQuantity": 13,
+      "results": [
+        {
+          "bedZoneId": 7,
+          "quantity": 13,
+          "startPosition": 12.25,
+          "endPosition": 14.75
+        }
+      ]
+    },
+    "serialized": {
+      "idempotencyKey": "sparse",
+      "title": "기존 제목",
+      "workDate": [
+        2026,
+        7,
+        15
+      ],
+      "worker": null,
+      "memo": null,
+      "sourceOrchidGroupId": 31,
+      "inputQuantity": 13,
+      "results": [
+        {
+          "bedZoneId": 7,
+          "quantity": 13,
+          "potSize": null,
+          "ageYear": null,
+          "placementType": null,
+          "trayCount": null,
+          "splitPlacementAllowed": null,
+          "startPosition": 12.25,
+          "endPosition": 14.75,
+          "memo": null
+        }
+      ],
+      "inheritCollectionIds": []
+    },
+    "fingerprint": "7fe235267380aa460a934a99ca7d5a8b272e091099e1b805e18ac6829047a8c1"
+  },
+  {
+    "name": "unknown-root",
+    "request": {
+      "idempotencyKey": " sparse ",
+      "title": "기존 제목",
+      "workDate": "2026-07-15",
+      "sourceOrchidGroupId": 31,
+      "inputQuantity": 13,
+      "results": [
+        {
+          "bedZoneId": 7,
+          "quantity": 13,
+          "startPosition": 12.25,
+          "endPosition": 14.75
+        }
+      ],
+      "future": {
+        "retained": false
+      }
+    },
+    "serialized": {
+      "idempotencyKey": "sparse",
+      "title": "기존 제목",
+      "workDate": [
+        2026,
+        7,
+        15
+      ],
+      "worker": null,
+      "memo": null,
+      "sourceOrchidGroupId": 31,
+      "inputQuantity": 13,
+      "results": [
+        {
+          "bedZoneId": 7,
+          "quantity": 13,
+          "potSize": null,
+          "ageYear": null,
+          "placementType": null,
+          "trayCount": null,
+          "splitPlacementAllowed": null,
+          "startPosition": 12.25,
+          "endPosition": 14.75,
+          "memo": null
+        }
+      ],
+      "inheritCollectionIds": []
+    },
+    "fingerprint": "7fe235267380aa460a934a99ca7d5a8b272e091099e1b805e18ac6829047a8c1"
+  },
+  {
+    "name": "array-date-null-inheritance",
+    "request": {
+      "idempotencyKey": " sparse ",
+      "title": "기존 제목",
+      "workDate": [
+        2026,
+        7,
+        15
+      ],
+      "sourceOrchidGroupId": 31,
+      "inputQuantity": 13,
+      "results": [
+        {
+          "bedZoneId": 7,
+          "quantity": 13,
+          "startPosition": 12.25,
+          "endPosition": 14.75
+        }
+      ],
+      "inheritCollectionIds": null
+    },
+    "serialized": {
+      "idempotencyKey": "sparse",
+      "title": "기존 제목",
+      "workDate": [
+        2026,
+        7,
+        15
+      ],
+      "worker": null,
+      "memo": null,
+      "sourceOrchidGroupId": 31,
+      "inputQuantity": 13,
+      "results": [
+        {
+          "bedZoneId": 7,
+          "quantity": 13,
+          "potSize": null,
+          "ageYear": null,
+          "placementType": null,
+          "trayCount": null,
+          "splitPlacementAllowed": null,
+          "startPosition": 12.25,
+          "endPosition": 14.75,
+          "memo": null
+        }
+      ],
+      "inheritCollectionIds": []
+    },
+    "fingerprint": "7fe235267380aa460a934a99ca7d5a8b272e091099e1b805e18ac6829047a8c1"
+  }
+]

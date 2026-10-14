@@ -24,10 +24,7 @@ class ModularArchitectureTests {
           "audit",
           "farm",
           "work",
-          "partner",
           "sales",
-          "auction",
-          "settlement",
           "dashboard",
           "print",
           "analytics",
@@ -35,34 +32,18 @@ class ModularArchitectureTests {
           "demo");
 
   private static final Set<String> LAYERED_MODULES =
-      Set.of(
-          "audit",
-          "farm",
-          "work",
-          "partner",
-          "sales",
-          "auction",
-          "settlement",
-          "dashboard",
-          "print",
-          "analytics");
+      Set.of("audit", "farm", "work", "sales", "dashboard", "print", "analytics");
 
-  private static final Set<String> STANDARD_LAYERS =
-      Set.of("domain", "repository", "application", "controller", "dto");
   static final Map<String, Set<String>> ALLOWED_DEPENDENCIES =
       Map.ofEntries(
           Map.entry("common", Set.of()),
           Map.entry("audit", Set.of("common")),
           Map.entry("farm", Set.of("common", "work", "audit")),
           Map.entry("work", Set.of("common")),
-          Map.entry("partner", Set.of("common", "audit")),
-          Map.entry("sales", Set.of("common", "audit", "auction", "farm", "partner", "settlement")),
-          Map.entry("auction", Set.of("common", "partner")),
-          Map.entry("settlement", Set.of("common", "audit", "auction", "partner")),
+          Map.entry("sales", Set.of("common", "audit", "farm")),
           Map.entry("dashboard", Set.of("common", "farm")),
           Map.entry("print", Set.of("common", "sales")),
-          Map.entry(
-              "analytics", Set.of("common", "farm", "partner", "sales", "settlement", "work")),
+          Map.entry("analytics", Set.of("common", "farm", "sales", "work")),
           Map.entry("auth", Set.of("common", "demo")),
           Map.entry("demo", Set.of("common")));
 
@@ -71,7 +52,7 @@ class ModularArchitectureTests {
 
   private static final Pattern REPOSITORY_IMPORT =
       Pattern.compile(
-          "\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.repository\\.");
+          "\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.(?:[a-z]+\\.)?repository\\.");
 
   @Test
   void moduleRootsAndLayersAreExplicit() throws IOException {
@@ -90,7 +71,11 @@ class ModularArchitectureTests {
                     path -> {
                       Path relative = moduleRoot.relativize(path);
                       return relative.getNameCount() < 2
-                          || !STANDARD_LAYERS.contains(relative.getName(0).toString());
+                          || !ArchitecturePackages.isValidLayout(
+                              "com.greenhouse.backend."
+                                  + module
+                                  + "."
+                                  + relative.getParent().toString().replace('/', '.'));
                     })
                 .toList();
         assertThat(misplaced).as("Files outside standard layers in %s", module).isEmpty();
@@ -116,37 +101,32 @@ class ModularArchitectureTests {
 
   @Test
   void workLayersAreGroupedByFeature() throws IOException {
-    assertFeaturePackages("work", "application", "operation", "target", "effect", "correction");
-    assertFeaturePackages("work", "domain", "operation", "target", "effect", "correction");
-    assertFeaturePackages("work", "dto", "operation", "target", "effect", "correction");
+    for (String role : List.of("application", "domain", "repository", "controller", "dto")) {
+      assertThat(SOURCE_ROOT.resolve("work").resolve(role))
+          .as("Work no longer accepts the legacy role-first layout: %s", role)
+          .doesNotExist();
+    }
   }
 
   @Test
   void farmLayersAreGroupedByFeature() throws IOException {
-    String[] allFeatures = {
-      "structure",
-      "status",
-      "orchid",
-      "collection",
-      "inbound",
-      "variety",
-      "material",
-      "transformation"
-    };
-    assertFeaturePackages("farm", "application", allFeatures);
-    assertFeaturePackages("farm", "domain", allFeatures);
-    assertFeaturePackages("farm", "controller", allFeatures);
-    assertFeaturePackages("farm", "dto", allFeatures);
-    assertFeaturePackages(
-        "farm",
-        "repository",
-        "structure",
-        "orchid",
-        "collection",
-        "inbound",
-        "variety",
-        "material",
-        "transformation");
+    for (String role : List.of("application", "domain", "repository", "controller", "dto")) {
+      assertThat(SOURCE_ROOT.resolve("farm").resolve(role))
+          .as("Farm no longer accepts the legacy role-first layout: %s", role)
+          .doesNotExist();
+    }
+  }
+
+  @Test
+  void salesLayersAreGroupedByOwnership() throws IOException {
+    for (String role : List.of("application", "domain", "repository", "controller", "dto")) {
+      assertThat(SOURCE_ROOT.resolve("sales").resolve(role))
+          .as("Sales no longer accepts the legacy role-first layout: %s", role)
+          .doesNotExist();
+    }
+    for (String oldModule : List.of("auction", "partner", "settlement")) {
+      assertThat(SOURCE_ROOT.resolve(oldModule)).doesNotExist();
+    }
   }
 
   @Test
@@ -209,28 +189,20 @@ class ModularArchitectureTests {
     }
   }
 
-  private void assertNoImports(String layer, String... forbiddenFragments) throws IOException {
-    for (String module : MODULES) {
-      Path layerRoot = SOURCE_ROOT.resolve(module).resolve(layer);
-      if (!Files.isDirectory(layerRoot)) continue;
-      for (Path source : javaSources(layerRoot)) {
-        String content = Files.readString(source);
+  private void assertNoImports(String layer, String... forbiddenFragments) {
+    for (var origin : ModuleBoundaryInventoryTest.CLASSES) {
+      String role = ArchitecturePackages.role(origin.getPackageName());
+      if (!role.equals(layer) && !(layer.equals("controller") && role.equals("web"))) continue;
+      for (var dependency : origin.getDirectDependenciesFromSelf()) {
+        String targetRole = ArchitecturePackages.role(dependency.getTargetClass().getPackageName());
         for (String fragment : forbiddenFragments) {
-          assertThat(content)
-              .as("Forbidden %s dependency in %s", fragment, source)
-              .doesNotContain(fragment);
+          String forbidden = fragment.replace(".", "");
+          boolean matches =
+              targetRole.equals(forbidden)
+                  || (forbidden.equals("controller") && targetRole.equals("web"));
+          assertThat(matches).as("Forbidden %s dependency: %s", forbidden, dependency).isFalse();
         }
       }
-    }
-  }
-
-  private void assertFeaturePackages(String module, String layer, String... expectedPackages)
-      throws IOException {
-    Path layerRoot = SOURCE_ROOT.resolve(module).resolve(layer);
-    try (Stream<Path> entries = Files.list(layerRoot)) {
-      assertThat(entries.map(path -> path.getFileName().toString()).toList())
-          .as("Unexpected package in %s/%s", module, layer)
-          .containsExactlyInAnyOrder(expectedPackages);
     }
   }
 

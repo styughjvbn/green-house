@@ -6,6 +6,7 @@ import type {
   InboundPottingPayload,
   InboundRecord,
   InboundRecordPayload,
+  InboundCreationRequestKey,
   InboundRecordUpdatePayload,
   Material,
   MaterialPayload,
@@ -266,12 +267,18 @@ export function getInboundRecord(inboundRecordId: number) {
   ).then(toInboundRecord);
 }
 
-export function createInboundRecord(payload: InboundRecordPayload) {
+export function createInboundRecord(
+  payload: InboundRecordPayload,
+  idempotencyKey: InboundCreationRequestKey,
+) {
   return requestJson<InboundRecordResponse>(
     "/inbound-records",
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
       body: JSON.stringify(payload),
     },
     "입고 기록을 등록하지 못했습니다.",

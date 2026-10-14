@@ -1,3 +1,9 @@
+import type { operations } from "@/shared/api/generated/openapi";
+
+export type InboundCreationRequestKey = NonNullable<
+  NonNullable<operations["create_5"]["parameters"]["header"]>["Idempotency-Key"]
+>;
+
 export type InventoryStatus = "ACTIVE" | "INACTIVE";
 
 export type MaterialFilterState = {

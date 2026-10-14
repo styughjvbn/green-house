@@ -5,6 +5,13 @@ import type {
   PartnerSettlementSettings,
   PartnerType,
 } from "@/entities/farm/types";
+import type { components, operations } from "@/shared/api/generated/openapi";
+
+export type SalesCreationRequestKey = NonNullable<
+  NonNullable<
+    operations["createSalesSlip"]["parameters"]["header"]
+  >["Idempotency-Key"]
+>;
 
 export type BusinessPartnerPayload = {
   name: string;
@@ -19,6 +26,8 @@ export type CreateBusinessPartnerPayload = BusinessPartnerPayload;
 export type UpdateBusinessPartnerPayload = BusinessPartnerPayload;
 
 export type CreateSalesSlipPayload = {
+  recordOnly?: components["schemas"]["SalesSlipCreateRequest"]["recordOnly"];
+  initialReceipt?: components["schemas"]["SalesInitialReceiptRequest"] | null;
   salesType: "DIRECT" | "AUCTION";
   saleDate: string;
   partnerId: number | null;
@@ -31,6 +40,8 @@ export type CreateSalesSlipPayload = {
     itemName: string;
     genus: string | null;
     spec: string | null;
+    unit: string | null;
+    boxes: number | null;
     quantity: number;
     unitPrice: number;
     memo: string | null;
@@ -57,11 +68,15 @@ export type AuctionResultFormPayload = {
   resultLines?: AuctionResultLinePayload[];
 };
 
-export type CreateAuctionResultPayload = AuctionResultFormPayload & {
-  attemptNo: number | null;
-};
+export type CreateAuctionResultPayload = AuctionResultFormPayload &
+  Pick<components["schemas"]["AuctionLotResultRequest"], "idempotencyKey"> & {
+    attemptNo: number | null;
+  };
 
-export type AuctionReturnPayload = {
+export type AuctionReturnPayload = Pick<
+  components["schemas"]["AuctionLotReturnRequest"],
+  "idempotencyKey"
+> & {
   returnedQuantity: number;
   returnDate: string;
   worker: string | null;
@@ -95,5 +110,52 @@ export type ManualPaymentPayload = {
 
 export type PartnerSettlementSettingsPayload = Omit<
   PartnerSettlementSettings,
-  "id" | "partnerId"
+  "id" | "partnerId" | "capabilities"
 >;
+
+export type AuctionFollowUp = Required<
+  components["schemas"]["AuctionFollowUpResponse"]
+>;
+export type AuctionArrival = Required<
+  components["schemas"]["AuctionArrivalResponse"]
+>;
+export type AuctionFollowUpMethod = NonNullable<AuctionFollowUp["method"]>;
+export type AuctionFollowUpPayload =
+  components["schemas"]["AuctionFollowUpCommand"];
+export type AuctionArrivalPayload =
+  components["schemas"]["AuctionArrivalCommand"];
+export type AuctionArrivalCancellationPayload =
+  components["schemas"]["CancelAuctionArrivalCommand"];
+export type AuctionFollowUpResult = {
+  followUp: AuctionFollowUp;
+  arrival: AuctionArrival | null;
+};
+
+export type UnassignedReceipt = Required<
+  components["schemas"]["PartnerPaymentEventResponse"]
+>;
+export type CancelUnassignedReceiptPayload =
+  components["schemas"]["CancelUnassignedReceiptRequest"];
+export type PartnerPaymentBalance = Required<
+  components["schemas"]["PartnerBalanceSummaryResponse"]
+>;
+
+export type PaymentReceipt = Required<
+  components["schemas"]["PaymentReceiptResponse"]
+>;
+export type PaymentAllocation = Required<
+  components["schemas"]["PaymentAllocationResponse"]
+>;
+export type AllocationTarget = Required<
+  components["schemas"]["PaymentAllocationTargetOption"]
+>;
+export type AllocationMetadata = Required<
+  components["schemas"]["PaymentAllocationMetadata"]
+>;
+export type AllocationPayload =
+  components["schemas"]["PaymentAllocationRequest"];
+export type AllocationCorrectionPayload =
+  components["schemas"]["PaymentAllocationCorrectionRequest"];
+export type AllocationResult =
+  components["schemas"]["PaymentAllocationChangeResponse"];
+export type AllocationTargetType = AllocationTarget["targetType"];

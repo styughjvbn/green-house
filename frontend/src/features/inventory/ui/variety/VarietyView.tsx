@@ -1,41 +1,32 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Page } from "@/shared/api/page";
 import { formatShortDate } from "@/shared/lib/dateFormat";
-import { DataTable } from "@/shared/ui/DataTable";
+import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
+import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 import {
   DetailActionButton,
   DetailCard,
   DetailHeader,
   DetailSummary,
 } from "@/shared/ui/DetailCard";
-import {
-  FilterField,
-  FilterGrid,
-  FilterPanel,
-  FilterResetButton,
-  FilterSearchButton,
-} from "@/shared/ui/FilterControls";
 import { TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
-import type {
-  Variety,
-  VarietyFilterState,
-  VarietyPayload,
-} from "../../model/types";
+import type { Variety, VarietyPayload } from "../../model/types";
 import { DetailRow, Field, inputClass } from "../common/InventoryPrimitives";
 import { ColorField } from "../common/ColorField";
 import { PotSizeInput } from "../common/PotSizeInput";
 
 export function VarietyView({
-  filters,
+  toolbar,
+  emptyAction,
+  hasAppliedFilters = false,
   loading,
   pageData,
   connectedGroups,
-  genera,
   selectedId,
   loadingGroups = false,
   onSelect,
@@ -43,17 +34,15 @@ export function VarietyView({
   onUpdate,
   onDeactivate,
   onDelete,
-  onFilterChange,
   onPageChange,
   onPageSizeChange,
-  onReset,
-  onSearch,
 }: {
-  filters: VarietyFilterState;
+  toolbar: DataTableToolbar;
+  emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   loading: boolean;
   pageData: Page<Variety>;
   connectedGroups: Variety["connectedGroups"];
-  genera: string[];
   selectedId: number;
   loadingGroups?: boolean;
   onSelect: (id: number) => void;
@@ -61,14 +50,8 @@ export function VarietyView({
   onUpdate: (varietyId: number, payload: VarietyPayload) => Promise<void>;
   onDeactivate: (varietyId: number) => Promise<void>;
   onDelete: (varietyId: number) => Promise<void>;
-  onFilterChange: <K extends keyof VarietyFilterState>(
-    field: K,
-    value: VarietyFilterState[K],
-  ) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
-  onReset: () => void;
-  onSearch: () => void;
 }) {
   const selected =
     pageData.content.find((item) => item.id === selectedId) ??
@@ -76,7 +59,6 @@ export function VarietyView({
   const connectedGroupCountLabel = loadingGroups
     ? selected?.connectedGroupCount
     : connectedGroups.length;
-  const genusOptions = useMemo(() => [...new Set(genera)], [genera]);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<VarietyPayload>({
     genus: selected?.genus ?? "",
@@ -138,99 +120,23 @@ export function VarietyView({
 
   return (
     <TabStack>
-      <form
-        className="shrink-0"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSearch();
-        }}
-      >
-        <FilterPanel>
-          <FilterGrid className="lg:grid-cols-[1fr_1.1fr_1fr_1fr_auto_auto] lg:items-end">
-            <FilterField label="속">
-              <select
-                className={inputClass}
-                value={filters.genus}
-                name="varietyGenus"
-                onChange={(event) =>
-                  onFilterChange("genus", event.target.value)
-                }
-              >
-                <option value="">전체</option>
-                {genusOptions.map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-            </FilterField>
-            <FilterField label="품종명">
-              <input
-                className={inputClass}
-                value={filters.keyword}
-                name="varietyKeyword"
-                placeholder="품종명을 입력하세요"
-                onChange={(event) =>
-                  onFilterChange("keyword", event.target.value)
-                }
-              />
-            </FilterField>
-            <FilterField label="상태">
-              <select
-                className={inputClass}
-                value={filters.status}
-                name="varietyStatus"
-                onChange={(event) =>
-                  onFilterChange(
-                    "status",
-                    event.target.value as VarietyFilterState["status"],
-                  )
-                }
-              >
-                <option value="">전체</option>
-                <option value="ACTIVE">활성</option>
-                <option value="INACTIVE">비활성</option>
-              </select>
-            </FilterField>
-            <FilterField label="판매 사용">
-              <select
-                className={inputClass}
-                value={filters.saleEnabled}
-                name="varietySale"
-                onChange={(event) =>
-                  onFilterChange(
-                    "saleEnabled",
-                    event.target.value as VarietyFilterState["saleEnabled"],
-                  )
-                }
-              >
-                <option value="">전체</option>
-                <option value="true">사용</option>
-                <option value="false">미사용</option>
-              </select>
-            </FilterField>
-            <FilterResetButton className="h-9 lg:mt-5" onClick={onReset} />
-            <FilterSearchButton className="h-9 lg:mt-5" />
-          </FilterGrid>
-        </FilterPanel>
-      </form>
-
       <TabSplit
         columns="lg:grid-cols-[minmax(0,1.15fr)_minmax(25rem,1fr)]"
         gap="gap-3"
       >
         <DataTable
+          toolbar={toolbar}
+          emptyAction={emptyAction}
+          hasAppliedFilters={hasAppliedFilters}
           actions={
-            <button
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
-              type="button"
-              onClick={onCreate}
-            >
-              <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+            <DataTableCreateButton onClick={onCreate}>
               새 품종 등록
-            </button>
+            </DataTableCreateButton>
           }
           columns={columns}
           data={pageData.content}
-          emptyMessage="조건에 맞는 품종이 없습니다."
+          emptyMessage="등록된 품종이 없습니다."
+          filteredEmptyMessage="조건에 맞는 품종이 없습니다."
           getRowId={(row) => String(row.id)}
           isLoading={loading}
           pageIndex={pageData.page}

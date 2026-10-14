@@ -1,0 +1,102 @@
+package com.greenhouse.backend.work.effect.application;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.WorkEffectResults;
+import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.api.effect.WorkMutationLink;
+import com.greenhouse.backend.work.effect.domain.WorkAppliedEffect;
+import com.greenhouse.backend.work.effect.domain.WorkEffectOrchidGroup;
+import com.greenhouse.backend.work.effect.domain.WorkEffectOrchidGroupRelationType;
+import com.greenhouse.backend.work.effect.repository.WorkAppliedEffectRepository;
+import com.greenhouse.backend.work.effect.repository.WorkEffectOrchidGroupRepository;
+import com.greenhouse.backend.work.operation.application.WorkRequestFingerprint;
+import com.greenhouse.backend.work.operation.domain.WorkOperation;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+
+class WorkEffectStoreTest {
+
+  private final WorkAppliedEffectRepository appliedEffectRepository =
+      mock(WorkAppliedEffectRepository.class);
+
+  private final WorkEffectOrchidGroupRepository effectOrchidGroupRepository =
+      mock(WorkEffectOrchidGroupRepository.class);
+
+  private final WorkEffectStore store =
+      new WorkEffectStore(
+          appliedEffectRepository, effectOrchidGroupRepository, new WorkRequestFingerprint());
+
+  @Test
+  void persistsTypedFactsAndReplaysJsonWithTheMutationLink() {
+    WorkOperation operation = mock(WorkOperation.class);
+    UUID correlationId = UUID.randomUUID();
+    WorkMutationLink mutationLink = new WorkMutationLink(91L, correlationId);
+    WorkExecutionResult executionResult =
+        new WorkExecutionResult(
+            "REPOT",
+            new WorkEffectResults.Transformation(
+                "round-1",
+                Map.of(101L, 10),
+                2,
+                0,
+                List.of(
+                    new WorkEffectResults.ResultGroup(
+                        201L, 8, StructureChangeResultPurpose.NORMAL)),
+                0),
+            List.of(201L),
+            mutationLink);
+    WorkEffectCommand command =
+        new WorkEffectCommand(
+            LocalDateTime.of(2026, 8, 20, 9, 0), "worker", Map.of("command", "value"), null);
+    when(appliedEffectRepository.save(any(WorkAppliedEffect.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    store.save(
+        operation,
+        null,
+        command,
+        "EXECUTION:round-1",
+        List.of(101L),
+        WorkEffectKind.STRUCTURE_CHANGE,
+        executionResult);
+
+    ArgumentCaptor<WorkAppliedEffect> effectCaptor =
+        ArgumentCaptor.forClass(WorkAppliedEffect.class);
+    verify(appliedEffectRepository).save(effectCaptor.capture());
+    WorkAppliedEffect savedEffect = effectCaptor.getValue();
+    assertThat(executionResult.details()).isInstanceOf(WorkEffectResults.Transformation.class);
+    assertThat(savedEffect.getResultDetails()).isEqualTo(executionResult.storedDetails());
+    assertThat(savedEffect.getMutationId()).isEqualTo(91L);
+    assertThat(savedEffect.getCorrelationId()).isEqualTo(correlationId);
+
+    when(appliedEffectRepository.findByWorkOperationIdAndEffectKey(11L, "EXECUTION:round-1"))
+        .thenReturn(Optional.of(savedEffect));
+    when(effectOrchidGroupRepository.findByWorkAppliedEffectIdOrderByIdAsc(savedEffect.getId()))
+        .thenReturn(
+            List.of(
+                new WorkEffectOrchidGroup(
+                    savedEffect, 101L, WorkEffectOrchidGroupRelationType.SOURCE),
+                new WorkEffectOrchidGroup(
+                    savedEffect, 201L, WorkEffectOrchidGroupRelationType.RESULT)));
+
+    WorkExecutionResult replayed = store.find(11L, "EXECUTION:round-1", command).orElseThrow();
+
+    assertThat(replayed.details()).isInstanceOf(WorkEffectResults.Json.class);
+    assertThat(replayed.storedDetails()).isEqualTo(savedEffect.getResultDetails());
+    assertThat(replayed.resultOrchidGroupIds()).containsExactly(201L);
+    assertThat(replayed.mutationLink()).isEqualTo(mutationLink);
+  }
+}

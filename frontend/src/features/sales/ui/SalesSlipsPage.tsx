@@ -1,5 +1,7 @@
 "use client";
-
+import type { ReactNode } from "react";
+import { FilterResetButton } from "@/shared/ui/FilterControls";
+import { hasFilterConditions } from "@/shared/ui/listFilterBadges";
 import { useSearchParams } from "next/navigation";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { readSalesRouteState } from "../lib/salesRouteParams";
@@ -8,7 +10,6 @@ import { SalesFilters } from "./slips/SalesFilters";
 import { SalesSlipCreateForm } from "./slips/SalesSlipCreateForm";
 import { SalesSlipDetail } from "./slips/SalesSlipDetail";
 import { SalesSlipList } from "./slips/SalesSlipList";
-
 export function SalesSlipsPage({
   initialShowCreateSlip = false,
 }: {
@@ -19,7 +20,6 @@ export function SalesSlipsPage({
     initialShowCreateSlip,
     routeState,
   });
-
   function handleToggleCreateSalesSlip() {
     const nextOpen = !sales.showCreateSlip;
     if (nextOpen) {
@@ -28,17 +28,24 @@ export function SalesSlipsPage({
       sales.cancelSalesSlipEditing();
     }
   }
+  const toolbar = (columnSettings: ReactNode) => (
+    <SalesFilters
+      loading={sales.loadingSalesSlipPage}
+      filters={sales.filters}
+      appliedFilters={routeState.filters}
+      columnSettings={columnSettings}
+      onRemove={sales.removeFilters}
+      onResetFilters={sales.resetPopupFilters}
+      onChange={sales.updateFilters}
+      onSalesTypeChange={sales.setSalesTypeFilter}
+      onReset={sales.resetFilters}
+      onSearch={sales.searchSalesSlips}
+    />
+  );
 
   return (
     <main className="h-full min-h-0">
       <TabLayout>
-        <SalesFilters
-          filters={sales.filters}
-          onChange={sales.updateFilters}
-          onReset={sales.resetFilters}
-          onSearch={sales.searchSalesSlips}
-        />
-
         {sales.showCreateSlip ? (
           <SalesSlipCreateForm
             errorMessage={sales.errorMessage}
@@ -46,10 +53,14 @@ export function SalesSlipsPage({
             mode={sales.editingSlipId == null ? "create" : "edit"}
             saving={sales.savingSlip}
             totalAmount={sales.totalAmount}
-            onAddAllocation={sales.addAllocation}
+            onSelectGroups={sales.selectSalesGroups}
+            onRemoveGroup={sales.removeSalesGroup}
+            onAutomaticAllocation={sales.useAutomaticAllocation}
+            onResetAllocation={sales.resetSalesAllocation}
+            selectedGroups={sales.selectedGroups}
+            allocationIssue={sales.allocationIssue}
             onAddItem={sales.addSalesItem}
             onAllocationChange={sales.updateAllocation}
-            onAllocationRemove={sales.removeAllocation}
             onCancel={() => {
               sales.cancelSalesSlipEditing();
             }}
@@ -57,6 +68,7 @@ export function SalesSlipsPage({
             onRemoveItem={sales.removeSalesItem}
             onSubmit={sales.handleCreateSalesSlip}
             onSalesTypeChange={sales.selectSalesType}
+            onRecordingModeChange={sales.setRecordingMode}
             onUpdateItem={sales.updateItem}
           />
         ) : null}
@@ -65,6 +77,17 @@ export function SalesSlipsPage({
 
         <TabSplit>
           <SalesSlipList
+            hasAppliedFilters={hasFilterConditions(routeState.filters)}
+            toolbar={toolbar}
+            emptyAction={
+              sales.hasEmptySalesSlipResult && !sales.errorMessage ? (
+                <FilterResetButton
+                  className="lg:mt-0"
+                  label="전체 초기화"
+                  onClick={sales.resetFilters}
+                />
+              ) : undefined
+            }
             currentPage={sales.salesSlipCurrentPage}
             pageSize={sales.salesSlipPageSize}
             salesSlips={sales.salesSlips}
@@ -84,7 +107,6 @@ export function SalesSlipsPage({
             onCancelSalesSlip={sales.handleCancelSalesSlip}
             onEditSalesSlip={sales.startEditSalesSlip}
             onCompleteSalesSlip={sales.handleCompleteSalesSlip}
-            onPaymentConfirmed={sales.updateSalesSlip}
           />
         </TabSplit>
       </TabLayout>

@@ -21,7 +21,7 @@ export function SlipTable({
           <thead className="bg-[#f7f9f6] text-[#536057]">
             <tr>
               {[
-                "전표 번호",
+                "전표 ID",
                 "거래처",
                 "판매일",
                 "금액",
@@ -43,7 +43,7 @@ export function SlipTable({
                       className="font-semibold text-[#216d3a]"
                       href={`/sales?slipId=${slip.id}`}
                     >
-                      {slip.slipNumber}
+                      {`#${slip.id}`}
                     </Link>
                   </td>
                   <td className="px-2 py-2">{slip.partnerName}</td>

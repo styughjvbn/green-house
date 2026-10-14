@@ -1,18 +1,18 @@
 package com.greenhouse.backend.support;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
-import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
-import com.greenhouse.backend.work.application.effect.StructureChangeResultInput;
-import com.greenhouse.backend.work.application.effect.StructureChangeSourceInput;
-import com.greenhouse.backend.work.application.operation.StructureChangeRecordService;
-import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
-import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
-import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
-import com.greenhouse.backend.work.repository.WorkTypeRepository;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupResponse;
+import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.api.effect.StructureChangeResultInput;
+import com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.api.effect.StructureChangeSourceInput;
+import com.greenhouse.backend.work.api.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.effect.web.dto.StructureChangeRecordBatchCreateRequest;
+import com.greenhouse.backend.work.effect.web.dto.StructureChangeRecordCreateRequest;
+import com.greenhouse.backend.work.operation.application.StructureChangeRecordService;
+import com.greenhouse.backend.work.operation.repository.WorkTypeRepository;
+import com.greenhouse.backend.work.operation.web.dto.WorkOperationCreateRequest;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MovementTestSupport {
 
-  private final OrchidGroupReader groups;
+  private final OrchidGroupRepository groups;
 
   private final StructureChangeRecordService records;
 

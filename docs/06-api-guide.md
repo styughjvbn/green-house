@@ -25,6 +25,8 @@ npm run api:types
 
 기본 생성 과정은 `openApiRun` Gradle task와 테스트 프로필의 메모리 H2 DB를 사용하며 로컬 PostgreSQL에 의존하지 않는다. `AUTH_ENABLED=false`로 임시 백엔드를 실행한다. 분할 스크립트는 모든 operation이 controller tag 기준으로 정확히 하나의 slice에 포함되는지 검사하며, 새 controller tag의 매핑이 없으면 실패한다.
 
+CI에서는 `python3 scripts/generate_openapi.py --timeout 300`으로 실행한다. 최초 Gradle 의존성 다운로드·컴파일·Spring 기동을 같은 제한 시간에 포함하기 때문에 로컬 기본값인 120초보다 길게 둔다. 생성 실패와 계약 drift 검사는 그대로 유지한다.
+
 전체 명세와 slice를 저장할 때 `properties` 키는 이름순으로 정렬한다. Springdoc 실행 환경에 따라 필드 탐색 순서가 달라도 동일한 생성 결과를 유지하며, 배열 순서와 필드 타입·제약조건은 변경하지 않는다. `api-contract` CI는 생성 순서 회귀 테스트와 명세·TypeScript 재생성 후 drift 검사를 수행한다.
 
 프론트는 생성된 schema 중 API enum과 capability 타입을 사용한다. 전체 API client는 생성하지 않는다. `npm run check`는 `openapi.yaml`과 `shared/api/generated/openapi.d.ts`의 drift를 검사한다.
@@ -46,10 +48,16 @@ npm run api:types
 | `partner.openapi.yaml` | 거래처, 정산 설정 |
 | `sales.openapi.yaml` | 판매 전표, 경매 판매 전표 |
 | `analytics.openapi.yaml` | 판매·거래처·작업 분석 |
-| `auction.openapi.yaml` | 경매 lot, 결과 입력, 상태 변경, 반환 확인, 수량 보정, 정산 |
+| `auction.openapi.yaml` | 경매 lot, 결과 입력, 상태 변경, 후속 처리·반환 도착, 수량 보정, 경매 대금 |
 | `payment.openapi.yaml` | 입금 확인, 거래처 잔액, 입금 이벤트 |
 
 ## 3. 판매/경매 API 규칙
+
+전표는 기존 `id`로 식별하며 별도 `slipNumber`를 제공하지 않는다. 전표 목록과 수납 대상 검색의 숫자 검색어는 전표 ID와 일치 조회한다. 과거 생성 receipt의 `slipNumber`는 저장 원문을 보존하고 재전송 응답을 읽을 때만 제외한다. 기존 요청 키·입력 지문은 변경하지 않는다.
+
+`POST /api/sales-slips`의 재전송에는 `Idempotency-Key` header와 입력을 그대로 유지한다. 일반·경매 생성 모두 같은 키의 최초 응답을 `201`로 재조회하며, 입력 변경은 `409 / SALES_CREATE_REQUEST_KEY_CONFLICT`다. JSON 필드 순서는 비교에 영향이 없지만 품목·배분 배열 순서와 null/명시 기본값은 구분한다. 생성 namespace 전체에서 유일한 키를 사용하며 UUID를 권장한다. 키의 길이·validation은 Sales slice와 Controller를 기준으로 확인한다. 키 생략 호출은 수납을 함께 기록하지 않는 호환용이며 재전송 때 신규 전표가 추가된다. 일반 판매 생성의 최초 수납을 함께 기록할 때는 키가 필수다. 수납을 생략한 과거 지문은 유지하고, 최초 수납을 포함한 요청은 금액·날짜·방법도 같은 키의 입력 일치 검사에 포함한다.
+
+응답 유실·오류 뒤에는 키를 바꾸지 않는다. 서버 rollback 뒤에는 같은 키로 수정된 입력을 다시 접수할 수 있지만, 앞선 성공이 있으면 입력 변경을 거절한다. 최초 응답은 생성 당시 snapshot이며 현재 상태·업무 가능 여부는 상세로 다시 확인한다. 생성 키는 수정·상태 변경·입금 키와 독립적이다.
 
 일반 판매 전표:
 
@@ -83,13 +91,18 @@ npm run api:types
 - `SOLD`, `PARTIALLY_SOLD`는 `resultLines` 필요
 - `FAILED`, `RETURN_INFERRED`는 서버가 대기 수량 기준 결과 행을 자동 생성
 
+경매 결과 입력·반환 확인의 재전송은 같은 lot·endpoint의 `idempotencyKey`와 입력을 그대로 보낸다. 같은 키·같은 입력은 최초 처리 응답을 반환하고, 다른 입력은 `409 / AUCTION_REQUEST_KEY_CONFLICT`로 거절한다. 전량 처리 후에도 원래 요청을 재전송할 수 있다. 실제 다음 경매·추가 반환에는 새 키를 사용한다. 응답 유실 뒤 입력을 바꿔 새 키로 전송하기 전에는 현재 상세와 이전 처리 결과를 확인해야 한다. 최초 응답은 당시 상태이므로 후속 업무가 있으면 상세를 다시 조회한다.
+
+경매 lot의 직접 수량 보정은 응답 capability를 기준으로 표시하고 서버가 잠금 후 재검증한다. 경매 결과·반환 확인 뒤 실제 수량 변경은 `409 / AUCTION_QUANTITY_ADJUSTMENT_LOCKED`다. V39 이전 이력·Receipt에 없는 수량 snapshot이나 capability는 현재 lot 값으로 추정하지 않으며, replay 후 현재 판단에는 상세를 다시 조회한다.
+
 수동 입금 확인:
 
-- 일반 판매 전표와 경매 정산 입금 요청은 대상별 `idempotencyKey`가 필수다.
+- 일반 판매 전표와 경매 대금 입금 요청은 대상별 `idempotencyKey`가 필수다.
+- 받은 전액을 원본 수납으로 기록하고 대상 잔액까지만 배분한다. 초과액은 같은 거래처의 미배분 잔액으로 남는다. 잔액이 0원인 대상의 새 요청은 거절한다.
 - 같은 키·금액·입금일 재요청은 중복 입금으로 처리하지 않는다.
-- 같은 키를 다른 금액 또는 입금일에 재사용하면 검증 오류를 반환한다.
+- 같은 대상·키를 다른 금액 또는 입금일에 재사용하면 `409 / IDEMPOTENCY_KEY_REUSED`를 반환한다. 기존 `400 / VALIDATION_ERROR`에서 변경된 계약이다. 외부 소비자는 status/code 분기를 함께 갱신한다. 키 충돌을 받으면 기존 입금 결과를 확인하고 실제 추가 입금에만 새 키를 사용한다.
 
-경매 정산 조회는 `/api/auction-settlements/page`로 요약 목록을, `/api/auction-settlements/summary`로 같은 조건의 전체 금액 합계를 요청한다. 정산 결과 행은 단건 조회에서 받는다. 기존 `/api/auction-settlements`는 최신 500건으로 제한된 호환 경로이므로 전체 합계 계산에 사용하지 않는다.
+경매 대금 조회는 `/api/auction-proceeds/page`와 단건 경로를 사용한다. 제공 금액과 미확인 잔액의 null을 유지하고 입금 가능 여부는 서버 capability로 판단한다. 원본 결과 참조·실제 입금은 대금 계약을 따르며 기존 정산 ID를 새 대금 ID로 사용하지 않는다. 파생 정산 조회·재계산·입금 경로는 제거했다.
 
 입금 이력은 `/api/partner-payment-events/page`를 사용한다. 입금만 표시할 때는 이벤트 유형을 서버 필터로 지정해야 페이지 총건수와 내용이 일치한다. 유형을 생략하면 연결 이벤트를 포함한 전체 원장을 조회한다. 기존 `/api/partner-payment-events`는 최신 500개 이벤트로 제한된 호환 경로다.
 
@@ -119,6 +132,12 @@ npm run api:types
 ```
 
 프론트엔드 공통 `requestApi`는 실패를 `ApiError`로 변환하며 HTTP status, `error.code`, `error.details`를 그대로 보존한다. 화면 메시지만 필요한 경우 `getApiErrorMessage`를 사용하고, 업무 분기는 문자열 메시지가 아닌 status와 code를 기준으로 한다.
+
+오류 선택 기준은 다음과 같다.
+
+- 필수 값·형식·범위 오류는 `400 / VALIDATION_ERROR`다. 입금의 초과금액 등 기존 업무 검증도 이 계약을 유지한다.
+- 같은 처리 범위·멱등 키에 다른 입력을 보낸 요청은 `409`다. Work·보정·실사·수동 입금은 `IDEMPOTENCY_KEY_REUSED`를 사용하며 판매/입고 생성·경매의 기존 도메인별 충돌 code도 유지한다. 서로 다른 대상/경로에서 키가 같다는 이유만으로 충돌시키지 않는다.
+- 새 업무의 현재 상태 충돌은 명시적인 도메인 code를 가진 `409`로 구별한다. 기존 업무의 모든 `IllegalArgumentException`을 일괄 변환하지 않는다. DB 잠금/버전 충돌은 `409 / CONCURRENT_MODIFICATION`, 제약 위반은 `409 / DATA_INTEGRITY_CONFLICT`이며 입력 비교로 확인한 키 충돌과 구분한다.
 
 ## 5. 변경 체크리스트
 
@@ -169,6 +188,10 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 
 `POST /api/work-operations/record`는 농장 전체, 동, 물리 배드, 논리 구역, 난 묶음 범위의 기록형 작업을 대상 스냅샷과 함께 즉시 완료한다. 직접 자리 이동도 완료된 `WorkOperation`과 작업 효과로 기록하며 모든 작업 이력 API는 `WorkOperation` 계약을 사용한다.
 
+일반 계획 생성의 `POST /api/work-operations`와 `/api/work-operations/batch`, 일반 완료 기록의 `/api/work-operations/record`는 선택형 `Idempotency-Key` header를 지원한다. 세 경로의 키 범위는 독립적이므로 재전송은 경로·키·입력을 그대로 유지한다. 같은 요청은 최초 응답을 `201`로 반환하고 다른 입력은 `409 / IDEMPOTENCY_KEY_REUSED`다. Work의 기존 지문 규칙대로 JSON object 순서와 숫자 소수 자릿수는 정규화하고 배열 순서·문자열·null/명시값은 구분한다. 키는 기존 Work 규칙대로 앞뒤 공백 제거 후 1~100자이며 빈/공백/초과 길이는 `400 / VALIDATION_ERROR`다. 키 생략 생성은 재전송 중복 방어 대상이 아니다.
+
+일반 생성의 replay는 최초 대상·진행 상태·capability를 보존하며 현재 유형 비활성화나 작업명·상태·취소를 반영한 최신 상세가 아니다. 이후 업무 판단에는 현재 상세를 조회한다. 기존 실행·구조 변경·포트 Receipt는 저장한 작업 ID의 현재 상세를 반환하는 계약을 유지한다. 응답 유실·오류 뒤에는 키를 임의 변경하지 않으며 rollback 뒤에는 같은 키로 입력을 수정해 접수할 수 있다. 일반 등록 화면의 계획/완료 기록 키는 별도로 유지하고 성공 응답 확인 직후 해제한다.
+
 구조 변경 작업 기록은 유형별 전체 결과 요청을 사용한다.
 
 - `POST /api/work-operations/structure-change-records`: 분갈이·분주·합식의 전체 원본과 N:M 결과를 즉시 완료
@@ -181,6 +204,10 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 `GET /api/work-history?historyScopeType={historyScopeType}&historyScopeId={historyScopeId}&page={page}&size={size}`는 `HOUSE`, `PHYSICAL_BED`, `BED_ZONE`, `ORCHID_GROUP` 범위의 직접·전파 이력을 서버에서 통합해 페이지로 반환한다. `page`는 0부터 시작하고 `size`는 기본 20, 최대 100이다. 동일 작업은 한 번만 반환하며 최신 작업일과 작업 ID 역순으로 정렬한다. 요약 화면은 첫 페이지 일부만 사용하고 난 묶음 상세는 10건 단위로 페이지를 전환한다. 기존 난 묶음별 전체 이력 경로는 호환용으로 유지한다.
 
 신규 입고 등록은 입고 기록 대상을 가진 완료 상태의 `WorkOperation`을 생성한다.
+
+`POST /api/inbound-records`의 재전송에는 `Idempotency-Key` header와 입력을 그대로 유지한다. 모든 입고 유형에서 같은 키·입력은 최초 응답을 `201`로 반환하고, 다른 입력은 `409 / INBOUND_CREATE_REQUEST_KEY_CONFLICT`다. JSON property 순서는 비교에 영향이 없지만 null/명시값과 배치 좌표의 소수 자릿수는 구분한다. 키의 길이·validation은 Inventory slice와 Controller를 기준으로 확인한다. 판매 생성과 namespace가 독립적이며 각 입고 생성에는 UUID를 권장한다. 키 생략 호출은 재전송 중복 방어 대상이 아니다.
+
+응답 유실·오류 뒤에는 키를 바꾸지 않는다. rollback 뒤에는 같은 키로 수정된 입력을 접수할 수 있지만 앞선 성공이 있으면 거절한다. 생성 재조회는 현재 수정·취소·포트 상태를 반영한 상세가 아니라 최초 응답이므로 이후 업무 판단은 현재 상세에서 확인한다. 생성 키는 수정·취소·포트 실행 키와 독립적이다.
 
 자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 자리 이동·분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 같은 품종의 계획 대상 일부와 원본별 투입 수량을 하나의 풀로 합친 뒤 복수 결과를 생성하고 누적 작업 수량을 갱신한다. 결과 요청은 직접 원본 ID를 받지 않으며 기존 `sourceOrchidGroupIds` 입력은 호환상 무시한다. `attributeSourceOrchidGroupId`는 기존 결과 속성 상속 기준만 전달하며 수량 배분이나 직접 계보를 뜻하지 않는다. 기존 단일 대상 분갈이·분주 요청은 내부 변환 후 같은 N:M 실행 코어를 사용하고, 기존 합식 완료 API는 이전 클라이언트 호환용이다.
 

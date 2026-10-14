@@ -3,21 +3,17 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
-import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
-import com.greenhouse.backend.farm.domain.inbound.InboundType;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordCancelRequest;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
-import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
-import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
-import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
-import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
-import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordCreateCommand;
+import com.greenhouse.backend.farm.inbound.application.InboundRecordService;
+import com.greenhouse.backend.farm.inbound.domain.InboundType;
+import com.greenhouse.backend.farm.inbound.web.dto.InboundRecordCancelRequest;
+import com.greenhouse.backend.farm.inbound.web.dto.InboundRecordUpdateRequest;
+import com.greenhouse.backend.work.api.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.api.effect.InboundPottingResultInput;
+import com.greenhouse.backend.work.effect.web.dto.InboundPottingPlanCreateRequest;
+import com.greenhouse.backend.work.operation.application.InboundPottingOperationService;
+import com.greenhouse.backend.work.operation.application.InboundPottingPlanService;
 import java.math.BigDecimal;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -40,8 +36,6 @@ class WorkUndoStateProtectionPostgresE2ETest extends WorkUndoSafetyTestBase {
   @Autowired InboundPottingPlanService plans;
 
   @Autowired PlatformTransactionManager transactions;
-
-  @org.springframework.boot.test.web.server.LocalServerPort int port;
 
   private final LocalDate date = LocalDate.of(2026, 8, 20);
 
@@ -101,19 +95,13 @@ class WorkUndoStateProtectionPostgresE2ETest extends WorkUndoSafetyTestBase {
                     "{\"idempotencyKey\":\"undo-audit\",\"reason\":\"audit\"}")
                 .status())
         .isEqualTo(200);
-    var request =
-        HttpRequest.newBuilder(
-                URI.create("http://localhost:" + port + "/api/orchid-groups/" + group))
-            .header("Content-Type", "application/json")
-            .method(
-                "PATCH",
-                HttpRequest.BodyPublishers.ofString(
-                    "{\"varietyId\":"
-                        + variety
-                        + ",\"quantity\":60,\"potSize\":\"4치\",\"ageYear\":3,\"status\":\"정상\",\"startPosition\":6,\"endPosition\":8}"))
-            .build();
-    var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-    assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
+    var response =
+        patchJson(
+            "/api/orchid-groups/" + group,
+            "{\"varietyId\":"
+                + variety
+                + ",\"quantity\":60,\"potSize\":\"4치\",\"ageYear\":3,\"status\":\"정상\",\"startPosition\":6,\"endPosition\":8}");
+    assertThat(response.status()).as(response.body().toString()).isEqualTo(400);
     assertThat(jdbc.queryForObject("select sum(quantity) from orchid_groups", Long.class))
         .isEqualTo(100);
     assertThat(

@@ -1,12 +1,16 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AuctionLot } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
-import { DataTable } from "@/shared/ui/DataTable";
+import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
 import { auctionInspectionLabel } from "../../lib/auctionDisplay";
 import { AuctionLotStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
 
 export function AuctionLotList({
+  toolbar,
+  emptyAction,
+  hasAppliedFilters = false,
+  actions,
   lots,
   loading,
   page,
@@ -18,6 +22,10 @@ export function AuctionLotList({
   onPageChange,
   onPageSizeChange,
 }: {
+  toolbar?: DataTableToolbar;
+  emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
+  actions?: ReactNode;
   lots: AuctionLot[];
   loading: boolean;
   page: number;
@@ -104,9 +112,14 @@ export function AuctionLotList({
 
   return (
     <DataTable
+      toolbar={toolbar}
+      emptyAction={emptyAction}
+      hasAppliedFilters={hasAppliedFilters}
+      actions={actions}
       columns={columns}
       data={lots}
-      emptyMessage="조건에 맞는 출하 lot이 없습니다."
+      emptyMessage="등록된 출하 lot이 없습니다."
+      filteredEmptyMessage="조건에 맞는 출하 lot이 없습니다."
       getRowId={(row) => String(row.id)}
       isLoading={loading}
       pageIndex={page}

@@ -5,7 +5,7 @@ export { SalesSettlementPage } from "./ui/SalesSettlementPage";
 export { SalesSlipsPage } from "./ui/SalesSlipsPage";
 
 export {
-  confirmAuctionSettlementPayment,
+  confirmAuctionProceedsPayment,
   confirmSalesSlipPayment,
   getBusinessPartnerPage,
   getSalesSlip,
@@ -13,7 +13,6 @@ export {
   getAuctionShipmentOptions,
   getAuctionLots,
   getAuctionTrackingSummary,
-  rebuildAuctionSettlement,
   createBusinessPartner,
   getPartnerSettlementSettings,
   updatePartnerSettlementSettings,

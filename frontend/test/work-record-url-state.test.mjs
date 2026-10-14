@@ -6,6 +6,7 @@ import {
   needsWorkRecordUrlNormalization,
   readWorkRecordUrlState,
   writeWorkListFilterParams,
+  writeWorkWorkspaceFilterParams,
 } from "../src/features/work-record/lib/workRecordUrlState.ts";
 
 test("work record URL state reads scope, view, filters, and paging", () => {
@@ -52,7 +53,7 @@ test("work record URL state bounds invalid values", () => {
     "2026-07",
   );
 
-  assert.equal(state.scope, "MANAGEMENT");
+  assert.equal(state.scope, "ALL");
   assert.equal(state.view, "LIST");
   assert.equal(state.filters.status, "");
   assert.equal(state.page, 0);
@@ -89,8 +90,24 @@ test("work record URL defaults are normalized before data prefetch", () => {
   assert.equal(needsWorkRecordUrlNormalization(searchParams, state), true);
   assert.equal(
     createNormalizedWorkRecordSearchParams(searchParams, state).toString(),
-    "keyword=%EA%B4%80%EC%88%98&scope=MANAGEMENT&view=LIST",
+    "keyword=%EA%B4%80%EC%88%98&scope=ALL&view=LIST",
   );
+});
+
+test("both work views default to all while preserving an explicit management scope", () => {
+  for (const view of ["LIST", "CALENDAR"]) {
+    const defaultState = readWorkRecordUrlState(
+      new URLSearchParams({ view }),
+      "2026-07",
+    );
+    assert.equal(defaultState.scope, "ALL");
+
+    const managementState = readWorkRecordUrlState(
+      new URLSearchParams({ view, scope: "MANAGEMENT" }),
+      "2026-07",
+    );
+    assert.equal(managementState.scope, "MANAGEMENT");
+  }
 });
 
 test("work list filters are written and empty values are removed", () => {
@@ -109,6 +126,65 @@ test("work list filters are written and empty values are removed", () => {
   assert.equal(params.get("to"), "2026-07-31");
   assert.equal(params.get("status"), "COMPLETED");
   assert.equal(params.get("keyword"), "분주");
+});
+
+test("work filter apply writes scope and conditions together while preserving view", () => {
+  const params = new URLSearchParams({
+    scope: "MANAGEMENT",
+    view: "LIST",
+    page: "3",
+    size: "50",
+    keyword: "old",
+    hasCorrections: "true",
+  });
+
+  writeWorkWorkspaceFilterParams(params, {
+    scope: "ALL",
+    from: "2026-10-01",
+    to: "2026-10-13",
+    status: "IN_PROGRESS",
+    keyword: " 분갈이 ",
+  });
+
+  const state = readWorkRecordUrlState(params);
+  assert.equal(state.scope, "ALL");
+  assert.equal(state.page, 0);
+  assert.equal(state.view, "LIST");
+  assert.equal(state.size, 50);
+  assert.deepEqual(state.filters, {
+    from: "2026-10-01",
+    to: "2026-10-13",
+    status: "IN_PROGRESS",
+    keyword: "분갈이",
+  });
+  assert.equal(params.has("hasCorrections"), false);
+});
+
+test("work filter apply removes cleared conditions when returning to management", () => {
+  const params = new URLSearchParams({
+    scope: "ALL",
+    view: "LIST",
+    page: "2",
+    from: "2026-10-01",
+    to: "2026-10-13",
+    status: "IN_PROGRESS",
+    keyword: "분갈이",
+  });
+
+  writeWorkWorkspaceFilterParams(params, {
+    scope: "MANAGEMENT",
+    from: "",
+    to: "",
+    status: "",
+    keyword: "",
+  });
+
+  assert.equal(params.get("scope"), "MANAGEMENT");
+  assert.equal(params.get("page"), "0");
+  assert.equal(params.get("view"), "LIST");
+  for (const key of ["from", "to", "status", "keyword"]) {
+    assert.equal(params.has(key), false);
+  }
 });
 
 test("stopped work remains a valid status filter", () => {

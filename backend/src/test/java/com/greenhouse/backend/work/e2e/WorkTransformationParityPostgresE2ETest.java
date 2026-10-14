@@ -2,10 +2,9 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
+import com.greenhouse.backend.work.effect.repository.WorkAppliedEffectRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -27,7 +26,7 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired private WorkAppliedEffectRepository effectRepository;
 
-  @Autowired private OrchidGroupStateChainMigrationService migrationService;
+  @Autowired private OrchidGroupLedgerTestFixture migrationService;
 
   private WorkTestDataSeeder.ContractScenario scenario;
 
@@ -37,13 +36,14 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
     scenario = seeder.seedContractScenario();
     jdbcTemplate.update(
         "UPDATE orchid_groups SET status = '관리' WHERE id = ?", scenario.orchidGroupId());
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        migrationService, groupRepository, UUID.randomUUID(), LocalDate.of(2026, 8, 20), "1.0.0");
+    migrationService.seedBaseline(UUID.randomUUID(), LocalDate.of(2026, 8, 20), "1.0.0");
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"REPOT", "DIVIDE", "MERGE", "MOVEMENT"})
   void preservesPreChangeAttributesResultOrderAndLineage(String code) throws Exception {
+    Long sourceVarietyId =
+        groupRepository.findById(scenario.orchidGroupId()).orElseThrow().getVariety().getId();
     long operationId = planAndStart(code);
     int secondQuantity = code.equals("DIVIDE") ? 80 : 68;
     String request = execution(secondQuantity, 6);
@@ -79,6 +79,14 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
       assertThat(group.getPotSizeCode().name())
           .isEqualTo(code.equals("MOVEMENT") ? "POT_3_5" : "POT_4");
       assertThat(group.getAgeYear()).isEqualTo(code.equals("MOVEMENT") ? 2 : 3);
+      assertThat(group.getVariety().getId()).isEqualTo(sourceVarietyId);
+      assertThat(group.getBedZone().getId()).isEqualTo(scenario.bedZoneId());
+      assertThat(group.getPlacementType()).isEqualTo(index == 0 ? "트레이" : null);
+      assertThat(group.getTrayCount()).isEqualTo(index == 0 ? 3 : null);
+      assertThat(group.getSplitPlacementAllowed()).isEqualTo(index == 0);
+      assertThat(group.getStartPosition()).isEqualByComparingTo(index == 0 ? "5" : "6");
+      assertThat(group.getEndPosition()).isEqualByComparingTo(index == 0 ? "6" : "7");
+      assertThat(group.getMemo()).isEqualTo(index == 0 ? "첫 결과 배치" : null);
       assertThat(details.path("results").get(index).path("purpose").asText())
           .isEqualTo(index == 0 || code.equals("MOVEMENT") ? "NORMAL" : "HELD");
       assertThat(details.path("resultOrchidGroupIds").get(index).asLong())
@@ -148,9 +156,11 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 				 "sources":[{"sourceOrchidGroupId":%d,"inputQuantity":100}],
 				 "results":[
 				   {"bedZoneId":%d,"quantity":30,"sourceOrchidGroupIds":[%d],
-				    "potSize":"4치","ageYear":3,"purpose":"NORMAL","startPosition":5,"endPosition":6},
+				    "potSize":"4치","ageYear":3,"purpose":"NORMAL","startPosition":5,"endPosition":6,
+				    "placementType":" 트레이 ","trayCount":3,"splitPlacementAllowed":true,"memo":" 첫 결과 배치 "},
 				   {"bedZoneId":%d,"quantity":%d,"sourceOrchidGroupIds":[%d],
-				    "potSize":"4치","ageYear":3,"purpose":"HELD","startPosition":%d,"endPosition":7}]}
+				    "potSize":"4치","ageYear":3,"purpose":"HELD","startPosition":%d,"endPosition":7,
+				    "placementType":null,"trayCount":null,"splitPlacementAllowed":null,"memo":" "}]}
 				"""
         .formatted(
             scenario.orchidGroupId(),

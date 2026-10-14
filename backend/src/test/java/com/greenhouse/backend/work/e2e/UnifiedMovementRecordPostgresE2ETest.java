@@ -62,6 +62,30 @@ class UnifiedMovementRecordPostgresE2ETest extends WorkUndoSafetyTestBase {
     var first = post("/api/work-operations/structure-change-records/batch", request);
     assertThat(first.status()).as(first.body().toString()).isEqualTo(201);
     long work = first.data().get(0).path("id").asLong();
+    var expectedDetails =
+        objectMapper.readTree(
+            """
+        {"executionKey":"unified","sourceInputQuantities":{"%d":60},
+         "lossQuantity":0,"increaseQuantity":0,
+         "results":[{"orchidGroupId":%d,"quantity":60,"purpose":"NORMAL"}],
+         "sourceOrchidGroupId":%d,"inputQuantity":60,"remainingQuantity":60,
+         "resultOrchidGroupIds":[%d],"identityPreserved":true}
+        """
+                .formatted(source, source, source, source));
+    assertThat(
+            objectMapper.readTree(
+                jdbc.queryForObject(
+                    "select result_details::text from work_applied_effects where work_operation_id = ?",
+                    String.class,
+                    work)))
+        .isEqualTo(expectedDetails);
+    assertThat(
+            objectMapper.readTree(
+                jdbc.queryForObject(
+                    "select execution.result_details::text from work_target_executions execution join work_operation_targets target on target.id = execution.work_operation_target_id where target.work_operation_id = ?",
+                    String.class,
+                    work)))
+        .isEqualTo(expectedDetails);
     var replay = post("/api/work-operations/structure-change-records/batch", request);
     assertThat(replay.status()).as(replay.body().toString()).isEqualTo(201);
     assertThat(replay.data().get(0).path("id").asLong()).isEqualTo(work);

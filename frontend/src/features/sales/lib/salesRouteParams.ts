@@ -19,10 +19,15 @@ export type SalesSlipsRouteState = SalesRouteState<SalesFilterState> & {
   selectedSlipId: number | null;
 };
 
-export type SettlementRouteState = {
+export type AuctionRouteState = SalesRouteState<AuctionFilterState> & {
+  selectedLotId: number | null;
+  arrivalPage: number;
+};
+
+export type ProceedsRouteState = {
   page: number;
   size: number;
-  selectedSettlementId: number | null;
+  selectedProceedsId: number | null;
 };
 
 export type SearchParamReader = {
@@ -59,13 +64,27 @@ export function createServerSearchParamReader(
 export function readSalesRouteState(
   params: SearchParamReader,
 ): SalesSlipsRouteState {
+  const rawStatus = params.get("salesStatus");
+  const legacyType =
+    rawStatus === "출고 완료"
+      ? "DIRECT"
+      : rawStatus === "출하 완료"
+        ? "AUCTION"
+        : "";
+  const salesType =
+    readEnumValue(params.get("salesType"), ["DIRECT", "AUCTION"]) ||
+    (params.get("salesType") == null ? legacyType : "");
   return {
     filters: {
       from: params.get("from") ?? "",
       to: params.get("to") ?? "",
       partnerId: params.get("partnerId") ?? "",
-      paymentStatus: params.get("paymentStatus") ?? "",
-      salesStatus: params.get("salesStatus") ?? "",
+      // TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정. 기존 URL의 숨겨진 수납 필터도 무시한다.
+      paymentStatus: "",
+      salesStatus: legacyType
+        ? "완료"
+        : readEnumValue(rawStatus, ["작성중", "완료", "취소"]),
+      salesType,
       keyword: params.get("keyword") ?? "",
     },
     page: readBoundedIntegerValue(
@@ -104,8 +123,15 @@ export function readBusinessPartnerRouteState(
 
 export function readAuctionRouteState(
   params: SearchParamReader,
-): SalesRouteState<AuctionFilterState> {
+): AuctionRouteState {
   return {
+    selectedLotId: readOptionalPositiveInteger(params.get("lotId")),
+    arrivalPage: readBoundedIntegerValue(
+      params.get("arrivalPage"),
+      0,
+      0,
+      2_147_483_647,
+    ),
     filters: {
       from: params.get("from") ?? "",
       to: params.get("to") ?? "",
@@ -132,14 +158,35 @@ export function readCreateSlip(params: SearchParamReader) {
   return params.get("createSlip") === "1";
 }
 
-export function readSettlementRouteState(
+export function readProceedsRouteState(
   params: SearchParamReader,
-): SettlementRouteState {
+  scope: "default" | "auction" = "default",
+): ProceedsRouteState {
   return {
-    page: readBoundedIntegerValue(params.get("page"), 0, 0, 2_147_483_647),
-    size: readBoundedIntegerValue(params.get("size"), 10, 1, 100),
-    selectedSettlementId: readOptionalPositiveInteger(
-      params.get("settlementId"),
+    page: readBoundedIntegerValue(
+      params.get(scope === "auction" ? "proceedsPage" : "page"),
+      0,
+      0,
+      2_147_483_647,
+    ),
+    size: readBoundedIntegerValue(
+      params.get(scope === "auction" ? "proceedsSize" : "size"),
+      10,
+      1,
+      100,
+    ),
+    selectedProceedsId: readOptionalPositiveInteger(params.get("proceedsId")),
+  };
+}
+
+export function readReceiptRouteState(params: SearchParamReader) {
+  return {
+    partnerId: readOptionalPositiveInteger(params.get("receiptPartnerId")),
+    page: readBoundedIntegerValue(
+      params.get("receiptPage"),
+      0,
+      0,
+      2_147_483_647,
     ),
   };
 }
@@ -179,4 +226,27 @@ function readOptionalPositiveInteger(value: string | null) {
   if (value == null || value === "") return null;
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function readAllocationRouteState(params: SearchParamReader) {
+  return {
+    partnerId: readOptionalPositiveInteger(params.get("receiptPartnerId")),
+    receiptId: readOptionalPositiveInteger(params.get("receiptId")),
+    page: readBoundedIntegerValue(
+      params.get("sourcePage"),
+      0,
+      0,
+      2_147_483_647,
+    ),
+    allocationPage: readBoundedIntegerValue(
+      params.get("allocationPage"),
+      0,
+      0,
+      2_147_483_647,
+    ),
+  };
+}
+
+export function readSelectedBusinessPartnerId(params: SearchParamReader) {
+  return readOptionalPositiveInteger(params.get("partnerId"));
 }

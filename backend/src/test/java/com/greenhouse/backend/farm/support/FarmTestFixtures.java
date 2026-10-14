@@ -1,17 +1,17 @@
 package com.greenhouse.backend.farm.support;
 
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutation;
+import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationEntry;
+import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupStateSnapshotFactory;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.House;
+import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
+import com.greenhouse.backend.farm.variety.domain.Variety;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -84,7 +84,7 @@ public final class FarmTestFixtures {
     entityManager.persist(mutation);
     entityManager.persist(
         OrchidGroupMutationEntry.baseline(
-            mutation, group.getId(), OrchidGroupStateSnapshot.from(group)));
+            mutation, group.getId(), OrchidGroupStateSnapshotFactory.from(group)));
   }
 
   public record Layout(House house, PhysicalBed bed, BedZone left, BedZone right) {}

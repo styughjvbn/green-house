@@ -85,14 +85,14 @@ BEGIN
   END IF;
 
   IF EXISTS (
-    SELECT 1 FROM work_command_receipt_memberships membership
+    SELECT 1 FROM work_creation_batch_memberships membership
     JOIN work_command_receipts receipt ON receipt.receipt_key=membership.receipt_key
     WHERE NOT coalesce(receipt.result_operation_ids @> jsonb_build_array(membership.operation_id), FALSE)
   ) OR EXISTS (
     SELECT 1 FROM work_command_receipts receipt
     CROSS JOIN LATERAL jsonb_array_elements_text(receipt.result_operation_ids) result(operation_id)
     JOIN work_operations operation ON operation.id::text=result.operation_id
-    LEFT JOIN work_command_receipt_memberships membership
+    LEFT JOIN work_creation_batch_memberships membership
       ON membership.receipt_key=receipt.receipt_key AND membership.operation_id=operation.id
     WHERE membership.operation_id IS NULL
   ) THEN

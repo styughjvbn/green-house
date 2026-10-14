@@ -1,7 +1,8 @@
 "use client";
-
-import type { SubmitEvent } from "react";
+import type { ReactNode, SubmitEvent } from "react";
 import { useState } from "react";
+import { FilterResetButton } from "@/shared/ui/FilterControls";
+import { hasFilterConditions } from "@/shared/ui/listFilterBadges";
 import { useSearchParams } from "next/navigation";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { readBusinessPartnerRouteState } from "../lib/salesRouteParams";
@@ -13,15 +14,13 @@ import {
 } from "./partners/BusinessPartnerEditSection";
 import { BusinessPartnerFilters } from "./partners/BusinessPartnerFilters";
 import { BusinessPartnerList } from "./partners/BusinessPartnerList";
-import { PartnerSettlementSettingsSection } from "./partners/PartnerSettlementSettingsSection";
-
+import { PartnerPrintSettingsSection } from "./partners/PartnerPrintSettingsSection";
 export function SalesPartnersPage() {
   const routeState = readBusinessPartnerRouteState(useSearchParams());
-  const partners = useBusinessPartners({ routeState });
+  const partners = useBusinessPartners({ routeState, urlSelection: false });
   const [showCreatePartner, setShowCreatePartner] = useState(false);
   const [partnerDetailMode, setPartnerDetailMode] =
     useState<BusinessPartnerDetailMode>("read");
-
   async function handleCreateBusinessPartner(
     event: SubmitEvent<HTMLFormElement>,
   ) {
@@ -30,19 +29,37 @@ export function SalesPartnersPage() {
       setShowCreatePartner(false);
     }
   }
+  const toolbar = (columnSettings: ReactNode) => (
+    <BusinessPartnerFilters
+      loading={partners.loading}
+      filters={partners.filters}
+      appliedFilters={routeState.filters}
+      columnSettings={columnSettings}
+      onRemove={partners.removeFilters}
+      onResetFilters={partners.resetPopupFilters}
+      onChange={partners.updateFilter}
+      onReset={partners.resetFilters}
+      onSearch={partners.search}
+    />
+  );
 
   return (
     <main className="h-full min-h-0">
       <TabLayout>
-        <BusinessPartnerFilters
-          filters={partners.filters}
-          onChange={partners.updateFilter}
-          onReset={partners.resetFilters}
-          onSearch={partners.search}
-        />
         <TabError message={partners.errorMessage} />
         <TabSplit columns="lg:grid-cols-[520px_minmax(0,1fr)]">
           <BusinessPartnerList
+            hasAppliedFilters={hasFilterConditions(routeState.filters)}
+            toolbar={toolbar}
+            emptyAction={
+              partners.hasEmptyResult && !partners.errorMessage ? (
+                <FilterResetButton
+                  className="lg:mt-0"
+                  label="전체 초기화"
+                  onClick={partners.resetFilters}
+                />
+              ) : undefined
+            }
             currentPage={partners.currentPage}
             loading={partners.loading}
             pageSize={partners.pageSize}
@@ -60,6 +77,7 @@ export function SalesPartnersPage() {
             onPageSizeChange={partners.setPageSize}
           />
           <div>
+            {null}
             <BusinessPartnerEditSection
               key={partners.selectedPartner?.id ?? "empty"}
               partner={partners.selectedPartner}
@@ -71,11 +89,11 @@ export function SalesPartnersPage() {
               onModeChange={setPartnerDetailMode}
               onSubmit={partners.handleUpdate}
             >
-              <PartnerSettlementSettingsSection
+              <PartnerPrintSettingsSection
                 key={partners.selectedPartner?.id ?? "empty"}
                 partner={partners.selectedPartner}
                 embedded
-                mode={partnerDetailMode === "settlement" ? "edit" : "read"}
+                mode={partnerDetailMode === "print" ? "edit" : "read"}
                 onSaved={() => setPartnerDetailMode("read")}
               />
             </BusinessPartnerEditSection>

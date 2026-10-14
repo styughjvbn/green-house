@@ -5,26 +5,30 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.greenhouse.backend.auction.application.AuctionTrackingService;
-import com.greenhouse.backend.auction.domain.AuctionShipment;
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
-import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.audit.application.AuditEvent;
 import com.greenhouse.backend.audit.application.AuditEvent.Identity;
 import com.greenhouse.backend.audit.application.AuditEvent.Target;
 import com.greenhouse.backend.audit.application.AuditRecorder;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-import com.greenhouse.backend.sales.application.SalesQueryService;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.auction.application.AuctionTrackingService;
+import com.greenhouse.backend.sales.auction.domain.AuctionShipment;
+import com.greenhouse.backend.sales.auction.domain.AuctionShipmentLot;
+import com.greenhouse.backend.sales.auction.repository.AuctionShipmentRepository;
+import com.greenhouse.backend.sales.document.application.SalesQueryService;
+import com.greenhouse.backend.sales.document.domain.SalesSlip;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItem;
+import com.greenhouse.backend.sales.document.repository.SalesSlipRepository;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import jakarta.persistence.EntityManagerFactory;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.hibernate.SessionFactory;
@@ -84,24 +88,19 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
           lotId = lot.getId();
           var slip =
               new SalesSlip(
-                  "BOUNDARY-001",
-                  DATE,
-                  SalesType.DIRECT,
-                  null,
-                  partner.getId(),
-                  "미입금",
-                  "작성중",
-                  "계좌",
-                  "Slip Memo");
+                  DATE, SalesType.DIRECT, null, partner.getId(), "미입금", "작성중", "계좌", "Slip Memo");
           slip.addItem(new SalesSlipItem(null, "Snow White", "Orchid", "A", 5, 1000, "item memo"));
+          DirectSaleFixtures.refreshProjection(slip);
           slipId = slips.save(slip).getId();
         });
+    DirectSaleFixtures.copyTerms(jdbc, slipId);
     jdbc.update("UPDATE business_partners SET is_active = FALSE");
   }
 
   @Test
   void salesSearchKeepsContactFieldsAndLiteralWildcards() {
-    for (String term : List.of("owner needle", "010-5555", "alpha%_", "boundary", "Slip Memo")) {
+    for (String term :
+        List.of("owner needle", "010-5555", "alpha%_", Long.toString(slipId), "Slip Memo")) {
       assertThat(sales.getSalesSlipPage(null, null, null, null, null, term, 0, 10).totalElements())
           .as(term)
           .isEqualTo(1);
@@ -160,20 +159,82 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
                         "Partner " + i, PartnerType.RETAIL, "Batch Contact", null, null, null));
             slips.save(
                 new SalesSlip(
-                    "BATCH-" + i,
-                    DATE,
-                    SalesType.DIRECT,
-                    null,
-                    partner.getId(),
-                    "미입금",
-                    "작성중",
-                    null,
-                    null));
+                    DATE, SalesType.DIRECT, null, partner.getId(), "미입금", "작성중", null, null));
           }
         });
+    DirectSaleFixtures.copyAllTerms(jdbc);
     var lastPage = sales.getSalesSlipPage(null, DATE, DATE, null, null, "Batch Contact", 5, 100);
     assertThat(lastPage.totalElements()).isEqualTo(501);
     assertThat(lastPage.content()).hasSize(1);
+  }
+
+  @Test
+  void salesTypeAndGroupedCompletionFilterBeforePaginationAndKeepLegacyStatusQueries()
+      throws Exception {
+    var date = LocalDate.of(2046, 6, 7);
+    transactions.executeWithoutResult(
+        tx -> {
+          for (var type : SalesType.values()) {
+            var partner =
+                partners.save(
+                    new BusinessPartner(
+                        "필터 " + type,
+                        type == SalesType.AUCTION ? PartnerType.AUCTION_HOUSE : PartnerType.RETAIL,
+                        null,
+                        null,
+                        null,
+                        null));
+            for (int index = 0; index < 3; index++) {
+              var status =
+                  index == 1
+                      ? (type == SalesType.AUCTION
+                          ? SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED
+                          : SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED)
+                      : SalesSlip.STATUS_DRAFT;
+              var slip =
+                  new SalesSlip(date, type, null, partner.getId(), "미입금", status, null, null);
+              if (index == 2) slip.updateSalesStatus(SalesSlip.STATUS_CANCELED);
+              slips.save(slip);
+            }
+          }
+        });
+    DirectSaleFixtures.copyAllTerms(jdbc);
+    var base = "/api/sales-slips/page?from=" + date + "&to=" + date;
+    var completed = URLEncoder.encode("완료", StandardCharsets.UTF_8);
+    var all = get(base + "&salesStatus=" + completed + "&size=1");
+    assertThat(all.status()).isEqualTo(200);
+    assertThat(all.data().path("totalElements").asInt()).isEqualTo(2);
+    assertThat(all.data().path("content")).hasSize(1);
+    for (var type : SalesType.values()) {
+      var response = get(base + "&salesType=" + type + "&salesStatus=" + completed);
+      assertThat(response.status()).isEqualTo(200);
+      assertThat(response.data().path("totalElements").asInt()).isEqualTo(1);
+      assertThat(response.data().path("content").get(0).path("salesType").asText())
+          .isEqualTo(type.name());
+      assertThat(get(base + "&salesType=" + type).data().path("totalElements").asInt())
+          .isEqualTo(3);
+    }
+    for (var status : List.of("작성중", "취소", "출고 완료", "출하 완료")) {
+      var response =
+          get(base + "&salesStatus=" + URLEncoder.encode(status, StandardCharsets.UTF_8));
+      assertThat(response.status()).isEqualTo(200);
+      assertThat(response.data().path("totalElements").asInt())
+          .isEqualTo(status.endsWith("완료") ? 1 : 2);
+    }
+    assertThat(get(base + "&salesType=INVALID").status()).isEqualTo(400);
+    for (boolean auction : List.of(true, false)) {
+      var options = get("/api/business-partners/options?auctionHouse=" + auction);
+      assertThat(options.status()).isEqualTo(200);
+      assertThat(options.data().path("content")).isNotEmpty();
+      var expectedIds =
+          partners.findAll().stream()
+              .filter(partner -> (partner.getPartnerType() == PartnerType.AUCTION_HOUSE) == auction)
+              .map(BusinessPartner::getId)
+              .toList();
+      var actualIds = new ArrayList<Long>();
+      options.data().path("content").forEach(option -> actualIds.add(option.path("id").asLong()));
+      assertThat(actualIds).containsExactlyInAnyOrderElementsOf(expectedIds);
+    }
   }
 
   @Test

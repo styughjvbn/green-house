@@ -3,24 +3,24 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupMutationItem;
-import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
+import com.greenhouse.backend.farm.api.orchid.mutation.CorrectOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.CorrectOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.CreateOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.mutation.RelatedOrchidGroupMutations;
+import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationRelationType;
+import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationRelationRepository;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.House;
+import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
+import com.greenhouse.backend.farm.variety.domain.Variety;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -36,7 +36,7 @@ class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest
 
   @Autowired private OrchidGroupMutationEngine mutationEngine;
 
-  @Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
+  @Autowired private OrchidGroupLedgerTestFixture ledgerFixture;
 
   @Autowired private OrchidGroupMutationRelationRepository relationRepository;
 
@@ -132,12 +132,7 @@ class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest
     orchidGroupRepository.save(group);
     UUID cutoverKey = UUID.randomUUID();
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        stateChainMigrationService,
-        orchidGroupRepository,
-        cutoverKey,
-        businessDate,
-        "mutation-engine-test");
+    ledgerFixture.seedBaseline(cutoverKey, businessDate, "mutation-engine-test");
 
     var corrected =
         mutationEngine.correct(

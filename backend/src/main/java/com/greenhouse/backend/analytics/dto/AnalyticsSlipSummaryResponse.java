@@ -4,7 +4,6 @@ import java.time.LocalDate;
 
 public record AnalyticsSlipSummaryResponse(
     Long id,
-    String slipNumber,
     LocalDate saleDate,
     String partnerName,
     Integer totalAmount,

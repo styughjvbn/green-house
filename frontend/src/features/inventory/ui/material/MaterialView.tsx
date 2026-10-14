@@ -1,34 +1,26 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Page } from "@/shared/api/page";
 import { formatShortDate } from "@/shared/lib/dateFormat";
-import { DataTable } from "@/shared/ui/DataTable";
+import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
+import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 import {
   DetailActionButton,
   DetailCard,
   DetailHeader,
 } from "@/shared/ui/DetailCard";
-import {
-  FilterField,
-  FilterGrid,
-  FilterPanel,
-  FilterResetButton,
-  FilterSearchButton,
-} from "@/shared/ui/FilterControls";
 import { TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
-import type {
-  Material,
-  MaterialFilterState,
-  MaterialPayload,
-} from "../../model/types";
+import type { Material, MaterialPayload } from "../../model/types";
 import { DetailRow, Field, inputClass } from "../common/InventoryPrimitives";
 
 export function MaterialView({
-  filters,
+  toolbar,
+  emptyAction,
+  hasAppliedFilters = false,
   loading,
   pageData,
   selectedId,
@@ -37,13 +29,12 @@ export function MaterialView({
   onUpdate,
   onDeactivate,
   onDelete,
-  onFilterChange,
   onPageChange,
   onPageSizeChange,
-  onReset,
-  onSearch,
 }: {
-  filters: MaterialFilterState;
+  toolbar: DataTableToolbar;
+  emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   loading: boolean;
   pageData: Page<Material>;
   selectedId: number;
@@ -52,19 +43,12 @@ export function MaterialView({
   onUpdate: (materialId: number, payload: MaterialPayload) => Promise<void>;
   onDeactivate: (materialId: number) => Promise<void>;
   onDelete: (materialId: number) => Promise<void>;
-  onFilterChange: <K extends keyof MaterialFilterState>(
-    field: K,
-    value: MaterialFilterState[K],
-  ) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
-  onReset: () => void;
-  onSearch: () => void;
 }) {
   const selected =
     pageData.content.find((item) => item.id === selectedId) ??
     pageData.content[0];
-  const categories = ["자재", "농약", "비료"];
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<MaterialPayload>({
     category: selected?.category ?? "자재",
@@ -116,90 +100,20 @@ export function MaterialView({
   );
   return (
     <TabStack>
-      <form
-        className="shrink-0"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSearch();
-        }}
-      >
-        <FilterPanel>
-          <FilterGrid className="md:grid-cols-2 lg:grid-cols-[1fr_1.1fr_1.1fr_1fr_auto_auto] lg:items-end">
-            <FilterField label="자재 종류">
-              <select
-                className={inputClass}
-                value={filters.category}
-                name="materialCategory"
-                onChange={(event) =>
-                  onFilterChange("category", event.target.value)
-                }
-              >
-                <option value="">전체</option>
-                {categories.map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-            </FilterField>
-            <FilterField label="자재명">
-              <input
-                className={inputClass}
-                value={filters.keyword}
-                name="materialKeyword"
-                placeholder="자재명을 입력하세요"
-                onChange={(event) =>
-                  onFilterChange("keyword", event.target.value)
-                }
-              />
-            </FilterField>
-            <FilterField label="제조사">
-              <input
-                className={inputClass}
-                value={filters.manufacturer}
-                name="materialManufacturer"
-                placeholder="제조사를 입력하세요"
-                onChange={(event) =>
-                  onFilterChange("manufacturer", event.target.value)
-                }
-              />
-            </FilterField>
-            <FilterField label="상태">
-              <select
-                className={inputClass}
-                value={filters.status}
-                name="materialStatus"
-                onChange={(event) =>
-                  onFilterChange(
-                    "status",
-                    event.target.value as MaterialFilterState["status"],
-                  )
-                }
-              >
-                <option value="">전체</option>
-                <option value="ACTIVE">활성</option>
-                <option value="INACTIVE">비활성</option>
-              </select>
-            </FilterField>
-            <FilterResetButton className="h-9 lg:mt-5" onClick={onReset} />
-            <FilterSearchButton className="h-9 lg:mt-5" />
-          </FilterGrid>
-        </FilterPanel>
-      </form>
-
       <TabSplit columns="lg:grid-cols-[minmax(0,1fr)_22rem]" gap="gap-3">
         <DataTable
+          toolbar={toolbar}
+          emptyAction={emptyAction}
+          hasAppliedFilters={hasAppliedFilters}
           actions={
-            <button
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
-              type="button"
-              onClick={onCreate}
-            >
-              <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+            <DataTableCreateButton onClick={onCreate}>
               새 자재 등록
-            </button>
+            </DataTableCreateButton>
           }
           columns={columns}
           data={pageData.content}
-          emptyMessage="조건에 맞는 자재가 없습니다."
+          emptyMessage="등록된 자재가 없습니다."
+          filteredEmptyMessage="조건에 맞는 자재가 없습니다."
           getRowId={(row) => String(row.id)}
           isLoading={loading}
           pageIndex={pageData.page}

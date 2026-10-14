@@ -33,6 +33,8 @@ import { getIncludedTargets, getRecordTargetIds } from "./targetSelection";
 import { getWorkTypeDefinition } from "../work-types/workTypeDefinition";
 import { deriveWorkTargetSelectionOptions } from "./workTargetSelectionOptions";
 import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
+import { createPendingCreationRequestKey } from "@/shared/lib/pendingCreationRequestKey";
+import { createUuid } from "@/shared/lib/id";
 
 export function useWorkOperationRegistration({
   houses,
@@ -52,6 +54,20 @@ export function useWorkOperationRegistration({
   workTypes: WorkType[];
 }) {
   const { businessDate } = useRuntimeContext();
+  const [planKeys] = useState(() =>
+    createPendingCreationRequestKey(
+      "greenhouse:work-plan-create-request:v1",
+      createUuid,
+      () => window.sessionStorage,
+    ),
+  );
+  const [recordKeys] = useState(() =>
+    createPendingCreationRequestKey(
+      "greenhouse:work-record-create-request:v1",
+      createUuid,
+      () => window.sessionStorage,
+    ),
+  );
   const targetLocked = presetOrchidGroupIds.length > 0;
   const schedulableWorkTypes = getSchedulableWorkTypes(workTypes).filter(
     (workType) =>
@@ -289,19 +305,17 @@ export function useWorkOperationRegistration({
         setRecordResultOpen(true);
         return;
       }
-      await runSave(
-        () =>
-          createCompletedWorkOperation(
-            buildCompletedRecordPayload(
-              form,
-              recordTargetIds,
-              selectedWorkType,
-            ),
-            selectedWorkType.name,
-            form.title,
-          ),
-        "작업 기록을 저장하지 못했습니다.",
-      );
+      await runSave(async () => {
+        const key = recordKeys.get();
+        const result = await createCompletedWorkOperation(
+          buildCompletedRecordPayload(form, recordTargetIds, selectedWorkType),
+          key,
+          selectedWorkType.name,
+          form.title,
+        );
+        recordKeys.complete(key);
+        return result;
+      }, "작업 기록을 저장하지 못했습니다.");
       return;
     }
     if (isInboundPotting) {
@@ -323,9 +337,10 @@ export function useWorkOperationRegistration({
     if (!preview || includedTargets.length === 0) return;
     const targetSource = buildWorkTargetSourceFromForm(form, manualIds);
     if (!targetSource) return;
-    await runSave(
-      () =>
-        createWorkOperationsBatch({
+    await runSave(async () => {
+      const key = planKeys.get();
+      const result = await createWorkOperationsBatch(
+        {
           ...targetSource,
           workTypeId: selectedWorkType.id,
           title: form.title.trim(),
@@ -344,9 +359,12 @@ export function useWorkOperationRegistration({
               ? [target.orchidGroupId]
               : [],
           ),
-        }),
-      "작업을 저장하지 못했습니다.",
-    );
+        },
+        key,
+      );
+      planKeys.complete(key);
+      return result;
+    }, "작업을 저장하지 못했습니다.");
   }
 
   async function loadTargetPreview(

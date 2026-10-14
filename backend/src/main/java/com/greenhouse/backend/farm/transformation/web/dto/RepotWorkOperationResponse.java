@@ -1,0 +1,13 @@
+package com.greenhouse.backend.farm.transformation.web.dto;
+
+import com.greenhouse.backend.farm.orchid.web.dto.OrchidGroupResponse;
+import com.greenhouse.backend.work.api.operation.WorkOperationView;
+import java.util.List;
+
+public record RepotWorkOperationResponse(
+    WorkOperationView operation,
+    OrchidGroupResponse sourceOrchidGroup,
+    List<OrchidGroupResponse> resultOrchidGroups,
+    Integer inputQuantity,
+    Integer lossQuantity,
+    Integer increaseQuantity) {}

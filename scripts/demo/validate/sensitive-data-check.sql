@@ -8,11 +8,11 @@ DECLARE
     '"(workDate|beforeWorkDate|afterWorkDate|inboundDate|pottingDate|businessDate|' ||
     'effectiveBusinessDate|plannedStartDate|plannedEndDate|actualStartAt|actualEndAt|' ||
     'createdAt|updatedAt|recordedAt|appliedAt|canceledAt|voidedAt|occurredAt|' ||
-    'targetSnapshotAt|shipmentDate|auctionDate|saleDate|paymentDate|' ||
+    'targetSnapshotAt|shipmentDate|auctionDate|saleDate|paymentDate|arrivalDate|correctionDate|changeDate|expectedPaymentDate|decisionDate|decidedAt|confirmedAt|changedAt|allocationDate|countedDate|eventDate|joinedAt|latestAuctionDate|latestWorkDate|pottingDueDate|recentInboundDate|recentWorkDate|referenceDate|returnConfirmedDate|' ||
     'work_date|before_work_date|after_work_date|inbound_date|potting_date|business_date|' ||
     'effective_business_date|planned_start_date|planned_end_date|actual_start_at|actual_end_at|' ||
     'created_at|updated_at|recorded_at|applied_at|canceled_at|voided_at|occurred_at|' ||
-    'target_snapshot_at|shipment_date|auction_date|sale_date|payment_date)' ||
+    'target_snapshot_at|shipment_date|auction_date|sale_date|payment_date|arrival_date|correction_date|change_date|expected_payment_date|decision_date|decided_at|confirmed_at|changed_at|allocation_date|counted_date|event_date|joined_at|latest_auction_date|latest_work_date|potting_due_date|recent_inbound_date|recent_work_date|reference_date|return_confirmed_date)' ||
     '"[[:space:]]*:[[:space:]]*"[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])' ||
     '(T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})?)?"';
   pattern constant text :=
@@ -30,11 +30,14 @@ BEGIN
       AND table_name <> 'flyway_schema_history'
       AND data_type IN ('character varying', 'text', 'json', 'jsonb')
   LOOP
+    -- Opaque command identities may embed an original business date. Keep
+    -- them stable. The legacy cancel-chain grammar is also a generated key,
+    -- not a phone number; neither exemption applies to memo/reason/free text.
     identifier_pattern := CASE
       WHEN target.column_name IN (
         'source_reference_id', 'source_operation_key', 'request_key',
         'receipt_key', 'void_request_key', 'effect_key'
-      ) THEN uuid_pattern
+      ) THEN '^(BATCH_VOID:)?cancel-[0-9]+-chain(-[0-9]+)+$|' || uuid_pattern || '|\m[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])\M'
       ELSE 'a^'
     END;
     IF target.data_type IN ('json', 'jsonb') THEN
@@ -44,7 +47,7 @@ BEGIN
         'SELECT count(*) FROM public.%I WHERE replace(regexp_replace(regexp_replace(%I::text, $2, '''', ''g''), $3, '''', ''gi''), ''010-0000-0000'', '''') ~* $1',
         target.table_name, target.column_name
       ) INTO match_count USING pattern, business_date_pattern,
-        '"(correlationId|correlation_id)"[[:space:]]*:[[:space:]]*"' || uuid_pattern || '"';
+        '"(correlationId|correlation_id|requestKey|request_key|executionKey|execution_key|effectKey|effect_key|idempotencyKey|idempotency_key)"[[:space:]]*:[[:space:]]*"' || uuid_pattern || '"';
     ELSE
       EXECUTE format(
         'SELECT count(*) FROM public.%I WHERE replace(regexp_replace(%I::text, $2, '''', ''gi''), ''010-0000-0000'', '''') ~* $1',
@@ -80,7 +83,10 @@ BEGIN
     FROM (
       SELECT worker AS actor FROM auction_lot_status_history
       UNION ALL SELECT actor_id FROM audit_events
-      UNION ALL SELECT confirmed_by FROM auction_settlements
+      UNION ALL SELECT confirmed_by FROM auction_proceeds
+      UNION ALL SELECT worker FROM auction_follow_up_decisions
+      UNION ALL SELECT worker FROM auction_return_arrivals
+      UNION ALL SELECT worker FROM direct_return_arrivals
       UNION ALL SELECT worker FROM inbound_records
       UNION ALL SELECT created_by FROM partner_payment_events
       UNION ALL SELECT worker FROM work_records
@@ -126,6 +132,21 @@ BEGIN
     WHERE reason <> '데모 실사 사유' OR memo IS NOT NULL
   ) THEN
     RAISE EXCEPTION 'Unsanitized work cancellation, correction, or stock-count text remains';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM direct_sale_changes WHERE reason <> '데모 가격 조정/반품 사유')
+     OR EXISTS (SELECT 1 FROM direct_return_arrivals
+         WHERE cancellation_reason IS NOT NULL AND cancellation_reason <> '데모 도착 정정')
+     OR EXISTS (SELECT 1 FROM auction_return_arrivals
+         WHERE cancellation_reason IS NOT NULL AND cancellation_reason <> '데모 도착 정정')
+     OR EXISTS (SELECT 1 FROM auction_follow_up_decisions
+         WHERE reason IS NOT NULL AND reason <> '데모 처리 사유') THEN
+    RAISE EXCEPTION 'Unsanitized sales adjustment or return text remains';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM partner_settlement_settings
+      WHERE shipper_code IS NOT NULL OR shipper_name IS NOT NULL) THEN
+    RAISE EXCEPTION 'Unsanitized auction shipper identifiers remain';
   END IF;
 
   IF EXISTS (

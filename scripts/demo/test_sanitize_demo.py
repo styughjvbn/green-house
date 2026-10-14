@@ -58,6 +58,37 @@ class CatalogTest(unittest.TestCase):
 
 
 class JsonSanitizationTest(unittest.TestCase):
+    def test_nested_receipt_dates_follow_database_date_shift(self) -> None:
+        result = transform_business_json(
+            {"arrival": {"arrivalDate": "2026-10-07"},
+             "createdAt": "2026-10-07T09:10:11.123Z"},
+            key="k" * 32, namespace="receipt", quantity_factor=3,
+            price_factor=2, master_mapping={}, catalog=[CatalogPair("난", "품종")],
+            date_shift_days=-8,
+        )
+        self.assertEqual(result["arrival"]["arrivalDate"], "2026-09-29")
+        self.assertEqual(result["createdAt"], "2026-09-29T09:10:11.123Z")
+
+    def test_sales_receipt_dates_and_nullable_proceeds_remain_replayable(self) -> None:
+        source = {"id": 7, "arrivalDate": "2026-10-07", "createdAt": "2026-10-07T09:10:11.123Z",
+                  "quantity": 2, "lot": {"soldQuantity": 3, "waitingQuantity": 4, "currentStatus": "WAITING"},
+                  "reportedGrossAmount": 1000, "receivableAmount": None, "reviewRequired": True,
+                  "worker": "원래 담당자", "reason": "원래 사유"}
+        result = transform_business_json(source, key="k" * 32, namespace="auction-receipt",
+            quantity_factor=3, price_factor=2, master_mapping={}, catalog=[CatalogPair("난", "품종")])
+        self.assertEqual(result["id"], 7)
+        self.assertEqual(result["arrivalDate"], source["arrivalDate"])
+        self.assertEqual(result["createdAt"], source["createdAt"])
+        self.assertEqual(result["lot"]["currentStatus"], "WAITING")
+        self.assertEqual(result["lot"]["soldQuantity"], 9)
+        self.assertEqual(result["quantity"], 6)
+        self.assertEqual(result["reportedGrossAmount"], 6000)
+        self.assertIsNone(result["receivableAmount"])
+        self.assertTrue(result["reviewRequired"])
+        self.assertIsNone(result["worker"])
+        self.assertIsNone(result["reason"])
+
+
     def transform(self, value: object) -> object:
         return transform_business_json(
             value, key="k" * 32, namespace="test", quantity_factor=3, price_factor=2,
@@ -131,11 +162,43 @@ class JsonSanitizationTest(unittest.TestCase):
         with patch("sanitize_demo.fetch_all", side_effect=rows):
             self.assertEqual(choose_scaling_factors(object(), 3, 2), (1, 2))
 
+    def test_snapshot_timestamp_precision_survives_date_shift(self) -> None:
+        for fraction in ("1", "12", "123", "1234", "12345", "123456", "123456789"):
+            with self.subTest(fraction=fraction):
+                source = "2026-09-02T12:34:56." + fraction + "Z"
+                self.assertEqual(self.transform({"createdAt": source})["createdAt"],
+                                 "2026-09-12T12:34:56." + fraction + "Z")
+
     def test_invalid_dates_or_quantity_maps_fail_closed(self) -> None:
         with self.assertRaises(SanitizationError):
             self.transform({"workDate": "실제 개인 정보"})
         with self.assertRaises(SanitizationError):
             self.transform({"sourceInputQuantities": {"348": "개인 정보"}})
+
+    def test_sales_follow_up_and_financial_snapshots_preserve_business_meaning(self) -> None:
+        result = self.transform({
+            "decidedQuantity": 4, "pendingQuantity": 3, "boxes": 2,
+            "previousUnitPrice": 100, "nextUnitPrice": 50, "amountDelta": -100,
+            "allocatedBefore": 1200, "currentAmount": 800, "refundDueAmount": 400,
+            "salesStatus": "출하 완료", "paymentStatus": "정산 대기",
+            "decisionChangeAllowed": False,
+            "allocationDate": "2026-09-02", "cancellationReason": "개인 사유",
+            "requestKey": "00000000-0000-0000-0000-000000000001",
+        })
+        self.assertEqual(result["decidedQuantity"], 12)
+        self.assertEqual(result["pendingQuantity"], 9)
+        self.assertEqual(result["boxes"], 6)
+        self.assertEqual(result["previousUnitPrice"], 200)
+        self.assertEqual(result["nextUnitPrice"], 100)
+        self.assertEqual(result["amountDelta"], -600)
+        self.assertEqual(result["allocatedBefore"], 7200)
+        self.assertEqual(result["currentAmount"], 4800)
+        self.assertEqual(result["refundDueAmount"], 2400)
+        self.assertEqual(result["salesStatus"], "출하 완료")
+        self.assertEqual(result["paymentStatus"], "정산 대기")
+        self.assertFalse(result["decisionChangeAllowed"])
+        self.assertIsNone(result["cancellationReason"])
+        self.assertEqual(result["requestKey"], "00000000-0000-0000-0000-000000000001")
 
     def test_active_engine_snapshot_transformation_preserves_shape(self) -> None:
         source = {

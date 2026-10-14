@@ -89,6 +89,8 @@
 
 ### 판매 전표
 
+일반 판매의 가격 조정·반품·취소와 가격 구간/이력 조회는 Sales slice의 `direct-changes` 계약으로 구현했다. 일반 판매 반품 도착·재고 생성·기록만 등록·도착 취소는 구현했으며 실제 현금 환불은 미구현이다.
+
 - `GET /api/sales-slips`
 - `POST /api/sales-slips`
 - `PUT /api/sales-slips/{salesSlipId}`
@@ -104,18 +106,17 @@
 - `GET /api/auction-lots/{id}`
 - `POST /api/auction-lots/{id}/adjust-quantity`
 - `POST /api/auction-lots/{id}/confirm-return`
+- `GET /api/auction-lots/{id}/follow-up`
+- `POST /api/auction-lots/{id}/follow-up`
+- `GET /api/auction-lots/{id}/arrivals`
+- `POST /api/auction-lots/{id}/arrivals`
+- `POST /api/auction-lots/{id}/arrivals/{arrivalId}/cancel`
 - `PATCH /api/auction-lots/{id}/status`
 - `GET /api/auction-lots/{id}/timeline`
-- `GET /api/auction-settlements`
-- `GET /api/auction-settlements/page`
-- `GET /api/auction-settlements/summary`
-- `POST /api/auction-settlements/rebuild`
-- `GET /api/auction-settlements/{settlementId}`
 - `GET /api/auction-tracking/summary`
 
 ### 입금/정산 이벤트
 
-- `POST /api/auction-settlements/{settlementId}/confirm-payment`
 - `GET /api/business-partners/{partnerId}/balance-summary`
 - `GET /api/partner-payment-events`
 - `GET /api/partner-payment-events/page`
@@ -135,11 +136,9 @@
 
 ### 경매 정산 생성
 
-- `POST /api/auction-settlements`
 
 ### 경매 정산 출력
 
-- `GET /api/auction-settlements/{settlementId}/print`
 
 ### 경매 출하 조회
 
@@ -161,6 +160,8 @@
 
 ### 입금 이벤트 명령
 
+대상 미지정 수동 수납과 미배분 원본의 오입력 취소는 Payment slice의 거래처 수납 API로 구현했다. 다중 배분·배분 정정은 거래처의 `payment-allocations`·`payment-allocation-corrections` API로 구현했다. 아래 과거 초안 URL은 사용하지 않으며 예치금·은행 수집·자동 매칭은 여전히 미구현이다.
+
 - `POST /api/partner-payment-events/import-bank-csv`
 - `POST /api/partner-payment-events/manual-payment`
 - `POST /api/partner-payment-events/prepayment`
@@ -169,8 +170,6 @@
 
 ### 자동 매칭/연결 해제/예치금
 
-- `POST /api/auction-settlements/{settlementId}/run-auto-match`
-- `POST /api/auction-settlements/{settlementId}/unlink-payment`
 - `POST /api/sales-slips/{salesSlipId}/apply-credit`
 - `POST /api/sales-slips/{salesSlipId}/run-auto-match`
 - `POST /api/sales-slips/{salesSlipId}/unlink-payment`
@@ -198,3 +197,9 @@
 - 새로운 API 호출 코드를 만들 때는 이 문서의 미구현 목록에 있는 endpoint를 사용하지 않는다.
 - 미구현 API가 필요하면 먼저 Controller/Service/DTO/테스트를 추가하고 OpenAPI를 갱신한다.
 - 과거 md 초안에 적힌 동작 규칙은 `DOMAIN_RULES.md`로 옮겨진 항목만 현재 설계 의도로 본다.
+
+경매 근거 대금의 페이지·상세·입금 API는 구현했다. 과거 실제 입금의 참조 전환과 원래 멱등키 재전송도 지원한다. 자료 parser/matcher는 보류이며, 기존 파생 정산의 조회·생성·재구성과 테이블은 제거했다.
+
+파생 경매 정산 조회·생성·재계산·인쇄·입금 endpoint는 제거 대상이며 구현 예정 목록으로 취급하지 않는다. 경매 대금 조회·입금과 원본 결과 참조 계약을 사용한다. 실제 자료 수집·parser/matcher는 별도 범위다.
+
+일반 판매 반품별 실제 도착·도착 이력 조회·도착 취소와 경매 기록 전용 도착을 구현했다. 실제 환불, 기존 묶음 병합, 반품 폐기는 후속 범위다.

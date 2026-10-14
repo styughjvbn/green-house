@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { FilterResetButton } from "@/shared/ui/FilterControls";
+import { hasFilterConditions } from "@/shared/ui/listFilterBadges";
 import { useSearchParams } from "next/navigation";
 import { TabError } from "@/shared/ui/TabLayout";
 import { readVarietyRouteState } from "../lib/inventoryRouteState";
 import { useVarieties } from "../model/useVarieties";
 import type { VarietyPayload } from "../model/types";
 import { InventoryDialog } from "./components/InventoryDialog";
+import { VarietyFilters } from "./variety/VarietyFilters";
 import { VarietyView } from "./variety/VarietyView";
 
 export function InventoryVarietyPage() {
@@ -20,13 +23,40 @@ export function InventoryVarietyPage() {
     setDialogOpen(false);
   }
 
+  const toolbar = (columnSettings: ReactNode) => (
+    <VarietyFilters
+      filters={varieties.filters}
+      appliedFilters={routeState.filters}
+      columnSettings={columnSettings}
+      loading={varieties.loading}
+      genera={varieties.lookup.genera}
+      onChange={varieties.updateFilter}
+      onRemove={varieties.removeFilters}
+      onReset={varieties.reset}
+      onResetFilters={varieties.resetPopupFilters}
+      onSearch={varieties.search}
+    />
+  );
+  const emptyAction =
+    varieties.query.isSuccess &&
+    !varieties.loading &&
+    !varieties.error &&
+    varieties.pageData.totalElements === 0 ? (
+      <FilterResetButton
+        className="lg:mt-0"
+        label="전체 초기화"
+        onClick={varieties.reset}
+      />
+    ) : undefined;
+
   return (
     <main className="flex h-full min-h-0 min-w-0 flex-col">
       <TabError message={varieties.error} />
       <VarietyView
+        hasAppliedFilters={hasFilterConditions(routeState.filters)}
+        toolbar={toolbar}
+        emptyAction={emptyAction}
         connectedGroups={varieties.connectedGroups}
-        filters={varieties.filters}
-        genera={varieties.lookup.genera}
         loading={varieties.loading}
         loadingGroups={varieties.groupsLoading}
         pageData={varieties.pageData}
@@ -34,11 +64,8 @@ export function InventoryVarietyPage() {
         onCreate={() => setDialogOpen(true)}
         onDeactivate={varieties.deactivate}
         onDelete={varieties.remove}
-        onFilterChange={varieties.updateFilter}
         onPageChange={varieties.changePage}
         onPageSizeChange={varieties.changePageSize}
-        onReset={varieties.reset}
-        onSearch={varieties.search}
         onSelect={varieties.select}
         onUpdate={varieties.update}
       />

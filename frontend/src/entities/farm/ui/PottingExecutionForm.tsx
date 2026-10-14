@@ -359,7 +359,7 @@ export function PottingExecutionForm({
   );
 }
 
-function PotSizeField({
+export function PotSizeField({
   value,
   onChange,
 }: {
@@ -398,7 +398,7 @@ const PLACEMENT_TYPE_OPTIONS = [
   { value: "CUSTOM", label: "기타" },
 ];
 
-function PlacementTypeField({
+export function PlacementTypeField({
   value,
   onChange,
 }: {

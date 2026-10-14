@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus } from "lucide-react";
 import type { SalesSlipListItem } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
-import { DataTable } from "@/shared/ui/DataTable";
+import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
+import { DataTableCreateButton } from "@/shared/ui/DataTableCreateButton";
 import { SalesSlipStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
-
 export function SalesSlipList({
+  toolbar,
+  emptyAction,
+  hasAppliedFilters = false,
   currentPage,
   pageSize,
   salesSlips,
@@ -21,6 +23,9 @@ export function SalesSlipList({
   onPageChange,
   onPageSizeChange,
 }: {
+  toolbar?: DataTableToolbar;
+  emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   currentPage: number;
   pageSize: number;
   salesSlips: SalesSlipListItem[];
@@ -67,41 +72,35 @@ export function SalesSlipList({
         size: 120,
         meta: { align: "right", cellClassName: "whitespace-nowrap" },
       },
-      {
-        accessorKey: "paymentStatus",
-        header: "입금 상태",
-        cell: ({ row }) => (
-          <SalesSlipStatusBadge value={row.original.paymentStatus} />
-        ),
-        size: 10,
-      },
+      // TODO: 수납 비활성화 — 전표 등록 마무리 후 연결 예정.
       {
         accessorKey: "salesStatus",
-        header: "판매 상태",
+        header: "출고·출하",
         cell: ({ row }) => (
-          <SalesSlipStatusBadge value={row.original.salesStatus} />
+          <SalesSlipStatusBadge
+            value={row.original.salesStatus}
+            salesType={row.original.salesType}
+          />
         ),
         size: 110,
       },
     ],
     [],
   );
-
   return (
     <DataTable
+      toolbar={toolbar}
+      emptyAction={emptyAction}
+      hasAppliedFilters={hasAppliedFilters}
       actions={
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
-          type="button"
-          onClick={onCreateSalesSlip}
-        >
-          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-          판매 전표 등록
-        </button>
+        <DataTableCreateButton onClick={onCreateSalesSlip}>
+          전표 작성
+        </DataTableCreateButton>
       }
       columns={columns}
       data={salesSlips}
-      emptyMessage="조건에 맞는 판매 전표가 없습니다."
+      emptyMessage="등록된 판매 전표가 없습니다."
+      filteredEmptyMessage="조건에 맞는 판매 전표가 없습니다."
       getRowId={(row) => String(row.id)}
       pageIndex={currentPage}
       isLoading={loading}
@@ -110,8 +109,8 @@ export function SalesSlipList({
       selectedRowId={
         selectedSalesSlipId == null ? null : String(selectedSalesSlipId)
       }
-      settingsKey="sales.slips"
-      title="판매 전표 목록"
+      settingsKey={"sales.slips"}
+      title="전표 목록"
       totalLabel={`총 ${totalSalesSlips.toLocaleString()}건`}
       totalPages={totalPages}
       onPageChange={onPageChange}

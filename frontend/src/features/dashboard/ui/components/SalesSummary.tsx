@@ -41,7 +41,7 @@ export function SalesSummary({
             href="/sales/slips"
           >
             <span className="font-semibold text-[#344138]">
-              {slip.slipNumber}
+              {`#${slip.id}`}
             </span>
             <span className="truncate text-[#5c6a60]">{slip.partnerName}</span>
             <span className="text-right font-bold">

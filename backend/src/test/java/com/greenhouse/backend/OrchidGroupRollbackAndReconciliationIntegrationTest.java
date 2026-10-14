@@ -4,24 +4,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.application.orchid.mutation.CompensateTransformMutationsCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.ReconcileOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
-import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
-import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
+import com.greenhouse.backend.farm.api.orchid.mutation.CompensateTransformMutationsCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.CreateOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.mutation.ReconcileOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResultItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSourceItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.mutation.ledger.domain.OrchidGroupMutationRelationType;
+import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationRelationRepository;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.House;
+import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
+import com.greenhouse.backend.farm.variety.domain.Variety;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -58,9 +58,9 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
         mutationEngine.transform(
             new TransformOrchidGroupsMutationCommand(
                 source("net-transform", "TRANSFORM"),
-                List.of(new TransformOrchidGroupMutationSource(originalId, 20, null, null)),
+                List.of(new TransformOrchidGroupMutationSourceItem(originalId, 20, null, null)),
                 List.of(
-                    new TransformOrchidGroupMutationResult(
+                    new TransformOrchidGroupMutationResultItem(
                         fixture.resultZone().getId(),
                         details(fixture.variety().getId(), 20, "0", "4"))),
                 date,
@@ -118,9 +118,9 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
         mutationEngine.transform(
             new TransformOrchidGroupsMutationCommand(
                 source("transform", "EXECUTION:1"),
-                List.of(new TransformOrchidGroupMutationSource(sourceId, 8, null, null)),
+                List.of(new TransformOrchidGroupMutationSourceItem(sourceId, 8, null, null)),
                 List.of(
-                    new TransformOrchidGroupMutationResult(
+                    new TransformOrchidGroupMutationResultItem(
                         fixture.resultZone().getId(),
                         details(fixture.variety().getId(), 8, "0", "2"))),
                 date,
@@ -183,9 +183,9 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
         mutationEngine.transform(
             new TransformOrchidGroupsMutationCommand(
                 source("stack-first", "EXECUTION:1"),
-                List.of(new TransformOrchidGroupMutationSource(sourceId, 8, null, null)),
+                List.of(new TransformOrchidGroupMutationSourceItem(sourceId, 8, null, null)),
                 List.of(
-                    new TransformOrchidGroupMutationResult(
+                    new TransformOrchidGroupMutationResultItem(
                         fixture.resultZone().getId(),
                         details(fixture.variety().getId(), 8, "0", "2"))),
                 date,
@@ -201,9 +201,9 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
         mutationEngine.transform(
             new TransformOrchidGroupsMutationCommand(
                 source("stack-second", "EXECUTION:2"),
-                List.of(new TransformOrchidGroupMutationSource(firstResultId, 3, null, null)),
+                List.of(new TransformOrchidGroupMutationSourceItem(firstResultId, 3, null, null)),
                 List.of(
-                    new TransformOrchidGroupMutationResult(
+                    new TransformOrchidGroupMutationResultItem(
                         fixture.sourceZone().getId(),
                         details(fixture.variety().getId(), 3, "6", "7"))),
                 date,
@@ -255,9 +255,9 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
         mutationEngine.transform(
             new TransformOrchidGroupsMutationCommand(
                 source("blocked-first", "EXECUTION:1"),
-                List.of(new TransformOrchidGroupMutationSource(sourceId, 8, null, null)),
+                List.of(new TransformOrchidGroupMutationSourceItem(sourceId, 8, null, null)),
                 List.of(
-                    new TransformOrchidGroupMutationResult(
+                    new TransformOrchidGroupMutationResultItem(
                         fixture.resultZone().getId(),
                         details(fixture.variety().getId(), 8, "0", "2"))),
                 date,
@@ -272,9 +272,9 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
     mutationEngine.transform(
         new TransformOrchidGroupsMutationCommand(
             source("blocked-second", "EXECUTION:2"),
-            List.of(new TransformOrchidGroupMutationSource(firstResultId, 3, null, null)),
+            List.of(new TransformOrchidGroupMutationSourceItem(firstResultId, 3, null, null)),
             List.of(
-                new TransformOrchidGroupMutationResult(
+                new TransformOrchidGroupMutationResultItem(
                     fixture.sourceZone().getId(), details(fixture.variety().getId(), 3, "6", "7"))),
             date,
             "두 번째 분할",

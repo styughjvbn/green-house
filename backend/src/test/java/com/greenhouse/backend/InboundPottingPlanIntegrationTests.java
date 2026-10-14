@@ -1,5 +1,6 @@
 package com.greenhouse.backend;
 
+import static com.greenhouse.backend.support.JsonResponseTestSupport.requiredId;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -9,23 +10,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
-import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
-import com.greenhouse.backend.farm.domain.inbound.InboundType;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
-import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
-import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
-import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
-import com.greenhouse.backend.work.repository.WorkOperationRepository;
-import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
-import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.farm.inbound.domain.InboundRecord;
+import com.greenhouse.backend.farm.inbound.domain.InboundStatus;
+import com.greenhouse.backend.farm.inbound.domain.InboundType;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.House;
+import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
+import com.greenhouse.backend.farm.variety.domain.Variety;
+import com.greenhouse.backend.work.api.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.effect.domain.WorkEffectOrchidGroupRelationType;
+import com.greenhouse.backend.work.effect.repository.WorkAppliedEffectRepository;
+import com.greenhouse.backend.work.effect.repository.WorkEffectOrchidGroupRepository;
+import com.greenhouse.backend.work.operation.domain.WorkType;
+import com.greenhouse.backend.work.operation.domain.WorkTypeDefinition;
+import com.greenhouse.backend.work.operation.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.target.repository.WorkOperationTargetRepository;
+import com.greenhouse.backend.work.target.repository.WorkTargetExecutionRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Set;
@@ -137,12 +138,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.status").value("PLACED"))
             .andReturn();
-    Long inboundRecordId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long inboundRecordId = requiredId(created.getResponse().getContentAsString(), "/data/id");
 
     assertThat(operationRepository.findAll())
         .singleElement()
@@ -197,12 +193,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
             .andExpect(jsonPath("$.data.availableActions", hasSize(1)))
             .andExpect(jsonPath("$.data.availableActions[0]").value("CANCEL"))
             .andReturn();
-    Long inboundRecordId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long inboundRecordId = requiredId(created.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(
@@ -252,12 +243,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
                             .formatted(inboundRecord.getVariety().getId())))
             .andExpect(status().isCreated())
             .andReturn();
-    Long inboundRecordId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long inboundRecordId = requiredId(created.getResponse().getContentAsString(), "/data/id");
 
     executePotting(inboundRecordId, "first-potting", 8, 10);
     mockMvc
@@ -375,12 +361,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
             .andExpect(jsonPath("$.data.targets[0].targetReferenceType").value("INBOUND_RECORD"))
             .andExpect(jsonPath("$.data.targets[0].inboundRecordId").value(inboundRecord.getId()))
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            created
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(created.getResponse().getContentAsString(), "/data/id");
     Long targetId =
         operationTargetRepository
             .findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
@@ -506,12 +487,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.targets[0].quantitySnapshot").value(120))
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            planned
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(planned.getResponse().getContentAsString(), "/data/id");
     var storedTarget =
         operationTargetRepository
             .findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
@@ -628,11 +604,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
             .andExpect(jsonPath("$.data.status").value("POTTING_PENDING"))
             .andReturn();
     Long inboundRecordId =
-        Long.valueOf(
-            createdInbound
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+        requiredId(createdInbound.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(
@@ -719,12 +691,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
                             .formatted(inboundRecord.getId(), secondInbound.getId())))
             .andExpect(status().isCreated())
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            planned
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(planned.getResponse().getContentAsString(), "/data/id");
     mockMvc
         .perform(get("/api/inbound-records/{id}", inboundRecord.getId()))
         .andExpect(status().isOk())
@@ -780,12 +747,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
                             .formatted(inboundRecord.getId())))
             .andExpect(status().isCreated())
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            planned
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(planned.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(post("/api/work-operations/{id}/end-remaining", operationId))
@@ -1143,12 +1105,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
                             .formatted(inboundRecord.getId())))
             .andExpect(status().isCreated())
             .andReturn();
-    Long operationId =
-        Long.valueOf(
-            planned
-                .getResponse()
-                .getContentAsString()
-                .replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+    Long operationId = requiredId(planned.getResponse().getContentAsString(), "/data/id");
 
     mockMvc
         .perform(

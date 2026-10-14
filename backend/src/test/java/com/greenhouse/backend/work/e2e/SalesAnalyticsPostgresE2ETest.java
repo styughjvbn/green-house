@@ -7,14 +7,15 @@ import static org.mockito.Mockito.doCallRealMethod;
 import com.greenhouse.backend.analytics.application.AnalyticsQueryService;
 import com.greenhouse.backend.analytics.dto.AnalyticsRankedValueResponse;
 import com.greenhouse.backend.analytics.dto.PartnerAnalyticsStatResponse;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.sales.application.SalesMetricsReader;
-import com.greenhouse.backend.sales.domain.SalesPaymentCategory;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.settlement.domain.PartnerBalanceSummary;
+import com.greenhouse.backend.sales.api.document.SalesPaymentCategory;
+import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.document.application.SalesMetricsReader;
+import com.greenhouse.backend.sales.document.domain.SalesSlip;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItem;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.payment.domain.PartnerBalanceSummary;
+import com.greenhouse.backend.support.DirectSaleFixtures;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.Map;
@@ -73,16 +74,9 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
     for (int index = 0; index < labels.length; index++) {
       var slip =
           new SalesSlip(
-              "PAYMENT-CATEGORY-" + index,
-              FROM,
-              SalesType.DIRECT,
-              null,
-              partner.getId(),
-              labels[index],
-              "출고 완료",
-              null,
-              null);
+              FROM, SalesType.DIRECT, null, partner.getId(), labels[index], "출고 완료", null, null);
       slip.addItem(new SalesSlipItem(null, "Variety", "난", null, 1, 1_000_000_000, null));
+      DirectSaleFixtures.refreshProjection(slip);
       entityManager.persist(slip);
     }
     entityManager.flush();
@@ -132,17 +126,9 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
     var house = partner("Auction");
     house.update("Auction", PartnerType.AUCTION_HOUSE, null, null, null, null);
     var auction =
-        new SalesSlip(
-            "ANALYTICS-AUCTION",
-            TO,
-            SalesType.AUCTION,
-            null,
-            house.getId(),
-            "정산 대기",
-            "출하 완료",
-            null,
-            null);
+        new SalesSlip(TO, SalesType.AUCTION, null, house.getId(), "정산 대기", "출하 완료", null, null);
     auction.addItem(new SalesSlipItem(null, "Variety", "난", null, 10, 100, null));
+    DirectSaleFixtures.refreshProjection(auction);
     entityManager.persist(auction);
     var zero = partner("Zero sale");
     slip(zero, FROM, 1, 0);
@@ -192,7 +178,8 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 
     var sales = analytics.getSalesAnalytics(FROM, TO);
 
-    assertThat(statistics.getPrepareStatementCount()).isEqualTo(12 + (size + 499) / 500);
+    // One owner-side aggregate query adds Direct price-adjustment/return deltas.
+    assertThat(statistics.getPrepareStatementCount()).isEqualTo(13 + (size + 499) / 500);
     assertThat(statistics.getEntityLoadCount()).isZero();
     assertThat(sales.currentMonthSales()).isEqualTo(3_000_000_000L * size);
     assertThat(sales.shippedQuantity()).isEqualTo(2L * size);
@@ -298,7 +285,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
   void partnerStatsRetainCurrentBalancesAndPostgresOrderingWithoutPeriodSales() {
     var sold = partner("Old name");
     var first = slip(sold, FROM, 1, 300);
-    first.recordPayment(100L);
+    DirectSaleFixtures.projectAllocation(first, 100L);
     slip(sold, TO, 2, 100);
     slip(sold, FROM.minusDays(1), 1, 9_999);
     balance(sold, 700, 0, 0);
@@ -372,23 +359,16 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
     var to = LocalDate.of(2040, 3, 31);
     var partial = slip(partner, from, 2, 100);
     partial.addItem(new SalesSlipItem(null, "Other variety", "난", null, 3, 200, null));
-    partial.recordPayment(100L);
+    DirectSaleFixtures.refreshProjection(partial);
+    DirectSaleFixtures.projectAllocation(partial, 100L);
     var paid = slip(partner, to, 1, 100);
-    paid.recordPayment(100L);
+    DirectSaleFixtures.projectAllocation(paid, 100L);
     slip(partner, LocalDate.of(2040, 2, 29), 1, 300);
     slip(partner, LocalDate.of(2040, 2, 28), 1, 9_999);
     var draft =
-        new SalesSlip(
-            "ANALYTICS-DRAFT",
-            to,
-            SalesType.DIRECT,
-            null,
-            partner.getId(),
-            "미입금",
-            "작성중",
-            null,
-            null);
+        new SalesSlip(to, SalesType.DIRECT, null, partner.getId(), "미입금", "작성중", null, null);
     draft.addItem(new SalesSlipItem(null, "Excluded", null, null, 1, 9_999, null));
+    DirectSaleFixtures.refreshProjection(draft);
     entityManager.persist(draft);
     entityManager.flush();
     entityManager.clear();
@@ -422,17 +402,9 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 
   private SalesSlip slip(BusinessPartner partner, LocalDate date, int quantity, int price) {
     var slip =
-        new SalesSlip(
-            "ANALYTICS-" + (++slipSequence),
-            date,
-            SalesType.DIRECT,
-            null,
-            partner.getId(),
-            "미입금",
-            "출고 완료",
-            null,
-            null);
+        new SalesSlip(date, SalesType.DIRECT, null, partner.getId(), "미입금", "출고 완료", null, null);
     slip.addItem(new SalesSlipItem(null, "Variety", "난", null, quantity, price, null));
+    DirectSaleFixtures.refreshProjection(slip);
     entityManager.persist(slip);
     return slip;
   }

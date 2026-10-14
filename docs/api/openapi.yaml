@@ -11,6 +11,7 @@ paths:
     get:
       tags:
       - sales-controller
+      description: 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.
       operationId: getSalesSlip
       parameters:
       - name: salesSlipId
@@ -21,11 +22,17 @@ paths:
           format: int64
       responses:
         '200':
-          description: OK
+          description: 조회 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     put:
       tags:
       - sales-controller
@@ -45,11 +52,17 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: 수정 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING: 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/business-partners/{partnerId}:
     put:
       tags:
@@ -294,6 +307,15 @@ paths:
       tags:
       - work-operation-controller
       operationId: create
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: 일반 단건 계획 생성의 재전송 키. 같은 키·입력은 최초 응답을 반환한다.
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 1
       requestBody:
         content:
           application/json:
@@ -720,6 +742,15 @@ paths:
       tags:
       - work-operation-controller
       operationId: createCompletedRecord
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: 일반 완료 기록 생성의 재전송 키. 같은 키·입력은 최초 응답을 반환한다.
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 1
       requestBody:
         content:
           application/json:
@@ -848,6 +879,15 @@ paths:
       tags:
       - work-operation-controller
       operationId: createBatch
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: 일반 일괄 계획 생성의 재전송 키. 품종별 전체 결과의 최초 응답을 반환한다.
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 1
       requestBody:
         content:
           application/json:
@@ -929,6 +969,7 @@ paths:
     get:
       tags:
       - sales-controller
+      description: 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.
       operationId: getSalesSlips
       parameters:
       - name: partnerId
@@ -951,16 +992,34 @@ paths:
           format: date
       responses:
         '200':
-          description: OK
+          description: 조회 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListSalesSlipResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
       deprecated: true
     post:
       tags:
       - sales-controller
+      description: recordOnly=true는 이미 완료된 판매·출하를 빈 allocation과 완료 상태로 기록하며 재고·예약·Farm snapshot을 만들지 않습니다. 경매는 새 출하·lot를 생성하므로
+        기존 출하를 중복 등록하지 않아야 합니다. 기록 등록의 생성 키는 필수입니다. 출고·출하와 수납은 독립적입니다. 일반 판매의 최초 수납은 전표 생성과 같은 트랜잭션으로 기록하며 생성 키가 필수입니다. 받은
+        전액을 기록하고 전표 총액까지 배분하며 초과분은 거래처 미배분 잔액으로 남깁니다. 수납 상태만으로 완납을 지정할 수 없습니다.
       operationId: createSalesSlip
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: 생성 재전송은 같은 키와 입력을 유지합니다. 키 생략 시 별도 신규 전표를 생성합니다.
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 1
       requestBody:
         content:
           application/json:
@@ -978,6 +1037,8 @@ paths:
     post:
       tags:
       - sales-controller
+      description: 받은 전액을 기록하고 전표 잔액까지만 배분하며 초과액은 거래처 미배분 잔액으로 남깁니다. 대상별 같은 키·금액·입금일의 재요청은 기존 반영 결과를 반환합니다. 같은 키의 금액/입금일 변경은
+        409 IDEMPOTENCY_KEY_REUSED입니다.
       operationId: confirmPayment
       parameters:
       - name: salesSlipId
@@ -994,11 +1055,197 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: 입금 확인 또는 재요청 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+        '400':
+          description: 'VALIDATION_ERROR: 입력 오류 또는 배분할 대상 잔액 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'IDEMPOTENCY_KEY_REUSED: 같은 대상·키의 금액 또는 입금일 변경. DIRECT_AMOUNT_REVIEW_REQUIRED: 금액·배분 검토 필요. DIRECT_AMOUNT_SOURCE_MISSING:
+            금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/sales-slips/{id}/direct-changes/{returnId}/arrivals:
+    post:
+      tags:
+      - sales-controller
+      description: 반품 도착을 기록합니다. 새 묶음 생성 또는 이미 재고에 반영된 도착의 기록만 등록을 선택합니다. 원판매·금액·수납은 변경하지 않습니다.
+      operationId: recordDirectReturnArrival
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: returnId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirectReturnArrivalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectReturnArrivalResult'
+  /api/sales-slips/{id}/direct-changes/{changeId}/cancel:
+    post:
+      tags:
+      - sales-controller
+      description: 후속 사용이 없는 가격 조정 또는 반품을 취소 이력으로 되돌립니다. 원기록은 삭제하지 않습니다.
+      operationId: cancelDirectSaleChange
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: changeId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelDirectSaleChangeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectSaleChangeResult'
+  /api/sales-slips/{id}/direct-changes/returns:
+    post:
+      tags:
+      - sales-controller
+      description: 선택한 가격 구간의 수량·금액을 반품 이력으로 기록합니다. 실제 농장 도착·재고 반영·현금 환불을 실행하지 않습니다.
+      operationId: recordDirectSaleReturn
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirectSaleChangeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectSaleChangeResult'
+  /api/sales-slips/{id}/direct-changes/return-arrivals/{arrivalId}/cancel:
+    post:
+      tags:
+      - sales-controller
+      description: 도착 이력을 보존해 취소합니다. 새 묶음을 생성한 경우에만 Farm 생성 Mutation을 보상하며 후속 사용이 있으면 거절합니다.
+      operationId: cancelDirectReturnArrival
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: arrivalId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelDirectReturnArrivalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectReturnArrivalResult'
+  /api/sales-slips/{id}/direct-changes/price-adjustments:
+    post:
+      tags:
+      - sales-controller
+      description: 원가격 구간의 일부 수량을 새 단가로 조정합니다. 원품목·재고·수납은 보존하며 현재 거래금액을 갱신합니다. 같은 키·입력은 최초 변경 ID를 반환합니다.
+      operationId: adjustDirectSalePrices
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirectSaleChangeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectSaleChangeResult'
   /api/orchid-groups:
     get:
       tags:
@@ -1352,6 +1599,15 @@ paths:
       tags:
       - inbound-record-controller
       operationId: create_5
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: 생성 재전송은 같은 키와 입력을 유지합니다. 키 생략 시 별도 신규 입고를 생성합니다.
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 1
       requestBody:
         content:
           application/json:
@@ -1486,6 +1742,146 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBusinessPartnerResponse'
+  /api/business-partners/{partnerId}/payment-receipts:
+    get:
+      tags:
+      - payment-controller
+      operationId: receiptPage
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponsePaymentReceiptResponse'
+    post:
+      tags:
+      - payment-controller
+      description: 대상 미지정 수동 수납. 유효 배분과 전표 입금액은 변경하지 않습니다.
+      operationId: receiveUnassignedPayment
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualPaymentRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePartnerPaymentEventResponse'
+  /api/business-partners/{partnerId}/payment-receipts/{receiptId}/cancel:
+    post:
+      tags:
+      - payment-controller
+      description: 미배분 수납의 오입력 취소. 실제 환불을 기록하지 않습니다.
+      operationId: cancelUnassignedPayment
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelUnassignedReceiptRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePartnerPaymentEventResponse'
+  /api/business-partners/{partnerId}/payment-allocations:
+    post:
+      tags:
+      - payment-controller
+      operationId: allocate
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentAllocationRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentAllocationChangeResponse'
+  /api/business-partners/{partnerId}/payment-allocation-corrections:
+    post:
+      tags:
+      - payment-controller
+      operationId: correctAllocations
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentAllocationCorrectionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentAllocationChangeResponse'
   /api/auth/logout:
     post:
       tags:
@@ -1516,13 +1912,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuthenticatedUserResponse'
-  /api/auction-settlements/{settlementId}/confirm-payment:
+  /api/auction-proceeds/{id}/confirm-payment:
     post:
       tags:
-      - payment-controller
-      operationId: confirmAuctionPayment
+      - auction-proceeds-controller
+      description: 자료 연결과 받을 금액이 확인된 경매 대금에 잔액까지만 배분하고 초과 수납액은 거래처 미배분 잔액으로 남깁니다. 같은 키·금액·입금일은 중복 수납 없이 현재 조회를 반환합니다.
+      operationId: confirmPayment_1
       parameters:
-      - name: settlementId
+      - name: id
         in: path
         required: true
         schema:
@@ -1540,32 +1937,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseAuctionSettlementResponse'
-  /api/auction-settlements/rebuild:
-    post:
-      tags:
-      - auction-settlement-controller
-      operationId: rebuild
-      parameters:
-      - name: auctionHouseId
-        in: query
-        required: true
-        schema:
-          type: integer
-          format: int64
-      - name: auctionDate
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseAuctionSettlementResponse'
+                $ref: '#/components/schemas/ApiResponseAuctionProceedsResponse'
   /api/auction-lots/{id}/results:
     post:
       tags:
@@ -1591,6 +1963,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/auction-lots/{id}/follow-up:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getFollowUp
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionFollowUpResponse'
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: decideFollowUp
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionFollowUpCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionFollowUpResult'
   /api/auction-lots/{id}/confirm-return:
     post:
       tags:
@@ -1616,6 +2031,94 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/auction-lots/{id}/arrivals:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getArrivals
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseAuctionArrivalResponse'
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: recordArrival
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionArrivalCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionFollowUpResult'
+  /api/auction-lots/{id}/arrivals/{arrivalId}/cancel:
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: cancelArrival
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: arrivalId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelAuctionArrivalCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionFollowUpResult'
   /api/auction-lots/{id}/adjust-quantity:
     post:
       tags:
@@ -1809,7 +2312,7 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: 상태 변경 결과
           content:
             application/json:
               schema:
@@ -2184,6 +2687,8 @@ paths:
     get:
       tags:
       - work-operation-controller
+      description: 노드 수 외에도 작업 대상·효과·정정 참조는 조회별 최대 1,000건, Mutation 관계는 최대 maxNodes × 4건으로 제한한다. 일부 노드·참조·관계가 생략되면 truncated=true이며
+        전체 이력으로 취급하지 않는다.
       operationId: getGraph
       parameters:
       - name: workOperationId
@@ -2277,6 +2782,8 @@ paths:
     get:
       tags:
       - work-operation-controller
+      description: 양 끝 날짜를 포함해 최대 366일, 최대 1,000개 작업을 완전한 목록으로 반환한다. 기간 초과는 400, 결과 건수 초과는 422 QUERY_LIMIT_EXCEEDED. 초과 시
+        기간·필터를 좁히거나 작업 페이지 조회를 사용한다.
       operationId: getCalendar
       parameters:
       - name: from
@@ -2320,11 +2827,23 @@ paths:
           type: boolean
       responses:
         '200':
-          description: OK
+          description: 조회 범위의 전체 작업 요약
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListWorkOperationSummaryResponse'
+        '400':
+          description: 기간 또는 조회 조건 오류 (VALIDATION_ERROR)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: 조회 결과 상한 초과 (QUERY_LIMIT_EXCEEDED)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/work-history:
     get:
       tags:
@@ -2447,6 +2966,72 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+  /api/sales-slips/{id}/direct-changes:
+    get:
+      tags:
+      - sales-controller
+      operationId: getDirectSaleChanges
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectSaleChangeResponse'
+  /api/sales-slips/{id}/direct-changes/return-arrivals:
+    get:
+      tags:
+      - sales-controller
+      operationId: getDirectReturnArrivals
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDirectReturnArrivalState'
   /api/sales-slips/print:
     get:
       tags:
@@ -2478,6 +3063,7 @@ paths:
     get:
       tags:
       - sales-controller
+      description: 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다.
       operationId: getSalesSlipPage
       parameters:
       - name: partnerId
@@ -2505,9 +3091,18 @@ paths:
           type: string
       - name: salesStatus
         in: query
+        description: 완료는 출고 완료·출하 완료를 포함하며 판매 유형 조건과 함께 적용합니다. 기존 개별 상태 검색도 지원합니다.
         required: false
         schema:
           type: string
+      - name: salesType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - DIRECT
+          - AUCTION
       - name: keyword
         in: query
         required: false
@@ -2529,11 +3124,17 @@ paths:
           default: 10
       responses:
         '200':
-          description: OK
+          description: 조회 결과
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePageResponseSalesSlipListItemResponse'
+        '409':
+          description: 'DIRECT_AMOUNT_SOURCE_MISSING: 일반 판매 금액 자료 없음'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/sales-slips/auction-shipments:
     get:
       tags:
@@ -2584,6 +3185,71 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePhysicalBedResponse'
+  /api/payment-targets/{targetType}/{targetId}/history:
+    get:
+      tags:
+      - payment-controller
+      description: 대상에 반영한 수납 배분 이력. 대상 미지정 수납에서 배분한 기록과 직접 수납의 배분 기록을 한 번씩 조회합니다. 금액은 해당 대상의 배분액이며 날짜는 반영일입니다. 취소된 배분도 상태와
+        함께 보존합니다.
+      operationId: targetHistory
+      parameters:
+      - name: targetType
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+      - name: targetId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponsePartnerPaymentEventResponse'
+  /api/payment-allocation-metadata:
+    get:
+      tags:
+      - payment-controller
+      description: 거래처를 지정하면 일반 거래처는 일반 전표, 경매장은 경매 대금만 배분 대상 종류로 반환합니다.
+      operationId: getPaymentAllocationMetadata
+      parameters:
+      - name: partnerId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentAllocationMetadata'
   /api/partner-payment-events:
     get:
       tags:
@@ -2605,6 +3271,7 @@ paths:
           enum:
           - SALES_SLIP
           - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
           - NONE
       - name: targetId
         in: query
@@ -2641,6 +3308,7 @@ paths:
           enum:
           - SALES_SLIP
           - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
           - NONE
       - name: targetId
         in: query
@@ -2690,6 +3358,7 @@ paths:
     get:
       tags:
       - work-operation-controller
+      description: '호환 경로: 작업일·ID 내림차순 최신 500개 작업을 반환한다. 전체 이력은 GET /api/work-history의 페이지 조회를 사용한다.'
       operationId: getOrchidGroupHistory
       parameters:
       - name: orchidGroupId
@@ -2925,6 +3594,8 @@ paths:
     get:
       tags:
       - orchid-group-mutation-query-controller
+      description: 노드·깊이 한도 안에서 탐색하며 표시되는 Mutation 간 관계는 최대 maxNodes × 4건이다. 노드·탐색·관계가 생략되면 truncated=true이며 전체 이력으로 취급하지
+        않는다.
       operationId: getMutationGraph
       parameters:
       - name: orchidGroupId
@@ -3109,6 +3780,119 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseDashboardSummaryResponse'
+  /api/business-partners/{partnerId}/payment-receipts/{receiptId}:
+    get:
+      tags:
+      - payment-controller
+      operationId: receipt
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePaymentReceiptResponse'
+  /api/business-partners/{partnerId}/payment-receipts/{receiptId}/allocations:
+    get:
+      tags:
+      - payment-controller
+      operationId: receiptAllocations
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponsePaymentAllocationResponse'
+  /api/business-partners/{partnerId}/payment-allocation-targets:
+    get:
+      tags:
+      - payment-controller
+      operationId: allocationTargets
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: targetType
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponsePaymentAllocationTargetOption'
   /api/business-partners/{partnerId}/option:
     get:
       tags:
@@ -3317,59 +4101,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionTrackingSummaryResponse'
-  /api/auction-settlements:
+  /api/auction-proceeds/{id}:
     get:
       tags:
-      - auction-settlement-controller
-      description: 호환용 목록. 최신 500건만 반환합니다. 운영 목록은 /page, 전체 합계는 /summary를 사용합니다.
-      operationId: getSettlements
+      - auction-proceeds-controller
+      operationId: get_5
       parameters:
-      - name: auctionHouseId
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int64
-      - name: from
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: to
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
-          enum:
-          - CREATED
-          - PAYMENT_WAITING
-          - PARTIALLY_PAID
-          - PAID
-          - AMOUNT_MISMATCH
-          - REVIEW_REQUIRED
-          - CANCELLED
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseListAuctionSettlementResponse'
-      deprecated: true
-  /api/auction-settlements/{settlementId}:
-    get:
-      tags:
-      - auction-settlement-controller
-      operationId: getSettlement
-      parameters:
-      - name: settlementId
+      - name: id
         in: path
         required: true
         schema:
@@ -3381,13 +4119,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseAuctionSettlementResponse'
-  /api/auction-settlements/summary:
+                $ref: '#/components/schemas/ApiResponseAuctionProceedsResponse'
+  /api/auction-proceeds/page:
     get:
       tags:
-      - auction-settlement-controller
-      description: 조회 조건에 해당하는 전체 정산의 합계. 페이지 크기와 무관하게 집계합니다.
-      operationId: getAuctionSettlementSummary
+      - auction-proceeds-controller
+      operationId: page
       parameters:
       - name: auctionHouseId
         in: query
@@ -3395,76 +4132,6 @@ paths:
         schema:
           type: integer
           format: int64
-      - name: from
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: to
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
-          enum:
-          - CREATED
-          - PAYMENT_WAITING
-          - PARTIALLY_PAID
-          - PAID
-          - AMOUNT_MISMATCH
-          - REVIEW_REQUIRED
-          - CANCELLED
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseAuctionSettlementSummaryResponse'
-  /api/auction-settlements/page:
-    get:
-      tags:
-      - auction-settlement-controller
-      description: 정산 요약의 서버 페이지 목록. page는 0 이상, size는 1~100으로 보정합니다. 상세 행은 단건 API에서 조회합니다.
-      operationId: getAuctionSettlementPage
-      parameters:
-      - name: auctionHouseId
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int64
-      - name: from
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: to
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
-          enum:
-          - CREATED
-          - PAYMENT_WAITING
-          - PARTIALLY_PAID
-          - PAID
-          - AMOUNT_MISMATCH
-          - REVIEW_REQUIRED
-          - CANCELLED
       - name: page
         in: query
         required: false
@@ -3485,7 +4152,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponsePageResponseAuctionSettlementListItemResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseAuctionProceedsResponse'
   /api/auction-lots:
     get:
       tags:
@@ -3538,6 +4205,7 @@ paths:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+          - DISPOSED
       - name: reviewOnly
         in: query
         required: false
@@ -3719,12 +4387,49 @@ paths:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
 components:
   schemas:
+    ErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+    SalesInitialReceiptRequest:
+      type: object
+      description: 실제 받은 전액을 기록합니다. 전표 총액까지 배분하고 초과분은 거래처 미배분 잔액으로 남깁니다.
+      properties:
+        amount:
+          type: integer
+          format: int64
+        method:
+          type: string
+          enum:
+          - CASH
+          - BANK_TRANSFER
+        paymentDate:
+          type: string
+          format: date
+      required:
+      - amount
+      - method
+      - paymentDate
     SalesSlipCreateRequest:
       type: object
       properties:
         auctionShipmentId:
           type: integer
           format: int64
+        initialReceipt:
+          $ref: '#/components/schemas/SalesInitialReceiptRequest'
         items:
           type: array
           items:
@@ -3744,6 +4449,9 @@ components:
           type: string
           maxLength: 50
           minLength: 0
+        recordOnly:
+          type: boolean
+          description: 이미 완료된 판매·출하를 재고 변경 없이 기록합니다. 완료 상태와 빈 allocation이 필요하며 생성 요청 키는 필수입니다.
         saleDate:
           type: string
           format: date
@@ -3779,6 +4487,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SalesSlipItemAllocationRequest'
+        boxes:
+          type: integer
+          format: int32
+          minimum: 1
         genus:
           type: string
           maxLength: 100
@@ -3798,6 +4510,10 @@ components:
         spec:
           type: string
           maxLength: 100
+          minLength: 0
+        unit:
+          type: string
+          maxLength: 30
           minLength: 0
         unitPrice:
           type: integer
@@ -3904,6 +4620,20 @@ components:
           format: int64
         varietyName:
           type: string
+    SalesSlipAuctionLotResponse:
+      type: object
+      properties:
+        currentStatus:
+          type: string
+        returnedQuantity:
+          type: integer
+          format: int32
+        soldQuantity:
+          type: integer
+          format: int32
+        waitingQuantity:
+          type: integer
+          format: int32
     SalesSlipItemAllocationResponse:
       type: object
       properties:
@@ -3943,9 +4673,16 @@ components:
         amount:
           type: integer
           format: int32
+        auctionLot:
+          type: 'null'
+          $ref: '#/components/schemas/SalesSlipAuctionLotResponse'
+          description: 현재 경매 lot 요약. 출하 전 또는 과거 생성 응답에는 없을 수 있습니다.
         auctionShipmentLotId:
           type: integer
           format: int64
+        boxes:
+          type: integer
+          format: int32
         genus:
           type: string
         id:
@@ -3959,6 +4696,8 @@ components:
           type: integer
           format: int32
         spec:
+          type: string
+        unit:
           type: string
         unitPrice:
           type: integer
@@ -3983,6 +4722,11 @@ components:
         expectedPaymentDate:
           type: string
           format: date
+        financialReviewRequired:
+          type:
+          - boolean
+          - 'null'
+          description: 현재 거래금액·수납 배분의 확인 필요 여부. 수납 기록이 없다는 이유만으로 확인 대상으로 보지 않습니다. 과거 생성 응답에는 미상일 수 있습니다.
         id:
           type: integer
           format: int64
@@ -4014,11 +4758,10 @@ components:
           enum:
           - DIRECT
           - AUCTION
-        slipNumber:
-          type: string
         totalAmount:
           type: integer
           format: int32
+          description: 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
     BusinessPartnerUpdateRequest:
       type: object
       properties:
@@ -4063,16 +4806,20 @@ components:
       properties:
         allowPrepayment:
           type: boolean
+          description: 선입금의 보관용 선호값. 현재 예치금 처리는 제공하지 않는다.
         amountTolerance:
           type: integer
           format: int64
           minimum: 0
         autoMatchEnabled:
           type: boolean
+          description: 자동 매칭의 보관용 선호값. 현재 자동 매칭 실행은 제공하지 않는다.
         autoSettleEnabled:
           type: boolean
+          description: 자동 정산의 보관용 선호값. 현재 자동 정산 실행은 제공하지 않는다.
         creditAutoApplyEnabled:
           type: boolean
+          description: 선입금 자동 차감의 보관용 선호값. 현재 실행은 제공하지 않는다.
         depositorAliases:
           type: array
           items:
@@ -4092,15 +4839,33 @@ components:
           type: integer
           format: int32
           minimum: 0
+        printTemplate:
+          type: string
+          description: 거래처 전표의 기본 인쇄 양식. 생략하면 기존 설정을 유지한다.
+          enum:
+          - STANDARD_A5
+          - YANGJAE_AUCTION_SHIPMENT
         ruleJson:
           type: object
           additionalProperties: {}
+          description: 보관용 규칙 JSON. 현재 결과 수신/파싱 또는 정산 실행에 적용하지 않는다.
         settlementUnit:
           type: string
+          description: 저장할 선호 정산 단위. MONTHLY_BATCH 저장은 월간 실행을 활성화하지 않으며 실제 지원 범위는 응답 capabilities를 확인한다.
           enum:
           - SALES_SLIP
           - MONTHLY_BATCH
           - AUCTION_DATE
+        shipperCode:
+          type: string
+          description: 경매장 출하 전표에 사용할 기본 출하자 코드
+          maxLength: 50
+          minLength: 0
+        shipperName:
+          type: string
+          description: 경매장 출하 전표에 사용할 기본 출하자 성명
+          maxLength: 100
+          minLength: 0
       required:
       - amountTolerance
       - depositorAliases
@@ -4126,6 +4891,10 @@ components:
           type: boolean
         autoSettleEnabled:
           type: boolean
+        capabilities:
+          $ref: '#/components/schemas/SettlementCapabilities'
+          description: 현재 거래처의 정산 실행 지원 범위. 저장된 설정값과 독립적이며 권한 또는 특정 전표의 실행 가능 여부를 뜻하지 않는다.
+          readOnly: true
         creditAutoApplyEnabled:
           type: boolean
         depositorAliases:
@@ -4148,6 +4917,11 @@ components:
         paymentDelayDays:
           type: integer
           format: int32
+        printTemplate:
+          type: string
+          enum:
+          - STANDARD_A5
+          - YANGJAE_AUCTION_SHIPMENT
         ruleJson:
           type: object
           additionalProperties: {}
@@ -4157,6 +4931,33 @@ components:
           - SALES_SLIP
           - MONTHLY_BATCH
           - AUCTION_DATE
+        shipperCode:
+          type: string
+        shipperName:
+          type: string
+      required:
+      - capabilities
+    SettlementCapabilities:
+      type: object
+      properties:
+        autoMatching:
+          type: boolean
+        autoSettlement:
+          type: boolean
+        creditAutoApply:
+          type: boolean
+        executableUnits:
+          type: array
+          items:
+            type: string
+            enum:
+            - SALES_SLIP
+            - MONTHLY_BATCH
+            - AUCTION_DATE
+        prepayment:
+          type: boolean
+        ruleExecution:
+          type: boolean
     BedZoneCapacityRequest:
       type: object
       properties:
@@ -5599,6 +6400,138 @@ components:
       - amount
       - idempotencyKey
       - paymentDate
+    DirectReturnArrivalRequest:
+      type: object
+      properties:
+        arrivalDate:
+          type: string
+          format: date
+        bedZoneId:
+          type: integer
+          format: int64
+        details:
+          $ref: '#/components/schemas/OrchidGroupMutationDetails'
+        quantity:
+          type: integer
+          format: int32
+        recordOnly:
+          type: boolean
+          description: 이미 재고에 반영된 도착이면 true. Farm 재고를 변경하지 않습니다.
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - arrivalDate
+      - quantity
+    OrchidGroupMutationDetails:
+      type: object
+      properties:
+        ageYear:
+          type: integer
+          format: int32
+        endPosition:
+          type: number
+        memo:
+          type: string
+        placementType:
+          type: string
+        potSize:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        splitPlacementAllowed:
+          type: boolean
+        startPosition:
+          type: number
+        status:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+        varietyId:
+          type: integer
+          format: int64
+    ApiResponseDirectReturnArrivalResult:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DirectReturnArrivalResult'
+        message:
+          type: string
+    DirectReturnArrivalResult:
+      type: object
+      properties:
+        arrivalId:
+          type: integer
+          format: int64
+    CancelDirectSaleChangeRequest:
+      type: object
+      properties:
+        changeDate:
+          type: string
+          format: date
+        reason:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - changeDate
+      - reason
+    ApiResponseDirectSaleChangeResult:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DirectSaleChangeResult'
+        message:
+          type: string
+    DirectSaleChangeResult:
+      type: object
+      properties:
+        changeId:
+          type: integer
+          format: int64
+    DirectSaleChangeRequest:
+      type: object
+      properties:
+        changeDate:
+          type: string
+          format: date
+        itemId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        reason:
+          type: string
+          maxLength: 500
+          minLength: 0
+        sourceChangeId:
+          type: integer
+          format: int64
+        unitPrice:
+          type: integer
+          format: int32
+      required:
+      - changeDate
+      - itemId
+      - quantity
+      - reason
+    CancelDirectReturnArrivalRequest:
+      type: object
+      properties:
+        correctionDate:
+          type: string
+          format: date
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - correctionDate
+      - reason
     OrchidGroupCreateRequest:
       type: object
       properties:
@@ -6233,6 +7166,205 @@ components:
       required:
       - name
       - partnerType
+    ApiResponsePartnerPaymentEventResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PartnerPaymentEventResponse'
+        message:
+          type: string
+    PartnerPaymentEventResponse:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        createdBy:
+          type: string
+        depositorName:
+          type: string
+        description:
+          type: string
+        eventDate:
+          type: string
+          format: date
+        eventType:
+          type: string
+          enum:
+          - PAYMENT_RECEIVED
+          - PAYMENT_ALLOCATED
+          - PREPAYMENT_RECEIVED
+          - CREDIT_APPLIED
+          - CREDIT_REFUND
+          - AUTO_MATCH_CANDIDATE
+          - AUTO_MATCH_CONFIRMED
+          - MANUAL_MATCH_CONFIRMED
+          - MATCH_REJECTED
+          - PAYMENT_UNLINKED
+          - ADJUSTMENT
+        id:
+          type: integer
+          format: int64
+        memo:
+          type: string
+        parentEventId:
+          type: integer
+          format: int64
+        partnerId:
+          type: integer
+          format: int64
+        partnerName:
+          type: string
+        paymentMethod:
+          type: string
+        status:
+          type: string
+          enum:
+          - UNAPPLIED
+          - PARTIALLY_APPLIED
+          - FULLY_APPLIED
+          - CANDIDATE
+          - CONFIRMED
+          - REJECTED
+          - CANCELLED
+        targetId:
+          type: integer
+          format: int64
+        targetType:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+        unappliedAmount:
+          type: integer
+          format: int64
+        unassignedCancellationAllowed:
+          type: boolean
+    CancelUnassignedReceiptRequest:
+      type: object
+      properties:
+        correctionDate:
+          type: string
+          format: date
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - correctionDate
+      - idempotencyKey
+      - reason
+    PaymentAllocationLine:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        receiptId:
+          type: integer
+          format: int64
+        targetId:
+          type: integer
+          format: int64
+        targetType:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+      required:
+      - amount
+      - receiptId
+      - targetId
+      - targetType
+    PaymentAllocationRequest:
+      type: object
+      properties:
+        allocationDate:
+          type: string
+          format: date
+        allocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentAllocationLine'
+          maxItems: 100
+          minItems: 0
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - allocationDate
+      - allocations
+      - idempotencyKey
+    ApiResponsePaymentAllocationChangeResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PaymentAllocationChangeResponse'
+        message:
+          type: string
+    PaymentAllocationChangeResponse:
+      type: object
+      properties:
+        allocationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        cancellationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+    PaymentAllocationCorrectionRequest:
+      type: object
+      properties:
+        allocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentAllocationLine'
+          maxItems: 100
+          minItems: 0
+        cancellationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          maxItems: 100
+          minItems: 0
+        correctionDate:
+          type: string
+          format: date
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - allocations
+      - cancellationIds
+      - correctionDate
+      - idempotencyKey
+      - reason
     ApiResponseVoid:
       type: object
       properties:
@@ -6269,26 +7401,75 @@ components:
           - DEMO
         username:
           type: string
-    ApiResponseAuctionSettlementResponse:
+    ApiResponseAuctionProceedsResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/AuctionSettlementResponse'
+          $ref: '#/components/schemas/AuctionProceedsResponse'
         message:
           type: string
-    AuctionSettlementLineResponse:
+    AuctionProceedsResponse:
+      type: object
+      properties:
+        auctionHouseId:
+          type: integer
+          format: int64
+        auctionHouseName:
+          type: string
+        id:
+          type: integer
+          format: int64
+        matchingConfirmed:
+          type: boolean
+        paidAmount:
+          type: number
+        paymentAllowed:
+          type: boolean
+        receivableAmount:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        remainingAmount:
+          type:
+          - number
+          - 'null'
+        reportedGrossAmount:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        resultDetails:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuctionProceedsResultReference'
+        resultIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        reviewRequired:
+          type: boolean
+        sourceReference:
+          type:
+          - string
+          - 'null'
+    AuctionProceedsResultReference:
       type: object
       properties:
         amount:
           type: integer
           format: int64
-        auctionResultLineId:
-          type: integer
-          format: int64
-        auctionShipmentLotId:
+        auctionDate:
+          type: string
+          format: date
+        auctionHouseId:
           type: integer
           format: int64
         id:
+          type: integer
+          format: int64
+        lotId:
           type: integer
           format: int64
         quantity:
@@ -6298,79 +7479,25 @@ components:
           type: string
           format: date
         shipmentGrade:
-          type: string
-        status:
-          type: string
-          enum:
-          - UNPAID
-          - PAID
-          - PARTIALLY_PAID
-          - EXCLUDED
-          - REVIEW_REQUIRED
+          type:
+          - string
+          - 'null'
         unitPrice:
           type: integer
           format: int32
         varietyName:
           type: string
-    AuctionSettlementResponse:
-      type: object
-      properties:
-        auctionDate:
-          type: string
-          format: date
-        auctionHouseId:
-          type: integer
-          format: int64
-        auctionHouseName:
-          type: string
-        confirmedAt:
-          type: string
-          format: date-time
-        confirmedBy:
-          type: string
-        deductionAmount:
-          type: integer
-          format: int64
-        expectedDepositAmount:
-          type: integer
-          format: int64
-        expectedPaymentDate:
-          type: string
-          format: date
-        feeAmount:
-          type: integer
-          format: int64
-        grossAmount:
-          type: integer
-          format: int64
-        id:
-          type: integer
-          format: int64
-        lines:
-          type: array
-          items:
-            $ref: '#/components/schemas/AuctionSettlementLineResponse'
-        memo:
-          type: string
-        paidAmount:
-          type: integer
-          format: int64
-        remainingAmount:
-          type: integer
-          format: int64
-        resultReceivedAt:
-          type: string
-          format: date-time
-        status:
-          type: string
-          enum:
-          - CREATED
-          - PAYMENT_WAITING
-          - PARTIALLY_PAID
-          - PAID
-          - AMOUNT_MISMATCH
-          - REVIEW_REQUIRED
-          - CANCELLED
+      required:
+      - amount
+      - auctionDate
+      - auctionHouseId
+      - id
+      - lotId
+      - quantity
+      - shipmentDate
+      - shipmentGrade
+      - unitPrice
+      - varietyName
     AuctionLotResultLineRequest:
       type: object
       properties:
@@ -6425,6 +7552,10 @@ components:
           type: string
           maxLength: 200
           minLength: 0
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 1
         memo:
           type: string
           maxLength: 1000
@@ -6436,6 +7567,7 @@ components:
       required:
       - attemptStatus
       - auctionDate
+      - idempotencyKey
     ApiResponseAuctionLotResponse:
       type: object
       properties:
@@ -6498,9 +7630,16 @@ components:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+          - DISPOSED
         failedCount:
           type: integer
           format: int32
+        followUpAttemptId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: 현재 유찰 잔량에 대응하는 최신 경매 시도 식별자
         id:
           type: integer
           format: int64
@@ -6522,6 +7661,10 @@ components:
           format: date
         memo:
           type: string
+        quantityAdjustmentAllowed:
+          type:
+          - boolean
+          - 'null'
         returnConfirmableQuantity:
           type: integer
           format: int32
@@ -6598,6 +7741,16 @@ components:
           format: int64
         memo:
           type: string
+        newReturnedQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        newSoldQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
         newStatus:
           type: string
           enum:
@@ -6614,6 +7767,22 @@ components:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+          - DISPOSED
+        newWaitingQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        previousReturnedQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        previousSoldQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
         previousStatus:
           type: string
           enum:
@@ -6630,13 +7799,162 @@ components:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+          - DISPOSED
+        previousWaitingQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
         reason:
           type: string
         worker:
           type: string
+    AuctionFollowUpCommand:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        method:
+          type: string
+          enum:
+          - REAUCTION
+          - FARM_RETURN
+          - AUCTION_DISPOSAL
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - idempotencyKey
+      - method
+      - reason
+    ApiResponseAuctionFollowUpResult:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuctionFollowUpResult'
+        message:
+          type: string
+    AuctionArrivalResponse:
+      type: object
+      properties:
+        arrivalDate:
+          type: string
+          format: date
+        canceledAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        cancellationAllowed:
+          type: boolean
+        cancellationMutationId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        cancellationReason:
+          type:
+          - string
+          - 'null'
+        createdAt:
+          type: string
+          format: date-time
+        creationMutationId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        decisionId:
+          type: integer
+          format: int64
+        id:
+          type: integer
+          format: int64
+        lotId:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        recordOnly:
+          type: boolean
+        worker:
+          type: string
+      required:
+      - cancellationAllowed
+      - recordOnly
+    AuctionFollowUpResponse:
+      type: object
+      properties:
+        arrivalAllowed:
+          type: boolean
+        availableMethods:
+          type: array
+          items:
+            type: string
+            enum:
+            - REAUCTION
+            - FARM_RETURN
+            - AUCTION_DISPOSAL
+        decidedQuantity:
+          type:
+          - integer
+          - 'null'
+          format: int32
+        decisionChangeAllowed:
+          type: boolean
+        decisionId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        disposedQuantity:
+          type: integer
+          format: int32
+        inferredReturnQuantity:
+          type: integer
+          format: int32
+        lotId:
+          type: integer
+          format: int64
+        method:
+          type:
+          - string
+          - 'null'
+          enum:
+          - REAUCTION
+          - FARM_RETURN
+          - AUCTION_DISPOSAL
+        pendingQuantity:
+          type: integer
+          format: int32
+    AuctionFollowUpResult:
+      type: object
+      properties:
+        arrival:
+          type: 'null'
+          $ref: '#/components/schemas/AuctionArrivalResponse'
+        followUp:
+          $ref: '#/components/schemas/AuctionFollowUpResponse'
     AuctionLotReturnRequest:
       type: object
       properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 1
         memo:
           type: string
           maxLength: 1000
@@ -6653,7 +7971,58 @@ components:
           maxLength: 100
           minLength: 0
       required:
+      - idempotencyKey
       - returnDate
+    AuctionArrivalCommand:
+      type: object
+      properties:
+        arrivalDate:
+          type: string
+          format: date
+        bedZoneId:
+          type: integer
+          format: int64
+        details:
+          $ref: '#/components/schemas/OrchidGroupMutationDetails'
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        quantity:
+          type: integer
+          format: int32
+        recordOnly:
+          type: boolean
+          description: 이미 재고에 반영된 도착이면 true. Farm 재고를 변경하지 않습니다.
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - arrivalDate
+      - idempotencyKey
+    CancelAuctionArrivalCommand:
+      type: object
+      properties:
+        correctionDate:
+          type: string
+          format: date
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - correctionDate
+      - idempotencyKey
+      - reason
     AuctionLotAdjustmentRequest:
       type: object
       properties:
@@ -6963,6 +8332,7 @@ components:
           - QUANTITY_MISMATCH
           - REVIEW_REQUIRED
           - CANCELLED
+          - DISPOSED
         worker:
           type: string
           maxLength: 100
@@ -7836,6 +9206,248 @@ components:
             $ref: '#/components/schemas/SalesSlipResponse'
         message:
           type: string
+    ApiResponseDirectSaleChangeResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DirectSaleChangeResponse'
+        message:
+          type: string
+    DirectSaleChangeResponse:
+      type: object
+      properties:
+        availableTypes:
+          type: array
+          items:
+            type: string
+            enum:
+            - PRICE_ADJUSTMENT
+            - RETURN
+            - CANCEL
+        currentAmount:
+          type: integer
+          format: int32
+        documentId:
+          type: integer
+          format: int64
+        history:
+          $ref: '#/components/schemas/PageResponseHistory'
+        originalAmount:
+          type: integer
+          format: int64
+        portions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Portion'
+        refundDueAmount:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: 현재 수납 배분이 거래금액을 초과한 환불 필요액. 검토 대상은 미상이며 실제 환불 기록이 아닙니다.
+        returnedPortions:
+          type: array
+          description: 취소되지 않은 반품의 가격 구간별 수량·단가·비음수 금액. 이력 페이지와 무관한 전체 구성이며 현재 거래금액에서 제외됩니다.
+          items:
+            $ref: '#/components/schemas/Portion'
+    History:
+      type: object
+      properties:
+        amountDelta:
+          type: integer
+          format: int64
+        cancelAllowed:
+          type: boolean
+        canceled:
+          type: boolean
+        canceledChangeId:
+          type: integer
+          format: int64
+        changeDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        id:
+          type: integer
+          format: int64
+        itemId:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        nextUnitPrice:
+          type: integer
+          format: int32
+        previousUnitPrice:
+          type: integer
+          format: int32
+        quantity:
+          type: integer
+          format: int32
+        reason:
+          type: string
+        sourceChangeId:
+          type: integer
+          format: int64
+        type:
+          type: string
+          enum:
+          - PRICE_ADJUSTMENT
+          - RETURN
+          - CANCEL
+    PageResponseHistory:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/History'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    Portion:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        itemId:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        sourceChangeId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: 원가격 구간이면 null, 조정가격 구간이면 해당 가격 조정 ID
+        spec:
+          type: string
+        unitPrice:
+          type: integer
+          format: int32
+    ApiResponseDirectReturnArrivalState:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DirectReturnArrivalState'
+        message:
+          type: string
+    DirectReturnArrivalResponse:
+      type: object
+      properties:
+        arrivalDate:
+          type: string
+          format: date
+        canceledAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        cancellationAllowed:
+          type: boolean
+        cancellationMutationId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        cancellationReason:
+          type:
+          - string
+          - 'null'
+        correctionDate:
+          type:
+          - string
+          - 'null'
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        creationMutationId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        id:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        recordOnly:
+          type: boolean
+        returnChangeId:
+          type: integer
+          format: int64
+        worker:
+          type: string
+      required:
+      - cancellationAllowed
+      - recordOnly
+    DirectReturnArrivalState:
+      type: object
+      properties:
+        history:
+          $ref: '#/components/schemas/PageResponseDirectReturnArrivalResponse'
+        pendingReturns:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingReturn'
+    PageResponseDirectReturnArrivalResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirectReturnArrivalResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PendingReturn:
+      type: object
+      properties:
+        arrivalAllowed:
+          type: boolean
+        itemId:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        pendingQuantity:
+          type: integer
+          format: int32
+        returnChangeId:
+          type: integer
+          format: int64
     ApiResponsePageResponseSalesSlipListItemResponse:
       type: object
       properties:
@@ -7900,11 +9512,10 @@ components:
           enum:
           - DIRECT
           - AUCTION
-        slipNumber:
-          type: string
         totalAmount:
           type: integer
           format: int32
+          description: 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
     ApiResponseListAuctionShipmentOptionResponse:
       type: object
       properties:
@@ -8049,81 +9660,6 @@ components:
           $ref: '#/components/schemas/PhysicalBedResponse'
         message:
           type: string
-    ApiResponseListPartnerPaymentEventResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/PartnerPaymentEventResponse'
-        message:
-          type: string
-    PartnerPaymentEventResponse:
-      type: object
-      properties:
-        amount:
-          type: integer
-          format: int64
-        createdBy:
-          type: string
-        depositorName:
-          type: string
-        description:
-          type: string
-        eventDate:
-          type: string
-          format: date
-        eventType:
-          type: string
-          enum:
-          - PAYMENT_RECEIVED
-          - PAYMENT_ALLOCATED
-          - PREPAYMENT_RECEIVED
-          - CREDIT_APPLIED
-          - CREDIT_REFUND
-          - AUTO_MATCH_CANDIDATE
-          - AUTO_MATCH_CONFIRMED
-          - MANUAL_MATCH_CONFIRMED
-          - MATCH_REJECTED
-          - PAYMENT_UNLINKED
-          - ADJUSTMENT
-        id:
-          type: integer
-          format: int64
-        memo:
-          type: string
-        parentEventId:
-          type: integer
-          format: int64
-        partnerId:
-          type: integer
-          format: int64
-        partnerName:
-          type: string
-        paymentMethod:
-          type: string
-        status:
-          type: string
-          enum:
-          - UNAPPLIED
-          - PARTIALLY_APPLIED
-          - FULLY_APPLIED
-          - CANDIDATE
-          - CONFIRMED
-          - REJECTED
-          - CANCELLED
-        targetId:
-          type: integer
-          format: int64
-        targetType:
-          type: string
-          enum:
-          - SALES_SLIP
-          - AUCTION_SETTLEMENT
-          - NONE
-        unappliedAmount:
-          type: integer
-          format: int64
     ApiResponsePageResponsePartnerPaymentEventResponse:
       type: object
       properties:
@@ -8150,6 +9686,34 @@ components:
         totalPages:
           type: integer
           format: int32
+    ApiResponsePaymentAllocationMetadata:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PaymentAllocationMetadata'
+        message:
+          type: string
+    PaymentAllocationMetadata:
+      type: object
+      properties:
+        targetTypes:
+          type: array
+          items:
+            type: string
+            enum:
+            - SALES_SLIP
+            - AUCTION_SETTLEMENT
+            - AUCTION_PROCEEDS
+            - NONE
+    ApiResponseListPartnerPaymentEventResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerPaymentEventResponse'
+        message:
+          type: string
     ApiResponseListOrchidGroupWorkHistoryResponse:
       type: object
       properties:
@@ -9220,6 +10784,220 @@ components:
             $ref: '#/components/schemas/BusinessPartnerResponse'
         message:
           type: string
+    ApiResponsePageResponsePaymentReceiptResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponsePaymentReceiptResponse'
+        message:
+          type: string
+    PageResponsePaymentReceiptResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentReceiptResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PaymentReceiptResponse:
+      type: object
+      properties:
+        allocationAllowed:
+          type: boolean
+        amount:
+          type: integer
+          format: int64
+        availableAmount:
+          type: integer
+          format: int64
+        correctionAllowed:
+          type: boolean
+        depositorName:
+          type:
+          - string
+          - 'null'
+        id:
+          type: integer
+          format: int64
+        memo:
+          type:
+          - string
+          - 'null'
+        originalTargetId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        originalTargetType:
+          type:
+          - string
+          - 'null'
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+        partnerId:
+          type: integer
+          format: int64
+        paymentDate:
+          type: string
+          format: date
+        reviewRequired:
+          type: boolean
+        status:
+          type: string
+          enum:
+          - UNAPPLIED
+          - PARTIALLY_APPLIED
+          - FULLY_APPLIED
+          - CANDIDATE
+          - CONFIRMED
+          - REJECTED
+          - CANCELLED
+    ApiResponsePaymentReceiptResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PaymentReceiptResponse'
+        message:
+          type: string
+    ApiResponsePageResponsePaymentAllocationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponsePaymentAllocationResponse'
+        message:
+          type: string
+    PageResponsePaymentAllocationResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentAllocationResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PaymentAllocationResponse:
+      type: object
+      properties:
+        allocationDate:
+          type: string
+          format: date
+        amount:
+          type: integer
+          format: int64
+        cancellationAllowed:
+          type: boolean
+        id:
+          type: integer
+          format: int64
+        receiptId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - UNAPPLIED
+          - PARTIALLY_APPLIED
+          - FULLY_APPLIED
+          - CANDIDATE
+          - CONFIRMED
+          - REJECTED
+          - CANCELLED
+        targetId:
+          type: integer
+          format: int64
+        targetType:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
+    ApiResponsePageResponsePaymentAllocationTargetOption:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponsePaymentAllocationTargetOption'
+        message:
+          type: string
+    PageResponsePaymentAllocationTargetOption:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentAllocationTargetOption'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PaymentAllocationTargetOption:
+      type: object
+      properties:
+        allocationAllowed:
+          type: boolean
+        availableAmount:
+          type:
+          - number
+          - 'null'
+        correctionAllowed:
+          type: boolean
+        id:
+          type: integer
+          format: int64
+        paidAmount:
+          type:
+          - number
+          - 'null'
+        receivableAmount:
+          type:
+          - integer
+          - 'null'
+          format: int64
+        reviewRequired:
+          type: boolean
+        sourceReference:
+          type:
+          - string
+          - 'null'
+        targetType:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - AUCTION_PROCEEDS
+          - NONE
     ApiResponseBusinessPartnerOptionResponse:
       type: object
       properties:
@@ -9375,78 +11153,20 @@ components:
         waitingQuantity:
           type: integer
           format: int32
-    ApiResponseListAuctionSettlementResponse:
+    ApiResponsePageResponseAuctionProceedsResponse:
       type: object
       properties:
         data:
-          type: array
-          items:
-            $ref: '#/components/schemas/AuctionSettlementResponse'
+          $ref: '#/components/schemas/PageResponseAuctionProceedsResponse'
         message:
           type: string
-    ApiResponseAuctionSettlementSummaryResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/AuctionSettlementSummaryResponse'
-        message:
-          type: string
-    AuctionSettlementSummaryResponse:
-      type: object
-      properties:
-        expectedDepositAmount:
-          type: integer
-          format: int64
-        remainingAmount:
-          type: integer
-          format: int64
-    ApiResponsePageResponseAuctionSettlementListItemResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/PageResponseAuctionSettlementListItemResponse'
-        message:
-          type: string
-    AuctionSettlementListItemResponse:
-      type: object
-      properties:
-        auctionDate:
-          type: string
-          format: date
-        auctionHouseId:
-          type: integer
-          format: int64
-        auctionHouseName:
-          type: string
-        expectedDepositAmount:
-          type: integer
-          format: int64
-        grossAmount:
-          type: integer
-          format: int64
-        id:
-          type: integer
-          format: int64
-        remainingAmount:
-          type: integer
-          format: int64
-        status:
-          type: string
-          enum:
-          - CREATED
-          - PAYMENT_WAITING
-          - PARTIALLY_PAID
-          - PAID
-          - AMOUNT_MISMATCH
-          - REVIEW_REQUIRED
-          - CANCELLED
-    PageResponseAuctionSettlementListItemResponse:
+    PageResponseAuctionProceedsResponse:
       type: object
       properties:
         content:
           type: array
           items:
-            $ref: '#/components/schemas/AuctionSettlementListItemResponse'
+            $ref: '#/components/schemas/AuctionProceedsResponse'
         page:
           type: integer
           format: int32
@@ -9473,6 +11193,39 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuctionLotResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    ApiResponseAuctionFollowUpResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuctionFollowUpResponse'
+        message:
+          type: string
+    ApiResponsePageResponseAuctionArrivalResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponseAuctionArrivalResponse'
+        message:
+          type: string
+    PageResponseAuctionArrivalResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuctionArrivalResponse'
         page:
           type: integer
           format: int32
@@ -9608,8 +11361,6 @@ components:
           type: string
           format: date
         salesStatus:
-          type: string
-        slipNumber:
           type: string
         totalAmount:
           type: integer

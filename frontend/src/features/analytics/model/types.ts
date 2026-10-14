@@ -54,7 +54,7 @@ export type PartnerAnalyticsStat = {
 
 export type AnalyticsSlipSummary = {
   id: number;
-  slipNumber: string;
+
   saleDate: string;
   partnerName: string;
   totalAmount: number;

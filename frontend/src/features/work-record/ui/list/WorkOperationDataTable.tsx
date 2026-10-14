@@ -6,7 +6,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { WorkCorrectionBadge } from "../common/WorkCorrectionBadge";
 import type { WorkOperationSummary } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
-import { DataTable } from "@/shared/ui/DataTable";
+import { DataTable, type DataTableToolbar } from "@/shared/ui/DataTable";
 import { workOperationScopeLabel } from "../../lib/workOperationDisplay";
 import type { WorkOperationRelationSelection } from "../../lib/workOperationRelations";
 import { operationStatusLabel } from "../common/workOperationLabels";
@@ -14,7 +14,10 @@ import { operationStatusLabel } from "../common/workOperationLabels";
 export function WorkOperationDataTable({
   actions,
   activeRelation,
+  emptyAction,
   emptyMessage,
+  filteredEmptyMessage,
+  hasAppliedFilters = false,
   loading,
   operations,
   page,
@@ -23,6 +26,7 @@ export function WorkOperationDataTable({
   selectedId,
   settingsKey,
   title,
+  toolbar,
   totalElements,
   totalPages,
   onPageChange,
@@ -32,7 +36,10 @@ export function WorkOperationDataTable({
 }: {
   actions?: ReactNode;
   activeRelation: WorkOperationRelationSelection | null;
+  emptyAction?: ReactNode;
   emptyMessage: string;
+  filteredEmptyMessage?: string;
+  hasAppliedFilters?: boolean;
   loading: boolean;
   operations: WorkOperationSummary[];
   page: number;
@@ -41,6 +48,7 @@ export function WorkOperationDataTable({
   selectedId: number | null;
   settingsKey: string;
   title: string;
+  toolbar?: DataTableToolbar;
   totalElements: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -118,7 +126,10 @@ export function WorkOperationDataTable({
       actions={actions}
       columns={columns}
       data={operations}
+      emptyAction={emptyAction}
       emptyMessage={emptyMessage}
+      filteredEmptyMessage={filteredEmptyMessage}
+      hasAppliedFilters={hasAppliedFilters}
       getRowId={(row) => String(row.id)}
       isLoading={loading}
       pageIndex={page}
@@ -127,6 +138,7 @@ export function WorkOperationDataTable({
       selectedRowId={selectedId == null ? null : String(selectedId)}
       settingsKey={settingsKey}
       title={title}
+      toolbar={toolbar}
       totalLabel={`총 ${totalElements.toLocaleString()}건`}
       totalPages={totalPages}
       onPageChange={onPageChange}

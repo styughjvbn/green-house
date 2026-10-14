@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
-import { Plus } from "lucide-react";
+import type { DataTableToolbar } from "@/shared/ui/DataTable";
 import type { WorkOperationSummary } from "@/entities/farm/types";
 import type { WorkOperationRelationSelection } from "../../lib/workOperationRelations";
 import { WorkOperationDataTable } from "./WorkOperationDataTable";
 
 export function WorkListTable({
+  emptyAction,
+  hasAppliedFilters = false,
   headerActions,
+  toolbar,
   activeRelation,
   loading,
   operations,
@@ -20,7 +23,10 @@ export function WorkListTable({
   onSelect,
   onShowRelations,
 }: {
+  emptyAction?: ReactNode;
+  hasAppliedFilters?: boolean;
   headerActions?: ReactNode;
+  toolbar?: DataTableToolbar;
   activeRelation: WorkOperationRelationSelection | null;
   loading: boolean;
   operations: WorkOperationSummary[];
@@ -37,9 +43,12 @@ export function WorkListTable({
 }) {
   return (
     <WorkOperationDataTable
+      emptyAction={emptyAction}
+      hasAppliedFilters={hasAppliedFilters}
       actions={headerActions}
       activeRelation={activeRelation}
-      emptyMessage="조건에 맞는 작업이 없습니다."
+      emptyMessage="등록된 작업이 없습니다."
+      filteredEmptyMessage="조건에 맞는 작업이 없습니다."
       loading={loading}
       operations={operations}
       page={page}
@@ -48,6 +57,7 @@ export function WorkListTable({
       selectedId={selectedId}
       settingsKey="workRecord.management"
       title="작업 목록"
+      toolbar={toolbar}
       totalElements={totalElements}
       totalPages={totalPages}
       onPageChange={onPageChange}

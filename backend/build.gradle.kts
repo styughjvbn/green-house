@@ -68,11 +68,15 @@ spotless {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	// Full Spring/ArchUnit suites exceed Gradle's default 512 MiB test worker heap.
+	maxHeapSize = providers.gradleProperty("backendTestHeap").orElse("2g").get()
+	// Report OOM immediately instead of leaving the worker's remote shutdown waiting.
+	jvmArgs("-XX:+ExitOnOutOfMemoryError")
 }
 
 tasks.named<Test>("test") {
 	useJUnitPlatform {
-		excludeTags("work-e2e", "work-benchmark")
+		excludeTags("work-e2e", "work-benchmark", "domain-benchmark", "domain-diagnosis")
 	}
 }
 
@@ -97,23 +101,7 @@ tasks.register<JavaExec>("orchidLedgerReconcile") {
 	description = "Runs the read-only OrchidGroup ledger rehearsal checks against a restored database."
 	dependsOn(tasks.named("classes"))
 	classpath = sourceSets["main"].runtimeClasspath
-	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationCli")
-}
-
-tasks.register<JavaExec>("orchidLedgerCutover") {
-	group = "verification"
-	description = "Verifies the imported OrchidGroup state-chain and optionally activates it."
-	dependsOn(tasks.named("classes"))
-	classpath = sourceSets["main"].runtimeClasspath
-	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCli")
-}
-
-tasks.register<JavaExec>("orchidStateChainMigrate") {
-	group = "verification"
-	description = "Validates or imports the complete OrchidGroup state-chain manifest."
-	dependsOn(tasks.named("classes"))
-	classpath = sourceSets["main"].runtimeClasspath
-	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationCli")
+	mainClass.set("com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerReconciliationCli")
 }
 
 tasks.register<JavaExec>("orchidLedgerStartupVerify") {
@@ -121,11 +109,16 @@ tasks.register<JavaExec>("orchidLedgerStartupVerify") {
 	description = "Runs Hibernate validation and the OrchidGroup ledger startup guard without HTTP."
 	dependsOn(tasks.named("classes"))
 	classpath = sourceSets["main"].runtimeClasspath
-	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerStartupVerificationCli")
+	mainClass.set("com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerStartupVerificationCli")
 }
 
 tasks.register<Test>("workE2eTest") {
 	group = "verification"
+	inputs.files(
+		"../scripts/data-audit/domain-constraint-catalog.sql",
+		"../scripts/data-audit/audit-domain-constraints.sql",
+		"../scripts/data-audit/validate-domain-constraint.sql",
+	)
 	description = "Runs the Work API contract E2E tests against PostgreSQL."
 	testClassesDirs = sourceSets["test"].output.classesDirs
 	classpath = sourceSets["test"].runtimeClasspath
@@ -133,6 +126,9 @@ tasks.register<Test>("workE2eTest") {
 		includeTags("work-e2e")
 	}
 	shouldRunAfter(tasks.named("test"))
+	systemProperty("greenhouse.cli.runtime-classpath", sourceSets["main"].runtimeClasspath.asPath)
+
+	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")
 }
 
 tasks.register<Test>("workBenchmark") {
@@ -149,4 +145,45 @@ tasks.register<Test>("workBenchmark") {
 		providers.gradleProperty("workBenchmarkEnforce").orElse("false").get()
 	)
 	shouldRunAfter(tasks.named("workE2eTest"))
+}
+
+tasks.register<Test>("domainBenchmark") {
+	group = "verification"
+	description = "Measures settlement rebuild and ledger reconciliation in an isolated PostgreSQL database."
+	testClassesDirs = sourceSets["test"].output.classesDirs
+	classpath = sourceSets["test"].runtimeClasspath
+	useJUnitPlatform { includeTags("domain-benchmark") }
+	maxParallelForks = 1
+	maxHeapSize = providers.gradleProperty("domainBenchmarkHeap").orElse("2g").get()
+	for ((key, fallback) in mapOf(
+		"profile" to "standard", "scenario" to "all", "samples" to "3", "warmup" to "1"
+	)) {
+		val value = providers.gradleProperty("domainBenchmark.$key").orElse(fallback)
+		systemProperty("domainBenchmark.$key", value.get())
+		inputs.property(key, value)
+	}
+	val reportDirectory = providers.gradleProperty("domainBenchmark.outputDir")
+		.orElse(layout.buildDirectory.dir("domain-benchmark/direct").map { it.asFile.absolutePath })
+	systemProperty("domainBenchmark.outputDir", reportDirectory.get())
+	outputs.dir(reportDirectory)
+	outputs.upToDateWhen { false }
+	testLogging.showStandardStreams = true
+	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")
+}
+
+tasks.register<Test>("domainDiagnosis") {
+	group = "verification"
+	description = "Profiles selected settlement and ledger paths in isolated PostgreSQL."
+	testClassesDirs = sourceSets["test"].output.classesDirs
+	classpath = sourceSets["test"].runtimeClasspath
+	useJUnitPlatform { includeTags("domain-diagnosis") }
+	maxParallelForks = 1
+	maxHeapSize = "2g"
+	systemProperty("diagnosis.outputDir", providers.gradleProperty("diagnosis.outputDir")
+		.orElse(layout.buildDirectory.dir("domain-diagnosis/direct").map { it.asFile.absolutePath }).get())
+	systemProperty("diagnosis.revision", providers.gradleProperty("diagnosis.revision").orElse("unspecified").get())
+	systemProperty("diagnosis.scope", providers.gradleProperty("diagnosis.scope").orElse("all").get())
+	outputs.upToDateWhen { false }
+	testLogging.showStandardStreams = true
+	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")
 }

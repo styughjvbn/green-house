@@ -4,30 +4,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.application.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
-import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
-import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.UpdateOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryKind;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
+import com.greenhouse.backend.farm.api.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.CreateOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.DiscardOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.MoveOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationEntryKind;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationEntryRole;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationResultItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupMutationSourceItem;
+import com.greenhouse.backend.farm.api.orchid.mutation.TransformOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.api.orchid.mutation.UpdateOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationEntryRepository;
+import com.greenhouse.backend.farm.mutation.ledger.repository.OrchidGroupMutationRepository;
+import com.greenhouse.backend.farm.orchid.domain.OrchidGroup;
+import com.greenhouse.backend.farm.structure.domain.BedZone;
+import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
+import com.greenhouse.backend.farm.structure.domain.House;
+import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
+import com.greenhouse.backend.farm.variety.domain.Variety;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -40,7 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegrationTest {
 
-  @Autowired OrchidGroupStateChainMigrationService stateChainMigrationService;
+  @Autowired OrchidGroupLedgerTestFixture ledgerFixture;
 
   @Autowired OrchidGroupMutationEngine mutationEngine;
 
@@ -137,12 +137,7 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
     long mutationCountBefore = mutationRepository.count();
     long entryCountBefore = entryRepository.count();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        stateChainMigrationService,
-        orchidGroupRepository,
-        cutoverKey,
-        businessDate,
-        "mutation-engine-test");
+    ledgerFixture.seedBaseline(cutoverKey, businessDate, "mutation-engine-test");
 
     var updated =
         mutationEngine.updateDetails(
@@ -235,15 +230,9 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
     long entryCountBefore = entryRepository.count();
     UUID cutoverKey = UUID.randomUUID();
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
-    var imported =
-        OrchidGroupStateChainTestSupport.importCurrentGroups(
-            stateChainMigrationService,
-            orchidGroupRepository,
-            cutoverKey,
-            businessDate,
-            "mutation-engine-test");
+    var imported = ledgerFixture.seedBaseline(cutoverKey, businessDate, "mutation-engine-test");
 
-    assertThat(imported.importedMutationCount()).isEqualTo(1);
+    assertThat(imported).isEqualTo(1);
     assertThat(entryRepository.findStateChainByOrchidGroupIdIn(List.of(group.getId())))
         .singleElement()
         .satisfies(
@@ -296,12 +285,7 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
     OrchidGroup group = createOrchidGroup(20);
     UUID cutoverKey = UUID.randomUUID();
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        stateChainMigrationService,
-        orchidGroupRepository,
-        cutoverKey,
-        businessDate,
-        "mutation-engine-test");
+    ledgerFixture.seedBaseline(cutoverKey, businessDate, "mutation-engine-test");
     var source =
         new OrchidGroupMutationSource(
             OrchidGroupMutationSourceDomain.WORK,
@@ -332,12 +316,7 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
         createOrchidGroup(fixture, 30, new BigDecimal("2"), new BigDecimal("4"), 2);
     UUID cutoverKey = UUID.randomUUID();
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
-    OrchidGroupStateChainTestSupport.importCurrentGroups(
-        stateChainMigrationService,
-        orchidGroupRepository,
-        cutoverKey,
-        businessDate,
-        "mutation-engine-test");
+    ledgerFixture.seedBaseline(cutoverKey, businessDate, "mutation-engine-test");
     long groupCountBefore = orchidGroupRepository.count();
     long mutationCountBefore = mutationRepository.count();
     long entryCountBefore = entryRepository.count();
@@ -352,13 +331,13 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
         new TransformOrchidGroupsMutationCommand(
             mutationSource,
             List.of(
-                new TransformOrchidGroupMutationSource(secondSource.getId(), 7, null, null),
-                new TransformOrchidGroupMutationSource(firstSource.getId(), 5, null, null)),
+                new TransformOrchidGroupMutationSourceItem(secondSource.getId(), 7, null, null),
+                new TransformOrchidGroupMutationSourceItem(firstSource.getId(), 5, null, null)),
             List.of(
-                new TransformOrchidGroupMutationResult(
+                new TransformOrchidGroupMutationResultItem(
                     fixture.destinationZone().getId(),
                     details(fixture.variety().getId(), 6, "4치", "0", "2")),
-                new TransformOrchidGroupMutationResult(
+                new TransformOrchidGroupMutationResultItem(
                     fixture.destinationZone().getId(),
                     details(fixture.variety().getId(), 6, "4치", "2", "4"))),
             businessDate,
@@ -372,8 +351,9 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
             new TransformOrchidGroupsMutationCommand(
                 mutationSource,
                 List.of(
-                    new TransformOrchidGroupMutationSource(firstSource.getId(), 5, null, null),
-                    new TransformOrchidGroupMutationSource(secondSource.getId(), 7, null, null)),
+                    new TransformOrchidGroupMutationSourceItem(firstSource.getId(), 5, null, null),
+                    new TransformOrchidGroupMutationSourceItem(
+                        secondSource.getId(), 7, null, null)),
                 command.results(),
                 businessDate,
                 " N:M 분갈이 "));

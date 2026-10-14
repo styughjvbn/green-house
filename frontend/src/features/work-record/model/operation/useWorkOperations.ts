@@ -1,23 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import type { WorkOperationSummary } from "@/entities/farm/types";
 import { createEmptyPage } from "@/shared/api/page";
-import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
-import {
-  WORK_LIST_FILTER_KEYS,
-  writeWorkListFilterParams,
-  type WorkRecordUrlState,
-} from "../../lib/workRecordUrlState";
-import type { WorkOperationFilterState } from "../types";
+import type { WorkRecordUrlState } from "../../lib/workRecordUrlState";
+import { useWorkFilters } from "./useWorkFilters";
 import { workOperationPageQueryOptions } from "../workRecordQueryOptions";
 
 export function useWorkOperations(routeState: WorkRecordUrlState) {
   const query = useQuery(workOperationPageQueryOptions(routeState));
-  const listState = useUrlPagedListState({
-    emptyFilters: createEmptyWorkOperationFilters,
-    filterKeys: WORK_LIST_FILTER_KEYS,
-    routeFilters: routeState.filters,
-    writeFilterParams: writeWorkListFilterParams,
-  });
+  const listState = useWorkFilters(routeState);
 
   return {
     ...listState,
@@ -25,14 +15,5 @@ export function useWorkOperations(routeState: WorkRecordUrlState) {
     pageData:
       query.data ??
       createEmptyPage<WorkOperationSummary>(routeState.size, routeState.page),
-  };
-}
-
-function createEmptyWorkOperationFilters(): WorkOperationFilterState {
-  return {
-    from: "",
-    keyword: "",
-    status: "",
-    to: "",
   };
 }

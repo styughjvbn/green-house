@@ -5,37 +5,37 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.doAnswer;
 
-import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
-import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-import com.greenhouse.backend.sales.application.SalesQueryService;
-import com.greenhouse.backend.sales.application.SalesSlipCreationService;
-import com.greenhouse.backend.sales.application.SalesSlipStatusService;
-import com.greenhouse.backend.sales.application.SalesSlipUpdateService;
-import com.greenhouse.backend.sales.application.command.SalesSlipAllocationInput;
-import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
-import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
-import com.greenhouse.backend.sales.domain.SalesInventoryMovement;
-import com.greenhouse.backend.sales.domain.SalesInventoryMovementType;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
-import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
-import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
-import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.farm.mutation.verification.OrchidGroupLedgerReconciliationService;
+import com.greenhouse.backend.farm.orchid.application.OrchidGroupReader;
+import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
+import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
+import com.greenhouse.backend.sales.document.application.SalesQueryService;
+import com.greenhouse.backend.sales.document.application.SalesSlipCreationService;
+import com.greenhouse.backend.sales.document.application.SalesSlipInventoryService;
+import com.greenhouse.backend.sales.document.application.SalesSlipStatusService;
+import com.greenhouse.backend.sales.document.application.SalesSlipUpdateService;
+import com.greenhouse.backend.sales.document.application.command.SalesSlipAllocationInput;
+import com.greenhouse.backend.sales.document.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.document.application.command.SalesSlipItemInput;
+import com.greenhouse.backend.sales.document.domain.SalesInventoryMovement;
+import com.greenhouse.backend.sales.document.domain.SalesInventoryMovementType;
+import com.greenhouse.backend.sales.document.domain.SalesSlip;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItem;
+import com.greenhouse.backend.sales.document.domain.SalesSlipItemAllocation;
+import com.greenhouse.backend.sales.document.repository.SalesInventoryMovementRepository;
+import com.greenhouse.backend.sales.document.repository.SalesSlipRepository;
+import com.greenhouse.backend.sales.document.web.dto.SalesSlipStatusUpdateRequest;
+import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
+import com.greenhouse.backend.sales.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.support.DirectSaleFixtures;
+import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import jakarta.persistence.EntityManager;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -44,6 +44,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -73,13 +74,13 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 
   @Autowired private SalesSlipUpdateService updates;
 
+  @Autowired private SalesSlipInventoryService inventory;
+
   @Autowired private SalesSlipStatusService statuses;
 
   @Autowired private SalesQueryService queries;
 
-  @Autowired private OrchidGroupStateChainMigrationService migration;
-
-  @Autowired private OrchidGroupLedgerCutoverService cutover;
+  @Autowired private OrchidGroupLedgerTestFixture ledgerFixture;
 
   @Autowired private OrchidGroupLedgerReconciliationService reconciliation;
 
@@ -95,8 +96,85 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 
   @BeforeEach
   void seed() {
-    seeder.reset();
+    seeder.resetKeepingSequences();
     groupId = seeder.seedContractScenario().orchidGroupId();
+  }
+
+  @ParameterizedTest
+  @org.junit.jupiter.params.provider.EnumSource(SalesType.class)
+  void persistsDirectTermsWithDocumentItemIdsOnlyForDirectSales(SalesType type) {
+    activate();
+    var created = creation.create(request(partner(type), type, DATE, 3, 2));
+    long count =
+        jdbc.queryForObject(
+            "select count(*) from direct_sales where sales_slip_id = ?", Long.class, created.id());
+    assertThat(count).isEqualTo(type == SalesType.DIRECT ? 1 : 0);
+    if (type == SalesType.DIRECT) {
+      assertThat(
+              jdbc.queryForObject(
+                  "select total_amount from direct_sales where sales_slip_id = ?",
+                  Integer.class,
+                  created.id()))
+          .isEqualTo(created.totalAmount());
+      assertThat(
+              jdbc.queryForList(
+                  "select sales_slip_item_id from direct_sale_prices where sales_slip_id = ? order by sales_slip_item_id",
+                  Long.class,
+                  created.id()))
+          .containsExactlyElementsOf(
+              created.items().stream().map(item -> item.id()).sorted().toList());
+      for (var item : created.items()) {
+        var price =
+            jdbc.queryForMap(
+                "select * from direct_sale_prices where sales_slip_item_id = ?", item.id());
+        assertThat(price.get("priced_quantity")).isEqualTo(item.quantity());
+        assertThat(price.get("unit_price")).isEqualTo(item.unitPrice());
+        assertThat(price.get("amount")).isEqualTo(item.amount());
+      }
+    }
+  }
+
+  @Test
+  void directTermsFailureRollsBackDocumentReceiptAndReservationAndAllowsRetry() {
+    activate();
+    var request = request(partner(SalesType.DIRECT), SalesType.DIRECT, DATE, 3, 2);
+    String key = "direct-terms-failure-" + UUID.randomUUID();
+    long beforeSlips = slips.count();
+    long beforeDirect = jdbc.queryForObject("select count(*) from direct_sales", Long.class);
+    long beforeMovements = movements.count();
+    long beforeMutations =
+        jdbc.queryForObject("select count(*) from orchid_group_mutations", Long.class);
+    jdbc.execute(
+        "ALTER TABLE direct_sales ADD CONSTRAINT test_direct_failure CHECK (total_amount < 0) NOT VALID");
+    try {
+      assertThatThrownBy(() -> creation.create(request, key))
+          .isInstanceOf(DataIntegrityViolationException.class)
+          .hasMessageContaining("test_direct_failure");
+    } finally {
+      jdbc.execute("ALTER TABLE direct_sales DROP CONSTRAINT test_direct_failure");
+    }
+    assertThat(slips.count()).isEqualTo(beforeSlips);
+    assertThat(jdbc.queryForObject("select count(*) from direct_sales", Long.class))
+        .isEqualTo(beforeDirect);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from sales_creation_receipts where request_key = ?",
+                Long.class,
+                key))
+        .isZero();
+    assertThat(movements.count()).isEqualTo(beforeMovements);
+    assertThat(jdbc.queryForObject("select count(*) from orchid_group_mutations", Long.class))
+        .isEqualTo(beforeMutations);
+    assertStock(100, 0);
+    var retried = creation.create(request, key);
+    assertThat(creation.create(request, key)).isEqualTo(retried);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from direct_sales where sales_slip_id = ?",
+                Long.class,
+                retried.id()))
+        .isEqualTo(1);
+    assertStock(100, 5);
   }
 
   @ParameterizedTest
@@ -210,7 +288,7 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
-  void laterFailureRollsBackStockSnapshotsShipmentsAndMovements() {
+  void callerFailureRollsBackParticipatingStockSnapshotsShipmentsAndMovements() {
     activate();
     var created =
         creation.create(request(partner(SalesType.AUCTION), SalesType.AUCTION, DATE, 3, 2));
@@ -241,19 +319,251 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
+  void standaloneShipmentAuditFailureRollsBackStockSnapshotsAndLedgerThenAllowsRetry() {
+    activate();
+    var created =
+        creation.create(request(partner(SalesType.AUCTION), SalesType.AUCTION, DATE, 3, 2));
+    var request =
+        new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED, null);
+    var before = shipmentState();
+    // Status audit is written after inventory mutation and shipment creation.
+    jdbc.execute(
+        "ALTER TABLE audit_events ADD CONSTRAINT test_shipment_audit CHECK "
+            + "(entity_type <> 'SALES_SLIP' OR entity_id <> "
+            + created.id()
+            + " OR action <> 'UPDATED')");
+    try {
+      PostgresWriteTestSupport.assertStandaloneCheckFailure(
+          () -> statuses.updateStatus(created.id(), request), "test_shipment_audit");
+    } finally {
+      jdbc.execute("ALTER TABLE audit_events DROP CONSTRAINT test_shipment_audit");
+    }
+    assertThat(shipmentState()).isEqualTo(before);
+    assertStock(100, 5);
+    statuses.updateStatus(created.id(), request);
+    assertStock(95, 0);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+    var committed = shipmentState();
+    statuses.updateStatus(created.id(), request);
+    assertThat(shipmentState()).isEqualTo(committed);
+  }
+
+  private Map<String, List<String>> shipmentState() {
+    return PostgresWriteTestSupport.snapshot(
+        jdbc,
+        transactionManager,
+        List.of(
+            "sales_slips",
+            "sales_slip_items",
+            "sales_slip_item_allocations",
+            "sales_orchid_group_snapshots",
+            "sales_inventory_movements",
+            "sales_creation_receipts",
+            "auction_shipments",
+            "auction_shipment_lots",
+            "orchid_groups",
+            "orchid_group_mutations",
+            "orchid_group_mutation_entries",
+            "orchid_group_mutation_relations",
+            "audit_events"));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "spec,false",
+    "spec,true",
+    "itemMemo,false",
+    "itemMemo,true",
+    "slipMemo,false",
+    "slipMemo,true"
+  })
+  void metadataEditsKeepReservationsThroughCompletionAndCancellation(
+      String field, boolean completeBeforeCancel) {
+    activate();
+    var request = request(partner(SalesType.DIRECT), SalesType.DIRECT, DATE, 3, 2);
+    var created = creation.create(request);
+
+    for (int edit = 1; edit <= 2; edit++) {
+      request = withMetadata(request, field, "수정 " + edit);
+      var updated = updates.update(created.id(), request);
+      assertStock(100, 5);
+      assertThat(updated.totalAmount()).isEqualTo(created.totalAmount());
+      assertThat(updated.items())
+          .allSatisfy(
+              item ->
+                  assertThat(item.allocations().getFirst().creationSnapshot().reservedQuantity())
+                      .isZero());
+      assertThat(reconciliation.reconcile().ready()).isTrue();
+    }
+
+    assertThat(
+            movements.findBySalesSlipIdAndChangeType(
+                created.id(), SalesInventoryMovementType.SALES_RESERVE))
+        .hasSize(6)
+        .extracting(SalesInventoryMovement::getQuantityDelta)
+        .containsExactlyInAnyOrder(3, 2, 3, 2, 3, 2);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(distinct mutation_id) from sales_inventory_movements where sales_slip_id = ? and change_type = 'SALES_RESERVE'",
+                Long.class,
+                created.id()))
+        .isEqualTo(3L);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(distinct mutation_id) from sales_inventory_movements where sales_slip_id = ? and change_type = 'SALES_RELEASE'",
+                Long.class,
+                created.id()))
+        .isEqualTo(2L);
+
+    if (completeBeforeCancel) {
+      statuses.updateStatus(
+          created.id(),
+          new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED, null));
+      assertStock(95, 0);
+      assertMovement(created.id(), SalesInventoryMovementType.SALES_OUTBOUND, -3, -2);
+    }
+    statuses.updateStatus(
+        created.id(), new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_CANCELED, null));
+    assertStock(100, 0);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  @Test
+  void sameAmountAllocationEditsCanSwitchGroupsRepeatedlyAndThenShip() {
+    Long secondId = seedSecondGroup();
+    activate();
+    Long partnerId = partner(SalesType.DIRECT);
+    var created = creation.create(singleGroupRequest(partnerId, groupId, 5));
+
+    for (Long selectedId : List.of(secondId, groupId, secondId)) {
+      var updated = updates.update(created.id(), singleGroupRequest(partnerId, selectedId, 5));
+      assertStock(100, selectedId.equals(groupId) ? 5 : 0);
+      assertThat(groups.findById(secondId).orElseThrow().getReservedQuantity())
+          .isEqualTo(selectedId.equals(secondId) ? 5 : 0);
+      assertThat(updated.totalAmount()).isEqualTo(created.totalAmount());
+      assertThat(updated.items().getFirst().allocations().getFirst().orchidGroupId())
+          .isEqualTo(selectedId);
+      assertThat(reconciliation.reconcile().ready()).isTrue();
+    }
+
+    statuses.updateStatus(
+        created.id(),
+        new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED, null));
+    assertStock(100, 0);
+    assertThat(groups.findById(secondId).orElseThrow().getQuantity()).isEqualTo(95);
+    assertThat(groups.findById(secondId).orElseThrow().getReservedQuantity()).isZero();
+    statuses.updateStatus(
+        created.id(), new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_CANCELED, null));
+    assertThat(groups.findById(secondId).orElseThrow().getQuantity()).isEqualTo(100);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  @Test
+  void metadataEditsDoNotConsumeAnotherSlipsReservation() {
+    activate();
+    var other = creation.create(singleGroupRequest(partner(SalesType.DIRECT), groupId, 7));
+    var request = singleGroupRequest(partner(SalesType.DIRECT), groupId, 5);
+    var created = creation.create(request);
+    var updated = updates.update(created.id(), withMetadata(request, "spec", "특품"));
+    assertStock(100, 12);
+    assertThat(
+            updated
+                .items()
+                .getFirst()
+                .allocations()
+                .getFirst()
+                .creationSnapshot()
+                .reservedQuantity())
+        .isEqualTo(7);
+
+    statuses.updateStatus(
+        created.id(),
+        new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED, null));
+    assertStock(95, 7);
+    statuses.updateStatus(
+        created.id(), new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_CANCELED, null));
+    assertStock(100, 7);
+    statuses.updateStatus(
+        other.id(), new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_CANCELED, null));
+    assertStock(100, 0);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  @Test
+  void replayingReservationDoesNotDuplicateMovements() {
+    activate();
+    var created = creation.create(request(partner(SalesType.DIRECT), SalesType.DIRECT, DATE, 3, 2));
+    long beforeMutations =
+        jdbc.queryForObject("select count(*) from orchid_group_mutations", Long.class);
+    new TransactionTemplate(transactionManager)
+        .executeWithoutResult(
+            status -> {
+              var slip = slips.findForUpdateById(created.id()).orElseThrow();
+              inventory.reserve(slip);
+              inventory.reserve(slip);
+              entityManager.flush();
+            });
+    assertStock(100, 5);
+    assertMovement(created.id(), SalesInventoryMovementType.SALES_RESERVE, 3, 2);
+    assertThat(jdbc.queryForObject("select count(*) from orchid_group_mutations", Long.class))
+        .isEqualTo(beforeMutations);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  @Test
+  void reservationFailureRollsBackTheEditAndAllowsRetry() {
+    activate();
+    var request = request(partner(SalesType.DIRECT), SalesType.DIRECT, DATE, 3, 2);
+    var created = creation.create(request);
+    var before = queries.getSalesSlip(created.id());
+    var beforeDirect =
+        jdbc.queryForList("select * from direct_sales where sales_slip_id = ?", created.id());
+    var beforePrices =
+        jdbc.queryForList(
+            "select * from direct_sale_prices where sales_slip_id = ? order by sales_slip_item_id",
+            created.id());
+    long beforeMovements = movements.count();
+    long beforeMutations =
+        jdbc.queryForObject("select count(*) from orchid_group_mutations", Long.class);
+    long beforeAudits = jdbc.queryForObject("select count(*) from audit_events", Long.class);
+    jdbc.execute(
+        "ALTER TABLE sales_inventory_movements ADD CONSTRAINT test_edit_reservation_failure "
+            + "CHECK (change_type <> 'SALES_RESERVE') NOT VALID");
+    try {
+      assertThatThrownBy(
+              () -> updates.update(created.id(), withMetadata(request, "spec", "실패할 수정")))
+          .isInstanceOf(DataIntegrityViolationException.class)
+          .hasMessageContaining("test_edit_reservation_failure");
+    } finally {
+      jdbc.execute(
+          "ALTER TABLE sales_inventory_movements DROP CONSTRAINT test_edit_reservation_failure");
+    }
+    assertStock(100, 5);
+    assertThat(queries.getSalesSlip(created.id())).isEqualTo(before);
+    assertThat(
+            jdbc.queryForList("select * from direct_sales where sales_slip_id = ?", created.id()))
+        .isEqualTo(beforeDirect);
+    assertThat(
+            jdbc.queryForList(
+                "select * from direct_sale_prices where sales_slip_id = ? order by sales_slip_item_id",
+                created.id()))
+        .isEqualTo(beforePrices);
+    assertThat(movements.count()).isEqualTo(beforeMovements);
+    assertThat(jdbc.queryForObject("select count(*) from orchid_group_mutations", Long.class))
+        .isEqualTo(beforeMutations);
+    assertThat(jdbc.queryForObject("select count(*) from audit_events", Long.class))
+        .isEqualTo(beforeAudits);
+
+    var retried = updates.update(created.id(), withMetadata(request, "spec", "재시도"));
+    assertThat(retried.items()).allSatisfy(item -> assertThat(item.spec()).isEqualTo("재시도"));
+    assertStock(100, 5);
+    assertThat(movements.count()).isEqualTo(beforeMovements + 4);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  @Test
   void concurrentReservationsLockGroupsInIdOrderAndRejectOverbooking() throws Exception {
-    Long secondId =
-        jdbc.queryForObject(
-            """
-						insert into orchid_groups (created_at, updated_at, age_year, genus, placement_type, pot_size, pot_size_code,
-						  quantity, sort_order, status, variety_name, bed_zone_id, split_placement_allowed,
-						  variety_id, start_position, end_position, reserved_quantity)
-						select created_at, updated_at, age_year, genus, placement_type, pot_size, pot_size_code,
-						  100, 2, status, variety_name, bed_zone_id, split_placement_allowed, variety_id, 5, 10, 0
-						from orchid_groups where id = ? returning id
-						""",
-            Long.class,
-            groupId);
+    Long secondId = seedSecondGroup();
     activate();
     var first = request(partner(SalesType.DIRECT), List.of(groupId, secondId), DATE);
     var second = request(partner(SalesType.DIRECT), List.of(secondId, groupId), DATE.plusDays(1));
@@ -344,7 +654,6 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
   void scalarGroupIdsStillRequireExistingFarmRowsInPostgres() {
     var slip =
         new SalesSlip(
-            "FK-SALES",
             DATE,
             SalesType.DIRECT,
             null,
@@ -356,13 +665,13 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
     var item = new SalesSlipItem(null, "E2E 난", null, null, 1, 100, null);
     item.addAllocation(new SalesSlipItemAllocation(-1L, 1));
     slip.addItem(item);
+    DirectSaleFixtures.refreshProjection(slip);
     assertThatThrownBy(() -> slips.saveAndFlush(slip))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasMessageContaining("foreign key");
     var saved =
         slips.saveAndFlush(
             new SalesSlip(
-                "FK-MOVEMENT",
                 DATE,
                 SalesType.DIRECT,
                 null,
@@ -376,6 +685,7 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
             status -> {
               var managed = slips.findById(saved.getId()).orElseThrow();
               managed.addItem(new SalesSlipItem(null, "E2E 난", null, null, 1, 100, null));
+              DirectSaleFixtures.refreshProjection(managed);
               entityManager.flush();
             });
     assertThatThrownBy(
@@ -434,8 +744,95 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
     // Import a pre-cutover fixture, then exercise the real PostgreSQL write fence.
     assertThat(reconciliation.reconcile().issues()).isEmpty();
     var key = UUID.randomUUID();
-    OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, DATE, "1.0.0");
-    cutover.execute(new OrchidGroupLedgerCutoverCommand(key, DATE, "1.0.0", "1.1.0", true));
+    ledgerFixture.seedBaseline(key, DATE, "1.0.0");
+    ledgerFixture.activate(key);
+  }
+
+  @Test
+  void changingItemCountStillRollsBackTheReleasedReservation() {
+    activate();
+    var request = request(partner(SalesType.DIRECT), SalesType.DIRECT, DATE, 3, 2);
+    var created = creation.create(request);
+    var before = queries.getSalesSlip(created.id());
+    long beforeMovements = movements.count();
+    long beforeMutations =
+        jdbc.queryForObject("SELECT count(*) FROM orchid_group_mutations", Long.class);
+    long beforeAudits = jdbc.queryForObject("SELECT count(*) FROM audit_events", Long.class);
+    var invalid =
+        new SalesSlipCommand(
+            DATE.plusDays(1),
+            SalesType.DIRECT,
+            request.partnerId(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            List.of(request.items().getFirst()));
+    assertThatThrownBy(() -> updates.update(created.id(), invalid))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("품목 개수 변경 수정은 아직 지원하지 않습니다.");
+    assertStock(100, 5);
+    assertThat(queries.getSalesSlip(created.id())).isEqualTo(before);
+    assertThat(movements.count()).isEqualTo(beforeMovements);
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM orchid_group_mutations", Long.class))
+        .isEqualTo(beforeMutations);
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_events", Long.class))
+        .isEqualTo(beforeAudits);
+    assertThat(reconciliation.reconcile().ready()).isTrue();
+  }
+
+  private Long seedSecondGroup() {
+    return jdbc.queryForObject(
+        """
+        insert into orchid_groups (created_at, updated_at, age_year, genus, placement_type, pot_size, pot_size_code,
+          quantity, sort_order, status, variety_name, bed_zone_id, split_placement_allowed,
+          variety_id, start_position, end_position, reserved_quantity)
+        select created_at, updated_at, age_year, genus, placement_type, pot_size, pot_size_code,
+          100, 2, status, variety_name, bed_zone_id, split_placement_allowed, variety_id, 5, 10, 0
+        from orchid_groups where id = ? returning id
+        """,
+        Long.class,
+        groupId);
+  }
+
+  private SalesSlipCommand singleGroupRequest(Long partnerId, Long selectedId, int quantity) {
+    return new SalesSlipCommand(
+        DATE,
+        SalesType.DIRECT,
+        partnerId,
+        null,
+        "미입금",
+        SalesSlip.STATUS_DRAFT,
+        null,
+        null,
+        List.of(item(List.of(new SalesSlipAllocationInput(selectedId, quantity)))));
+  }
+
+  private SalesSlipCommand withMetadata(SalesSlipCommand request, String field, String value) {
+    var items =
+        request.items().stream()
+            .map(
+                item ->
+                    new SalesSlipItemInput(
+                        item.itemName(),
+                        item.genus(),
+                        field.equals("spec") ? value : item.spec(),
+                        item.quantity(),
+                        item.unitPrice(),
+                        field.equals("itemMemo") ? value : item.memo(),
+                        item.allocations()))
+            .toList();
+    return new SalesSlipCommand(
+        request.saleDate(),
+        request.salesType(),
+        request.partnerId(),
+        request.auctionShipmentId(),
+        request.paymentStatus(),
+        request.salesStatus(),
+        request.paymentMethod(),
+        field.equals("slipMemo") ? value : request.memo(),
+        items);
   }
 
   private Long partner(SalesType type) {

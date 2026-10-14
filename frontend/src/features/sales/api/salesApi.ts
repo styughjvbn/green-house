@@ -1,4 +1,9 @@
-﻿import { fetchApi, requestApi } from "@/shared/api/client";
+﻿import type {
+  DirectSaleChangeState,
+  DirectReturnArrivalState,
+} from "./directChangeTypes";
+import type { DirectChangePendingRequest } from "../lib/directChangeRequests";
+import { fetchApi, requestApi } from "@/shared/api/client";
 import type {
   BusinessPartner,
   BusinessPartnerOption,
@@ -16,9 +21,8 @@ import type {
   AuctionLotPage,
   AuctionTrackingSummary,
   AuctionShipmentOption,
-  AuctionSettlement,
-  AuctionSettlementPage,
-  AuctionSettlementSummary,
+  AuctionProceeds,
+  AuctionProceedsPage,
 } from "@/entities/farm/types";
 import type {
   AuctionFilterState,
@@ -34,6 +38,7 @@ import type {
   CreateSalesSlipPayload,
   ManualPaymentPayload,
   PartnerSettlementSettingsPayload,
+  SalesCreationRequestKey,
   UpdateBusinessPartnerPayload,
 } from "./types";
 
@@ -129,13 +134,18 @@ export function updateSalesSlip(
   );
 }
 
-export function searchSalesOrchidGroups(keyword: string, varietyId?: number) {
+export function searchSalesOrchidGroups(
+  keyword: string,
+  varietyId?: number,
+  signal?: AbortSignal,
+) {
   const params = new URLSearchParams();
   if (keyword.trim()) params.set("keyword", keyword.trim());
   if (varietyId != null) params.set("varietyId", String(varietyId));
   const query = params.size > 0 ? `?${params}` : "";
   return fetchApi<SalesOrchidGroupOption[]>(
     `/sales/orchid-groups/search${query}`,
+    { signal },
   );
 }
 
@@ -164,7 +174,7 @@ export function getAuctionTrackingSummary() {
   return fetchApi<AuctionTrackingSummary>("/auction-tracking/summary");
 }
 
-export function getAuctionSettlementPage(
+export function getAuctionProceedsPage(
   page: number,
   size: number,
   signal?: AbortSignal,
@@ -173,45 +183,23 @@ export function getAuctionSettlementPage(
     page: String(page),
     size: String(size),
   });
-  return fetchApi<AuctionSettlementPage>(
-    `/auction-settlements/page?${params}`,
-    { signal },
-  );
-}
-
-export function getAuctionSettlementSummary(signal?: AbortSignal) {
-  return fetchApi<AuctionSettlementSummary>("/auction-settlements/summary", {
+  return fetchApi<AuctionProceedsPage>(`/auction-proceeds/page?${params}`, {
     signal,
   });
 }
 
-export function getAuctionSettlement(id: number, signal?: AbortSignal) {
-  return fetchApi<AuctionSettlement>(`/auction-settlements/${id}`, { signal });
-}
-
-export function rebuildAuctionSettlement(
-  auctionHouseId: number,
-  auctionDate: string,
-) {
-  const params = new URLSearchParams({
-    auctionHouseId: String(auctionHouseId),
-    auctionDate,
-  });
-  return requestJson<AuctionSettlement>(
-    `/auction-settlements/rebuild?${params}`,
-    { method: "POST" },
-    "경매 정산을 다시 계산하지 못했습니다.",
-  );
+export function getAuctionProceeds(id: number, signal?: AbortSignal) {
+  return fetchApi<AuctionProceeds>(`/auction-proceeds/${id}`, { signal });
 }
 
 export type { ManualPaymentPayload } from "./types";
 
-export function confirmAuctionSettlementPayment(
-  settlementId: number,
+export function confirmAuctionProceedsPayment(
+  id: number,
   payload: ManualPaymentPayload,
 ) {
-  return requestJson<AuctionSettlement>(
-    `/auction-settlements/${settlementId}/confirm-payment`,
+  return requestJson<AuctionProceeds>(
+    `/auction-proceeds/${id}/confirm-payment`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -236,7 +224,7 @@ export function confirmSalesSlipPayment(
   );
 }
 
-export function getReceivedPaymentPage(
+export function getTargetPaymentHistoryPage(
   targetType: PaymentTargetType,
   targetId: number,
   page: number,
@@ -244,14 +232,11 @@ export function getReceivedPaymentPage(
   signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({
-    targetType,
-    targetId: String(targetId),
-    eventType: "PAYMENT_RECEIVED",
     page: String(page),
     size: String(size),
   });
   return fetchApi<PartnerPaymentEventPage>(
-    `/partner-payment-events/page?${params}`,
+    `/payment-targets/${targetType}/${targetId}/history?${params}`,
     { signal },
   );
 }
@@ -368,12 +353,16 @@ export function updatePartnerSettlementSettings(
 
 export function createSalesSlip(
   payload: CreateSalesSlipPayload,
+  idempotencyKey: SalesCreationRequestKey,
 ): Promise<SalesSlip> {
   return requestJson<SalesSlip>(
     "/sales-slips",
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
       body: JSON.stringify(payload),
     },
     "판매 전표를 저장하지 못했습니다.",
@@ -394,6 +383,284 @@ export function changeSalesSlipStatus(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     },
-    "판매 상태를 변경하지 못했습니다.",
+    "출고·출하 처리를 변경하지 못했습니다.",
+  );
+}
+
+export function getAuctionLot(lotId: number, signal?: AbortSignal) {
+  return fetchApi<AuctionLot>(`/auction-lots/${lotId}`, { signal });
+}
+
+export function getAuctionFollowUp(lotId: number, signal?: AbortSignal) {
+  return fetchApi<import("./types").AuctionFollowUp>(
+    `/auction-lots/${lotId}/follow-up`,
+    { signal },
+  );
+}
+
+export function getAuctionArrivals(
+  lotId: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<
+    import("@/shared/api/page").Page<import("./types").AuctionArrival>
+  >(`/auction-lots/${lotId}/arrivals?page=${page}&size=10`, { signal });
+}
+
+export function decideAuctionFollowUp(
+  lotId: number,
+  payload: import("./types").AuctionFollowUpPayload,
+) {
+  return requestJson<import("./types").AuctionFollowUpResult>(
+    `/auction-lots/${lotId}/follow-up`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "후속 처리를 저장하지 못했습니다.",
+  );
+}
+
+export function recordAuctionArrival(
+  lotId: number,
+  payload: import("./types").AuctionArrivalPayload,
+) {
+  return requestJson<import("./types").AuctionFollowUpResult>(
+    `/auction-lots/${lotId}/arrivals`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "실제 도착을 저장하지 못했습니다.",
+  );
+}
+
+export function cancelAuctionArrival(
+  lotId: number,
+  arrivalId: number,
+  payload: import("./types").AuctionArrivalCancellationPayload,
+) {
+  return requestJson<import("./types").AuctionFollowUpResult>(
+    `/auction-lots/${lotId}/arrivals/${arrivalId}/cancel`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "도착 기록을 취소하지 못했습니다.",
+  );
+}
+
+export function getAuctionReturnHouses(signal?: AbortSignal) {
+  return fetchApi<import("@/entities/farm/types").House[]>("/houses", {
+    signal,
+  });
+}
+
+export function getAuctionReturnVarieties(signal?: AbortSignal) {
+  return fetchApi<
+    Required<
+      import("@/shared/api/generated/openapi").components["schemas"]["VarietyGeneraResponse"]
+    >
+  >("/varieties/genera", { signal });
+}
+
+export function getSalesRecordedVarieties(
+  keyword: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({
+    keyword: keyword.trim(),
+    page: String(page),
+    size: "20",
+  });
+  return fetchApi<
+    import("@/shared/api/page").Page<
+      import("@/entities/farm/types").VarietyOption
+    >
+  >(`/varieties?${params}`, { signal });
+}
+
+export function getUnassignedReceiptPage(
+  partnerId: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<
+    import("@/shared/api/page").Page<import("./types").UnassignedReceipt>
+  >(
+    `/partner-payment-events/page?partnerId=${partnerId}&targetType=NONE&page=${page}&size=10`,
+    { signal },
+  );
+}
+export function getPaymentBalance(partnerId: number, signal?: AbortSignal) {
+  return fetchApi<import("./types").PartnerPaymentBalance>(
+    `/business-partners/${partnerId}/balance-summary`,
+    { signal },
+  );
+}
+export function receiveUnassignedPayment(
+  partnerId: number,
+  payload: ManualPaymentPayload,
+) {
+  return requestJson<import("./types").UnassignedReceipt>(
+    `/business-partners/${partnerId}/payment-receipts`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "수납을 저장하지 못했습니다.",
+  );
+}
+export function cancelUnassignedPayment(
+  partnerId: number,
+  receiptId: number,
+  payload: import("./types").CancelUnassignedReceiptPayload,
+) {
+  return requestJson<import("./types").UnassignedReceipt>(
+    `/business-partners/${partnerId}/payment-receipts/${receiptId}/cancel`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "수납 입력을 취소하지 못했습니다.",
+  );
+}
+
+export function getAllocationReceipts(
+  partnerId: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<
+    import("@/shared/api/page").Page<import("./types").PaymentReceipt>
+  >(`/business-partners/${partnerId}/payment-receipts?page=${page}&size=10`, {
+    signal,
+  });
+}
+export function getAllocationReceipt(
+  partnerId: number,
+  id: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<import("./types").PaymentReceipt>(
+    `/business-partners/${partnerId}/payment-receipts/${id}`,
+    { signal },
+  );
+}
+export function getReceiptAllocations(
+  partnerId: number,
+  id: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<
+    import("@/shared/api/page").Page<import("./types").PaymentAllocation>
+  >(
+    `/business-partners/${partnerId}/payment-receipts/${id}/allocations?page=${page}&size=10`,
+    { signal },
+  );
+}
+export function getAllocationMetadata(partnerId: number, signal?: AbortSignal) {
+  return fetchApi<import("./types").AllocationMetadata>(
+    `/payment-allocation-metadata?partnerId=${partnerId}`,
+    { signal },
+  );
+}
+export function getAllocationTargets(
+  partnerId: number,
+  type: import("./types").AllocationTargetType,
+  keyword: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  const query = new URLSearchParams({
+    targetType: type,
+    keyword,
+    page: String(page),
+    size: "10",
+  });
+  return fetchApi<
+    import("@/shared/api/page").Page<import("./types").AllocationTarget>
+  >(`/business-partners/${partnerId}/payment-allocation-targets?${query}`, {
+    signal,
+  });
+}
+export function submitPaymentRequest(
+  partnerId: number,
+  request: import("../lib/receiptRequest").ReceiptRequest,
+) {
+  if (request.operation === "RECEIVE")
+    return receiveUnassignedPayment(partnerId, request.payload);
+  if (request.operation === "CANCEL")
+    return cancelUnassignedPayment(
+      partnerId,
+      request.receiptId,
+      request.payload,
+    );
+  return requestJson<import("./types").AllocationResult>(
+    `/business-partners/${partnerId}/${request.operation === "ALLOCATE" ? "payment-allocations" : "payment-allocation-corrections"}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request.payload),
+    },
+    "배분을 저장하지 못했습니다.",
+  );
+}
+
+// Commercial changes keep original document items, stock and actual cash history intact.
+export function getDirectSaleChanges(
+  id: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return requestApi<DirectSaleChangeState>(
+    `/sales-slips/${id}/direct-changes?page=${page}&size=10`,
+    { signal },
+  );
+}
+export function submitDirectSaleChange(
+  id: number,
+  request: DirectChangePendingRequest,
+) {
+  const path =
+    request.operation === "ARRIVAL"
+      ? `${request.returnId}/arrivals`
+      : request.operation === "ARRIVAL_CANCEL"
+        ? `return-arrivals/${request.arrivalId}/cancel`
+        : request.operation === "CANCEL"
+          ? `${request.changeId}/cancel`
+          : request.operation === "RETURN"
+            ? "returns"
+            : "price-adjustments";
+  return requestApi(
+    `/sales-slips/${id}/direct-changes/${path}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": request.key,
+      },
+      body: JSON.stringify(request.payload),
+    },
+    "가격 조정·반품을 기록하지 못했습니다.",
+  );
+}
+
+export function getDirectReturnArrivals(
+  id: number,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<DirectReturnArrivalState>(
+    `/sales-slips/${id}/direct-changes/return-arrivals?page=${page}&size=10`,
+    { signal },
   );
 }

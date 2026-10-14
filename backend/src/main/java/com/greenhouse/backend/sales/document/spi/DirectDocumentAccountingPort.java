@@ -1,0 +1,67 @@
+package com.greenhouse.backend.sales.document.spi;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/** Document-owned value contract for Direct terms and accounting coordination. */
+public interface DirectDocumentAccountingPort {
+  void requireNoActiveChanges(Long documentId);
+
+  void requireFinancialReviewCleared(Long documentId, Long expectedPartnerId);
+
+  void requirePaymentAmount(Long documentId, Long expectedPartnerId, Long amount);
+
+  void lockPaymentTargets(Collection<Long> documentIds);
+
+  void lockPartners(Collection<Long> ids);
+
+  void updateReceivable(Long partnerId, Long amount, Long eventId);
+
+  LocalDate calculate(Long partnerId, LocalDate date);
+
+  boolean existsPayment(Long documentId);
+
+  Set<Long> findPaidDocumentIds(Collection<Long> ids);
+
+  QuotedPrices quotePrices(List<Price> prices);
+
+  void storeTerms(Terms terms);
+
+  Map<Long, Long> findItemAmountChanges(LocalDate from, LocalDate to);
+
+  Map<Long, FinancialSnapshot> findFinancials(Collection<Long> documentIds);
+
+  record FinancialSnapshot(
+      Long documentId,
+      Long partnerId,
+      Integer totalAmount,
+      LocalDate expectedPaymentDate,
+      String paymentMethod,
+      BigDecimal allocatedAmount,
+      BigDecimal remainingAmount,
+      boolean reviewRequired,
+      String paymentStatus,
+      boolean paymentAllowed,
+      boolean allocationCorrectionAllowed,
+      Map<Long, PriceSnapshot> prices,
+      boolean hasActiveChanges) {}
+
+  record QuotedPrices(Integer totalAmount, List<PriceSnapshot> prices) {}
+
+  record PriceSnapshot(Integer pricedQuantity, Integer unitPrice, Integer amount) {}
+
+  record Terms(
+      Long documentId,
+      Long partnerId,
+      LocalDate saleDate,
+      LocalDate expectedPaymentDate,
+      String paymentMethod,
+      String unpaidPaymentLabel,
+      List<Price> prices) {}
+
+  record Price(Long documentItemId, Integer quantity, Integer unitPrice) {}
+}

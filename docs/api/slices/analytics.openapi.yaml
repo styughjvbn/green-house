@@ -125,8 +125,6 @@ components:
           format: date
         salesStatus:
           type: string
-        slipNumber:
-          type: string
         totalAmount:
           type: integer
           format: int32

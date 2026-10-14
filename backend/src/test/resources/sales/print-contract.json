@@ -1,7 +1,6 @@
 {
   "detail" : {
     "id" : 99,
-    "slipNumber" : "BOUNDARY-001",
     "saleDate" : "2045-01-02",
     "salesType" : "DIRECT",
     "auctionShipmentId" : null,
@@ -27,21 +26,24 @@
     "items" : [ {
       "id" : 99,
       "auctionShipmentLotId" : null,
+      "auctionLot" : null,
       "itemName" : "Snow White",
       "genus" : "Orchid",
       "spec" : "A",
+      "unit" : null,
+      "boxes" : null,
       "quantity" : 5,
       "unitPrice" : 1000,
       "amount" : 5000,
       "memo" : "item memo",
       "allocations" : [ ]
     } ],
-    "availableActions" : [ "EDIT", "COMPLETE", "CANCEL", "CONFIRM_PAYMENT" ]
+    "availableActions" : [ "EDIT", "COMPLETE", "CANCEL", "CONFIRM_PAYMENT" ],
+    "financialReviewRequired" : false
   },
   "list" : {
     "content" : [ {
       "id" : 99,
-      "slipNumber" : "BOUNDARY-001",
       "saleDate" : "2045-01-02",
       "salesType" : "DIRECT",
       "auctionShipmentId" : null,

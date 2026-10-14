@@ -1,0 +1,130 @@
+package com.greenhouse.backend.farm.transformation.application;
+
+import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.farm.transformation.application.LegacyStructureChangeRequestMapper.Merge;
+import com.greenhouse.backend.farm.transformation.application.LegacyStructureChangeRequestMapper.MergeSource;
+import com.greenhouse.backend.work.api.correction.StructureChangeReferenceApi;
+import com.greenhouse.backend.work.api.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.api.effect.StructureChangeResultInput;
+import com.greenhouse.backend.work.api.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.api.effect.StructureChangeSourceInput;
+import com.greenhouse.backend.work.api.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.api.effect.WorkEffectContext;
+import com.greenhouse.backend.work.api.effect.WorkEffectKind;
+import com.greenhouse.backend.work.api.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.spi.effect.WorkEffectHandler;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+public class MergeWorkHandler implements WorkEffectHandler {
+
+  private final StructureChangeReferenceApi structureChangeReferenceReader;
+
+  private final StructureChangeExecutor structureChangeExecutor;
+
+  private final LegacyStructureChangeRequestMapper legacyRequestMapper;
+
+  @Override
+  public String supports() {
+    return "MERGE";
+  }
+
+  @Override
+  public WorkEffectKind effectKind() {
+    return WorkEffectKind.STRUCTURE_CHANGE;
+  }
+
+  @Override
+  public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
+    var target = context.target();
+    if (command.payload() instanceof StructureChangeCommand request) {
+      return structureChangeExecutor.execute(
+          context, request, command.placementExclusionOrchidGroupIds());
+    }
+    if (target != null) {
+      throw new IllegalArgumentException("합식은 작업 전체 대상을 한 번에 실행해야 합니다.");
+    }
+    Merge request = legacyRequestMapper.readMerge(command.resultDetails());
+    validateRequest(context, request);
+    return structureChangeExecutor.execute(context, toStructureChangeRequest(command, request));
+  }
+
+  private StructureChangeCommand toStructureChangeRequest(
+      WorkEffectCommand command, Merge request) {
+    String executionKey =
+        command.effectKey().startsWith("EXECUTION:")
+            ? command.effectKey().substring("EXECUTION:".length())
+            : command.effectKey();
+    var result = request.result();
+    return new StructureChangeCommand(
+        executionKey,
+        TimeConfig.toFarmTime(command.executedAt()).toLocalDate(),
+        command.worker(),
+        result.memo(),
+        request.sources().stream()
+            .map(
+                source ->
+                    new StructureChangeSourceInput(
+                        source.sourceOrchidGroupId(), source.inputQuantity(), null, null))
+            .toList(),
+        List.of(
+            new StructureChangeResultInput(
+                result.bedZoneId(),
+                result.quantity(),
+                null,
+                result.potSize(),
+                result.ageYear(),
+                StructureChangeResultPurpose.NORMAL,
+                result.placementType(),
+                result.trayCount(),
+                result.splitPlacementAllowed(),
+                result.startPosition(),
+                result.endPosition(),
+                result.memo())));
+  }
+
+  private void validateRequest(WorkEffectContext context, Merge request) {
+    if (request == null || request.sources() == null || request.sources().isEmpty()) {
+      throw new IllegalArgumentException("합식 원본 난 묶음이 필요합니다.");
+    }
+    if (request.sources().stream()
+        .anyMatch(
+            source ->
+                source == null
+                    || source.sourceOrchidGroupId() == null
+                    || source.inputQuantity() == null
+                    || source.inputQuantity() < 1)) {
+      throw new IllegalArgumentException("합식 원본 ID와 투입 수량을 확인해주세요.");
+    }
+    if (request.result() == null) {
+      throw new IllegalArgumentException("합식 결과가 필요합니다.");
+    }
+    var result = request.result();
+    if (result.bedZoneId() == null
+        || result.quantity() == null
+        || result.quantity() < 1
+        || result.startPosition() == null
+        || result.endPosition() == null
+        || result.startPosition().signum() < 0
+        || result.endPosition().compareTo(result.startPosition()) <= 0) {
+      throw new IllegalArgumentException("합식 결과의 수량과 배치 위치를 확인해주세요.");
+    }
+    Set<Long> requestedIds =
+        request.sources().stream()
+            .map(MergeSource::sourceOrchidGroupId)
+            .collect(Collectors.toSet());
+    if (requestedIds.size() != request.sources().size()) {
+      throw new IllegalArgumentException("합식 원본 난 묶음은 중복될 수 없습니다.");
+    }
+    Set<Long> targetIds =
+        structureChangeReferenceReader.getActiveOrchidGroupIds(context.operationId());
+    if (!targetIds.equals(requestedIds)) {
+      throw new IllegalArgumentException("합식 원본은 계획에 확정된 작업 대상과 일치해야 합니다.");
+    }
+  }
+}
