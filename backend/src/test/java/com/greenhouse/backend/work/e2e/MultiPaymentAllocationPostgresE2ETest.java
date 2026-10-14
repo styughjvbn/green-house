@@ -301,10 +301,14 @@ class MultiPaymentAllocationPostgresE2ETest extends WorkE2ETestBase {
                 }
               });
       start.countDown();
-      assertThat(List.of(a.get(20, TimeUnit.SECONDS), b.get(20, TimeUnit.SECONDS)))
-          .containsExactlyInAnyOrder(true, false);
+      boolean allocationCommitted = a.get(20, TimeUnit.SECONDS);
+      assertThat(b.get(20, TimeUnit.SECONDS)).isTrue();
+      // Manual collection accepts excess cash but caps its allocation at current capacity.
+      assertThat(paid(first)).isEqualTo(allocationCommitted ? 1000 : 700);
+      assertThat(reader.get(partnerId, source).availableAmount())
+          .isEqualTo(allocationCommitted ? 0 : 700);
+      assertThat(count("event_type = 'PAYMENT_RECEIVED'")).isEqualTo(2);
     }
-    assertThat(paid(first)).isEqualTo(700);
   }
 
   @Test

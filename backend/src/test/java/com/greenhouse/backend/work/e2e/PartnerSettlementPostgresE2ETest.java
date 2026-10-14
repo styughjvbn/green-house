@@ -201,11 +201,11 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
         List.of(
             () -> salesPaymentService.confirmPayment(first.getId(), firstPayment),
             () -> salesPaymentService.confirmPayment(second.getId(), secondPayment)));
-    assertThatThrownBy(
-            () -> salesPaymentService.confirmPayment(first.getId(), payment(90_000L, "overpay")))
-        .isInstanceOf(IllegalArgumentException.class);
-
-    assertThat(balanceService.getBalance(partner.getId()).receivableBalance()).isEqualTo(150_000L);
+    var overpaid = salesPaymentService.confirmPayment(first.getId(), payment(90_000L, "overpay"));
+    assertThat(overpaid.paidAmount()).isEqualTo(100_000L);
+    assertThat(balanceService.getBalance(partner.getId()).unappliedPaymentAmount())
+        .isEqualTo(10_000L);
+    assertThat(balanceService.getBalance(partner.getId()).receivableBalance()).isEqualTo(70_000L);
     assertThat(balanceRepository.findByPartnerId(partner.getId())).isPresent();
     assertThat(
             eventRepository
@@ -216,7 +216,9 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
             PaymentEventType.PAYMENT_RECEIVED,
             PaymentEventType.MANUAL_MATCH_CONFIRMED,
             PaymentEventType.PAYMENT_RECEIVED,
-            PaymentEventType.MANUAL_MATCH_CONFIRMED);
+            PaymentEventType.MANUAL_MATCH_CONFIRMED,
+            PaymentEventType.PAYMENT_RECEIVED,
+            PaymentEventType.PAYMENT_ALLOCATED);
   }
 
   @Test
