@@ -331,9 +331,9 @@ class DirectSaleFinancialPostgresE2ETest extends WorkE2ETestBase {
   private void seedSale(int total, int quantity, int unitPrice, int amount) {
     jdbc.update(
         """
-        INSERT INTO sales_slips (id, slip_number, sale_date, sales_type, partner_id, total_amount,
+        INSERT INTO sales_slips (id, sale_date, sales_type, partner_id, total_amount,
             paid_amount, remaining_amount, payment_status, sales_status, created_at, updated_at)
-        VALUES (900, 'FINANCIAL-READER', DATE '2026-10-07', 'DIRECT', ?, ?, 0, 0, '미입금', '작성중', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES (900, DATE '2026-10-07', 'DIRECT', ?, ?, 0, 0, '미입금', '작성중', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         """,
         partnerId,
         total);

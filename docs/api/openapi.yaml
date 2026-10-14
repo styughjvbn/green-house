@@ -4758,8 +4758,6 @@ components:
           enum:
           - DIRECT
           - AUCTION
-        slipNumber:
-          type: string
         totalAmount:
           type: integer
           format: int32
@@ -9514,8 +9512,6 @@ components:
           enum:
           - DIRECT
           - AUCTION
-        slipNumber:
-          type: string
         totalAmount:
           type: integer
           format: int32
@@ -11365,8 +11361,6 @@ components:
           type: string
           format: date
         salesStatus:
-          type: string
-        slipNumber:
           type: string
         totalAmount:
           type: integer

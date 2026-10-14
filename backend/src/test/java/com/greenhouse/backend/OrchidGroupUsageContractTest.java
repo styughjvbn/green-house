@@ -65,7 +65,6 @@ class OrchidGroupUsageContractTest {
     entityManager.persist(partner);
     var slip =
         new SalesSlip(
-            "USAGE-TEST",
             LocalDate.of(2026, 9, 5),
             SalesType.DIRECT,
             null,

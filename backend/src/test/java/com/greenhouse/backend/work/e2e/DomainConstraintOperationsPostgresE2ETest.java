@@ -96,10 +96,10 @@ class DomainConstraintOperationsPostgresE2ETest {
         """);
     jdbc.execute(
         """
-        INSERT INTO sales_slips (id, slip_number, sale_date, sales_type, partner_id,
+        INSERT INTO sales_slips (id, sale_date, sales_type, partner_id,
             total_amount, paid_amount, remaining_amount, payment_status, sales_status,
             created_at, updated_at)
-        VALUES (900, 'AUDIT-FIXTURE', DATE '2026-10-04', 'DIRECT', 900,
+        VALUES (900, DATE '2026-10-04', 'DIRECT', 900,
             2000, 0, 2000, '미입금', '작성중', TIMESTAMP '2026-10-04 00:00:00', TIMESTAMP '2026-10-04 00:00:00')
         """);
     jdbc.execute(

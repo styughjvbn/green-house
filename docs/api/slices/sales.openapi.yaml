@@ -1482,8 +1482,6 @@ components:
           enum:
           - DIRECT
           - AUCTION
-        slipNumber:
-          type: string
         totalAmount:
           type: integer
           format: int32
@@ -1544,8 +1542,6 @@ components:
           enum:
           - DIRECT
           - AUCTION
-        slipNumber:
-          type: string
         totalAmount:
           type: integer
           format: int32

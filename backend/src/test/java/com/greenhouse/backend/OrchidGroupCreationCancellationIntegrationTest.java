@@ -110,7 +110,6 @@ class OrchidGroupCreationCancellationIntegrationTest extends FarmFixtureIntegrat
     fixtureEntityManager.persist(partner);
     var slip =
         new SalesSlip(
-            "CANCEL-SALES",
             DATE,
             SalesType.DIRECT,
             null,

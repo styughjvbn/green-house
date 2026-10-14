@@ -18,7 +18,6 @@ class SalesSlipAuditSupport {
 
   Map<String, Object> snapshot(SalesSlip slip) {
     var data = new LinkedHashMap<String, Object>();
-    data.put("slipNumber", slip.getSlipNumber());
     data.put("saleDate", slip.getSaleDate());
     data.put("salesType", slip.getSalesType());
     data.put("partnerId", slip.getPartnerId());

@@ -654,7 +654,6 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
   void scalarGroupIdsStillRequireExistingFarmRowsInPostgres() {
     var slip =
         new SalesSlip(
-            "FK-SALES",
             DATE,
             SalesType.DIRECT,
             null,
@@ -673,7 +672,6 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
     var saved =
         slips.saveAndFlush(
             new SalesSlip(
-                "FK-MOVEMENT",
                 DATE,
                 SalesType.DIRECT,
                 null,

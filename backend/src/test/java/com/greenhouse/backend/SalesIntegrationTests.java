@@ -440,7 +440,7 @@ class SalesIntegrationTests extends FarmFixtureIntegrationTest {
         .perform(get("/api/sales-slips/{salesSlipId}/print", salesSlipId))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.id").value(salesSlipId))
-        .andExpect(jsonPath("$.data.slipNumber").exists())
+        .andExpect(jsonPath("$.data.slipNumber").doesNotExist())
         .andExpect(jsonPath("$.data.partner.id").value(partnerId))
         .andExpect(jsonPath("$.data.items", hasSize(2)))
         .andExpect(jsonPath("$.data.totalAmount").value(60000));

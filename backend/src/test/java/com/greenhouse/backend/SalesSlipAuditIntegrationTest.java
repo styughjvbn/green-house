@@ -92,7 +92,6 @@ class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
             new BusinessPartner("판매 수정 거래처", PartnerType.WHOLESALE, null, null, null, null));
     SalesSlip slip =
         new SalesSlip(
-            "AUDIT-" + System.nanoTime(),
             LocalDate.of(2026, 8, 1),
             SalesType.DIRECT,
             null,

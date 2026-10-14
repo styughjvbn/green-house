@@ -16,7 +16,6 @@ final class SalesSlipSummaryFactory {
       DirectDocumentAccountingPort.FinancialSnapshot financial) {
     return new SalesSlipSummary(
         salesSlip.getId(),
-        salesSlip.getSlipNumber(),
         salesSlip.getSaleDate(),
         salesSlip.getSalesType(),
         salesSlip.getAuctionShipmentId(),

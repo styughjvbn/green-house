@@ -1,7 +1,6 @@
 {
   "detail" : {
     "id" : 99,
-    "slipNumber" : "BOUNDARY-001",
     "saleDate" : "2045-01-02",
     "salesType" : "DIRECT",
     "auctionShipmentId" : null,
@@ -45,7 +44,6 @@
   "list" : {
     "content" : [ {
       "id" : 99,
-      "slipNumber" : "BOUNDARY-001",
       "saleDate" : "2045-01-02",
       "salesType" : "DIRECT",
       "auctionShipmentId" : null,

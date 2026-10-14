@@ -120,10 +120,8 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
         businessPartnerRepository.save(
             new BusinessPartner("분석 거래처", PartnerType.WHOLESALE, null, null, null, null));
     var completed =
-        salesSlipRepository.save(
-            salesSlip("ANALYTICS-COMPLETED", LocalDate.of(2026, 7, 10), partner, "출고 완료", 2, 1000));
-    salesSlipRepository.save(
-        salesSlip("ANALYTICS-DRAFT", LocalDate.of(2026, 7, 11), partner, "작성중", 7, 1000));
+        salesSlipRepository.save(salesSlip(LocalDate.of(2026, 7, 10), partner, "출고 완료", 2, 1000));
+    salesSlipRepository.save(salesSlip(LocalDate.of(2026, 7, 11), partner, "작성중", 7, 1000));
 
     mockMvc
         .perform(get("/api/analytics/sales").param("from", "2026-07-01").param("to", "2026-07-31"))
@@ -200,23 +198,9 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
   }
 
   private SalesSlip salesSlip(
-      String slipNumber,
-      LocalDate saleDate,
-      BusinessPartner partner,
-      String status,
-      int quantity,
-      int unitPrice) {
+      LocalDate saleDate, BusinessPartner partner, String status, int quantity, int unitPrice) {
     var slip =
-        new SalesSlip(
-            slipNumber,
-            saleDate,
-            SalesType.DIRECT,
-            null,
-            partner.getId(),
-            "미입금",
-            status,
-            null,
-            null);
+        new SalesSlip(saleDate, SalesType.DIRECT, null, partner.getId(), "미입금", status, null, null);
     slip.addItem(new SalesSlipItem(null, "분석 품종", "카틀레야", null, quantity, unitPrice, null));
     DirectSaleFixtures.refreshProjection(slip);
     return slip;

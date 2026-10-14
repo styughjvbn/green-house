@@ -34,7 +34,6 @@ final class SalesSlipDocumentFactory {
       throw new ConflictException("DIRECT_AMOUNT_SOURCE_MISSING", "일반 판매 품목 가격 자료를 찾을 수 없습니다.");
     return new SalesSlipDocument(
         salesSlip.getId(),
-        salesSlip.getSlipNumber(),
         salesSlip.getSaleDate(),
         salesSlip.getSalesType(),
         salesSlip.getAuctionShipmentId(),

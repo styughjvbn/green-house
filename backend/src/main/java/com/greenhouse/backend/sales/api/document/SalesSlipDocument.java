@@ -8,10 +8,9 @@ import java.util.List;
 
 @Schema(name = "SalesSlipResponse")
 // Read old creation receipts without rewriting their stored response snapshots.
-@JsonIgnoreProperties("historicalAuctionImport")
+@JsonIgnoreProperties({"historicalAuctionImport", "slipNumber"})
 public record SalesSlipDocument(
     Long id,
-    String slipNumber,
     LocalDate saleDate,
     SalesType salesType,
     Long auctionShipmentId,

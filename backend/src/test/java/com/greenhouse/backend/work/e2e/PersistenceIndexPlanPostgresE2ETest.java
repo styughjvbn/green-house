@@ -254,7 +254,7 @@ class PersistenceIndexPlanPostgresE2ETest extends WorkE2ETestBase {
     cases.add(
         new Scenario(
             "sales-contains-or",
-            "select id from sales_slips where lower(slip_number) like '%plan%' or lower(memo) like '%xx%' order by sale_date desc,id desc limit 20",
+            "select id from sales_slips where id = 90000001 or lower(memo) like '%xx%' order by sale_date desc,id desc limit 20",
             new Object[0]));
     cases.add(
         new Scenario(

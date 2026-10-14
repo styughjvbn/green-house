@@ -213,7 +213,7 @@ BusinessPartner 1 ─ N SalesSlip 1 ─ N SalesSlipItem 1 ─ N SalesSlipItemAll
 
 ### SalesSlip
 
-판매 전표다.
+판매 전표다. 별도 업무 전표번호 없이 기존 전표 ID로 식별하며 날짜별 번호 발급은 사용하지 않는다.
 
 - 이미 완료된 판매·경매 출하는 재고 변경 없이 기록만 등록할 수 있다. 품목의 과거 출처·snapshot을 추정하지 않으며 완료 상태만으로 시스템 재고 반영 여부를 판단하지 않는다. 재고를 반영하는 기존 전표는 allocation·예약·출고 Mutation으로 처리 이력을 유지한다.
 - 일반 판매와 경매 판매를 구분할 수 있다.

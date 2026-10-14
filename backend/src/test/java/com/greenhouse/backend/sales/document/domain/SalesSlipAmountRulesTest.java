@@ -129,7 +129,6 @@ class SalesSlipAmountRulesTest {
 
   private SalesSlip slip() {
     return new SalesSlip(
-        "SALE-TEST",
         LocalDate.of(2026, 10, 3),
         SalesType.AUCTION,
         null,

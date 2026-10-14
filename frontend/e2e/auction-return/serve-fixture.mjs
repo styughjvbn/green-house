@@ -193,7 +193,7 @@ const server = http.createServer(async (req, res) => {
   };
   const slips = [11, 13].map((id) => ({
     id,
-    slipNumber: `TEST-${id}`,
+
     salesType: id === 11 ? "DIRECT" : "AUCTION",
     saleDate: "2026-10-01",
     partner: partnerDetails,

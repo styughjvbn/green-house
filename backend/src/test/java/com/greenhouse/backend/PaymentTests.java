@@ -171,7 +171,6 @@ class PaymentTests {
             new BusinessPartner("직거래 화원", PartnerType.WHOLESALE, null, null, null, null));
     var slip =
         new SalesSlip(
-            "S20260706-900",
             LocalDate.of(2026, 7, 6),
             SalesType.DIRECT,
             null,
@@ -313,7 +312,6 @@ class PaymentTests {
             new BusinessPartner("초과 수납 거래처", PartnerType.WHOLESALE, null, null, null, null));
     var slip =
         new SalesSlip(
-            "S20260706-OVER",
             LocalDate.of(2026, 7, 6),
             SalesType.DIRECT,
             null,
@@ -357,7 +355,6 @@ class PaymentTests {
             new BusinessPartner("입금 거절 거래처", PartnerType.AUCTION_HOUSE, null, null, null, null));
     var slip =
         new SalesSlip(
-            "REJECT-PAYMENT",
             LocalDate.of(2026, 7, 6),
             salesType,
             null,

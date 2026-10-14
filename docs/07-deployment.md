@@ -262,6 +262,12 @@ V36은 `CREATE INDEX CONCURRENTLY`가 아닌 일반 index 생성 15개를 **하�
 
 기존 개발·리허설 DB에 초안 V35~V60이 적용되어 있다면 새 버전과 이력이 충돌한다. 현재 DB를 그대로 보존하고 별도 복원본에서 통합 경로를 검증한다. `repair`만으로 checksum을 덮어쓰거나 기존 개발 데이터를 자동 초기화하지 않는다. 개발 중 새로 만든 기록이 있으면 별도 백업·보존 검토 후 복원 또는 데이터 보존 이력 전환을 진행한다.
 
+### 별도 전표번호 제거
+
+V42는 `sales_slips.slip_number`와 `sales_slip_daily_sequences`를 제거한다. 운영 적용된 V1·V17과 기존 V40 이관 단계는 변경하지 않는다. 전표 식별·검색·화면·인쇄·분석은 기존 전표 ID를 사용하며 날짜별 발급 코드는 제거한다. 전표·품목·allocation·Mutation·경매·수납 연결 ID는 유지하고 과거 생성 receipt·감사 JSON은 다시 쓰지 않는다. 과거 생성 응답의 번호 필드는 재전송 역직렬화에서만 제외한다.
+
+배포 전에 백업을 확보하고 API 소비자를 함께 갱신한다. 위 V34→V41 복원본 대사는 번호 제거 전 기준이다. V41→V42는 PostgreSQL 회귀에서 전표 ID·연결·기존 행과 receipt 원문 보존을 검증한다. 번호가 필수인 구버전 애플리케이션으로 DB만 그대로 rollback하지 않는다. 데모 비식별화는 V42 이전 백업의 번호만 처리한다. `scripts/seed_tools/generate_direct_sales_seed.py`는 V34 이전 스키마로 자료를 이관한 뒤 migration하는 과거 도구이며 현행 DB seed로 사용하지 않는다.
+
 ### 저장 지문·스냅샷 형식 변경 기준
 
 현재 Mutation 지문은 중첩 입력까지, Sales 생성과 일반 Work 세 생성 경로의 지문은 기존 요청 필드까지 v1 형식으로 고정한다. Work 자유 details는 기존 전체 JSON 비교를 유지한다. 저장 hash에 version 접두사를 추가하거나 기존 hash를 재계산하지 않는다. coverage의 engine/snapshot schema version(현재 각각 1), state-chain manifest schema version(현재 2), 최소 writer version은 각각 다른 계약이다. coverage metadata와 writer 기동 검사가 개별 Mutation·Work·Sales receipt의 다중 형식 reader를 제공하는 것은 아니다.

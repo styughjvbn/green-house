@@ -64,7 +64,7 @@ public class DocumentPaymentTarget implements DocumentPaymentApi {
               var value = values.get(slip.getId());
               return new PaymentOption(
                   slip.getId(),
-                  slip.getSlipNumber(),
+                  "#" + slip.getId(),
                   value == null ? null : value.totalAmount().longValue(),
                   value == null ? null : value.allocatedAmount(),
                   value == null ? null : value.remainingAmount(),

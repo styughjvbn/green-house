@@ -17,7 +17,7 @@ test("partial price adjustment retries the original request and a return uses it
   ]);
   const slip = {
     id: 900,
-    slipNumber: "PORTIONS-900",
+
     saleDate: "2026-10-07",
     salesType: "DIRECT",
     partner: { id: 7, name: "성은", partnerType: "WHOLESALE" },
@@ -460,7 +460,7 @@ test("unfinished and canceled slips do not expose adjustment or return actions",
   ]);
   const slip = {
     id: 900,
-    slipNumber: "NO-CHANGES-900",
+
     saleDate: "2026-10-07",
     salesType: "DIRECT",
     partner: { id: 7, name: "성은", partnerType: "WHOLESALE" },

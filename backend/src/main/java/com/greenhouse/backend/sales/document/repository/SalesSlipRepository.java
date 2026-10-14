@@ -31,7 +31,7 @@ public interface SalesSlipRepository
   Optional<Long> findPartnerId(@Param("id") Long id);
 
   @Query(
-      "select s from SalesSlip s where s.partnerId = :partnerId and s.salesType = com.greenhouse.backend.sales.api.document.SalesType.DIRECT and s.salesStatus <> '취소' and (:keyword = '' or lower(s.slipNumber) like lower(concat('%', :keyword, '%')))")
+      "select s from SalesSlip s where s.partnerId = :partnerId and s.salesType = com.greenhouse.backend.sales.api.document.SalesType.DIRECT and s.salesStatus <> '취소' and (:keyword = '' or cast(s.id as string) = :keyword)")
   Page<SalesSlip> findPaymentTargets(Long partnerId, String keyword, Pageable pageable);
 
   @Query(

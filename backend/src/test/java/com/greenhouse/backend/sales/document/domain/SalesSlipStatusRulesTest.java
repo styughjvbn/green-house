@@ -96,14 +96,6 @@ class SalesSlipStatusRulesTest {
 
   private SalesSlip slip(SalesType salesType, String status) {
     return new SalesSlip(
-        "STATUS-" + salesType + "-" + status,
-        LocalDate.of(2026, 8, 1),
-        salesType,
-        null,
-        null,
-        "미입금",
-        status,
-        null,
-        null);
+        LocalDate.of(2026, 8, 1), salesType, null, null, "미입금", status, null, null);
   }
 }

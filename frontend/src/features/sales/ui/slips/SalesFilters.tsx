@@ -89,7 +89,7 @@ export function SalesFilters({
       appliedKeyword={appliedFilters.keyword}
       keyword={filters.keyword}
       loading={loading}
-      searchPlaceholder="전표번호, 거래처명, 메모"
+      searchPlaceholder="전표 ID, 거래처명, 메모"
       settingsControl={columnSettings}
       onKeywordChange={(value) => onChange("keyword", value)}
       onClearKeyword={() => onRemove(["keyword"])}

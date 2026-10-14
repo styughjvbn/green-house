@@ -56,7 +56,6 @@ class AuctionDocumentAmountPostgresE2ETest extends WorkE2ETestBase {
     lotIds = shipment.getLots().stream().map(AuctionShipmentLot::getId).toList();
     var document =
         new SalesSlip(
-            "AMOUNT-" + UUID.randomUUID(),
             DATE,
             SalesType.AUCTION,
             shipment.getId(),

@@ -71,7 +71,6 @@ class SalesSlipAllocationBatchTest {
 
   private SalesSlip slip() {
     return new SalesSlip(
-        "SNAPSHOT-SEAM",
         LocalDate.of(2026, 8, 11),
         SalesType.DIRECT,
         null,

@@ -309,7 +309,7 @@ function SalesSlipLoadedDetail({
           </p>
         ) : null}
         <DetailHeader
-          eyebrow={`${"LOT"} #${salesSlip.slipNumber}`}
+          eyebrow={`전표 #${salesSlip.id}`}
           title="전표 상세"
           summary={
             <DetailSummary

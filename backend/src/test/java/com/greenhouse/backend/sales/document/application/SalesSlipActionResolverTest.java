@@ -93,16 +93,7 @@ class SalesSlipActionResolverTest {
 
   private SalesSlip salesSlip(Long id, SalesType salesType, String status) {
     SalesSlip salesSlip =
-        new SalesSlip(
-            "ACTION-" + id,
-            LocalDate.of(2026, 8, 1),
-            salesType,
-            null,
-            1L,
-            "미입금",
-            status,
-            null,
-            null);
+        new SalesSlip(LocalDate.of(2026, 8, 1), salesType, null, 1L, "미입금", status, null, null);
     ReflectionTestUtils.setField(salesSlip, "id", id);
     salesSlip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
     DirectSaleFixtures.refreshProjection(salesSlip);

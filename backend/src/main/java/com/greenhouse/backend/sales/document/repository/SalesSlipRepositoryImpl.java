@@ -138,13 +138,21 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
     }
     String normalizedKeyword = keyword.trim().toLowerCase();
     return new BooleanBuilder()
-        .or(salesSlip.slipNumber.lower().contains(normalizedKeyword))
+        .or(documentIdEquals(normalizedKeyword))
         .or(LongIdMembership.contains(salesSlip.partnerId, matchingPartnerIds))
         .or(salesSlip.memo.lower().contains(normalizedKeyword));
   }
 
   private OrderSpecifier<?>[] defaultOrder() {
     return new OrderSpecifier<?>[] {salesSlip.saleDate.desc(), salesSlip.id.desc()};
+  }
+
+  private BooleanExpression documentIdEquals(String keyword) {
+    try {
+      return salesSlip.id.eq(Long.parseLong(keyword));
+    } catch (NumberFormatException ignored) {
+      return null;
+    }
   }
 
   private boolean isBlank(String value) {

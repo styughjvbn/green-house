@@ -7,7 +7,6 @@ import java.time.LocalDate;
 @Schema(name = "SalesSlipListItemResponse")
 public record SalesSlipSummary(
     Long id,
-    String slipNumber,
     LocalDate saleDate,
     SalesType salesType,
     Long auctionShipmentId,

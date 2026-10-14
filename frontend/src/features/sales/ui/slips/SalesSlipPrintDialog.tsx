@@ -233,8 +233,8 @@ function StandardSalesSlipPrintSheet({
             </h2>
           </div>
           <div className="text-right text-sm">
-            <p className="font-semibold">전표번호</p>
-            <p className="mt-1 text-lg font-bold">{salesSlip.slipNumber}</p>
+            <p className="font-semibold">전표 ID</p>
+            <p className="mt-1 text-lg font-bold">{salesSlip.id}</p>
             <p className="mt-2 text-[#4d6755]">
               {formatDate(salesSlip.saleDate)}
             </p>

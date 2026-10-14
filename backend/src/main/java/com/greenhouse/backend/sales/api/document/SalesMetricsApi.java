@@ -37,7 +37,6 @@ public interface SalesMetricsApi {
 
   public record SlipSummary(
       Long id,
-      String slipNumber,
       LocalDate saleDate,
       Long partnerId,
       Integer totalAmount,

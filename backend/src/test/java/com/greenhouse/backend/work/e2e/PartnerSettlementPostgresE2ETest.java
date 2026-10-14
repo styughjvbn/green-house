@@ -184,8 +184,8 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
   @Test
   void concurrentPaymentsAndReplaysKeepOneAccuratePartnerBalance() throws Exception {
     var partner = createPartner("동시 입금");
-    var first = createSlip(partner, "S20400102-801");
-    var second = createSlip(partner, "S20400102-802");
+    var first = createSlip(partner);
+    var second = createSlip(partner);
     var firstPayment = payment(20_000L, "first");
     var secondPayment = payment(30_000L, "second");
 
@@ -224,7 +224,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
   @Test
   void concurrentFullPaymentRetriesRecordPaymentOnlyOnce() throws Exception {
     var partner = createPartner("완납 재요청");
-    var slip = createSlip(partner, "S20400102-FULL-PAYMENT-RETRY");
+    var slip = createSlip(partner);
     var payment = payment(100_000L, "full-payment");
 
     List<SalesSlipDocument> results =
@@ -346,7 +346,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
   @Test
   void callerFailureRollsBackTheParticipatingSalesPaymentAndAllLedgerEffects() {
     var partner = createPartner("입금 전체 rollback");
-    var slip = createSlip(partner, "S20400102-803");
+    var slip = createSlip(partner);
     assertThatThrownBy(
             () ->
                 transaction()
@@ -378,7 +378,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
   @ValueSource(strings = {"SALES_SLIP", "PAYMENT_EVENT"})
   void eitherPaymentAuditFailureRollsBackTheEntirePaymentAndAllowsSameKeyRetry(String entityType) {
     var partner = createPartner("감사 실패 " + entityType);
-    var slip = createSlip(partner, "PAY-AUDIT-" + partner.getId());
+    var slip = createSlip(partner);
     var payment = payment(20_000L, "audit-failure");
     var before =
         PostgresWriteTestSupport.snapshot(
@@ -524,8 +524,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
   private PaymentTarget createPaymentTarget(PaymentTargetType type) {
     if (type == PaymentTargetType.SALES_SLIP) {
       var partner = createPartner("입금 충돌 판매 거래처");
-      return new PaymentTarget(
-          partner.getId(), createSlip(partner, "S20400102-" + partner.getId()).getId(), type);
+      return new PaymentTarget(partner.getId(), createSlip(partner).getId(), type);
     }
     var house =
         partnerRepository.saveAndFlush(
@@ -629,7 +628,6 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
             () ->
                 salesSlipRepository.saveAndFlush(
                     new SalesSlip(
-                        "INVALID-PARTNER",
                         LocalDate.of(2040, 1, 2),
                         SalesType.DIRECT,
                         null,
@@ -672,7 +670,6 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
                   var created = shipmentCreator.create(date, house.getId(), drafts);
                   var slip =
                       new SalesSlip(
-                          "SHIPMENT-LINK",
                           date,
                           SalesType.AUCTION,
                           created.id(),
@@ -701,10 +698,9 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
         new BusinessPartner(name, PartnerType.WHOLESALE, null, null, null, null));
   }
 
-  private SalesSlip createSlip(BusinessPartner partner, String number) {
+  private SalesSlip createSlip(BusinessPartner partner) {
     var slip =
         new SalesSlip(
-            number,
             LocalDate.of(2040, 1, 2),
             SalesType.DIRECT,
             null,

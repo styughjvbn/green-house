@@ -567,7 +567,7 @@ export type SalesSlipAction = NonNullable<
 
 export type SalesSlip = {
   id: number;
-  slipNumber: string;
+
   saleDate: string;
   salesType: "DIRECT" | "AUCTION";
   auctionShipmentId: number | null;

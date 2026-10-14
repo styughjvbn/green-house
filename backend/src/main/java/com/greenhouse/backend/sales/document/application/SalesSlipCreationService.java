@@ -52,8 +52,6 @@ public class SalesSlipCreationService {
 
   private final SalesSlipInventoryService salesSlipInventoryService;
 
-  private final SalesSlipNumberGenerator numberGenerator;
-
   private final SalesSlipOutboundService salesSlipOutboundService;
 
   private final SalesSlipDocumentAssembler responseAssembler;
@@ -129,7 +127,6 @@ public class SalesSlipCreationService {
 
     var salesSlip =
         new SalesSlip(
-            numberGenerator.generate(request.saleDate(), type),
             request.saleDate(),
             type,
             null,

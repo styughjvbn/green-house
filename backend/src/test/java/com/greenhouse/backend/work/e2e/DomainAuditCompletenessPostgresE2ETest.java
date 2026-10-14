@@ -524,8 +524,7 @@ class DomainAuditCompletenessPostgresE2ETest extends WorkE2ETestBase {
             "auction_result_lines",
             "auction_lot_status_history",
             "partner_balance_summaries",
-            "partner_payment_events",
-            "sales_slip_daily_sequences")) {
+            "partner_payment_events")) {
       result.put(
           table,
           jdbc.queryForList(

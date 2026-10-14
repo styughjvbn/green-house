@@ -47,9 +47,6 @@ public class SalesSlip extends BaseEntity {
   @Column(nullable = false)
   private Long version;
 
-  @Column(name = "slip_number", nullable = false, unique = true)
-  private String slipNumber;
-
   @Column(name = "sale_date", nullable = false)
   private LocalDate saleDate;
 
@@ -91,7 +88,6 @@ public class SalesSlip extends BaseEntity {
   private List<SalesSlipItem> items = new ArrayList<>();
 
   public SalesSlip(
-      String slipNumber,
       LocalDate saleDate,
       SalesType salesType,
       Long auctionShipmentId,
@@ -100,7 +96,6 @@ public class SalesSlip extends BaseEntity {
       String salesStatus,
       String paymentMethod,
       String memo) {
-    this.slipNumber = slipNumber;
     this.saleDate = saleDate;
     this.salesType = salesType;
     this.auctionShipmentId = auctionShipmentId;

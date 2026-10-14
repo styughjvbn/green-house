@@ -88,15 +88,7 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
           lotId = lot.getId();
           var slip =
               new SalesSlip(
-                  "BOUNDARY-001",
-                  DATE,
-                  SalesType.DIRECT,
-                  null,
-                  partner.getId(),
-                  "미입금",
-                  "작성중",
-                  "계좌",
-                  "Slip Memo");
+                  DATE, SalesType.DIRECT, null, partner.getId(), "미입금", "작성중", "계좌", "Slip Memo");
           slip.addItem(new SalesSlipItem(null, "Snow White", "Orchid", "A", 5, 1000, "item memo"));
           DirectSaleFixtures.refreshProjection(slip);
           slipId = slips.save(slip).getId();
@@ -107,7 +99,8 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
 
   @Test
   void salesSearchKeepsContactFieldsAndLiteralWildcards() {
-    for (String term : List.of("owner needle", "010-5555", "alpha%_", "boundary", "Slip Memo")) {
+    for (String term :
+        List.of("owner needle", "010-5555", "alpha%_", Long.toString(slipId), "Slip Memo")) {
       assertThat(sales.getSalesSlipPage(null, null, null, null, null, term, 0, 10).totalElements())
           .as(term)
           .isEqualTo(1);
@@ -166,15 +159,7 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
                         "Partner " + i, PartnerType.RETAIL, "Batch Contact", null, null, null));
             slips.save(
                 new SalesSlip(
-                    "BATCH-" + i,
-                    DATE,
-                    SalesType.DIRECT,
-                    null,
-                    partner.getId(),
-                    "미입금",
-                    "작성중",
-                    null,
-                    null));
+                    DATE, SalesType.DIRECT, null, partner.getId(), "미입금", "작성중", null, null));
           }
         });
     DirectSaleFixtures.copyAllTerms(jdbc);
@@ -207,16 +192,7 @@ class SalesAuctionBoundaryPostgresE2ETest extends WorkE2ETestBase {
                           : SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED)
                       : SalesSlip.STATUS_DRAFT;
               var slip =
-                  new SalesSlip(
-                      "FILTER-" + type + "-" + index,
-                      date,
-                      type,
-                      null,
-                      partner.getId(),
-                      "미입금",
-                      status,
-                      null,
-                      null);
+                  new SalesSlip(date, type, null, partner.getId(), "미입금", status, null, null);
               if (index == 2) slip.updateSalesStatus(SalesSlip.STATUS_CANCELED);
               slips.save(slip);
             }

@@ -51,9 +51,9 @@ final class PersistencePlanFixtures {
         zoneArray, roots);
     jdbc.update(
         """
-        insert into sales_slips (id, slip_number, sale_date, sales_type, partner_id, payment_status,
+        insert into sales_slips (id, sale_date, sales_type, partner_id, payment_status,
           sales_status, total_amount, paid_amount, remaining_amount, version, memo, created_at, updated_at)
-        select 90000000+n, 'PLAN-'||n, date '2040-01-01'+n%365, 'DIRECT', 90000001+n%100,
+        select 90000000+n, date '2040-01-01'+n%365, 'DIRECT', 90000001+n%100,
           '미입금', case when n%10=0 then '작성중' else '출고 완료' end, 20, 0, 20, 0, repeat('x',100), now(), now()
         from generate_series(1,?) n
         """,

@@ -199,7 +199,6 @@ public class AnalyticsQueryService {
             row ->
                 new AnalyticsSlipSummaryResponse(
                     row.id(),
-                    row.slipNumber(),
                     row.saleDate(),
                     partners.get(row.partnerId()).name(),
                     row.totalAmount(),

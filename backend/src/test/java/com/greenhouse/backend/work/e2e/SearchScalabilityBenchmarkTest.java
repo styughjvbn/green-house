@@ -60,9 +60,9 @@ class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
           count);
       jdbc.update(
           """
-							INSERT INTO sales_slips (id, slip_number, sale_date, sales_type, partner_id, payment_status, sales_status,
+							INSERT INTO sales_slips (id, sale_date, sales_type, partner_id, payment_status, sales_status,
 							 total_amount, paid_amount, version, created_at, updated_at)
-							SELECT id, 'SCALE-' || id, DATE '2045-01-02', 'DIRECT', id, '미입금', '작성중', 0, 0, 0, now(), now()
+							SELECT id, DATE '2045-01-02', 'DIRECT', id, '미입금', '작성중', 0, 0, 0, now(), now()
 							FROM business_partners
 							""");
       // Direct owns the current monetary facts; a DIRECT document alone is incomplete.

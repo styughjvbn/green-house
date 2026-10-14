@@ -24,15 +24,18 @@ import com.greenhouse.backend.support.OrchidGroupLedgerTestFixture;
 import jakarta.persistence.EntityManagerFactory;
 import java.security.MessageDigest;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -429,6 +432,28 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
+  void concurrentIndependentCreationsUseDistinctDocumentIdsWithoutDailyNumbering()
+      throws Exception {
+    var request = request(1, null);
+    try (var pool = Executors.newFixedThreadPool(4)) {
+      var tasks =
+          IntStream.range(0, 4)
+              .mapToObj(
+                  index ->
+                      (Callable<Long>) () -> creation.create(request, "independent-" + index).id())
+              .toList();
+      var ids = new ArrayList<Long>();
+      for (var future : pool.invokeAll(tasks, 30, TimeUnit.SECONDS))
+        ids.add(future.get(1, TimeUnit.SECONDS));
+      assertThat(ids).hasSize(4).doesNotHaveDuplicates();
+      assertThat(jdbc.queryForObject("SELECT count(*) FROM sales_slips", Long.class)).isEqualTo(4);
+      assertThat(
+              jdbc.queryForObject("SELECT to_regclass('sales_slip_daily_sequences')", String.class))
+          .isNull();
+    }
+  }
+
+  @Test
   void omittedKeysRetainLegacyIndependentCreation() throws Exception {
     String body = objectMapper.writeValueAsString(request(5, null));
     var first = post("/api/sales-slips", body);
@@ -484,7 +509,7 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
   }
 
   @Test
-  void validationFailureDoesNotConsumeKeyOrDailyNumber() {
+  void validationFailureDoesNotConsumeRequestKey() {
     var before = snapshot();
     assertThatThrownBy(() -> creation.create(request(101, null), "retry-failed"))
         .isInstanceOf(IllegalArgumentException.class);
@@ -704,7 +729,6 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
             "partner_balance_summaries",
             "partner_payment_events",
             "audit_events",
-            "sales_slip_daily_sequences",
             "auction_shipments",
             "auction_shipment_lots",
             "auction_attempts",
@@ -953,7 +977,7 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     var request = request(5, null);
     creation.create(request, "old-import-field");
     jdbc.update(
-        "UPDATE sales_creation_receipts SET response_snapshot=jsonb_set(response_snapshot,'{historicalAuctionImport}',?::jsonb) WHERE request_key=?",
+        "UPDATE sales_creation_receipts SET response_snapshot=jsonb_set(jsonb_set(response_snapshot,'{historicalAuctionImport}',?::jsonb),'{slipNumber}','\"S20260101-001\"'::jsonb) WHERE request_key=?",
         Boolean.toString(imported),
         "old-import-field");
     var expected =
@@ -964,6 +988,7 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
                     String.class,
                     "old-import-field"));
     expected.remove("historicalAuctionImport");
+    expected.remove("slipNumber");
     var before = snapshot();
     var replay =
         post(
@@ -972,6 +997,7 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
             Map.of("Idempotency-Key", "old-import-field"));
     assertThat(replay.status()).isEqualTo(201);
     assertThat(replay.data().has("historicalAuctionImport")).isFalse();
+    assertThat(replay.data().has("slipNumber")).isFalse();
     assertThat(replay.data()).isEqualTo(expected);
     assertThat(snapshot()).isEqualTo(before);
   }

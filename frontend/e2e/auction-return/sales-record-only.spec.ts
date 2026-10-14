@@ -77,7 +77,7 @@ for (const salesType of ["DIRECT", "AUCTION"] as const) {
       created = {
         ...body,
         id: 99,
-        slipNumber: "RECORD-99",
+
         partner: {
           id: salesType === "AUCTION" ? 8 : 7,
           name: "기록 거래처",

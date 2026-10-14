@@ -74,15 +74,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
     for (int index = 0; index < labels.length; index++) {
       var slip =
           new SalesSlip(
-              "PAYMENT-CATEGORY-" + index,
-              FROM,
-              SalesType.DIRECT,
-              null,
-              partner.getId(),
-              labels[index],
-              "출고 완료",
-              null,
-              null);
+              FROM, SalesType.DIRECT, null, partner.getId(), labels[index], "출고 완료", null, null);
       slip.addItem(new SalesSlipItem(null, "Variety", "난", null, 1, 1_000_000_000, null));
       DirectSaleFixtures.refreshProjection(slip);
       entityManager.persist(slip);
@@ -134,16 +126,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
     var house = partner("Auction");
     house.update("Auction", PartnerType.AUCTION_HOUSE, null, null, null, null);
     var auction =
-        new SalesSlip(
-            "ANALYTICS-AUCTION",
-            TO,
-            SalesType.AUCTION,
-            null,
-            house.getId(),
-            "정산 대기",
-            "출하 완료",
-            null,
-            null);
+        new SalesSlip(TO, SalesType.AUCTION, null, house.getId(), "정산 대기", "출하 완료", null, null);
     auction.addItem(new SalesSlipItem(null, "Variety", "난", null, 10, 100, null));
     DirectSaleFixtures.refreshProjection(auction);
     entityManager.persist(auction);
@@ -383,16 +366,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
     slip(partner, LocalDate.of(2040, 2, 29), 1, 300);
     slip(partner, LocalDate.of(2040, 2, 28), 1, 9_999);
     var draft =
-        new SalesSlip(
-            "ANALYTICS-DRAFT",
-            to,
-            SalesType.DIRECT,
-            null,
-            partner.getId(),
-            "미입금",
-            "작성중",
-            null,
-            null);
+        new SalesSlip(to, SalesType.DIRECT, null, partner.getId(), "미입금", "작성중", null, null);
     draft.addItem(new SalesSlipItem(null, "Excluded", null, null, 1, 9_999, null));
     DirectSaleFixtures.refreshProjection(draft);
     entityManager.persist(draft);
@@ -428,16 +402,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 
   private SalesSlip slip(BusinessPartner partner, LocalDate date, int quantity, int price) {
     var slip =
-        new SalesSlip(
-            "ANALYTICS-" + (++slipSequence),
-            date,
-            SalesType.DIRECT,
-            null,
-            partner.getId(),
-            "미입금",
-            "출고 완료",
-            null,
-            null);
+        new SalesSlip(date, SalesType.DIRECT, null, partner.getId(), "미입금", "출고 완료", null, null);
     slip.addItem(new SalesSlipItem(null, "Variety", "난", null, quantity, price, null));
     DirectSaleFixtures.refreshProjection(slip);
     entityManager.persist(slip);

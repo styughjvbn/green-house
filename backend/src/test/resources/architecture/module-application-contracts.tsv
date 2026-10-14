@@ -131,7 +131,6 @@ METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.pay
 METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.remainingAmount()
 METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.saleDate()
 METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.salesStatus()
-METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.slipNumber()
 METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi$SlipSummary.totalAmount()
 METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi.monthlySales(java.time.LocalDate, java.time.LocalDate)
 METHOD	com.greenhouse.backend.sales.api.document.SalesMetricsApi.partnerSales(java.time.LocalDate, java.time.LocalDate)

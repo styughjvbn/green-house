@@ -43,12 +43,11 @@ class HistoricalAuctionDocumentPostgresE2ETest extends WorkE2ETestBase {
     long slip =
         jdbc.queryForObject(
             """
-        INSERT INTO sales_slips (id,created_at,updated_at,slip_number,sale_date,sales_type,auction_shipment_id,
+        INSERT INTO sales_slips (id,created_at,updated_at,sale_date,sales_type,auction_shipment_id,
           partner_id,total_amount,paid_amount,remaining_amount,payment_status,sales_status)
-        VALUES (nextval('sales_slips_id_seq'),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?,DATE '2025-05-04','AUCTION',?, ?,0,0,0,'정산 대기','출하 완료') RETURNING id
+        VALUES (nextval('sales_slips_id_seq'),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,DATE '2025-05-04','AUCTION',?, ?,0,0,0,'정산 대기','출하 완료') RETURNING id
         """,
             Long.class,
-            "HIST-AUC-" + shipment,
             shipment,
             partner.getId());
     jdbc.update(

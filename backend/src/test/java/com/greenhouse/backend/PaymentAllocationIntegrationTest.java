@@ -184,17 +184,7 @@ class PaymentAllocationIntegrationTest {
   }
 
   private long document(String name) {
-    var slip =
-        new SalesSlip(
-            "allocation-" + name + "-" + UUID.randomUUID(),
-            DATE,
-            SalesType.DIRECT,
-            null,
-            partnerId,
-            "미입금",
-            "작성중",
-            "계좌이체",
-            null);
+    var slip = new SalesSlip(DATE, SalesType.DIRECT, null, partnerId, "미입금", "작성중", "계좌이체", null);
     slip.addItem(new SalesSlipItem(null, "난", null, "A", 1, 1000, null));
     DirectSaleFixtures.refreshProjection(slip);
     documents.saveAndFlush(slip);

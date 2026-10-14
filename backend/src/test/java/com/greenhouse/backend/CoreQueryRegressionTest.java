@@ -87,6 +87,44 @@ class CoreQueryRegressionTest {
     assertThat(queryCount).isLessThanOrEqualTo(3L);
   }
 
+  @Test
+  void salesAndPaymentTargetSearchUseTheExistingDocumentId() {
+    var partner =
+        partnerRepository.save(
+            new BusinessPartner("ID 검색 거래처", PartnerType.WHOLESALE, null, null, null, null));
+    var date = LocalDate.of(2046, 1, 1);
+    var first =
+        new SalesSlip(date, SalesType.DIRECT, null, partner.getId(), "미입금", "출고 완료", null, null);
+    first.addItem(new SalesSlipItem(null, "검색 품목", null, null, 1, 1000, null));
+    DirectSaleFixtures.refreshProjection(first);
+    salesSlipRepository.saveAndFlush(first);
+    DirectSaleFixtures.copyTerms(jdbc, first.getId());
+    var second =
+        new SalesSlip(date, SalesType.DIRECT, null, partner.getId(), "미입금", "출고 완료", null, null);
+    second.addItem(new SalesSlipItem(null, "다른 품목", null, null, 1, 1000, null));
+    DirectSaleFixtures.refreshProjection(second);
+    salesSlipRepository.saveAndFlush(second);
+    DirectSaleFixtures.copyTerms(jdbc, second.getId());
+    assertThat(
+            salesQueryService
+                .getSalesSlipPage(null, date, date, null, null, first.getId().toString(), 0, 10)
+                .content())
+        .extracting(row -> row.id())
+        .containsExactly(first.getId());
+    assertThat(
+            salesSlipRepository
+                .findPaymentTargets(
+                    partner.getId(), first.getId().toString(), PageRequest.of(0, 10))
+                .getContent())
+        .extracting(SalesSlip::getId)
+        .containsExactly(first.getId());
+    assertThat(
+            salesQueryService
+                .getSalesSlipPage(null, date, date, null, null, "999999999999999999999999", 0, 10)
+                .totalElements())
+        .isZero();
+  }
+
   @ParameterizedTest
   @CsvSource({"0,0", "1,1", "500,1", "501,2"})
   void farmStateValuesAreLoadedInBoundedBatchesWithoutLazyQueries(int count, long expectedQueries) {
@@ -202,7 +240,6 @@ class CoreQueryRegressionTest {
     auctionShipmentRepository.saveAndFlush(shipment);
     var slip =
         new SalesSlip(
-            "LOT-SUMMARY",
             LocalDate.of(2030, 2, 1),
             SalesType.AUCTION,
             shipment.getId(),
@@ -242,7 +279,6 @@ class CoreQueryRegressionTest {
             new BusinessPartner("회귀 거래처", PartnerType.WHOLESALE, null, null, null, null));
     SalesSlip slip =
         new SalesSlip(
-            "S20300301-999",
             LocalDate.of(2030, 3, 1),
             SalesType.DIRECT,
             null,
@@ -285,16 +321,7 @@ class CoreQueryRegressionTest {
           partnerRepository.save(
               new BusinessPartner("이전 이름", PartnerType.WHOLESALE, null, null, null, null));
       salesSlipRepository.save(
-          new SalesSlip(
-              "PARTNER-PAGE-" + index,
-              date,
-              SalesType.DIRECT,
-              null,
-              partner.getId(),
-              "미입금",
-              "작성중",
-              null,
-              null));
+          new SalesSlip(date, SalesType.DIRECT, null, partner.getId(), "미입금", "작성중", null, null));
       partner.update("현재 이름 " + index, PartnerType.WHOLESALE, "대표 Search", "010-7890", "주소", "메모");
     }
     entityManager.flush();
@@ -382,7 +409,6 @@ class CoreQueryRegressionTest {
     var slip =
         salesSlipRepository.save(
             new SalesSlip(
-                "ARRAY-SEARCH",
                 LocalDate.of(2041, 1, 1),
                 SalesType.DIRECT,
                 null,
@@ -422,7 +448,6 @@ class CoreQueryRegressionTest {
       } else {
         salesSlipRepository.save(
             new SalesSlip(
-                "USED-" + index,
                 date,
                 SalesType.AUCTION,
                 shipment.getId(),

@@ -183,7 +183,6 @@ public class SalesMetricsReader implements SalesMetricsApi {
             Projections.constructor(
                 SlipSummary.class,
                 salesSlip.id,
-                salesSlip.slipNumber,
                 salesSlip.saleDate,
                 salesSlip.partnerId,
                 salesSlip.totalAmount,

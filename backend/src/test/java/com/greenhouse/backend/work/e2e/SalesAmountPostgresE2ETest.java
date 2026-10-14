@@ -296,8 +296,7 @@ class SalesAmountPostgresE2ETest extends WorkE2ETestBase {
             "partner_balance_summaries",
             "partner_settlement_settings",
             "partner_payment_events",
-            "audit_events",
-            "sales_slip_daily_sequences")) {
+            "audit_events")) {
       // JSON compares SQL arrays and JSONB by value rather than JDBC object identity.
       rows.put(
           table,

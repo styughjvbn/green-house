@@ -2473,7 +2473,6 @@ export interface components {
             salesStatus?: string;
             /** @enum {string} */
             salesType?: "DIRECT" | "AUCTION";
-            slipNumber?: string;
             /**
              * Format: int32
              * @description 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
@@ -4553,7 +4552,6 @@ export interface components {
             salesStatus?: string;
             /** @enum {string} */
             salesType?: "DIRECT" | "AUCTION";
-            slipNumber?: string;
             /**
              * Format: int32
              * @description 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
@@ -5513,7 +5511,6 @@ export interface components {
             /** Format: date */
             saleDate?: string;
             salesStatus?: string;
-            slipNumber?: string;
             /** Format: int32 */
             totalAmount?: number;
         };

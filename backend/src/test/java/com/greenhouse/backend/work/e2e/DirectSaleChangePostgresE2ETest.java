@@ -36,7 +36,7 @@ class DirectSaleChangePostgresE2ETest extends WorkE2ETestBase {
                     "가격 구간 " + UUID.randomUUID(), PartnerType.WHOLESALE, null, null, null, null))
             .getId();
     jdbc.update(
-        "INSERT INTO sales_slips(id,slip_number,sale_date,sales_type,partner_id,total_amount,paid_amount,remaining_amount,payment_status,sales_status,created_at,updated_at) VALUES(900,'PRICE-PORTIONS',DATE '2026-10-07','DIRECT',?,1000000,0,1000000,'미입금','출고 완료',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+        "INSERT INTO sales_slips(id,sale_date,sales_type,partner_id,total_amount,paid_amount,remaining_amount,payment_status,sales_status,created_at,updated_at) VALUES(900,DATE '2026-10-07','DIRECT',?,1000000,0,1000000,'미입금','출고 완료',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
         partnerId);
     jdbc.execute(
         "INSERT INTO sales_slip_items(id,sales_slip_id,item_name,quantity,unit_price,amount) VALUES(901,900,'버드로즈',100,10000,1000000)");
