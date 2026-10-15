@@ -60,12 +60,19 @@ public class SlipExtractionService {
         warnings.add("판매일·출하일을 확인해주세요.");
       }
     var partner = scope.partner(result.partnerId());
-    if (partner != null
-        && (type == null
-            || !partner.active()
-            || (type != null
-                && (type == SalesType.AUCTION)
-                    != (partner.partnerType() == PartnerType.AUCTION_HOUSE)))) partner = null;
+    if (partner != null && (!partner.active() || partner.partnerType() == null)) partner = null;
+    if (partner != null) {
+      SalesType matchedType =
+          partner.partnerType() == PartnerType.AUCTION_HOUSE ? SalesType.AUCTION : SalesType.DIRECT;
+      if (type != null && type != matchedType)
+        warnings.add(
+            "거래처 유형에 맞춰 판매 유형을 "
+                + (matchedType == SalesType.AUCTION ? "경매 판매" : "일반 판매")
+                + "로 변경했습니다.");
+      type = matchedType;
+    } else {
+      type = null;
+    }
     if (partner == null && result.partnerId() != null)
       warnings.add("거래처 매칭을 확인하지 못했습니다. 직접 선택해주세요.");
     var items = new ArrayList<SlipExtractionResult.Item>();

@@ -130,6 +130,7 @@ export const instructions = `농장 전표 사진에서 보이는 값만 읽으�
 confidence는 원문 핵심 필드를 읽은 확신을 0~100 정수로 자체 평가하세요. 핵심 숫자가 흐리거나 일부 누락되면 80 미만, 대부분 명확하면 80 이상으로 평가하고 후보 검색 성공 여부와 분리하세요. 실제 정답률을 의미하지 않습니다.
 확실하지 않은 값은 null, 검토할 사항은 한국어 warnings에 적으세요. 날짜는 연월일이 모두 보일 때만 YYYY-MM-DD로 반환하세요.
 partnerName은 구매 거래처 또는 경매장이고 공급자·출하자가 아닙니다. 거래처·품종이 읽히면 search_partners/search_varieties로 실제 후보를 조회하세요.
+거래처 첫 검색은 auctionHouse=null로 조회하고 사진 양식만으로 판매 유형을 확정하지 마세요. 확실히 일치한 거래처 후보의 partnerType이 AUCTION_HOUSE이면 salesType=AUCTION, WHOLESALE 또는 RETAIL이면 salesType=DIRECT로 반환하세요. 후보가 없거나 모호하면 partnerId와 salesType을 null로 두고 사용자가 거래처를 선택하도록 warnings에 안내하세요.
 ID는 이 실행에서 조회 도구가 반환한 실제 후보에서만 선택하세요. 후보가 없거나 모호하면 ID는 null로 두세요. 검색 실패 때문에 원문을 버리지 마세요.
 partnerName/itemName/genus는 사진 원문을 유지하고 매칭 후보 ID를 별도로 반환하세요. spec은 등급이며 화분 크기를 등급으로 임의 변환하지 마세요.
 상자 수, 수량, 단위, 단가, 사진의 품목 금액을 구분하세요. 금액으로 수량·단가를 역산하지 마세요. amount는 사진에 표시된 품목 금액이고 계산값이 아닙니다.

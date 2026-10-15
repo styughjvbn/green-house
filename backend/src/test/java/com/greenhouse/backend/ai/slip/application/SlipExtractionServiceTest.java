@@ -7,6 +7,7 @@ import com.greenhouse.backend.ai.api.AgentException;
 import com.greenhouse.backend.ai.slip.application.port.out.AgentRuntimePort;
 import com.greenhouse.backend.ai.tool.application.AgentToolGateway;
 import com.greenhouse.backend.farm.api.variety.VarietySearchApi;
+import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import jakarta.validation.Validation;
@@ -17,8 +18,10 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.Arguments;
 
 class SlipExtractionServiceTest {
   @Test
@@ -188,4 +191,75 @@ class SlipExtractionServiceTest {
     }
   }
 
+  static Stream<Arguments> partnerTypes() {
+    return Arrays.stream(PartnerType.values())
+        .flatMap(
+            partnerType ->
+                Arrays.asList("DIRECT", "AUCTION", null).stream()
+                    .map(modelType -> Arguments.of(partnerType, modelType)));
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.MethodSource("partnerTypes")
+  void derivesSalesTypeFromTheMatchedPartnerEvenWhenTheModelTypeIsMissingOrWrong(
+      PartnerType partnerType, String modelType) {
+    var partners = mock(BusinessPartnerQueryApi.class);
+    when(partners.searchOptions("거래처", null, 10))
+        .thenReturn(List.of(new BusinessPartnerQueryApi.Option(3L, "등록 거래처", partnerType, true)));
+    var tools =
+        new AgentToolGateway(mock(VarietySearchApi.class), partners, Clock.systemUTC(), 5, 120);
+    try (var factory = Validation.buildDefaultValidatorFactory();
+        var scope = tools.open("r", "worker")) {
+      tools.execute(
+          "Bearer " + scope.token(),
+          "search_partners",
+          new AgentToolGateway.Arguments("거래처", null, null));
+      var service =
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+      var raw =
+          new SlipModelResult(
+              modelType, null, "사진 원문", 3L, null, List.of(), List.of(), 90, 1024, 1);
+      var result = service.validate("r", raw, scope);
+      assertThat(result.partnerId()).isEqualTo(3L);
+      assertThat(result.partnerName()).isEqualTo("등록 거래처");
+      assertThat(result.rawPartnerName()).isEqualTo("사진 원문");
+      var expected =
+          partnerType == PartnerType.AUCTION_HOUSE ? SalesType.AUCTION : SalesType.DIRECT;
+      assertThat(result.salesType()).isEqualTo(expected);
+      if (modelType != null && !modelType.equals(expected.name()))
+        assertThat(result.warnings()).anyMatch(w -> w.contains("판매 유형"));
+    }
+  }
+
+  @Test
+  void leavesSalesTypeUnconfirmedForUnmatchedInactiveOrUnselectedPartners() {
+    var partners = mock(BusinessPartnerQueryApi.class);
+    when(partners.searchOptions("거래처", null, 10))
+        .thenReturn(
+            List.of(
+                new BusinessPartnerQueryApi.Option(
+                    3L, "비활성 거래처", PartnerType.AUCTION_HOUSE, false)));
+    var tools =
+        new AgentToolGateway(mock(VarietySearchApi.class), partners, Clock.systemUTC(), 5, 120);
+    try (var factory = Validation.buildDefaultValidatorFactory();
+        var scope = tools.open("r", "worker")) {
+      tools.execute(
+          "Bearer " + scope.token(),
+          "search_partners",
+          new AgentToolGateway.Arguments("거래처", null, null));
+      var service =
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+      for (Long id : Arrays.asList(3L, 99L, null)) {
+        var result =
+            service.validate(
+                "r",
+                new SlipModelResult(
+                    "AUCTION", null, "사진 원문", id, null, List.of(), List.of(), 90, 1024, 1),
+                scope);
+        assertThat(result.partnerId()).isNull();
+        assertThat(result.salesType()).isNull();
+        assertThat(result.partnerName()).isEqualTo("사진 원문");
+      }
+    }
+  }
 }
