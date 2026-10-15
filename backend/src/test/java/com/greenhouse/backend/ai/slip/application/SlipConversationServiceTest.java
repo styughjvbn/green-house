@@ -27,6 +27,7 @@ class SlipConversationServiceTest {
   }
 
   private final AgentRuntimePort runtime = mock(AgentRuntimePort.class);
+  private final VarietySearchApi varieties = mock(VarietySearchApi.class);
   private final Clock clock = mock(Clock.class);
   private final Instant now = Instant.parse("2026-10-15T00:00:00Z");
 
@@ -36,7 +37,11 @@ class SlipConversationServiceTest {
         new AgentToolGateway(
             mock(VarietySearchApi.class), mock(BusinessPartnerQueryApi.class), clock, 20, 120);
     return new SlipConversationService(
-        runtime, tools, new SlipExtractionService(runtime, tools, factory.getValidator()), clock);
+        runtime,
+        tools,
+        new SlipExtractionService(runtime, tools, factory.getValidator()),
+        clock,
+        varieties);
   }
 
   private byte[] image(int rgb) throws Exception {
@@ -59,6 +64,8 @@ class SlipConversationServiceTest {
   void tenPhotosSingleAndFeedbackRequestsShareOneOwnedConversationAndResultsFollowIds()
       throws Exception {
     var service = service();
+    var names = List.of("하니문", "프라그랑스");
+    when(varieties.findActiveNamesWithLinkedGroups()).thenReturn(names);
     String session = service.open("worker").sessionId();
     when(runtime.extractConversation(anyString(), eq(session), anyString(), any()))
         .thenAnswer(
@@ -80,7 +87,8 @@ class SlipConversationServiceTest {
     service.extract("worker", session, new SlipConversationInput(List.of(photos.get(0))));
     service.extract(
         "worker", session, new SlipConversationInput(List.of(photo("photo-0", "수량은 20개"))));
-    verify(runtime).openSession(session);
+    verify(runtime).openSession(session, names);
+    verify(varieties, times(1)).findActiveNamesWithLinkedGroups();
     verify(runtime, times(3)).extractConversation(anyString(), eq(session), anyString(), any());
     verify(runtime)
         .extractConversation(

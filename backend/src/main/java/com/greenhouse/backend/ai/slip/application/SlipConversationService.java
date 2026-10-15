@@ -4,6 +4,7 @@ import com.greenhouse.backend.ai.api.AgentException;
 import com.greenhouse.backend.ai.slip.application.port.out.AgentRuntimePort;
 import com.greenhouse.backend.ai.tool.application.AgentToolGateway;
 import com.greenhouse.backend.common.image.UploadImage;
+import com.greenhouse.backend.farm.api.variety.VarietySearchApi;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -22,6 +23,7 @@ public class SlipConversationService {
   private final AgentToolGateway tools;
   private final SlipExtractionService extraction;
   private final Clock clock;
+  private final VarietySearchApi varieties;
   private final Map<String, Conversation> sessions = new ConcurrentHashMap<>();
   private final Semaphore slot = new Semaphore(1);
 
@@ -30,7 +32,8 @@ public class SlipConversationService {
     if (sessions.size() >= 100)
       throw new AgentException(429, "AI_SESSION_LIMIT", "진행 중인 사진 등록이 많습니다. 잠시 후 다시 시도해주세요.");
     String id = UUID.randomUUID().toString();
-    runtime.openSession(id);
+    var varietyNames = varieties.findActiveNamesWithLinkedGroups();
+    runtime.openSession(id, varietyNames);
     sessions.put(id, new Conversation(actor, clock.instant().plusSeconds(1800)));
     return new SlipConversationResult.Session(id);
   }

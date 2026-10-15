@@ -59,6 +59,12 @@ public class VarietyService implements VarietySearchApi {
         .toList();
   }
 
+  @Override
+  @Transactional(readOnly = true)
+  public List<String> findActiveNamesWithLinkedGroups() {
+    return varietyRepository.findActiveNamesWithLinkedGroups();
+  }
+
   @Transactional(readOnly = true)
   public PageResponse<VarietyResponse> getVarieties(
       String keyword, String genus, Boolean saleEnabled, Boolean active, int page, int size) {

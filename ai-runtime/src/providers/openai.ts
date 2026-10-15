@@ -5,6 +5,7 @@ import {
   batchSchema,
   inputPhotos,
   turnPrompt,
+  sessionReferencePrompt,
   validateResult,
   type AgentProvider,
   type SlipInput,
@@ -64,8 +65,19 @@ export function openAiProvider(
     model,
     async run(input: SlipInput, context: RunContext) {
       if (!apiKey) throw new RuntimeError(503, "AI_NOT_CONFIGURED");
+      const reference = !context.session?.history.length
+        ? sessionReferencePrompt(context.session)
+        : "";
       const conversation: unknown[] = [
         ...(context.session?.history ?? []),
+        ...(reference
+          ? [
+              {
+                role: "user",
+                content: [{ type: "input_text", text: reference }],
+              },
+            ]
+          : []),
         {
           role: "user",
           content: [

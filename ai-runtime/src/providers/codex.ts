@@ -10,6 +10,7 @@ import {
   batchSchema,
   inputPhotos,
   turnPrompt,
+  sessionReferencePrompt,
   RuntimeError,
   type AgentProvider,
 } from "../contracts.js";
@@ -34,8 +35,11 @@ export function codexProvider(
           | { type: "text"; text: string }
           | { type: "local_image"; path: string }
         )[] = [];
-        if (!context.session?.threadId)
+        if (!context.session?.threadId) {
           parts.push({ type: "text", text: instructions });
+          const reference = sessionReferencePrompt(context.session);
+          if (reference) parts.push({ type: "text", text: reference });
+        }
         if (parts.length && !input.photos)
           (parts[0] as { type: "text"; text: string }).text +=
             "\n" + turnPrompt(input);

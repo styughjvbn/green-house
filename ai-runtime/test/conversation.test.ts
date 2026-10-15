@@ -49,7 +49,9 @@ async function stop(server: Server) {
 }
 
 test("one batch of ten photos, individual reread and feedback reuse the Codex thread", async () => {
+  const names = Array.from({ length: 12 }, (_, i) => `초기참조품종${i}`);
   const state: SessionState = {
+    varietyNames: names,
     history: [],
     turns: 0,
     expiresAt: Date.now() + 10000,
@@ -114,6 +116,12 @@ test("one batch of ten photos, individual reread and feedback reuse the Codex th
   validateResult(await provider.run(current, context), current);
   assert.equal(starts, 1);
   assert.equal(resumes, 2);
+  const reference = turns[0].find((part) =>
+    part.text?.includes(JSON.stringify(names)),
+  );
+  assert.ok(reference);
+  assert.doesNotMatch(JSON.stringify(turns[1]), /초기참조품종/);
+  assert.doesNotMatch(JSON.stringify(turns[2]), /초기참조품종/);
   assert.equal(turns[0].filter((p) => p.type === "local_image").length, 10);
   assert.equal(turns[1].filter((p) => p.type === "local_image").length, 1);
   assert.match(JSON.stringify(turns[2]), /수량은 20개/);
@@ -165,13 +173,42 @@ test("runtime requires an open session, validates photo IDs and closes conversat
     });
   try {
     assert.equal((await send("/infer/slip", input)).status, 410);
+    for (const varietyNames of [
+      "invalid",
+      [null],
+      [""],
+      ["a".repeat(151)],
+      [{ id: 1, name: "품종" }],
+    ])
+      assert.equal(
+        (await send("/sessions", { sessionId: input.sessionId, varietyNames }))
+          .status,
+        400,
+      );
+    const names = ["하니문", "프라그랑스"];
     assert.equal(
-      (await send("/sessions", { sessionId: input.sessionId })).status,
+      (
+        await send("/sessions", {
+          sessionId: input.sessionId,
+          varietyNames: [...names, names[0]],
+        })
+      ).status,
       200,
     );
     const first = await send("/infer/slip", input);
     assert.equal(first.status, 200);
     assert.equal((await first.json()).photos.length, 10);
+    assert.deepEqual((states[0] as SessionState).varietyNames, names);
+    // Reopening an existing ID must not replace its initial reference snapshot.
+    assert.equal(
+      (
+        await send("/sessions", {
+          sessionId: input.sessionId,
+          varietyNames: ["변경된품종"],
+        })
+      ).status,
+      200,
+    );
     assert.equal(
       (
         await send("/infer/slip", {
@@ -182,6 +219,7 @@ test("runtime requires an open session, validates photo IDs and closes conversat
       200,
     );
     assert.equal(states[0], states[1]);
+    assert.deepEqual((states[1] as SessionState).varietyNames, names);
     assert.equal(
       (
         await send("/infer/slip", {
@@ -212,7 +250,9 @@ test("runtime requires an open session, validates photo IDs and closes conversat
 });
 
 test("OpenAI continuation retains prior extraction and feedback without retaining photo binaries", async () => {
+  const names = ["하니문", "프라그랑스"];
   const state: SessionState = {
+    varietyNames: names,
     history: [],
     turns: 0,
     expiresAt: Date.now() + 10000,
@@ -224,6 +264,13 @@ test("OpenAI continuation retains prior extraction and feedback without retainin
     for await (const chunk of req) text += chunk;
     const body = JSON.parse(text);
     turn++;
+    const referenceMessages = body.input.filter(
+      (item: { content?: { text?: string }[] }) =>
+        item.content?.some((part) =>
+          part.text?.includes(JSON.stringify(names)),
+        ),
+    );
+    assert.equal(referenceMessages.length, 1);
     assert.deepEqual(Object.keys(body.text.format).sort(), [
       "name",
       "schema",

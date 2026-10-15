@@ -14,6 +14,7 @@ import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -53,8 +54,8 @@ public class HttpAgentRuntimeAdapter implements AgentRuntimePort {
         SlipModelResult.class);
   }
 
-  public void openSession(String sessionId) {
-    call("/sessions", Map.of("sessionId", sessionId), Map.class);
+  public void openSession(String sessionId, List<String> varietyNames) {
+    call("/sessions", Map.of("sessionId", sessionId, "varietyNames", varietyNames), Map.class);
   }
 
   public void closeSession(String sessionId) {

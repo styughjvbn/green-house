@@ -25,6 +25,36 @@ class VarietyQueryIntegrationTests extends AbstractBackendIntegrationTest {
 
   @Test
   @Transactional
+  void sessionReferenceContainsAllDistinctActiveNamesWithLinkedGroupsEvenAtZeroQuantity() {
+    var house = new House(99, "초기 참조 테스트동");
+    var bed = new PhysicalBed(1, 1);
+    var zone = new BedZone("참조 구역", BedZoneSide.LEFT, 1);
+    bed.addBedZone(zone);
+    house.addPhysicalBed(bed);
+    houseRepository.save(house);
+    var expected = new ArrayList<String>();
+    for (int i = 0; i < 12; i++) {
+      String name = "세션참조품종" + i;
+      var variety = saveCandidate("REF-" + i, "참조속", name, "노출하지않는별명", true);
+      saveOrchidGroup(createGroup(zone, variety, i == 0 ? 0 : 1, i + 1));
+      expected.add(name);
+    }
+    var duplicate = saveCandidate("REF-DUPLICATE", "다른속", expected.getFirst(), null, true);
+    saveOrchidGroup(createGroup(zone, duplicate, 1, 13));
+    saveOrchidGroup(createGroup(zone, duplicate, 1, 14));
+    var inactive = saveCandidate("REF-INACTIVE", "참조속", "세션비활성품종", null, false);
+    saveOrchidGroup(createGroup(zone, inactive, 1, 15));
+    saveCandidate("REF-UNLINKED", "참조속", "세션미연결품종", null, true);
+    // Legacy text without an actual variety relationship must not qualify a variety.
+    saveOrchidGroup(new OrchidGroup(zone, "참조속", "세션미연결품종", 1, "2치", 1, "정상", 16, null, null));
+
+    var names = varietySearchApi.findActiveNamesWithLinkedGroups();
+    assertThat(names).containsAll(expected).doesNotHaveDuplicates().isSorted();
+    assertThat(names).doesNotContain("세션비활성품종", "세션미연결품종", "노출하지않는별명");
+  }
+
+  @Test
+  @Transactional
   void aiCandidatesSearchNamesAndAliasesButNotCodesOrGenusAlone() {
     var name = saveCandidate("AI-NAME", "다른속", "검색테스트목련", null, true);
     var alias = saveCandidate("AI-ALIAS", "다른속", "별도품종", "검색테스트목련", true);

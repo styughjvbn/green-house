@@ -10,6 +10,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
@@ -79,6 +80,7 @@ class HttpAgentRuntimeAdapterTest {
     var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
     var requests = new ArrayList<String>();
     var payload = new AtomicReference<String>();
+    var sessionPayload = new AtomicReference<String>();
     server.createContext(
         "/",
         exchange -> {
@@ -86,6 +88,7 @@ class HttpAgentRuntimeAdapterTest {
           String body =
               new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
           if (exchange.getRequestURI().getPath().equals("/infer/slip")) payload.set(body);
+          if (exchange.getRequestURI().getPath().equals("/sessions")) sessionPayload.set(body);
           byte[] response =
               (exchange.getRequestURI().getPath().equals("/infer/slip")
                       ? "{\"photos\":[{\"photoId\":\"p-0\",\"result\":null}]}"
@@ -100,7 +103,12 @@ class HttpAgentRuntimeAdapterTest {
       var adapter =
           new HttpAgentRuntimeAdapter(
               "http://127.0.0.1:" + server.getAddress().getPort(), "secret", 5);
-      adapter.openSession("session");
+      var names = List.of("하니문", "프라그랑스");
+      adapter.openSession("session", names);
+      var sessionJson = JsonMapper.builder().build().readTree(sessionPayload.get());
+      assertThat(sessionJson.path("varietyNames").size()).isEqualTo(2);
+      assertThat(sessionJson.path("varietyNames").get(0).asText()).isEqualTo("하니문");
+      assertThat(sessionJson.path("varietyNames").get(1).asText()).isEqualTo("프라그랑스");
       var photos = new ArrayList<Photo>();
       for (int i = 0; i < 10; i++)
         photos.add(new Photo("p-" + i, "image/png", new byte[] {1}, i == 0 ? "수량 20개" : null));
@@ -110,6 +118,7 @@ class HttpAgentRuntimeAdapterTest {
       assertThat(result.photos().getFirst().photoId()).isEqualTo("p-0");
       var json = JsonMapper.builder().build().readTree(payload.get());
       assertThat(json.path("sessionId").asText()).isEqualTo("session");
+      assertThat(json.has("varietyNames")).isFalse();
       assertThat(json.path("photos").size()).isEqualTo(10);
       assertThat(json.path("photos").get(0).path("feedback").asText()).isEqualTo("수량 20개");
       adapter.closeSession("session");

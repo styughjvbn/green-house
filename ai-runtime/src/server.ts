@@ -14,13 +14,15 @@ import {
   inputPhotos,
 } from "./contracts.js";
 
-async function readBody(request: IncomingMessage) {
+async function readBody(
+  request: IncomingMessage,
+  maxBytes = 112 * 1024 * 1024,
+) {
   const parts: Buffer[] = [];
   let bytes = 0;
   for await (const part of request) {
     bytes += part.length;
-    if (bytes > 112 * 1024 * 1024)
-      throw new RuntimeError(413, "AI_IMAGE_TOO_LARGE");
+    if (bytes > maxBytes) throw new RuntimeError(413, "AI_IMAGE_TOO_LARGE");
     parts.push(part);
   }
   try {
@@ -85,17 +87,24 @@ export function createRuntimeServer(
     cleanSessions();
     if (request.method === "POST" && request.url === "/sessions") {
       try {
-        const body = await readBody(request);
+        const body = await readBody(request, 2 * 1024 * 1024);
         if (
           !body ||
           typeof body.sessionId !== "string" ||
-          !/^[a-f0-9-]{36}$/.test(body.sessionId)
+          !/^[a-f0-9-]{36}$/.test(body.sessionId) ||
+          (body.varietyNames !== undefined &&
+            (!Array.isArray(body.varietyNames) ||
+              body.varietyNames.some(
+                (name: unknown) =>
+                  typeof name !== "string" || !name.trim() || name.length > 150,
+              )))
         )
           throw new RuntimeError(400, "AI_INVALID_REQUEST");
         if (!sessions.has(body.sessionId)) {
           if (sessions.size >= 100)
             throw new RuntimeError(429, "AI_SESSION_LIMIT");
           sessions.set(body.sessionId, {
+            varietyNames: [...new Set<string>(body.varietyNames ?? [])],
             history: [],
             turns: 0,
             expiresAt: Date.now() + 30 * 60 * 1000,
