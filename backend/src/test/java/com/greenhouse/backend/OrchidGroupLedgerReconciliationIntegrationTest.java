@@ -166,7 +166,6 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
                 null,
                 "3.5치",
                 true,
-                true,
                 null,
                 null));
     OrchidGroup group =

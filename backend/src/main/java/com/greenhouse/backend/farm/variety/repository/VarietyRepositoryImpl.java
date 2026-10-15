@@ -79,9 +79,8 @@ public class VarietyRepositoryImpl implements VarietyRepositoryCustom {
   }
 
   @Override
-  public Page<Variety> search(
-      String keyword, String genus, Boolean saleEnabled, Boolean active, Pageable pageable) {
-    BooleanBuilder conditions = conditions(keyword, genus, saleEnabled, active);
+  public Page<Variety> search(String keyword, String genus, Boolean active, Pageable pageable) {
+    BooleanBuilder conditions = conditions(keyword, genus, active);
     List<Variety> content =
         queryFactory
             .selectFrom(variety)
@@ -117,12 +116,10 @@ public class VarietyRepositoryImpl implements VarietyRepositoryCustom {
         .fetch();
   }
 
-  private BooleanBuilder conditions(
-      String keyword, String genus, Boolean saleEnabled, Boolean active) {
+  private BooleanBuilder conditions(String keyword, String genus, Boolean active) {
     return new BooleanBuilder()
         .and(keywordContains(keyword))
         .and(genusEq(genus))
-        .and(saleEnabledEq(saleEnabled))
         .and(activeEq(active));
   }
 
@@ -139,10 +136,6 @@ public class VarietyRepositoryImpl implements VarietyRepositoryCustom {
 
   private BooleanExpression genusEq(String genus) {
     return isBlank(genus) ? null : variety.genus.eq(genus);
-  }
-
-  private BooleanExpression saleEnabledEq(Boolean saleEnabled) {
-    return saleEnabled == null ? null : variety.saleEnabled.eq(saleEnabled);
   }
 
   private BooleanExpression activeEq(Boolean active) {

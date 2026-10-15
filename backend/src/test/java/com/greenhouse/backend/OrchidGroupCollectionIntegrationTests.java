@@ -40,8 +40,7 @@ class OrchidGroupCollectionIntegrationTests extends AbstractBackendIntegrationTe
     houseRepository.save(house);
     Variety variety =
         varietyRepository.save(
-            new Variety(
-                "COLLECTION-TEST", "팔레놉시스", "그룹 테스트 난", null, "3.5\"", true, true, null, null));
+            new Variety("COLLECTION-TEST", "팔레놉시스", "그룹 테스트 난", null, "3.5\"", true, null, null));
     OrchidGroup orchidGroup =
         new OrchidGroup(
             zone,

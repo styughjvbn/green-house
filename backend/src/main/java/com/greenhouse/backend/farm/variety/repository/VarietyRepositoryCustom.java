@@ -7,8 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface VarietyRepositoryCustom {
 
-  Page<Variety> search(
-      String keyword, String genus, Boolean saleEnabled, Boolean active, Pageable pageable);
+  Page<Variety> search(String keyword, String genus, Boolean active, Pageable pageable);
 
   List<Variety> searchCandidates(String keyword, String genusHint, int limit);
 

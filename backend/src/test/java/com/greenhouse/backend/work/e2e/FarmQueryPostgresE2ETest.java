@@ -93,7 +93,6 @@ class FarmQueryPostgresE2ETest extends WorkE2ETestBase {
                             null,
                             "3치",
                             true,
-                            true,
                             null,
                             null));
                 var group =

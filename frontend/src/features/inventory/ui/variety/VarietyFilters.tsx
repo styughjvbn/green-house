@@ -52,12 +52,6 @@ export function VarietyFilters({
       appliedFilters.status,
       onRemove,
     ),
-    ...valueFilterBadge(
-      "saleEnabled",
-      `판매 사용: ${appliedFilters.saleEnabled === "true" ? "사용" : "미사용"}`,
-      appliedFilters.saleEnabled,
-      onRemove,
-    ),
   ];
   return (
     <ListFilterToolbar
@@ -98,18 +92,6 @@ export function VarietyFilters({
         <option value="">전체</option>
         <option value="ACTIVE">활성</option>
         <option value="INACTIVE">비활성</option>
-      </FilterSelect>
-      <FilterSelect
-        layout="row"
-        label="판매 사용"
-        value={filters.saleEnabled}
-        onChange={(value) =>
-          onChange("saleEnabled", value as VarietyFilterState["saleEnabled"])
-        }
-      >
-        <option value="">전체</option>
-        <option value="true">사용</option>
-        <option value="false">미사용</option>
       </FilterSelect>
     </ListFilterToolbar>
   );

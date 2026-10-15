@@ -117,8 +117,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
     houseRepository.save(house);
     variety =
         varietyRepository.save(
-            new Variety(
-                "STRUCTURE-001", "팔레놉시스", "구조 변경 테스트", null, "3.5치", true, true, null, null));
+            new Variety("STRUCTURE-001", "팔레놉시스", "구조 변경 테스트", null, "3.5치", true, null, null));
   }
 
   @Test
@@ -177,8 +176,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
     OrchidGroup first = createSource(20, "0", "1");
     Variety anotherVariety =
         varietyRepository.save(
-            new Variety(
-                "STRUCTURE-002", "팔레놉시스", "다른 구조 변경 품종", null, "3.5치", true, true, null, null));
+            new Variety("STRUCTURE-002", "팔레놉시스", "다른 구조 변경 품종", null, "3.5치", true, null, null));
     OrchidGroup second = createSource(anotherVariety, 20, "1", "2");
     String sourceIds = first.getId() + "," + second.getId();
 
@@ -208,8 +206,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
     OrchidGroup first = createSource(10, "0", "1");
     Variety anotherVariety =
         varietyRepository.save(
-            new Variety(
-                "STRUCTURE-002", "팔레놉시스", "다른 구조 변경 품종", null, "3.5치", true, true, null, null));
+            new Variety("STRUCTURE-002", "팔레놉시스", "다른 구조 변경 품종", null, "3.5치", true, null, null));
     OrchidGroup second = createSource(anotherVariety, 20, "1", "2");
 
     mockMvc

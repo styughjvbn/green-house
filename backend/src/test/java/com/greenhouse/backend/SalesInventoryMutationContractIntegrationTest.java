@@ -130,7 +130,6 @@ class SalesInventoryMutationContractIntegrationTest extends AbstractBackendInteg
                 null,
                 "4인치",
                 true,
-                true,
                 null,
                 null));
     OrchidGroup group =

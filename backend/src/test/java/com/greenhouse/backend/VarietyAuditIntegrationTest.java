@@ -30,7 +30,7 @@ class VarietyAuditIntegrationTest extends AbstractBackendIntegrationTest {
                     .content(
                         """
 						{"genus":"감사속","name":"감사품종","defaultPotSize":"4인치",
-						 "color":"#112233","saleEnabled":true,"description":"설명","memo":"메모"}
+						 "color":"#112233","description":"설명","memo":"메모"}
 						"""))
             .andExpect(status().isCreated())
             .andReturn();
@@ -46,7 +46,7 @@ class VarietyAuditIntegrationTest extends AbstractBackendIntegrationTest {
                 .content(
                     """
 						{"genus":"감사속","name":"감사품종 수정","alias":"별칭","defaultPotSize":"5인치",
-						 "color":"#445566","saleEnabled":false,"description":"수정 설명","memo":"수정 메모"}
+						 "color":"#445566","description":"수정 설명","memo":"수정 메모"}
 						"""))
         .andExpect(status().isOk());
     mockMvc
@@ -66,7 +66,7 @@ class VarietyAuditIntegrationTest extends AbstractBackendIntegrationTest {
         .containsExactly(
             AuditAction.CREATED, AuditAction.UPDATED, AuditAction.DEACTIVATED, AuditAction.DELETED);
     assertThat(events.get(1).getChangedFields())
-        .contains("name", "alias", "defaultPotSize", "color", "saleEnabled", "description", "memo");
+        .contains("name", "alias", "defaultPotSize", "color", "description", "memo");
     assertThat(events.get(2).getChangedFields()).containsExactly("active");
     assertThat(events)
         .allSatisfy(

@@ -56,7 +56,6 @@ export function varietyPageQueryOptions(
         genus: state.filters.genus || undefined,
         keyword: state.filters.keyword || undefined,
         active: toActive(state.filters.status),
-        saleEnabled: toBoolean(state.filters.saleEnabled),
         page: state.page,
         size: state.size,
       }),

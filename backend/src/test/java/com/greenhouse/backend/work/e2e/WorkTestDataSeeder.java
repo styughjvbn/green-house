@@ -234,8 +234,8 @@ class WorkTestDataSeeder {
         """
 				INSERT INTO varieties (
 				  created_at, updated_at, code, genus, name, default_pot_size,
-				  sale_enabled, is_active
-				) VALUES (?, ?, ?, '팔레놉시스', ?, '3.5치', TRUE, TRUE)
+				  is_active
+				) VALUES (?, ?, ?, '팔레놉시스', ?, '3.5치', TRUE)
 				RETURNING id
 				""",
         Long.class,

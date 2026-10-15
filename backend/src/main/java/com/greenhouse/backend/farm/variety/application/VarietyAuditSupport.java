@@ -24,7 +24,6 @@ public class VarietyAuditSupport {
     data.put("alias", variety.getAlias());
     data.put("defaultPotSize", variety.getDefaultPotSize());
     data.put("color", variety.getColor());
-    data.put("saleEnabled", variety.isSaleEnabled());
     data.put("active", variety.isActive());
     data.put("description", variety.getDescription());
     data.put("memo", variety.getMemo());

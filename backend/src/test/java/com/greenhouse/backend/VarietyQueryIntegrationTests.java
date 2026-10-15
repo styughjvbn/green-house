@@ -65,7 +65,7 @@ class VarietyQueryIntegrationTests extends AbstractBackendIntegrationTest {
         .extracting(VarietySearchApi.Option::id)
         .containsExactly(name.getId(), alias.getId());
     assertThat(varietySearchApi.searchOptions("AI-NAME", null, 10)).isEmpty();
-    assertThat(varietyRepository.search("AI-NAME", null, null, null, PageRequest.of(0, 10)))
+    assertThat(varietyRepository.search("AI-NAME", null, null, PageRequest.of(0, 10)))
         .extracting(Variety::getId)
         .containsExactly(name.getId());
   }
@@ -137,8 +137,7 @@ class VarietyQueryIntegrationTests extends AbstractBackendIntegrationTest {
 
   private Variety saveCandidate(
       String code, String genus, String name, String alias, boolean active) {
-    return varietyRepository.save(
-        new Variety(code, genus, name, alias, "2치", true, active, null, null));
+    return varietyRepository.save(new Variety(code, genus, name, alias, "2치", active, null, null));
   }
 
   @Test
@@ -146,10 +145,10 @@ class VarietyQueryIntegrationTests extends AbstractBackendIntegrationTest {
   void returnsVarietySummariesFromBatchLoadedOrchidGroups() throws Exception {
     var firstVariety =
         varietyRepository.save(
-            new Variety("BATCH-001", "테스트속", "배치품종A", null, "2치", true, true, null, null));
+            new Variety("BATCH-001", "테스트속", "배치품종A", null, "2치", true, null, null));
     var secondVariety =
         varietyRepository.save(
-            new Variety("BATCH-002", "테스트속", "배치품종B", null, "3치", true, true, null, null));
+            new Variety("BATCH-002", "테스트속", "배치품종B", null, "3치", true, null, null));
     var house = new House(99, "배치 테스트동");
     var bed = new PhysicalBed(1, 1);
     var zone = new BedZone("테스트 구역", BedZoneSide.LEFT, 1);
@@ -173,11 +172,11 @@ class VarietyQueryIntegrationTests extends AbstractBackendIntegrationTest {
   @Transactional
   void returnsGeneraAndActiveVarietyNames() throws Exception {
     varietyRepository.save(
-        new Variety("GENERA-001", "카틀레야", "활성품종A", null, "2치", true, true, null, null));
+        new Variety("GENERA-001", "카틀레야", "활성품종A", null, "2치", true, null, null));
     varietyRepository.save(
-        new Variety("GENERA-002", "덴드로비움", "활성품종B", null, "3치", true, true, null, null));
+        new Variety("GENERA-002", "덴드로비움", "활성품종B", null, "3치", true, null, null));
     varietyRepository.save(
-        new Variety("GENERA-003", "카틀레야", "비활성품종", null, "3치", true, false, null, null));
+        new Variety("GENERA-003", "카틀레야", "비활성품종", null, "3치", false, null, null));
 
     mockMvc
         .perform(get("/api/varieties/genera"))

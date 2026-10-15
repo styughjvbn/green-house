@@ -94,7 +94,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 
     Variety variety =
         varietyRepository.save(
-            new Variety("POT-001", "팔레놉시스", "포트 계획 난", null, "2치", true, true, null, null));
+            new Variety("POT-001", "팔레놉시스", "포트 계획 난", null, "2치", true, null, null));
     inboundRecord =
         inboundRecordRepository.save(
             new InboundRecord(
@@ -436,7 +436,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
   void rejectsMixedVarietiesInOneInboundPottingPlan() throws Exception {
     Variety anotherVariety =
         varietyRepository.save(
-            new Variety("POT-002", "팔레놉시스", "다른 포트 계획 난", null, "2치", true, true, null, null));
+            new Variety("POT-002", "팔레놉시스", "다른 포트 계획 난", null, "2치", true, null, null));
     InboundRecord anotherInbound =
         inboundRecordRepository.save(
             new InboundRecord(

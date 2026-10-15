@@ -95,7 +95,7 @@ class WorkRecordBatchLockOrderPostgresE2ETest extends WorkE2ETestBase {
     Long secondVariety =
         varieties
             .saveAndFlush(
-                new Variety("LOCK-W-B", "팔레놉시스", "잠금 품종 B", null, "3.5치", true, true, null, null))
+                new Variety("LOCK-W-B", "팔레놉시스", "잠금 품종 B", null, "3.5치", true, null, null))
             .getId();
     Long secondZone =
         jdbc.queryForObject(

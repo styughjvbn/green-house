@@ -65,7 +65,6 @@ function VarietyDialogForm({
     alias: "",
     defaultPotSize: "",
     color: null,
-    saleEnabled: true,
     description: "",
     memo: "",
   });
@@ -121,19 +120,6 @@ function VarietyDialogForm({
         color={form.color}
         onChange={(color) => setForm((current) => ({ ...current, color }))}
       />
-      <label className="flex items-center gap-2 text-sm font-semibold text-[#425047] md:col-span-2">
-        <input
-          checked={form.saleEnabled}
-          type="checkbox"
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              saleEnabled: event.target.checked,
-            }))
-          }
-        />
-        판매 사용
-      </label>
       <label className="space-y-1 text-xs font-semibold text-[#425047] md:col-span-2">
         <span>설명</span>
         <textarea

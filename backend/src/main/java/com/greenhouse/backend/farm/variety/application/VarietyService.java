@@ -67,13 +67,12 @@ public class VarietyService implements VarietySearchApi {
 
   @Transactional(readOnly = true)
   public PageResponse<VarietyResponse> getVarieties(
-      String keyword, String genus, Boolean saleEnabled, Boolean active, int page, int size) {
+      String keyword, String genus, Boolean active, int page, int size) {
     PageRequests.validate(page, size);
     var result =
         varietyRepository.search(
             normalize(keyword) == null ? "" : normalize(keyword),
             normalize(genus) == null ? "" : normalize(genus),
-            saleEnabled,
             active,
             PageRequest.of(
                 page,
@@ -109,7 +108,6 @@ public class VarietyService implements VarietySearchApi {
             normalize(request.alias()),
             normalize(request.defaultPotSize()),
             normalizeColor(request.color()),
-            request.saleEnabled() == null || request.saleEnabled(),
             true,
             normalize(request.description()),
             normalize(request.memo()));
@@ -141,7 +139,6 @@ public class VarietyService implements VarietySearchApi {
                         null,
                         normalize(newVariety.defaultPotSize()),
                         true,
-                        true,
                         null,
                         normalize(newVariety.memo()))));
   }
@@ -158,7 +155,6 @@ public class VarietyService implements VarietySearchApi {
         normalize(request.alias()),
         normalize(request.defaultPotSize()),
         normalizeColor(request.color()),
-        request.saleEnabled() == null || request.saleEnabled(),
         normalize(request.description()),
         normalize(request.memo()));
     var connectedGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(varietyId);

@@ -99,7 +99,7 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
     houseRepository.save(house);
     variety =
         varietyRepository.save(
-            new Variety("REPOT-001", "팔레놉시스", "분갈이 테스트", null, "3.5치", true, true, null, null));
+            new Variety("REPOT-001", "팔레놉시스", "분갈이 테스트", null, "3.5치", true, null, null));
   }
 
   @Test
@@ -359,7 +359,6 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
                 " " + "가".repeat(148) + " ",
                 null,
                 "3.5치",
-                true,
                 true,
                 null,
                 null));

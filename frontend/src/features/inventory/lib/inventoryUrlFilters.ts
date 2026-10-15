@@ -15,7 +15,6 @@ export const VARIETY_FILTER_KEYS = [
   "varietyGenus",
   "varietyKeyword",
   "varietyStatus",
-  "varietySale",
 ] as const;
 
 export const INBOUND_FILTER_KEYS = [
@@ -38,7 +37,6 @@ export function createEmptyVarietyFilters(): VarietyFilterState {
     genus: "",
     keyword: "",
     status: "",
-    saleEnabled: "",
   };
 }
 
@@ -67,7 +65,7 @@ export function writeVarietyFilterParams(
   setParam(params, "varietyGenus", filters.genus);
   setParam(params, "varietyKeyword", filters.keyword);
   setParam(params, "varietyStatus", filters.status);
-  setParam(params, "varietySale", filters.saleEnabled);
+  params.delete("varietySale");
 }
 
 export function writeInboundFilterParams(

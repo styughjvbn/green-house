@@ -80,7 +80,7 @@ class OrchidGroupLineageIntegrationTests extends AbstractBackendIntegrationTest 
     houseRepository.save(house);
     variety =
         varietyRepository.save(
-            new Variety("LINEAGE-001", "팔레놉시스", "계보 테스트", null, "3.5치", true, true, null, null));
+            new Variety("LINEAGE-001", "팔레놉시스", "계보 테스트", null, "3.5치", true, null, null));
   }
 
   @Test

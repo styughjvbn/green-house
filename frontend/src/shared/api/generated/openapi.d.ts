@@ -3235,7 +3235,6 @@ export interface components {
             genus: string;
             memo?: string;
             name: string;
-            saleEnabled?: boolean;
         };
         ApiResponseVarietyResponse: {
             data?: components["schemas"]["VarietyResponse"];
@@ -3261,7 +3260,6 @@ export interface components {
             recentInboundDate?: string;
             /** Format: date */
             recentWorkDate?: string;
-            saleEnabled?: boolean;
             /** Format: int64 */
             saleableQuantity?: number;
             /** Format: int64 */
@@ -4071,7 +4069,6 @@ export interface components {
             genus: string;
             memo?: string;
             name: string;
-            saleEnabled?: boolean;
         };
         SalesSlipStatusUpdateRequest: {
             memo?: string;
@@ -6740,7 +6737,6 @@ export interface operations {
             query?: {
                 keyword?: string;
                 genus?: string;
-                saleEnabled?: boolean;
                 active?: boolean;
                 page?: number;
                 size?: number;

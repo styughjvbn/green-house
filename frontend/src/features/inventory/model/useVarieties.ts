@@ -92,8 +92,7 @@ export function useVarieties({
 
   return {
     ...listState,
-    resetPopupFilters: () =>
-      listState.removeFilters(["genus", "status", "saleEnabled"]),
+    resetPopupFilters: () => listState.removeFilters(["genus", "status"]),
     query,
     pageData,
     selected,

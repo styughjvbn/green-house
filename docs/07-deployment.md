@@ -76,6 +76,9 @@ ORCHID_LEDGER_STARTUP_GUARD_ENABLED
 ```
 
 운영에서 `JPA_DDL_AUTO`는 `validate`로 두고 스키마 변경은 Flyway 마이그레이션으로만 적용한다.
+
+품종의 사용하지 않는 판매 사용 컬럼은 V43에서 제거한다. 품종 ID·활성 상태·난 묶음 연결과 과거 감사 기록은 유지하며, 구버전 서버와 함께 운영하지 않고 백엔드·프론트를 함께 갱신한다.
+
 `HIBERNATE_JDBC_BATCH_SIZE`의 기본값은 `50`이며 PostgreSQL JDBC batch 재작성은 기본 활성화한다.
 난 묶음 ledger가 `ACTIVE`인 DB에는 coverage의
 최소 버전 이상인 `ORCHID_LEDGER_WRITER_VERSION`을 설정한다. 조건을 만족하지 못한

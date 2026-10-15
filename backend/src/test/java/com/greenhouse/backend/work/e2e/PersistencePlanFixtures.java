@@ -26,8 +26,8 @@ final class PersistencePlanFixtures {
         roots);
     jdbc.update(
         """
-        insert into varieties (id, code, genus, name, default_pot_size, sale_enabled, is_active, created_at, updated_at)
-        values (90000001, 'PLAN-1', '팔레놉시스', 'Plan variety', '3.5치', true, true, now(), now())
+        insert into varieties (id, code, genus, name, default_pot_size, is_active, created_at, updated_at)
+        values (90000001, 'PLAN-1', '팔레놉시스', 'Plan variety', '3.5치', true, now(), now())
         """);
     jdbc.update(
         """
