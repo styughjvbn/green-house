@@ -384,6 +384,7 @@ export function SalesSlipPhotoRegistrationDialog({
                   }
                   errorMessage={selected.error}
                   form={selected.form}
+                  onConfirmReview={photos.confirmReview}
                   mode="create"
                   saving={photos.busy !== null}
                   totalAmount={calculateSalesTotal(selected.form.items)}

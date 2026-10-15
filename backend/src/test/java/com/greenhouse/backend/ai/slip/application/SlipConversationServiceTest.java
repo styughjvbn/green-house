@@ -57,7 +57,8 @@ class SlipConversationServiceTest {
   }
 
   private SlipModelResult result(String name) {
-    return new SlipModelResult(null, null, name, null, null, List.of(), List.of(), 90, 1024, 1);
+    return new SlipModelResult(
+        null, null, name, null, null, List.of(), List.of(), 90, 1024, 1, List.of());
   }
 
   @Test

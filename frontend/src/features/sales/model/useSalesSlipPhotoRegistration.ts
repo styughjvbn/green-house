@@ -20,9 +20,13 @@ import {
   toCreateSalesSlipPayload,
   withSalesRecordingMode,
 } from "../lib/salesForm";
-import { withRecognizedSalesSlip } from "../lib/salesPhotoForm";
+import {
+  withRecognizedSalesSlip,
+  clearEditedSalesReviews,
+  confirmSalesReview,
+} from "../lib/salesPhotoForm";
 import { createSalesSlipDraftActions } from "./salesSlipDraftActions";
-import type { SalesSlipForm } from "./types";
+import type { SalesSlipForm, SalesReviewField } from "./types";
 
 type PhotoEntry = {
   id: string;
@@ -101,8 +105,10 @@ export function useSalesSlipPhotoRegistration(
           entry.id === id && entry.save !== "saved" && !entry.pendingPayload
             ? {
                 ...entry,
-                form:
+                form: clearEditedSalesReviews(
+                  entry.form,
                   typeof update === "function" ? update(entry.form) : update,
+                ),
                 error: null,
               }
             : entry,
@@ -408,29 +414,39 @@ export function useSalesSlipPhotoRegistration(
       });
       return;
     }
-    setForm(selected.id, (current) => ({
-      ...current,
-      items: distributeSalesItems(
-        current.items.map((item, index) =>
-          indices.includes(index)
-            ? {
-                ...item,
-                itemName: first.varietyName,
-                genus: first.genus,
-                allocationMode: "AUTO" as const,
-                allocations: groups.map((group) => ({
-                  orchidGroupId: String(group.id),
-                  varietyName: group.varietyName,
-                  genus: group.genus,
-                  locationLabel: `${group.houseNumber}동 ${group.physicalBedNumber}배드 ${group.bedZoneName}`,
-                  availableQuantity: group.availableQuantity,
-                  quantity: "0",
-                })),
-              }
-            : item,
+    setForm(selected.id, (current) =>
+      confirmSalesReview(
+        confirmSalesReview(
+          {
+            ...current,
+            items: distributeSalesItems(
+              current.items.map((item, index) =>
+                indices.includes(index)
+                  ? {
+                      ...item,
+                      itemName: first.varietyName,
+                      genus: first.genus,
+                      allocationMode: "AUTO" as const,
+                      allocations: groups.map((group) => ({
+                        orchidGroupId: String(group.id),
+                        varietyName: group.varietyName,
+                        genus: group.genus,
+                        locationLabel: `${group.houseNumber}동 ${group.physicalBedNumber}배드 ${group.bedZoneName}`,
+                        availableQuantity: group.availableQuantity,
+                        quantity: "0",
+                      })),
+                    }
+                  : item,
+              ),
+            ),
+          },
+          "ITEM_NAME",
+          indices,
         ),
+        "GENUS",
+        indices,
       ),
-    }));
+    );
   }
   return {
     entries,
@@ -440,6 +456,12 @@ export function useSalesSlipPhotoRegistration(
     busy,
     uploadError,
     actions,
+    confirmReview: (field: SalesReviewField, indices?: number[]) => {
+      if (selected)
+        setForm(selected.id, (form) =>
+          confirmSalesReview(form, field, indices),
+        );
+    },
     setRecordingMode,
     connectGroups,
     addFiles,

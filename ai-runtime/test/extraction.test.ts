@@ -23,6 +23,37 @@ const result = (confidence: number) => ({
   items: [],
   warnings: [],
   confidence,
+  reviewFields: [],
+});
+
+test("field review metadata identifies uncertainty without discarding the candidate value", () => {
+  const item = {
+    itemName: "품종",
+    genus: null,
+    varietyId: null,
+    spec: "중",
+    unit: 10,
+    boxes: null,
+    quantity: 20,
+    unitPrice: 100,
+    amount: 2000,
+    memo: null,
+  };
+  const value = {
+    ...result(90),
+    items: [item],
+    reviewFields: [
+      { field: "QUANTITY", itemIndex: 0, reason: "수량 끝자리 불명확" },
+    ],
+  };
+  assert.equal(validateResult(value), value);
+  assert.equal(value.items[0].quantity, 20);
+  for (const review of [
+    { field: "UNKNOWN", itemIndex: 0, reason: "확인 필요" },
+    { field: "QUANTITY", itemIndex: -1, reason: "확인 필요" },
+    { field: "QUANTITY", itemIndex: 0, reason: "" },
+  ])
+    assert.throws(() => validateResult({ ...value, reviewFields: [review] }));
 });
 
 test("extraction units accept only positive integer numbers or null", () => {

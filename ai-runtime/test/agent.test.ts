@@ -19,6 +19,7 @@ const result = {
   items: [],
   warnings: [],
   confidence: 90,
+  reviewFields: [],
 };
 const input: SlipInput = {
   requestId: "test-run",

@@ -25,6 +25,86 @@ import org.junit.jupiter.params.provider.Arguments;
 
 class SlipExtractionServiceTest {
   @Test
+  void preservesUncertainValuesAndReturnsSpecificReviewTargets() {
+    var tools =
+        new AgentToolGateway(
+            mock(VarietySearchApi.class),
+            mock(BusinessPartnerQueryApi.class),
+            Clock.systemUTC(),
+            5,
+            120);
+    try (var factory = Validation.buildDefaultValidatorFactory();
+        var scope = tools.open("r", "worker")) {
+      var service =
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+      var item = new SlipModelResult.Item("하니문", "속", null, "중", 10, 2, 20, 100, 2000L, null);
+      var review = new SlipFieldReview(SlipFieldReview.Field.QUANTITY, 0, "수량 끝자리 불명확");
+      var raw =
+          new SlipModelResult(
+              "DIRECT",
+              "2026-10-15",
+              "거래처",
+              null,
+              null,
+              List.of(item),
+              List.of(),
+              90,
+              1024,
+              1,
+              List.of(review, review));
+      var result = service.validate("r", raw, scope);
+      assertThat(result.items().getFirst().quantity()).isEqualTo(20);
+      assertThat(result.reviewFields()).contains(review);
+      assertThat(
+              result.reviewFields().stream()
+                  .filter(r -> r.field() == SlipFieldReview.Field.QUANTITY))
+          .hasSize(1);
+      assertThat(result.reviewFields())
+          .anySatisfy(
+              r -> {
+                assertThat(r.field()).isEqualTo(SlipFieldReview.Field.PARTNER);
+                assertThat(r.itemIndex()).isNull();
+              });
+      assertThat(result.reviewFields())
+          .anySatisfy(
+              r -> {
+                assertThat(r.field()).isEqualTo(SlipFieldReview.Field.ITEM_NAME);
+                assertThat(r.itemIndex()).isZero();
+              });
+    }
+  }
+
+  @Test
+  void rejectsReviewTargetsOutsideTheirSlipOrItemScope() {
+    var tools =
+        new AgentToolGateway(
+            mock(VarietySearchApi.class),
+            mock(BusinessPartnerQueryApi.class),
+            Clock.systemUTC(),
+            5,
+            120);
+    try (var factory = Validation.buildDefaultValidatorFactory();
+        var scope = tools.open("r", "worker")) {
+      var service =
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+      for (var review :
+          List.of(
+              new SlipFieldReview(SlipFieldReview.Field.SALE_DATE, 0, "날짜 확인 필요"),
+              new SlipFieldReview(SlipFieldReview.Field.QUANTITY, null, "수량 확인 필요"),
+              new SlipFieldReview(SlipFieldReview.Field.QUANTITY, 0, "수량 확인 필요"),
+              new SlipFieldReview(SlipFieldReview.Field.SALE_DATE, null, " "))) {
+        var raw =
+            new SlipModelResult(
+                null, null, null, null, null, List.of(), List.of(), 90, 1024, 1, List.of(review));
+        assertThatThrownBy(() -> service.validate("r", raw, scope))
+            .isInstanceOf(AgentException.class)
+            .extracting("code")
+            .isEqualTo("AI_INVALID_RESULT");
+      }
+    }
+  }
+
+  @Test
   void acceptsOnlyCandidatesReturnedByThisRunAndKeepsRawValuesAndAmountWarning() {
     var varieties = mock(VarietySearchApi.class);
     var partners = mock(BusinessPartnerQueryApi.class);
@@ -58,7 +138,8 @@ class SlipExtractionServiceTest {
               List.of(),
               90,
               1024,
-              1);
+              1,
+              List.of());
       var result = service.validate("request", raw, scope);
       assertThat(result.saleDate()).isNull();
       assertThat(result.partnerName()).isEqualTo("정식 거래처");
@@ -104,7 +185,8 @@ class SlipExtractionServiceTest {
               List.of(),
               90,
               1024,
-              1);
+              1,
+              List.of());
       assertThatThrownBy(() -> service.validate("r", raw, scope))
           .isInstanceOf(AgentException.class)
           .extracting("code")
@@ -138,7 +220,7 @@ class SlipExtractionServiceTest {
                 throw new IllegalStateException(e);
               }
               return new SlipModelResult(
-                  null, null, null, null, null, List.of(), List.of(), 90, 1024, 1);
+                  null, null, null, null, null, List.of(), List.of(), 90, 1024, 1, List.of());
             });
     var png = new ByteArrayOutputStream();
     ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "png", png);
@@ -173,7 +255,8 @@ class SlipExtractionServiceTest {
       var service =
           new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
       var valid =
-          new SlipModelResult(null, null, null, null, null, List.of(), List.of(), 65, 2048, 2);
+          new SlipModelResult(
+              null, null, null, null, null, List.of(), List.of(), 65, 2048, 2, List.of());
       var result = service.validate("r", valid, scope);
       assertThat(result.confidence()).isEqualTo(65);
       assertThat(result.imageLongEdge()).isEqualTo(2048);
@@ -181,7 +264,7 @@ class SlipExtractionServiceTest {
       for (Integer confidence : Arrays.asList(-1, 101, null)) {
         var invalid =
             new SlipModelResult(
-                null, null, null, null, null, List.of(), List.of(), confidence, 1024, 1);
+                null, null, null, null, null, List.of(), List.of(), confidence, 1024, 1, List.of());
         assertThatThrownBy(() -> service.validate("r", invalid, scope))
             .isInstanceOf(AgentException.class)
             .extracting("code")
@@ -217,7 +300,7 @@ class SlipExtractionServiceTest {
           new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
       var raw =
           new SlipModelResult(
-              modelType, null, "사진 원문", 3L, null, List.of(), List.of(), 90, 1024, 1);
+              modelType, null, "사진 원문", 3L, null, List.of(), List.of(), 90, 1024, 1, List.of());
       var result = service.validate("r", raw, scope);
       assertThat(result.partnerId()).isEqualTo(3L);
       assertThat(result.partnerName()).isEqualTo("등록 거래처");
@@ -253,7 +336,8 @@ class SlipExtractionServiceTest {
             service.validate(
                 "r",
                 new SlipModelResult(
-                    "AUCTION", null, "사진 원문", id, null, List.of(), List.of(), 90, 1024, 1),
+                    "AUCTION", null, "사진 원문", id, null, List.of(), List.of(), 90, 1024, 1,
+                    List.of()),
                 scope);
         assertThat(result.partnerId()).isNull();
         assertThat(result.salesType()).isNull();

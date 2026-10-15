@@ -3,6 +3,12 @@
 import { useId, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import Select from "react-select";
+import {
+  ReviewBadge,
+  ReviewField,
+  ReviewSelectInput,
+  type InputReview,
+} from "../common/InputReview";
 import type { VarietyOption } from "@/entities/farm/types";
 import { getSalesRecordedVarieties } from "../../api/salesApi";
 
@@ -18,11 +24,13 @@ export function SalesRecordedVarietySelect({
   genus,
   disabled,
   onSelect,
+  review,
 }: {
   name: string;
   genus: string;
   disabled: boolean;
   onSelect: (variety: Pick<VarietyOption, "name" | "genus">) => void;
+  review?: InputReview;
 }) {
   const id = useId();
   const [keyword, setKeyword] = useState("");
@@ -54,15 +62,22 @@ export function SalesRecordedVarietySelect({
     : null;
 
   return (
-    <div className="w-1/2 min-w-0 shrink-0 space-y-1">
+    <ReviewField
+      id={`${id}-review`}
+      review={review}
+      disabled={disabled}
+      className="w-1/2 min-w-0 shrink-0 space-y-1"
+    >
       <label
         htmlFor={id}
         className="block text-sm font-semibold text-[#435047]"
       >
-        품종명 / 속
+        품종명 / 속{review ? <ReviewBadge /> : null}
       </label>
       <Select<Option, false>
+        components={{ Input: ReviewSelectInput }}
         inputId={id}
+        aria-describedby={`${id}-review`}
         instanceId={id}
         inputValue={keyword}
         value={selected}
@@ -82,7 +97,8 @@ export function SalesRecordedVarietySelect({
           control: (base) => ({
             ...base,
             minHeight: 40,
-            borderColor: "#cfd8cc",
+            borderColor: review ? "#d97706" : "#cfd8cc",
+            backgroundColor: review ? "#fffbeb" : base.backgroundColor,
             borderRadius: 6,
           }),
           menu: (base) => ({ ...base, zIndex: 1300 }),
@@ -101,7 +117,10 @@ export function SalesRecordedVarietySelect({
           if (action.action === "input-change") setKeyword(value);
         }}
         onChange={(option) => {
-          if (option) onSelect({ name: option.name, genus: option.genus });
+          if (option) {
+            onSelect({ name: option.name, genus: option.genus });
+            review?.onConfirm();
+          }
           setKeyword("");
         }}
         onMenuScrollToBottom={() => {
@@ -122,6 +141,6 @@ export function SalesRecordedVarietySelect({
           </button>
         </p>
       ) : null}
-    </div>
+    </ReviewField>
   );
 }

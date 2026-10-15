@@ -153,7 +153,7 @@ export const instructions = `## Role and Scope
 - Do not infer business or inventory status. Do not save slips.
 
 ## Source Fidelity and Uncertainty
-- Return null for uncertain values.
+- Fill legible candidate readings. Mark uncertain fields in reviewFields. Return null for unreadable or absent values.
 - Write warnings as concise Korean fragments, one issue per entry, e.g., "거래처 확인 필요", "꽃송이 수 판독 불가". Omit full sentences and polite endings.
 - Preserve original text in partnerName, itemName, and genus. Return matched candidate IDs separately.
 - Never discard recognized text due to search failures.
@@ -224,6 +224,13 @@ Example:
 - Return unit as a positive integer or null. Extract only a printed numeric unit value; never substitute quantity or boxes. For labels alone, such as 개 or 분, return null.
 - Never derive quantity or unit price from amounts.
 - Set amount to the printed item amount, never a calculated value.
+
+## Field Review
+- Return reviewFields as an array; use [] when no fields need review.
+- Identify each uncertain field and give a concise Korean reason. Never hide field uncertainty only in warnings.
+- Use itemIndex=null for SALE_DATE, PARTNER, SALES_TYPE, and SLIP_MEMO. Use the zero-based item index for item fields.
+- Mark inferred values, ambiguous readings, and uncertain candidate matches. Preserve readable candidate values for user review; never invent missing data.
+- Mark the specific uncertain fields independently of the overall confidence score.
 
 ## Recognition Confidence
 - Assign confidence as an integer from 0 to 100 based on certainty in reading key source fields.

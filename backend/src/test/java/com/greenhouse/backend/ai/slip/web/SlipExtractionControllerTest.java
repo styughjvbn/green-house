@@ -25,7 +25,8 @@ class SlipExtractionControllerTest {
     when(service.extract(eq("worker"), eq("image/png"), any()))
         .thenReturn(
             new SlipExtractionResult(
-                "r", null, null, null, null, null, null, List.of(), List.of(), 90, 1024, 1));
+                "r", null, null, null, null, null, null, List.of(), List.of(), 90, 1024, 1,
+                List.of()));
     var mvc =
         MockMvcBuilders.standaloneSetup(new SlipExtractionController(service))
             .setControllerAdvice(new AgentExceptionHandler())

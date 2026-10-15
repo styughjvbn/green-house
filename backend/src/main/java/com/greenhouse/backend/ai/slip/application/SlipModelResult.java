@@ -14,7 +14,8 @@ public record SlipModelResult(
     @NotNull @Size(max = 30) List<@NotNull @Size(max = 500) String> warnings,
     @NotNull @Min(0) @Max(100) Integer confidence,
     @Min(1) @Max(2048) Integer imageLongEdge,
-    @Min(1) @Max(2) Integer attempts) {
+    @Min(1) @Max(2) Integer attempts,
+    @NotNull @Size(max = 1004) List<@NotNull @Valid SlipFieldReview> reviewFields) {
   public record Item(
       @Size(max = 150) String itemName,
       @Size(max = 100) String genus,

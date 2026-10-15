@@ -103,6 +103,45 @@
       "minimum": 0,
       "maximum": 100,
       "description": "사진 원문의 핵심 필드(날짜·거래처·품목·수량·단가·금액)를 읽은 확신 수준. 0~100의 자체 평가이며 실제 정답률이 아님. 후보 검색 성공 여부와 분리해 평가."
+    },
+    "reviewFields": {
+      "type": "array",
+      "maxItems": 1004,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "type": "string",
+            "enum": [
+              "SALE_DATE",
+              "PARTNER",
+              "SALES_TYPE",
+              "SLIP_MEMO",
+              "ITEM_NAME",
+              "GENUS",
+              "GRADE",
+              "UNIT",
+              "BOXES",
+              "QUANTITY",
+              "UNIT_PRICE",
+              "AMOUNT",
+              "ITEM_MEMO"
+            ]
+          },
+          "itemIndex": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "maximum": 99
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": ["field", "itemIndex", "reason"]
+      }
     }
   },
   "required": [
@@ -113,7 +152,8 @@
     "memo",
     "items",
     "warnings",
-    "confidence"
+    "confidence",
+    "reviewFields"
   ],
   "additionalProperties": false
 }

@@ -21,6 +21,7 @@ const slip = {
   items: [],
   warnings: [],
   confidence: 90,
+  reviewFields: [],
 };
 const photo = (id: string, feedback: string | null = null) => ({
   photoId: id,

@@ -16,7 +16,8 @@ public record SlipExtractionResult(
     @io.swagger.v3.oas.annotations.media.Schema(description = "AI 자체 평가 신뢰도(0~100). 실제 정답률이 아닙니다.")
         Integer confidence,
     Integer imageLongEdge,
-    Integer attempts) {
+    Integer attempts,
+    List<SlipFieldReview> reviewFields) {
   @io.swagger.v3.oas.annotations.media.Schema(name = "AiSlipExtractionItem")
   public record Item(
       String itemName,

@@ -100,6 +100,18 @@ export function createSalesSlipDraftActions(
         ...createEmptySalesItem(),
         itemName: source.itemName,
         genus: source.genus,
+        ...(source.fieldReviews
+          ? {
+              fieldReviews: {
+                ...(source.fieldReviews.ITEM_NAME
+                  ? { ITEM_NAME: source.fieldReviews.ITEM_NAME }
+                  : {}),
+                ...(source.fieldReviews.GENUS
+                  ? { GENUS: source.fieldReviews.GENUS }
+                  : {}),
+              },
+            }
+          : {}),
       };
       const items = [...current.items];
       items.splice(index + 1, 0, item);

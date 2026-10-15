@@ -1,5 +1,5 @@
 import { salesDispatchLabel } from "../../lib/salesDisplay";
-import { useRef, type SubmitEvent } from "react";
+import { useId, useRef, type SubmitEvent } from "react";
 import { ChevronDown, X } from "lucide-react";
 import {
   Dialog,
@@ -11,9 +11,15 @@ import type {
   SalesItemForm,
   SalesSlipForm,
   SalesSlipFormMode,
+  SalesReviewField,
 } from "../../model/types";
 import { BusinessPartnerSelect } from "../common/BusinessPartnerSelect";
 import { SelectField, TextField } from "../common/FormFields";
+import {
+  ReviewBadge,
+  ReviewField,
+  type InputReview,
+} from "../common/InputReview";
 import { SalesSlipItemEditor } from "./SalesSlipItemEditor";
 import { SalesOrchidGroupSearchSelect } from "./SalesOrchidGroupSearchSelect";
 import { SalesRecordedVarietySelect } from "./SalesRecordedVarietySelect";
@@ -44,6 +50,7 @@ export function SalesSlipCreateForm({
   onSalesTypeChange,
   onRecordingModeChange,
   onUpdateItem,
+  onConfirmReview,
 }: {
   embedded?: boolean;
   readOnly?: boolean;
@@ -87,7 +94,44 @@ export function SalesSlipCreateForm({
     field: keyof SalesItemForm,
     value: string,
   ) => void;
+  onConfirmReview?: (field: SalesReviewField, indices?: number[]) => void;
 }) {
+  const reviewId = useId();
+  function reviewFor(
+    field: SalesReviewField,
+    indices?: number[],
+  ): InputReview | undefined {
+    const reasons =
+      indices === undefined
+        ? [form.fieldReviews?.[field]]
+        : indices.map((index) => form.items[index]?.fieldReviews?.[field]);
+    const reason = [...new Set(reasons.filter(Boolean))].join(" · ");
+    return reason && onConfirmReview
+      ? { reason, onConfirm: () => onConfirmReview(field, indices) }
+      : undefined;
+  }
+  function varietyReview(indices: number[]): InputReview | undefined {
+    const name = reviewFor("ITEM_NAME", indices);
+    const genus = reviewFor("GENUS", indices);
+    const reason = [
+      ...new Set([name?.reason, genus?.reason].filter(Boolean)),
+    ].join(" · ");
+    return reason
+      ? {
+          reason,
+          onConfirm: () => {
+            name?.onConfirm();
+            genus?.onConfirm();
+          },
+        }
+      : undefined;
+  }
+  const reviewCount =
+    Object.keys(form.fieldReviews ?? {}).length +
+    form.items.reduce(
+      (sum, item) => sum + Object.keys(item.fieldReviews ?? {}).length,
+      0,
+    );
   const openerRef = useRef<HTMLElement | null>(
     typeof document !== "undefined" &&
       document.activeElement instanceof HTMLElement
@@ -160,29 +204,55 @@ export function SalesSlipCreateForm({
         }}
       >
         <div className="space-y-4 p-5">
-          <fieldset
+          {onConfirmReview && reviewCount > 0 ? (
+            <p
+              role="status"
+              className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            >
+              확인 필요 {reviewCount}개 · 표시된 입력을 누르면 사유를 확인하고
+              표시를 해제합니다.
+            </p>
+          ) : null}
+          <ReviewField
+            id={`${reviewId}-type`}
+            review={reviewFor("SALES_TYPE")}
             disabled={inputsDisabled || mode === "edit"}
-            className="min-w-0 rounded-md border border-[#cfe0d2] bg-white p-4"
           >
-            <legend className="sr-only">판매 유형</legend>
-            <h3 className="mb-3 text-sm font-bold text-[#26352b]">
-              판매 유형 선택
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              <TypeButton
-                active={form.salesType === "DIRECT"}
-                disabled={inputsDisabled || mode === "edit"}
-                label="일반 판매"
-                onClick={() => onSalesTypeChange("DIRECT")}
-              />
-              <TypeButton
-                active={form.salesType === "AUCTION"}
-                disabled={inputsDisabled || mode === "edit"}
-                label="경매 판매"
-                onClick={() => onSalesTypeChange("AUCTION")}
-              />
-            </div>
-          </fieldset>
+            <fieldset
+              id={`${reviewId}-type-control`}
+              tabIndex={-1}
+              disabled={inputsDisabled || mode === "edit"}
+              className="min-w-0 rounded-md border border-[#cfe0d2] bg-white p-4"
+            >
+              <legend className="sr-only" aria-describedby={`${reviewId}-type`}>
+                판매 유형
+              </legend>
+              <h3 className="mb-3 text-sm font-bold text-[#26352b]">
+                판매 유형 선택
+                {reviewFor("SALES_TYPE") ? <ReviewBadge /> : null}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                <TypeButton
+                  active={form.salesType === "DIRECT"}
+                  disabled={inputsDisabled || mode === "edit"}
+                  label="일반 판매"
+                  onClick={() => {
+                    onSalesTypeChange("DIRECT");
+                    onConfirmReview?.("SALES_TYPE");
+                  }}
+                />
+                <TypeButton
+                  active={form.salesType === "AUCTION"}
+                  disabled={inputsDisabled || mode === "edit"}
+                  label="경매 판매"
+                  onClick={() => {
+                    onSalesTypeChange("AUCTION");
+                    onConfirmReview?.("SALES_TYPE");
+                  }}
+                />
+              </div>
+            </fieldset>
+          </ReviewField>
           {mode === "create" ? (
             <fieldset
               disabled={inputsDisabled}
@@ -224,6 +294,7 @@ export function SalesSlipCreateForm({
                 label={form.salesType === "AUCTION" ? "출하일" : "판매일"}
                 required
                 type="date"
+                review={reviewFor("SALE_DATE")}
                 value={form.saleDate}
                 onChange={(value) => onChange("saleDate", value)}
               />
@@ -236,6 +307,7 @@ export function SalesSlipCreateForm({
                 activeOnly
                 required
                 disabled={inputsDisabled}
+                review={reviewFor("PARTNER")}
               />
               <SelectField
                 label="출고·출하"
@@ -271,6 +343,7 @@ export function SalesSlipCreateForm({
             <div className="mt-3">
               <TextField
                 label="메모"
+                review={reviewFor("SLIP_MEMO")}
                 value={form.memo}
                 onChange={(value) => onChange("memo", value)}
               />
@@ -379,6 +452,9 @@ export function SalesSlipCreateForm({
                     <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                       {form.recordOnly ? (
                         <SalesRecordedVarietySelect
+                          review={varietyReview(
+                            group.rows.map((row) => row.index),
+                          )}
                           name={group.itemName}
                           genus={group.genus}
                           disabled={inputsDisabled}
@@ -390,16 +466,37 @@ export function SalesSlipCreateForm({
                           }}
                         />
                       ) : (
-                        <div>
-                          <h3 className="text-base font-bold text-[#17251b]">
+                        <ReviewField
+                          id={`${reviewId}-variety-${group.rows[0].index}`}
+                          review={varietyReview(
+                            group.rows.map((row) => row.index),
+                          )}
+                          disabled={inputsDisabled}
+                        >
+                          <h3
+                            id={`${reviewId}-variety-control-${group.rows[0].index}`}
+                            tabIndex={
+                              !inputsDisabled &&
+                              varietyReview(group.rows.map((row) => row.index))
+                                ? 0
+                                : -1
+                            }
+                            aria-describedby={`${reviewId}-variety-${group.rows[0].index}`}
+                            className="text-base font-bold text-[#17251b]"
+                          >
                             {group.itemName || "난 묶음을 선택하세요"}
                             {group.genus ? ` / ${group.genus}` : ""}
+                            {varietyReview(
+                              group.rows.map((row) => row.index),
+                            ) ? (
+                              <ReviewBadge />
+                            ) : null}
                           </h3>
                           <p className="mt-1 text-xs text-[#66736a]">
                             선택된 난 묶음 {allocations.size}개 · 판매 가능{" "}
                             {availableQuantity.toLocaleString()}분
                           </p>
-                        </div>
+                        </ReviewField>
                       )}
                       {!form.recordOnly && onConnectGroups ? (
                         <div className="w-full sm:w-auto">
@@ -449,6 +546,7 @@ export function SalesSlipCreateForm({
                           onAllocationChange={onAllocationChange}
                           onChange={onUpdateItem}
                           onRemove={onRemoveItem}
+                          onConfirmReview={onConfirmReview}
                         />
                       ))}
                     </div>

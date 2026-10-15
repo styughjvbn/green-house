@@ -4008,6 +4008,16 @@ export interface components {
             /** Format: int64 */
             varietyId?: number;
         };
+        AiSlipFieldReview: {
+            /** @enum {string} */
+            field: "SALE_DATE" | "PARTNER" | "SALES_TYPE" | "SLIP_MEMO" | "ITEM_NAME" | "GENUS" | "GRADE" | "UNIT" | "BOXES" | "QUANTITY" | "UNIT_PRICE" | "AMOUNT" | "ITEM_MEMO";
+            /**
+             * Format: int32
+             * @description 품목은 0부터 시작하는 행 번호, 전표 기본 정보는 null
+             */
+            itemIndex?: number | null;
+            reason: string;
+        };
         AiSlipPhotoResult: {
             errorCode?: string;
             photoId?: string;
@@ -4039,6 +4049,7 @@ export interface components {
             partnerName?: string;
             rawPartnerName?: string;
             requestId?: string;
+            reviewFields?: components["schemas"]["AiSlipFieldReview"][];
             saleDate?: string;
             /** @enum {string} */
             salesType?: "DIRECT" | "AUCTION";
