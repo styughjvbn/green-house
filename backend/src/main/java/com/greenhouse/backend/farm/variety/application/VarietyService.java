@@ -8,6 +8,8 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.api.orchid.mutation.UpdateOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.variety.VarietySearchApi;
+import com.greenhouse.backend.farm.api.variety.VarietySearchApi.Option;
 import com.greenhouse.backend.farm.inbound.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
@@ -33,7 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class VarietyService {
+public class VarietyService implements VarietySearchApi {
 
   private final VarietyRepository varietyRepository;
 
@@ -48,6 +50,17 @@ public class VarietyService {
   private final OrchidGroupMutationEngine mutationEngine;
 
   private final Clock clock;
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Option> searchOptions(String keyword, String genus, int limit) {
+    return varietyRepository
+        .search(keyword, genus, null, null, PageRequest.of(0, Math.clamp(limit, 1, 20)))
+        .getContent()
+        .stream()
+        .map(v -> new Option(v.getId(), v.getName(), v.getGenus(), v.isActive()))
+        .toList();
+  }
 
   @Transactional(readOnly = true)
   public PageResponse<VarietyResponse> getVarieties(

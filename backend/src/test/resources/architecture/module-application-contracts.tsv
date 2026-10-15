@@ -567,3 +567,19 @@ TYPE	com.greenhouse.backend.sales.document.api.DirectDocumentChangeApi$Target
 
 # Direct physical return arrival uses Farm create/compensation through its public API.
 METHOD	com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSources.directReturnArrival(java.lang.Long, java.lang.String)
+
+# AI read tools: bounded master searches and value-only candidate verification.
+METHOD	com.greenhouse.backend.farm.api.variety.VarietySearchApi$Option.genus()
+METHOD	com.greenhouse.backend.farm.api.variety.VarietySearchApi$Option.id()
+METHOD	com.greenhouse.backend.farm.api.variety.VarietySearchApi$Option.name()
+METHOD	com.greenhouse.backend.farm.api.variety.VarietySearchApi.searchOptions(java.lang.String, java.lang.String, int)
+METHOD	com.greenhouse.backend.sales.api.document.SalesType.valueOf(java.lang.String)
+METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi$Option.active()
+METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi$Option.id()
+METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi$Option.name()
+METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi$Option.partnerType()
+METHOD	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi.searchOptions(java.lang.String, java.lang.Boolean, int)
+TYPE	com.greenhouse.backend.farm.api.variety.VarietySearchApi
+TYPE	com.greenhouse.backend.farm.api.variety.VarietySearchApi$Option
+TYPE	com.greenhouse.backend.sales.api.document.SalesType
+TYPE	com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi$Option

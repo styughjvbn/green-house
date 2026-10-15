@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.Map;
 
 public interface BusinessPartnerQueryApi {
+  List<Option> searchOptions(String keyword, Boolean auctionHouse, int limit);
+
+  record Option(Long id, String name, PartnerType partnerType, boolean active) {}
+
   List<Long> findMatchingIds(PartnerTextMatch match, String value);
 
   Map<PartnerTextSearch, List<Long>> findMatchingIds(Collection<PartnerTextSearch> searches);

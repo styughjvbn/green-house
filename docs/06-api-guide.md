@@ -47,6 +47,7 @@ CI에서는 `python3 scripts/generate_openapi.py --timeout 300`으로 실행한�
 | `work-operation.openapi.yaml` | 범위별 작업 실행과 난 묶음 통합 이력 |
 | `partner.openapi.yaml` | 거래처, 정산 설정 |
 | `sales.openapi.yaml` | 판매 전표, 경매 판매 전표 |
+| `ai.openapi.yaml` | AI 전표 추출 (조회 전용) |
 | `analytics.openapi.yaml` | 판매·거래처·작업 분석 |
 | `auction.openapi.yaml` | 경매 lot, 결과 입력, 상태 변경, 후속 처리·반환 도착, 수량 보정, 경매 대금 |
 | `payment.openapi.yaml` | 입금 확인, 거래처 잔액, 입금 이벤트 |
@@ -232,3 +233,7 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 폐기는 대상별 완료 요청의 `resultDetails.discardQuantity`만큼 현재 가용 수량에서 차감한다. 일부 폐기는 기존 상태와 잔여 수량을 유지하고, 전량 폐기는 수량 0과 `폐기` 상태로 전환한다. 입력한 폐기 수량과 관계없이 해당 난 묶음의 폐기 처리는 한 번의 대상 실행으로 완료된다.
 
 완료된 구조 변경 작업의 보정은 `POST/GET /api/work-operations/{workOperationId}/corrections`로 실행·조회한다. 생성 요청의 `workDate`는 원본 작업일 보정값으로 사용하며 날짜만 변경하는 보정도 허용한다. `orchidGroupAdjustments`에는 원본 작업이 만든 결과 난 묶음만 지정할 수 있다. `cancelResultCreation=true`는 결과 난 묶음 하나를 수량 0과 `생성 취소` 상태로 전환하며 수량·상태 또는 작업일 보정과 한 요청에 섞을 수 없다. 보정은 원본 작업의 감사 이벤트로 반환하며 독립 작업을 생성하지 않는다. 상세와 보정 조회는 같은 정형 이벤트 계약을 사용한다. 날짜만 보정할 때는 난 묶음 조정 목록을 비울 수 있다. 작업 목록·캘린더의 보정 유무 조건은 실제 서버 페이지 조회에 적용한다. 후속 운영 데이터가 연결된 결과와 예약 수량을 침해하는 변경은 거부한다.
+
+## AI 전표 추출
+
+`POST /api/ai/slips/extract`는 multipart `image`로 JPEG/PNG를 받아 입력 후보를 반환한다. 저장 API가 아니며 원문·매칭 ID·금액 검산 경고를 검토한 뒤 기존 전표 생성 API를 호출한다. 내부 `/internal/ai/tools/*`는 프론트 계약이 아니며 실행별 임시 토큰이 필요하다. 동시 실행 제한·설정 누락·타임아웃·결과 오류는 안정적인 `AI_*` 코드로 구분한다.

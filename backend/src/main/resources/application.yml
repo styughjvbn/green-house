@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 8MB
+      max-request-size: 82MB
   application:
     name: backend
 
@@ -46,6 +50,11 @@ server:
         same-site: lax
 
 app:
+  ai:
+    runtime-url: ${AI_RUNTIME_URL:http://127.0.0.1:8091}
+    runtime-secret: ${AI_RUNTIME_SECRET:}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:120}
+    max-tool-calls: ${AI_MAX_TOOL_CALLS:20}
   environment: ${APP_ENV:prod}
   auth:
     enabled: ${AUTH_ENABLED:true}

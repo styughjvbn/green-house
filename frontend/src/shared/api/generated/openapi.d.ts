@@ -1053,6 +1053,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ai/slips/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 사진 등록 대화를 시작합니다. 대화는 사용자에게 귀속되며 30분간 사용하지 않으면 만료됩니다. */
+        post: operations["open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/sessions/{sessionId}/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 선택 사진 1~10장을 동일 대화의 한 요청으로 추출합니다. metadata 순서와 photos 파일 순서는 일치해야 합니다. 사진별 최대 8MB, 피드백 최대 1000자. 결과는 사진 ID로 연결합니다. */
+        post: operations["extract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 전표 사진을 읽고 조회 도구로 거래처·품종 후보를 찾습니다. 전표·재고를 저장하지 않습니다. JPEG/PNG 최대 8MB. */
+        post: operations["extract_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-types/{workTypeId}": {
         parameters: {
             query?: never;
@@ -2315,6 +2366,38 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["removeMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["close"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/sessions/{sessionId}/photos/{photoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removePhoto"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3888,6 +3971,72 @@ export interface components {
             /** Format: int32 */
             waitingQuantity: number;
             worker?: string;
+        };
+        AiSlipSession: {
+            sessionId?: string;
+        };
+        ApiResponseAiSlipSession: {
+            data?: components["schemas"]["AiSlipSession"];
+            message?: string;
+        };
+        AiSlipConversationMetadata: {
+            photos: components["schemas"]["AiSlipPhotoMetadata"][];
+        };
+        AiSlipPhotoMetadata: {
+            feedback?: string;
+            photoId: string;
+        };
+        AiSlipExtractionItem: {
+            /** Format: int64 */
+            amount?: number;
+            /** Format: int32 */
+            boxes?: number;
+            /** Format: int64 */
+            calculatedAmount?: number;
+            genus?: string;
+            itemName?: string;
+            memo?: string;
+            /** Format: int32 */
+            quantity?: number;
+            rawGenus?: string;
+            rawItemName?: string;
+            spec?: string;
+            unit?: string;
+            /** Format: int32 */
+            unitPrice?: number;
+            /** Format: int64 */
+            varietyId?: number;
+        };
+        AiSlipPhotoResult: {
+            errorCode?: string;
+            photoId?: string;
+            result?: components["schemas"]["SlipExtractionResult"];
+        };
+        ApiResponseSlipConversationResult: {
+            data?: components["schemas"]["SlipConversationResult"];
+            message?: string;
+        };
+        SlipConversationResult: {
+            photos?: components["schemas"]["AiSlipPhotoResult"][];
+            requestId?: string;
+            sessionId?: string;
+        };
+        SlipExtractionResult: {
+            items?: components["schemas"]["AiSlipExtractionItem"][];
+            memo?: string;
+            /** Format: int64 */
+            partnerId?: number;
+            partnerName?: string;
+            rawPartnerName?: string;
+            requestId?: string;
+            saleDate?: string;
+            /** @enum {string} */
+            salesType?: "DIRECT" | "AUCTION";
+            warnings?: string[];
+        };
+        ApiResponseSlipExtractionResult: {
+            data?: components["schemas"]["SlipExtractionResult"];
+            message?: string;
         };
         WorkTypeUpdateRequest: {
             active?: boolean;
@@ -7731,6 +7880,82 @@ export interface operations {
             };
         };
     };
+    open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAiSlipSession"];
+                };
+            };
+        };
+    };
+    extract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    metadata: components["schemas"]["AiSlipConversationMetadata"];
+                    photos: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseSlipConversationResult"];
+                };
+            };
+        };
+    };
+    extract_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseSlipExtractionResult"];
+                };
+            };
+        };
+    };
     updateWorkType: {
         parameters: {
             query?: never;
@@ -9762,6 +9987,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseOrchidGroupCollectionResponse"];
+                };
+            };
+        };
+    };
+    close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    removePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+                photoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseVoid"];
                 };
             };
         };

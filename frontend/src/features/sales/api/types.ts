@@ -162,5 +162,7 @@ export type AllocationResult =
 export type AllocationTargetType = AllocationTarget["targetType"];
 
 export type SalesSlipPhotoInput = components["schemas"]["SalesSlipPhotoInput"];
+export type SalesSlipPhotoExtraction =
+  components["schemas"]["SlipExtractionResult"];
 export type SalesSlipPhotoInfo = components["schemas"]["PhotoInfo"];
 export type SalesSlipPhotoContent = components["schemas"]["PhotoContent"];

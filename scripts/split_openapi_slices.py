@@ -18,6 +18,7 @@ HTTP_METHODS = {"get", "put", "post", "delete", "options", "head", "patch", "tra
 DOMAIN_MAP = dict(
     [
         ("auth", ["auth-controller"]),
+        ("ai", ["ai-slip-controller"]),
         ("farm-structure", ["farm-structure-controller", "orchid-group-query-controller"]),
         ("farm-status", ["farm-status-controller", "dashboard-controller"]),
         ("orchid-command", [
