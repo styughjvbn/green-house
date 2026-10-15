@@ -61,7 +61,9 @@ class SalesCreationFingerprintCompatibilityTest {
                 ? Stream.concat(schema.getValue().stream(), List.of("unit", "boxes").stream())
                     .toList()
                 : schema.getKey().equals(SalesSlipCommand.class.getName())
-                    ? Stream.concat(schema.getValue().stream(), Stream.of("recordOnly")).toList()
+                    ? Stream.concat(
+                            schema.getValue().stream(), Stream.of("recordOnly", "sourcePhoto"))
+                        .toList()
                     : schema.getValue();
         assertThat(Arrays.stream(type.getRecordComponents()).map(RecordComponent::getName).toList())
             .as("%s: review versioning/replay before updating the v1 fixture", schema.getKey())
@@ -82,6 +84,25 @@ class SalesCreationFingerprintCompatibilityTest {
       var request = mapper.readValue(json, SalesSlipCommand.class);
       assertThat(hash(SalesCreationRequestPayload.from(request))).isEqualTo(hash(request));
     }
+  }
+
+  @Test
+  void sourcePhotoIsOptInAndParticipatesInTheFingerprint() throws Exception {
+    var legacy = mapper.readValue("{\"items\":[]}", SalesSlipCommand.class);
+    var photo =
+        mapper.readValue(
+            "{\"items\":[],\"sourcePhoto\":{\"fileName\":\"slip.png\",\"contentType\":\"image/png\",\"contentBase64\":\"first\"}}",
+            SalesSlipCommand.class);
+    var changed =
+        mapper.readValue(
+            "{\"items\":[],\"sourcePhoto\":{\"fileName\":\"slip.png\",\"contentType\":\"image/png\",\"contentBase64\":\"second\"}}",
+            SalesSlipCommand.class);
+    assertThat(mapper.writeValueAsString(SalesCreationRequestPayload.from(legacy)))
+        .doesNotContain("sourcePhoto");
+    assertThat(hash(SalesCreationRequestPayload.from(photo)))
+        .isNotEqualTo(hash(SalesCreationRequestPayload.from(legacy)));
+    assertThat(hash(SalesCreationRequestPayload.from(photo)))
+        .isNotEqualTo(hash(SalesCreationRequestPayload.from(changed)));
   }
 
   private String hash(Object request) throws Exception {

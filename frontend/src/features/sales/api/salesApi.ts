@@ -664,3 +664,15 @@ export function getDirectReturnArrivals(
     { signal },
   );
 }
+
+export function getSalesSlipPhotoInfo(id: number) {
+  return fetchApi<import("./types").SalesSlipPhotoInfo | null>(
+    `/sales-slips/${id}/source-photo/info`,
+  );
+}
+export function getSalesSlipPhoto(id: number, signal?: AbortSignal) {
+  return fetchApi<import("./types").SalesSlipPhotoContent>(
+    `/sales-slips/${id}/source-photo`,
+    { signal },
+  );
+}

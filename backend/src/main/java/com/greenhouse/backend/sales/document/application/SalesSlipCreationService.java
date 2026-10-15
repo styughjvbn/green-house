@@ -14,7 +14,9 @@ import com.greenhouse.backend.sales.document.application.command.SalesInitialRec
 import com.greenhouse.backend.sales.document.application.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.document.domain.SalesSlip;
 import com.greenhouse.backend.sales.document.domain.SalesSlipInputPolicy;
+import com.greenhouse.backend.sales.document.domain.SalesSlipPhoto;
 import com.greenhouse.backend.sales.document.repository.SalesCreationReceiptRepository;
+import com.greenhouse.backend.sales.document.repository.SalesSlipPhotoRepository;
 import com.greenhouse.backend.sales.document.repository.SalesSlipRepository;
 import com.greenhouse.backend.sales.document.spi.DirectCreationReceiptPort;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
@@ -47,6 +49,7 @@ public class SalesSlipCreationService {
   private final BusinessPartnerQueryApi partnerReader;
 
   private final SalesSlipRepository salesSlipRepository;
+  private final SalesSlipPhotoRepository photoRepository;
 
   private final SalesSlipAllocationFactory salesSlipAllocationFactory;
 
@@ -107,6 +110,11 @@ public class SalesSlipCreationService {
   }
 
   private SalesSlipDocument createNew(SalesSlipCommand request) {
+    var photo = request.sourcePhoto();
+    byte[] photoBytes =
+        photo == null
+            ? null
+            : SalesSlipPhoto.validate(photo.fileName(), photo.contentType(), photo.contentBase64());
     SalesType type = request.salesType() == null ? SalesType.DIRECT : request.salesType();
     SalesSlipInputPolicy.requireCreationReceipt(
         type, request.initialReceipt() != null, request.paymentStatus());
@@ -203,6 +211,14 @@ public class SalesSlipCreationService {
       accounting.updateReceivable(
           partner.id(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);
     }
+    if (photo != null)
+      photoRepository.save(
+          new SalesSlipPhoto(
+              saved.getId(),
+              photo.fileName(),
+              photo.contentType(),
+              photoBytes,
+              TimeConfig.utcNow(clock)));
     // Cascaded IDs must be present in both the first response and its stored replay snapshot.
     salesSlipRepository.flush();
     auditSupport.record(AuditAction.CREATED, saved, null, auditSupport.snapshot(saved));

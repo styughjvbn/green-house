@@ -416,6 +416,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+  /api/sales-slips/{id}/source-photo:
+    get:
+      tags:
+      - sales-controller
+      description: 인증된 전표 사진 조회. JPEG/PNG 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다.
+      operationId: getPhoto
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePhotoContent'
+  /api/sales-slips/{id}/source-photo/info:
+    get:
+      tags:
+      - sales-controller
+      description: 전표 첨부 사진의 메타데이터. 사진이 없으면 data=null. 전표 취소 후에도 보존합니다.
+      operationId: getPhotoInfo
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePhotoInfo'
   /api/sales-slips/{id}/direct-changes:
     get:
       tags:
@@ -659,6 +699,20 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/PageResponseSalesSlipListItemResponse'
+        message:
+          type: string
+    ApiResponsePhotoContent:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PhotoContent'
+        message:
+          type: string
+    ApiResponsePhotoInfo:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PhotoInfo'
         message:
           type: string
     ApiResponseSalesSlipResponse:
@@ -1114,6 +1168,22 @@ components:
         returnChangeId:
           type: integer
           format: int64
+    PhotoContent:
+      type: object
+      properties:
+        contentBase64:
+          type: string
+        contentType:
+          type: string
+        fileName:
+          type: string
+    PhotoInfo:
+      type: object
+      properties:
+        contentType:
+          type: string
+        fileName:
+          type: string
     Portion:
       type: object
       properties:
@@ -1316,6 +1386,8 @@ components:
           enum:
           - DIRECT
           - AUCTION
+        sourcePhoto:
+          $ref: '#/components/schemas/SalesSlipPhotoInput'
       required:
       - items
       - saleDate
@@ -1486,6 +1558,24 @@ components:
           type: integer
           format: int32
           description: 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
+    SalesSlipPhotoInput:
+      type: object
+      properties:
+        contentBase64:
+          type: string
+          maxLength: 11184812
+          minLength: 0
+        contentType:
+          type: string
+          minLength: 1
+        fileName:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - contentBase64
+      - contentType
+      - fileName
     SalesSlipResponse:
       type: object
       properties:

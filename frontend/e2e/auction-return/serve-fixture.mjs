@@ -313,6 +313,8 @@ const server = http.createServer(async (req, res) => {
       },
       memo: null,
     });
+  if (/^\/api\/sales-slips\/\d+\/source-photo\/info$/.test(url.pathname))
+    return send(null);
   if (url.pathname === "/api/sales-slips/page") return send(pageOf(slips));
   if (/^\/api\/sales-slips\/(11|13)$/.test(url.pathname))
     return send(

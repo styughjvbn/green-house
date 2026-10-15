@@ -26,6 +26,7 @@ export type CreateBusinessPartnerPayload = BusinessPartnerPayload;
 export type UpdateBusinessPartnerPayload = BusinessPartnerPayload;
 
 export type CreateSalesSlipPayload = {
+  sourcePhoto?: SalesSlipPhotoInput;
   recordOnly?: components["schemas"]["SalesSlipCreateRequest"]["recordOnly"];
   initialReceipt?: components["schemas"]["SalesInitialReceiptRequest"] | null;
   salesType: "DIRECT" | "AUCTION";
@@ -159,3 +160,7 @@ export type AllocationCorrectionPayload =
 export type AllocationResult =
   components["schemas"]["PaymentAllocationChangeResponse"];
 export type AllocationTargetType = AllocationTarget["targetType"];
+
+export type SalesSlipPhotoInput = components["schemas"]["SalesSlipPhotoInput"];
+export type SalesSlipPhotoInfo = components["schemas"]["PhotoInfo"];
+export type SalesSlipPhotoContent = components["schemas"]["PhotoContent"];

@@ -1503,6 +1503,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sales-slips/{id}/source-photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 인증된 전표 사진 조회. JPEG/PNG 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다. */
+        get: operations["getPhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/source-photo/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 전표 첨부 사진의 메타데이터. 사진이 없으면 data=null. 전표 취소 후에도 보존합니다. */
+        get: operations["getPhotoInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sales-slips/{id}/direct-changes": {
         parameters: {
             query?: never;
@@ -2324,6 +2358,7 @@ export interface components {
             salesStatus?: string;
             /** @enum {string} */
             salesType?: "DIRECT" | "AUCTION";
+            sourcePhoto?: components["schemas"]["SalesSlipPhotoInput"];
         };
         SalesSlipItemAllocationRequest: {
             /** Format: int64 */
@@ -2344,6 +2379,11 @@ export interface components {
             unit?: string;
             /** Format: int32 */
             unitPrice: number;
+        };
+        SalesSlipPhotoInput: {
+            contentBase64: string;
+            contentType: string;
+            fileName: string;
         };
         ApiResponseSalesSlipResponse: {
             data?: components["schemas"]["SalesSlipResponse"];
@@ -4382,6 +4422,23 @@ export interface components {
         ApiResponseListSalesSlipResponse: {
             data?: components["schemas"]["SalesSlipResponse"][];
             message?: string;
+        };
+        ApiResponsePhotoContent: {
+            data?: components["schemas"]["PhotoContent"];
+            message?: string;
+        };
+        PhotoContent: {
+            contentBase64?: string;
+            contentType?: string;
+            fileName?: string;
+        };
+        ApiResponsePhotoInfo: {
+            data?: components["schemas"]["PhotoInfo"];
+            message?: string;
+        };
+        PhotoInfo: {
+            contentType?: string;
+            fileName?: string;
         };
         ApiResponseDirectSaleChangeResponse: {
             data?: components["schemas"]["DirectSaleChangeResponse"];
@@ -8529,6 +8586,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
+                };
+            };
+        };
+    };
+    getPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePhotoContent"];
+                };
+            };
+        };
+    };
+    getPhotoInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePhotoInfo"];
                 };
             };
         };
