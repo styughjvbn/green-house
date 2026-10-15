@@ -21,6 +21,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 @Tag("work-e2e")
+@IsolatedPostgresContext
 class OrchidGroupLedgerCliPostgresE2ETest extends WorkE2ETestBase {
   @Autowired private WorkTestDataSeeder seeder;
   @Autowired private OrchidGroupLedgerTestFixture fixture;
@@ -46,7 +47,7 @@ class OrchidGroupLedgerCliPostgresE2ETest extends WorkE2ETestBase {
           "-Fc",
           "-f",
           "/tmp/ledger.dump",
-          POSTGRES.getDatabaseName());
+          testDatabase.name());
       executeInPostgres("createdb", "-U", POSTGRES.getUsername(), restoredDatabase);
       executeInPostgres(
           "pg_restore",
