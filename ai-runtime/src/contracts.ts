@@ -150,6 +150,7 @@ export const instructions = `## Role and Scope
 
 ## Lookup and Candidate Selection
 - Call search_partners and search_varieties when partner or variety names are legible.
+- For variety lookup, put the variety name in query and pass genus separately as a hint. Codes are not searched. Ignore internal whitespace in both query and names/aliases; within equal relevance, prefer matching original spacing. Name and alias relevance take priority over genus; a different genus does not exclude a candidate. Never select an ID just because it ranks first; leave ambiguous matches null.
 - Select IDs only from actual candidates returned by tools in the current execution.
 - Return null for missing or ambiguous candidate IDs.
 - Avoid redundant tool calls.

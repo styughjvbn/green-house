@@ -54,10 +54,7 @@ public class VarietyService implements VarietySearchApi {
   @Override
   @Transactional(readOnly = true)
   public List<Option> searchOptions(String keyword, String genus, int limit) {
-    return varietyRepository
-        .search(keyword, genus, null, null, PageRequest.of(0, Math.clamp(limit, 1, 20)))
-        .getContent()
-        .stream()
+    return varietyRepository.searchCandidates(keyword, genus, limit).stream()
         .map(v -> new Option(v.getId(), v.getName(), v.getGenus(), v.isActive()))
         .toList();
   }

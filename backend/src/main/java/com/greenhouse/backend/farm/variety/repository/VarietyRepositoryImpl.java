@@ -6,8 +6,12 @@ import com.greenhouse.backend.farm.variety.domain.Variety;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -16,7 +20,63 @@ import org.springframework.data.domain.Pageable;
 @RequiredArgsConstructor
 public class VarietyRepositoryImpl implements VarietyRepositoryCustom {
 
+  private static final List<String> SEARCH_SPACES =
+      List.of(" ", "\t", "\n", "\r", "\u00a0", "\u3000");
+
   private final JPAQueryFactory queryFactory;
+
+  @Override
+  public List<Variety> searchCandidates(String keyword, String genusHint, int limit) {
+    if (isBlank(keyword)) return List.of();
+    String query = keyword.trim().toLowerCase(Locale.ROOT);
+    String compactQuery = query;
+    for (String space : SEARCH_SPACES) compactQuery = compactQuery.replace(space, "");
+    if (compactQuery.isEmpty()) return List.of();
+    var compactName = withoutSearchSpaces(variety.name.lower());
+    var compactAlias = withoutSearchSpaces(variety.alias.lower());
+    var nameContains = compactName.contains(compactQuery);
+    var aliasContains = compactAlias.contains(compactQuery);
+    var relevance =
+        new CaseBuilder()
+            .when(compactName.eq(compactQuery))
+            .then(0)
+            .when(compactAlias.eq(compactQuery))
+            .then(1)
+            .when(nameContains)
+            .then(2)
+            .otherwise(3);
+    var originalMatch =
+        new CaseBuilder()
+            .when(variety.name.lower().eq(query).or(variety.alias.lower().eq(query)))
+            .then(0)
+            .when(variety.name.lower().contains(query).or(variety.alias.lower().contains(query)))
+            .then(1)
+            .otherwise(2);
+    var genusMatch =
+        new CaseBuilder()
+            .when(variety.genus.eq(isBlank(genusHint) ? "" : genusHint.trim()))
+            .then(0)
+            .otherwise(1);
+    return queryFactory
+        .selectFrom(variety)
+        .where(nameContains.or(aliasContains))
+        .orderBy(
+            relevance.asc(),
+            originalMatch.asc(),
+            genusMatch.asc(),
+            variety.active.desc(),
+            variety.name.asc(),
+            variety.genus.asc(),
+            variety.id.asc())
+        .limit(Math.clamp(limit, 1, 20))
+        .fetch();
+  }
+
+  private StringExpression withoutSearchSpaces(StringExpression value) {
+    for (String space : SEARCH_SPACES)
+      value = Expressions.stringTemplate("replace({0}, {1}, '')", value, space);
+    return value;
+  }
 
   @Override
   public Page<Variety> search(

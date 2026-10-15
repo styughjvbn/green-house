@@ -28,7 +28,7 @@ for (const name of ["search_varieties", "search_partners"] as const) {
       },
       description:
         name === "search_varieties"
-          ? "품종명·별명으로 등록된 품종 후보 검색"
+          ? "품종명·별명으로 후보를 검색하며 검색어와 이름의 내부 공백을 무시합니다. 같은 일치도에서는 원문 표기가 일치하는 후보가 우선입니다. 코드 검색은 하지 않습니다. 품종명 정확 일치, 별명 정확 일치, 품종명 부분 일치, 별명 부분 일치 순이며 속은 같은 일치도의 후보 정렬 힌트입니다. 속이 달라도 제외하지 않습니다. 모호하면 ID를 선택하지 마세요."
           : "활성 거래처 이름으로 후보 검색",
       inputSchema:
         name === "search_varieties"
