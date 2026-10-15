@@ -1,3 +1,4 @@
+import { imageBase64 } from "./fixtures.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
@@ -19,11 +20,12 @@ const slip = {
   memo: null,
   items: [],
   warnings: [],
+  confidence: 90,
 };
 const photo = (id: string, feedback: string | null = null) => ({
   photoId: id,
   contentType: "image/png",
-  contentBase64: Buffer.from("image").toString("base64"),
+  contentBase64: imageBase64,
   feedback,
 });
 const input: SlipInput = {

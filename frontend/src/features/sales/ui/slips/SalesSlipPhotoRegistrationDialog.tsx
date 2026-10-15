@@ -280,6 +280,18 @@ export function SalesSlipPhotoRegistrationDialog({
                 <p className="mt-2 text-xs text-[#5c6a60]">
                   사진 ID: {selected.id.slice(0, 12)}
                 </p>
+                {selected.recognition ? (
+                  <p className="mt-2 text-sm text-[#526158]" role="status">
+                    인식 신뢰도 {selected.recognition.confidence}/100 · AI 자체
+                    평가
+                    {selected.recognition.imageLongEdge
+                      ? ` · 긴 변 ${selected.recognition.imageLongEdge}px`
+                      : ""}
+                    {selected.recognition.attempts === 2
+                      ? " · 고해상도 재인식 시도"
+                      : ""}
+                  </p>
+                ) : null}
                 {selected.save !== "saved" ? (
                   <div className="mt-3 space-y-2">
                     <label

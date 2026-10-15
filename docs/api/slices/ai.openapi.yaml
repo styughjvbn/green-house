@@ -236,6 +236,16 @@ components:
     SlipExtractionResult:
       type: object
       properties:
+        attempts:
+          type: integer
+          format: int32
+        confidence:
+          type: integer
+          format: int32
+          description: AI 자체 평가 신뢰도(0~100). 실제 정답률이 아닙니다.
+        imageLongEdge:
+          type: integer
+          format: int32
         items:
           type: array
           items:

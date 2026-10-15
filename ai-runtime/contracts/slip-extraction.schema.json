@@ -96,6 +96,12 @@
         "type": "string",
         "maxLength": 500
       }
+    },
+    "confidence": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "사진 원문의 핵심 필드(날짜·거래처·품목·수량·단가·금액)를 읽은 확신 수준. 0~100의 자체 평가이며 실제 정답률이 아님. 후보 검색 성공 여부와 분리해 평가."
     }
   },
   "required": [
@@ -105,7 +111,8 @@
     "partnerId",
     "memo",
     "items",
-    "warnings"
+    "warnings",
+    "confidence"
   ],
   "additionalProperties": false
 }

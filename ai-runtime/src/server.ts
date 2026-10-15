@@ -4,10 +4,10 @@ import { pathToFileURL } from "node:url";
 import { openAiProvider } from "./providers/openai.js";
 import { codexProvider } from "./providers/codex.js";
 import { createToolClient } from "./tools/client.js";
+import { extractWithResolutionFallback } from "./extraction.js";
 import { createLogger, errorDetails } from "./logging.js";
 import {
   RuntimeError,
-  validateResult,
   type AgentProvider,
   type SlipInput,
   type SessionState,
@@ -36,6 +36,7 @@ export function createRuntimeServer(
   maxToolCalls = 20,
   maxSeconds = 120,
   log = createLogger(),
+  minimumConfidence = Number(process.env.AI_MIN_CONFIDENCE ?? 80),
 ) {
   if (!secret || secret.length < 32)
     throw new Error("AI_RUNTIME_SECRET must contain at least 32 characters");
@@ -48,6 +49,12 @@ export function createRuntimeServer(
     maxSeconds > 600
   )
     throw new Error("Invalid AI execution limits");
+  if (
+    !Number.isInteger(minimumConfidence) ||
+    minimumConfidence < 0 ||
+    minimumConfidence > 100
+  )
+    throw new Error("Invalid AI_MIN_CONFIDENCE");
   let active = false;
   const sessions = new Map<string, SessionState>();
   function cleanSessions() {
@@ -195,6 +202,7 @@ export function createRuntimeServer(
       const diagnostic = (event: string, fields = {}) =>
         log(event, { ...fields, requestId, provider: provider.name }, true);
       input.timeoutSeconds = Math.min(input.timeoutSeconds, maxSeconds);
+      const deadlineMs = Date.now() + input.timeoutSeconds * 1000;
       timer = setTimeout(() => controller.abort(), input.timeoutSeconds * 1000);
       const callTool = createToolClient(
         toolsUrl,
@@ -209,16 +217,22 @@ export function createRuntimeServer(
         imageBytes,
         photoCount: inputPhotos(input).length,
       });
-      const output = await provider.run(input, {
-        signal: controller.signal,
-        callTool,
-        maxToolCalls,
-        diagnostic,
-        session,
-      });
+      const result = await extractWithResolutionFallback(
+        provider,
+        input,
+        {
+          signal: controller.signal,
+          callTool,
+          maxToolCalls,
+          diagnostic,
+          session,
+          deadlineMs,
+        },
+        minimumConfidence,
+      );
       stage = "validation";
       diagnostic("result_validation_started");
-      const result = validateResult(output, input);
+
       if (controller.signal.aborted) throw new RuntimeError(504, "AI_TIMEOUT");
       send(200, result);
       success = true;

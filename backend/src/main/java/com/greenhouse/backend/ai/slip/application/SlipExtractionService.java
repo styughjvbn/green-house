@@ -105,6 +105,9 @@ public class SlipExtractionService {
         result.partnerName(),
         result.memo(),
         List.copyOf(items),
-        List.copyOf(warnings));
+        List.copyOf(warnings),
+        result.confidence(),
+        result.imageLongEdge(),
+        result.attempts());
   }
 }

@@ -1,3 +1,4 @@
+import { imageBase64 } from "./fixtures.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
@@ -17,12 +18,13 @@ const result = {
   memo: null,
   items: [],
   warnings: [],
+  confidence: 90,
 };
 const input: SlipInput = {
   requestId: "test-run",
   toolToken: "t".repeat(43),
   contentType: "image/png",
-  contentBase64: Buffer.from("image").toString("base64"),
+  contentBase64: imageBase64,
   timeoutSeconds: 1,
 };
 const secret = "s".repeat(32);
@@ -201,7 +203,10 @@ test("Codex adapter receives only scoped tools and cleans its temporary image", 
           return {
             async runStreamed(parts: unknown, turnOptions: unknown) {
               imagePath = (parts as { path?: string }[])[1].path!;
-              assert.equal((await readFile(imagePath)).toString(), "image");
+              assert.deepEqual(
+                await readFile(imagePath),
+                Buffer.from(imageBase64, "base64"),
+              );
               assert.ok(
                 (turnOptions as { outputSchema: unknown }).outputSchema,
               );

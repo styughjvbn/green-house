@@ -33,6 +33,11 @@ type PhotoEntry = {
   slipId?: number;
   notes: string[];
   recognized: boolean;
+  recognition: {
+    confidence: number;
+    imageLongEdge?: number;
+    attempts?: number;
+  } | null;
   feedback: string;
   feedbackHistory: { text: string; requestId: string }[];
   error: string | null;
@@ -160,6 +165,7 @@ export function useSalesSlipPhotoRegistration(
             save: "draft",
             notes: [],
             recognized: false,
+            recognition: null,
             feedback: "",
             feedbackHistory: [],
             error: null,
@@ -245,6 +251,14 @@ export function useSalesSlipPhotoRegistration(
         patch(entry.id, {
           read: "ready",
           recognized: true,
+          recognition:
+            result.confidence != null
+              ? {
+                  confidence: result.confidence,
+                  imageLongEdge: result.imageLongEdge,
+                  attempts: result.attempts,
+                }
+              : null,
           notes,
           error: null,
           feedback: "",

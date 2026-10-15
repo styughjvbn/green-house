@@ -74,9 +74,15 @@ export function codexProvider(
                 env: {
                   AI_TOOLS_URL: toolsUrl,
                   AI_TOOL_TOKEN: input.toolToken,
-                  AI_MAX_TOOL_CALLS: String(context.maxToolCalls),
+                  AI_MAX_TOOL_CALLS: String(
+                    Math.max(
+                      0,
+                      context.maxToolCalls - (context.toolBudget?.used ?? 0),
+                    ),
+                  ),
                   AI_DEADLINE_MS: String(
-                    Date.now() + input.timeoutSeconds * 1000,
+                    context.deadlineMs ??
+                      Date.now() + input.timeoutSeconds * 1000,
                   ),
                 },
                 enabled_tools: ["search_varieties", "search_partners"],
@@ -123,7 +129,11 @@ export function codexProvider(
                 tool: event.item.tool,
                 call: calls + 1,
               });
-              if (++calls > context.maxToolCalls) {
+              calls++;
+              const totalCalls = context.toolBudget
+                ? ++context.toolBudget.used
+                : calls;
+              if (totalCalls > context.maxToolCalls) {
                 failure = new RuntimeError(429, "AI_TOOL_LIMIT");
                 limit.abort();
               }

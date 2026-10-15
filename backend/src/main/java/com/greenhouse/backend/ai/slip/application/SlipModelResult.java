@@ -11,7 +11,10 @@ public record SlipModelResult(
     @Positive Long partnerId,
     @Size(max = 1000) String memo,
     @NotNull @Size(max = 100) List<@Valid Item> items,
-    @NotNull @Size(max = 30) List<@NotNull @Size(max = 500) String> warnings) {
+    @NotNull @Size(max = 30) List<@NotNull @Size(max = 500) String> warnings,
+    @NotNull @Min(0) @Max(100) Integer confidence,
+    @Min(1) @Max(2048) Integer imageLongEdge,
+    @Min(1) @Max(2) Integer attempts) {
   public record Item(
       @Size(max = 150) String itemName,
       @Size(max = 100) String genus,

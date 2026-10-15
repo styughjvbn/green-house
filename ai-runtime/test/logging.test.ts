@@ -1,3 +1,4 @@
+import { imageBase64 } from "./fixtures.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createLogger, errorDetails } from "../src/logging.js";
@@ -58,7 +59,7 @@ test("failed extraction logs the request, stage and network cause without reques
         requestId: "diagnostic-test",
         toolToken: "private-token".repeat(4),
         contentType: "image/png",
-        contentBase64: Buffer.from("private-photo").toString("base64"),
+        contentBase64: imageBase64,
         timeoutSeconds: 1,
       }),
     });
@@ -73,10 +74,7 @@ test("failed extraction logs the request, stage and network cause without reques
       lines.join("\n"),
       /private-photo|private-token|private-upstream-message/,
     );
-    assert.doesNotMatch(
-      lines.join("\n"),
-      new RegExp(Buffer.from("private-photo").toString("base64")),
-    );
+    assert.doesNotMatch(lines.join("\n"), new RegExp(imageBase64));
   } finally {
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));

@@ -4022,6 +4022,15 @@ export interface components {
             sessionId?: string;
         };
         SlipExtractionResult: {
+            /** Format: int32 */
+            attempts?: number;
+            /**
+             * Format: int32
+             * @description AI 자체 평가 신뢰도(0~100). 실제 정답률이 아닙니다.
+             */
+            confidence?: number;
+            /** Format: int32 */
+            imageLongEdge?: number;
             items?: components["schemas"]["AiSlipExtractionItem"][];
             memo?: string;
             /** Format: int64 */

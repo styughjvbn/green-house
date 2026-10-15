@@ -160,7 +160,11 @@ export function openAiProvider(
         }
         conversation.push(...result.output);
         for (const call of requested) {
-          if (++calls > context.maxToolCalls)
+          calls++;
+          const totalCalls = context.toolBudget
+            ? ++context.toolBudget.used
+            : calls;
+          if (totalCalls > context.maxToolCalls)
             throw new RuntimeError(429, "AI_TOOL_LIMIT");
           if (
             !["search_varieties", "search_partners"].includes(

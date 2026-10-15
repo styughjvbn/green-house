@@ -53,7 +53,10 @@ class SlipExtractionServiceTest {
               List.of(
                   new SlipModelResult.Item(
                       "오독 품종", "오독 속", 7L, "A", "분", null, 2, 100, 999L, null)),
-              List.of());
+              List.of(),
+              90,
+              1024,
+              1);
       var result = service.validate("request", raw, scope);
       assertThat(result.saleDate()).isNull();
       assertThat(result.partnerName()).isEqualTo("정식 거래처");
@@ -96,7 +99,10 @@ class SlipExtractionServiceTest {
               null,
               List.of(
                   new SlipModelResult.Item(null, null, null, null, null, null, -1, 0, null, null)),
-              List.of());
+              List.of(),
+              90,
+              1024,
+              1);
       assertThatThrownBy(() -> service.validate("r", raw, scope))
           .isInstanceOf(AgentException.class)
           .extracting("code")
@@ -129,7 +135,8 @@ class SlipExtractionServiceTest {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException(e);
               }
-              return new SlipModelResult(null, null, null, null, null, List.of(), List.of());
+              return new SlipModelResult(
+                  null, null, null, null, null, List.of(), List.of(), 90, 1024, 1);
             });
     var png = new ByteArrayOutputStream();
     ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "png", png);
@@ -149,4 +156,36 @@ class SlipExtractionServiceTest {
       assertThat(first.get(5, TimeUnit.SECONDS).items()).isEmpty();
     }
   }
+
+  @Test
+  void validatesSelfRatedConfidenceAndPassesImageResolutionMetadataToReview() {
+    var tools =
+        new AgentToolGateway(
+            mock(VarietySearchApi.class),
+            mock(BusinessPartnerQueryApi.class),
+            Clock.systemUTC(),
+            5,
+            120);
+    try (var factory = Validation.buildDefaultValidatorFactory();
+        var scope = tools.open("r", "worker")) {
+      var service =
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+      var valid =
+          new SlipModelResult(null, null, null, null, null, List.of(), List.of(), 65, 2048, 2);
+      var result = service.validate("r", valid, scope);
+      assertThat(result.confidence()).isEqualTo(65);
+      assertThat(result.imageLongEdge()).isEqualTo(2048);
+      assertThat(result.attempts()).isEqualTo(2);
+      for (Integer confidence : Arrays.asList(-1, 101, null)) {
+        var invalid =
+            new SlipModelResult(
+                null, null, null, null, null, List.of(), List.of(), confidence, 1024, 1);
+        assertThatThrownBy(() -> service.validate("r", invalid, scope))
+            .isInstanceOf(AgentException.class)
+            .extracting("code")
+            .isEqualTo("AI_INVALID_RESULT");
+      }
+    }
+  }
+
 }
