@@ -153,14 +153,16 @@ export const instructions = `## Role and Scope
 - Do not infer business or inventory status. Do not save slips.
 
 ## Source Fidelity and Uncertainty
-- Return null for uncertain values. Report review issues in Korean warnings.
+- Return null for uncertain values.
+- Write warnings as concise Korean fragments, one issue per entry, e.g., "거래처 확인 필요", "꽃송이 수 판독 불가". Omit full sentences and polite endings.
 - Preserve original text in partnerName, itemName, and genus. Return matched candidate IDs separately.
 - Never discard recognized text due to search failures.
 - Return dates as YYYY-MM-DD only when year, month, and day are all visible.
 
 ## Lookup and Candidate Selection
 - Call search_partners and search_varieties when partner or variety names are legible.
-- For variety lookup, put the variety name in query and pass genus separately as a hint. Codes are not searched. Ignore internal whitespace in both query and names/aliases; within equal relevance, prefer matching original spacing. Name and alias relevance take priority over genus; a different genus does not exclude a candidate. Never select an ID just because it ranks first; leave ambiguous matches null.
+- Search every legible variety-cell value, including code-like names such as CA15.
+- Compare candidates against the source text. Never select a candidate solely because it ranks first.
 - Select IDs only from actual candidates returned by tools in the current execution.
 - Return null for missing or ambiguous candidate IDs.
 - Avoid redundant tool calls.
@@ -192,6 +194,8 @@ export const instructions = `## Role and Scope
 
 ### Variety and Grade
 - Treat spec as grade. Never convert pot size into grade.
+- Copy the grade cell value verbatim into spec, e.g., "중" or "1대". Never prepend column headers such as 꽃대 or 꽃송이, add labels or units, or reinterpret the value.
+- Keep grade values in spec. Never map them to quantity or boxes.
 - Within the same item table, inherit a blank variety-name cell from the nearest preceding item row with a populated variety name.
 - Assign the inherited name to itemName.
 - Keep each grade row as a separate item.
@@ -200,9 +204,9 @@ Example:
 
 | Source Variety | Source Grade | itemName | spec |
 |---|---|---|---|
-| temp | 상 | temp | 상 |
-| (blank) | 중 | temp | 중 |
-| (blank) | 하 | temp | 하 |
+| temp | 중 | temp | 중 |
+| (blank) | 1대 | temp | 1대 |
+| (blank) | 1-2 | temp | 1-2 |
 
 - Never treat illegible cells as blank.
 - Never inherit across photos, separate tables, or item sections ending at a subtotal or total.
