@@ -34,7 +34,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -88,18 +87,6 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     var key = UUID.randomUUID();
     ledgerFixture.seedBaseline(key, DATE, "1.0.0");
     ledgerFixture.activate(key);
-  }
-
-  @Test
-  void repeatedCreateReturnsFirstResponseWithoutDuplicatePlan() throws Exception {
-    var body = objectMapper.writeValueAsString(request("계획"));
-    var first = post("/api/work-operations", body, Map.of("Idempotency-Key", "retry"));
-    var second = post("/api/work-operations", body, Map.of("Idempotency-Key", "retry"));
-    assertThat(first.status()).as(first.body().toString()).isEqualTo(201);
-    assertThat(second.status()).as(second.body().toString()).isEqualTo(201);
-    assertThat(second.data()).isEqualTo(first.data());
-    assertThat(jdbc.queryForObject("select count(*) from work_operations", Integer.class))
-        .isEqualTo(1);
   }
 
   @ParameterizedTest
@@ -289,44 +276,45 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     assertThat(count("work_creation_batch_memberships")).isZero();
   }
 
-  @ParameterizedTest
-  @ValueSource(
-      strings = {
-        "workTypeId",
-        "title",
-        "plannedStartDate",
-        "plannedEndDate",
-        "sourceOrchidGroupIds",
-        "excludedOrchidGroupIds",
-        "details",
-        "worker",
-        "memo"
-      })
-  void changedFieldsConflictBeforeResolvingCurrentTargets(String field) throws Exception {
+  @Test
+  void changedFieldsConflictBeforeResolvingCurrentTargets() throws Exception {
     var request = request("최초");
     assertThat(http(Mode.BATCH, request, "field").status()).isEqualTo(201);
-    ObjectNode changed = objectMapper.valueToTree(request);
-    switch (field) {
-      case "workTypeId" -> changed.put(field, -1);
-      case "plannedStartDate", "plannedEndDate" -> changed.put(field, DATE.minusDays(1).toString());
-      case "sourceOrchidGroupIds" ->
-          changed.set(field, objectMapper.<JsonNode>valueToTree(List.of(-1)));
-      case "excludedOrchidGroupIds" ->
-          changed.set(field, objectMapper.<JsonNode>valueToTree(List.of(groupId)));
-      case "details" ->
-          changed.set(field, objectMapper.<JsonNode>valueToTree(Map.of("materialName", "새 자재")));
-      default -> changed.put(field, "변경");
-    }
     var before = snapshot();
-    var response =
-        post(
-            Mode.BATCH.path,
-            objectMapper.createObjectNode().set("operation", changed).toString(),
-            Map.of("Idempotency-Key", "field"));
-    assertThat(response.status()).as(response.body().toString()).isEqualTo(409);
-    assertThat(response.body().path("error").path("code").asText())
-        .isEqualTo("IDEMPOTENCY_KEY_REUSED");
-    assertThat(snapshot()).isEqualTo(before);
+    for (String field :
+        List.of(
+            "workTypeId",
+            "title",
+            "plannedStartDate",
+            "plannedEndDate",
+            "sourceOrchidGroupIds",
+            "excludedOrchidGroupIds",
+            "details",
+            "worker",
+            "memo")) {
+      ObjectNode changed = objectMapper.valueToTree(request);
+      switch (field) {
+        case "workTypeId" -> changed.put(field, -1);
+        case "plannedStartDate", "plannedEndDate" ->
+            changed.put(field, DATE.minusDays(1).toString());
+        case "sourceOrchidGroupIds" ->
+            changed.set(field, objectMapper.<JsonNode>valueToTree(List.of(-1)));
+        case "excludedOrchidGroupIds" ->
+            changed.set(field, objectMapper.<JsonNode>valueToTree(List.of(groupId)));
+        case "details" ->
+            changed.set(field, objectMapper.<JsonNode>valueToTree(Map.of("materialName", "새 자재")));
+        default -> changed.put(field, "변경");
+      }
+      var response =
+          post(
+              Mode.BATCH.path,
+              objectMapper.createObjectNode().set("operation", changed).toString(),
+              Map.of("Idempotency-Key", "field"));
+      assertThat(response.status()).as("field %s: %s", field, response.body()).isEqualTo(409);
+      assertThat(response.body().path("error").path("code").asText())
+          .isEqualTo("IDEMPOTENCY_KEY_REUSED");
+      assertThat(snapshot()).as("unchanged facts after %s", field).isEqualTo(before);
+    }
   }
 
   @ParameterizedTest

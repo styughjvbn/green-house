@@ -82,20 +82,6 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     ledgerFixture.activate(key);
   }
 
-  @Test
-  void replaysSameCreateRequestWithoutReservingTwice() throws Exception {
-    String body = objectMapper.writeValueAsString(request(5, null));
-    var first = post("/api/sales-slips", body, Map.of("Idempotency-Key", "retry-1"));
-    var second = post("/api/sales-slips", body, Map.of("Idempotency-Key", "retry-1"));
-    assertThat(first.status()).isEqualTo(201);
-    assertThat(second.status()).isEqualTo(201);
-    assertThat(second.data()).isEqualTo(first.data());
-    assertThat(
-            jdbc.queryForObject(
-                "select reserved_quantity from orchid_groups where id = ?", Integer.class, groupId))
-        .isEqualTo(5);
-  }
-
   @ParameterizedTest
   @CsvSource({
     "CASH,작성중,2000,부분입금",
@@ -353,6 +339,10 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
                 Integer.class,
                 first.data().path("id").asLong()))
         .isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject(
+                "select reserved_quantity from orchid_groups where id = ?", Integer.class, groupId))
+        .isEqualTo(status.equals("작성중") ? 5 : 0);
     var before = snapshot();
     var retry = post("/api/sales-slips", body, Map.of("Idempotency-Key", "lifecycle"));
     assertThat(retry.status()).isEqualTo(201);
@@ -469,28 +459,31 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
         .isEqualTo(10);
   }
 
-  @ParameterizedTest
-  @ValueSource(strings = {"memo", "partnerId", "saleDate", "salesStatus", "items", "salesType"})
-  void changedPayloadDoesNotMutateAnyBusinessFact(String field) throws Exception {
+  @Test
+  void changedPayloadDoesNotMutateAnyBusinessFact() throws Exception {
     var request = request(5, null);
     creation.create(request, "payload");
-    var changed = objectMapper.valueToTree(request).deepCopy();
-    var object = (ObjectNode) changed;
-    switch (field) {
-      case "memo" -> object.put(field, "변경");
-      case "partnerId" -> object.put(field, -1);
-      case "saleDate" -> object.put(field, "2044-01-02");
-      case "salesStatus" -> object.put(field, "출고 완료");
-      case "salesType" -> object.put(field, "AUCTION");
-      case "items" -> ((ObjectNode) object.path("items").get(0)).put("spec", "새 규격");
-      default -> throw new IllegalStateException(field);
-    }
     var before = snapshot();
-    var result = post("/api/sales-slips", object.toString(), Map.of("Idempotency-Key", "payload"));
-    assertThat(result.status()).isEqualTo(409);
-    assertThat(result.body().path("error").path("code").asText())
-        .isEqualTo("SALES_CREATE_REQUEST_KEY_CONFLICT");
-    assertThat(snapshot()).isEqualTo(before);
+    for (String field :
+        List.of("memo", "partnerId", "saleDate", "salesStatus", "items", "salesType")) {
+      var changed = objectMapper.valueToTree(request).deepCopy();
+      var object = (ObjectNode) changed;
+      switch (field) {
+        case "memo" -> object.put(field, "변경");
+        case "partnerId" -> object.put(field, -1);
+        case "saleDate" -> object.put(field, "2044-01-02");
+        case "salesStatus" -> object.put(field, "출고 완료");
+        case "salesType" -> object.put(field, "AUCTION");
+        case "items" -> ((ObjectNode) object.path("items").get(0)).put("spec", "새 규격");
+        default -> throw new IllegalStateException(field);
+      }
+      var result =
+          post("/api/sales-slips", object.toString(), Map.of("Idempotency-Key", "payload"));
+      assertThat(result.status()).as("field %s: %s", field, result.body()).isEqualTo(409);
+      assertThat(result.body().path("error").path("code").asText())
+          .isEqualTo("SALES_CREATE_REQUEST_KEY_CONFLICT");
+      assertThat(snapshot()).as("unchanged facts after %s", field).isEqualTo(before);
+    }
   }
 
   @ParameterizedTest

@@ -40,6 +40,7 @@ import org.testcontainers.DockerClientFactory;
 @TestPropertySource(
     properties = {"logging.level.root=WARN", "logging.level.org.hibernate.stat=OFF"})
 @Import({JdbcMeasurement.Configuration.class, JdbcTransactionMeasurement.Configuration.class})
+@IsolatedPostgresContext
 class DomainPerformanceBenchmarkTest extends WorkE2ETestBase {
   @Autowired WorkTestDataSeeder seeder;
   @Autowired JdbcTemplate jdbc;
@@ -73,9 +74,9 @@ class DomainPerformanceBenchmarkTest extends WorkE2ETestBase {
     report.put("scenarios", scenarios);
     writeReport();
     try {
-      // All destructive fixture operations must target this test's newly created container.
+      // All destructive fixture operations must target this context's isolated database.
       try (var connection = dataSource.getConnection()) {
-        if (!connection.getMetaData().getURL().equals(POSTGRES.getJdbcUrl()))
+        if (!connection.getMetaData().getURL().equals(testDatabase.getJdbcUrl()))
           throw new IllegalStateException("Domain benchmark requires its Testcontainers database");
       }
       var fixture = new DomainPerformanceFixture(jdbc, seeder, partners, ledgerFixture);

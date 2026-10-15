@@ -120,6 +120,7 @@ tasks.register<Test>("workE2eTest") {
 		"../scripts/data-audit/validate-domain-constraint.sql",
 	)
 	description = "Runs the Work API contract E2E tests against PostgreSQL."
+	systemProperty("junit.jupiter.execution.parallel.enabled", "false")
 	testClassesDirs = sourceSets["test"].output.classesDirs
 	classpath = sourceSets["test"].runtimeClasspath
 	useJUnitPlatform {
@@ -134,6 +135,7 @@ tasks.register<Test>("workE2eTest") {
 tasks.register<Test>("workBenchmark") {
 	group = "verification"
 	description = "Measures Work API query count and response-time distribution."
+	systemProperty("junit.jupiter.execution.parallel.enabled", "false")
 	testClassesDirs = sourceSets["test"].output.classesDirs
 	classpath = sourceSets["test"].runtimeClasspath
 	useJUnitPlatform {

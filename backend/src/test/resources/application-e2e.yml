@@ -1,6 +1,13 @@
 spring:
   flyway:
     enabled: true
+    # ConnectionDetails must override this; never fall back to a developer/operational DB.
+    url: jdbc:postgresql://127.0.0.1:1/e2e_configuration_required
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:1/e2e_configuration_required
+    hikari:
+      minimum-idle: 0
+      idle-timeout: 10000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -15,3 +22,10 @@ spring:
 app:
   auth:
     enabled: false
+
+# Keep cached contexts cheap and reports readable; JDBC counters still measure all SQL.
+debug: false
+logging:
+  level:
+    org.hibernate.SQL: 'OFF'
+    org.hibernate.orm.jdbc.bind: 'OFF'

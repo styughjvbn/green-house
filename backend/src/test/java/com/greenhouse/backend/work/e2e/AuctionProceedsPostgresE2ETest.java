@@ -219,6 +219,7 @@ class AuctionProceedsPostgresE2ETest extends WorkE2ETestBase {
       service.record(fixture.houseId(), "조회 " + i, 1000L, 930L, List.of(fixture.resultId()));
     }
     var statistics = emf.unwrap(SessionFactory.class).getStatistics();
+    boolean wasEnabled = statistics.isStatisticsEnabled();
     statistics.setStatisticsEnabled(true);
     try {
       statistics.clear();
@@ -236,7 +237,7 @@ class AuctionProceedsPostgresE2ETest extends WorkE2ETestBase {
                       .satisfies(result -> assertThat(result.amount()).isEqualTo(1000)));
       assertThat(statistics.getPrepareStatementCount()).isEqualTo(oneCount).isLessThanOrEqualTo(6);
     } finally {
-      statistics.setStatisticsEnabled(false);
+      statistics.setStatisticsEnabled(wasEnabled);
     }
   }
 

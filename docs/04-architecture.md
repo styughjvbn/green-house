@@ -661,10 +661,14 @@ cd backend
 
 - `workE2eTest`: RANDOM_PORT의 실제 HTTP 요청으로 대상 미리보기, 일반·즉시 완료 작업,
   작업과 대상 상태 전이, 분갈이 수량·계보, 계획형 구조 변경, 요청 키 멱등성,
-  작업 상세·분갈이 결과·난 묶음 통합 이력을 검증한다. 같은 PostgreSQL 환경에서 판매일별 전표 번호의 동시 원자 증가도 검증한다.
+  작업 상세·분갈이 결과·난 묶음 통합 이력을 검증한다. 같은 PostgreSQL 환경에서 독립 전표 생성의 ID 유일성과 중복 실행 방지도 검증한다.
+- 테스트 건수를 줄이기 위해 다른 트랜잭션·잠금·업무 상태의 회귀를 제거하지 않는다. 같은 완료 접수에 여러 필드 변경을 보내는 검증은 정상 생성·fixture 준비를 한 번 공유할 수 있으며, 매 요청에서 오류 코드와 전체 업무 상태 불변을 확인하고 실패한 필드를 진단에 남긴다. 더 강한 lifecycle 회귀가 같은 생성·재전송 결과를 검증하면 단순 반복 사례를 중복 유지하지 않는다. 실행 시간은 테스트 호출 수와 컨테이너·application context 준비 비용을 구분해서 판단한다.
+- 일반 PostgreSQL HTTP 회귀는 테스트 JVM 안의 컨테이너를 공유하고 Spring의 같은 설정 context를 재사용한다. context마다 별도 DB를 배정해 설정·Mock/Spy·계측 Bean이 다른 context 사이의 데이터를 격리한다. JDBC와 Flyway는 모두 같은 테스트 DB 연결 계약을 사용하며 e2e profile의 기본 URL은 실제 DB를 가리키지 않는다. 캐시에서 context를 닫을 때 해당 DB만 제거하고 공유 PostgreSQL 서버는 중지하지 않는다.
+- 클래스 진입 시 모든 업무 행을 비우고 migration 직후의 작업 유형·농장 기준정보를 복원하며 Flyway 이력은 유지한다. 기존 메서드별 fixture 준비는 그대로 수행한다. Hibernate의 ID 할당 범위가 context에 남으므로 시퀀스는 항상 유지하고 Entity cache·통계 카운터를 초기화하며 통계 활성 여부도 context 생성 시 설정으로 복원한다. HTTP에서 확정한 변경의 격리는 이 초기화가 담당하며 테스트 외부 transaction으로 rollback하지 않는다. 공유 DB를 사용하는 회귀와 benchmark는 순차 실행하며 유휴 connection은 context마다 쌓이지 않도록 회수한다.
+- 스키마 이관·별도 JVM 기동과 benchmark는 독립 context를 사용해 실제 기동·격리 검증을 유지한다. 직접 PostgreSQL 컨테이너를 소유하는 migration 테스트도 유지한다. context 공유·기준정보 복원·시퀀스 보존·독립 context 종료 후 공유 DB 생존은 실제 PostgreSQL 회귀로 보호한다.
 - 쓰기 rollback 회귀는 테스트 외부 transaction 없이 DI application proxy 또는 HTTP를 호출하고, 별도 read-only transaction에서 변경 전후 저장 상태를 비교한다. 늦은 실패를 주입할 때는 의도한 CHECK 이름·SQLSTATE 또는 정확한 실패 원인을 검증한 뒤 원장·업무 이력·접수·감사의 atomicity와 재시도를 확인한다. 호출자 transaction 참여 시험은 별도로 유지하며 최상위 transaction 검증을 대신하지 않는다.
 - 잠금 경쟁 회귀는 실제 application transaction 안에서 worker DB PID를 기록하고 `pg_blocking_pids`의 직접·대기열 차단 관계가 지정한 잠금 보유자까지 이어지는지 확인한다. 시간 경과·DB 전체 대기자 수만으로 요청의 충돌을 추정하지 않는다. worker 진입과 잠금 관측·결과 대기에는 상한을 두고, 잠금 해제 뒤 양쪽 실행 순서의 상태·업무 오류·이력 불변식을 확인한다. 테스트용 관측은 최상위 쓰기 transaction을 대신 만들지 않는다.
-- 실제 HTTP 회귀는 연결 10초·응답 60초 상한과 요청 method/path 진단을 공유한다. request body는 전송 실패 로그에 넣지 않는다. PostgreSQL 테스트 메서드는 기본 5분, 장시간 benchmark는 명시적으로 15분 상한을 사용하며 DB 번호 발급의 병렬 future도 60초 안에 완료해야 한다. `workE2eTest`의 JUnit timeout 시 thread dump를 남긴다. 이 상한은 운영 API SLA나 서버 JDBC 취소 보장이 아니다.
+- 실제 HTTP 회귀는 연결 10초·응답 60초 상한과 요청 method/path 진단을 공유한다. request body는 전송 실패 로그에 넣지 않는다. PostgreSQL 테스트 메서드는 기본 5분, 장시간 benchmark는 명시적으로 15분 상한을 사용하며 전표 생성의 병렬 future도 60초 안에 완료해야 한다. `workE2eTest`의 JUnit timeout 시 thread dump를 남긴다. 이 상한은 운영 API SLA나 서버 JDBC 취소 보장이 아니다.
 - `workBenchmark`: 작업 100건을 고정하고 작업당 대상 1·20·100건 및 한 난 묶음의 이력 1·100건으로 하위 fan-out을 늘린다. 작업 목록·상세·이력의 SQL 수와 목록 target Entity/반환 행 상한을 검사한다. API별 3회 워밍업 후 20회 측정한 median/p95는
   `backend/build/work-benchmark/results.json`에 기록한다.
 - 테스트 전용 DataSource 계측은 Hibernate와 JdbcTemplate의 JDBC execute 호출·batch 호출·`ResultSet.next()`로 소비한 행·실패·명시 commit/rollback을 함께 센다. Work 보고서는 Hibernate Entity/flush와 응답 JSON의 UTF-8 byte 수도 보존하고, 검색 보고서는 호출 스레드의 할당 바이트를 함께 기록한다. JSON byte 수는 재직렬화한 body 기준이며 HTTP header·압축 bytes가 아니다. 측정 창은 별도 테스트 context에서 순차 요청 하나를 완전히 끝낸 뒤 닫으며 fixture 준비와 워밍업을 제외한다.
