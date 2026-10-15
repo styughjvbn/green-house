@@ -665,6 +665,86 @@ export function getDirectReturnArrivals(
   );
 }
 
+export function readSalesSlipPhoto(
+  photo: import("./types").SalesSlipPhotoInput,
+  signal?: AbortSignal,
+) {
+  const bytes = Uint8Array.from(atob(photo.contentBase64), (char) =>
+    char.charCodeAt(0),
+  );
+  const body = new FormData();
+  body.append(
+    "image",
+    new Blob([bytes], { type: photo.contentType }),
+    photo.fileName,
+  );
+  return requestApi<import("./types").SalesSlipPhotoExtraction>(
+    "/ai/slips/extract",
+    { method: "POST", body, signal },
+  );
+}
+export function openSalesSlipPhotoSession(signal?: AbortSignal) {
+  return requestApi<
+    import("@/shared/api/generated/openapi").components["schemas"]["AiSlipSession"]
+  >("/ai/slips/sessions", { method: "POST", signal });
+}
+export function closeSalesSlipPhotoSession(sessionId: string) {
+  return requestApi<void>(
+    `/ai/slips/sessions/${encodeURIComponent(sessionId)}`,
+    { method: "DELETE" },
+  );
+}
+export function removeSalesSlipSessionPhoto(
+  sessionId: string,
+  photoId: string,
+) {
+  return requestApi<void>(
+    `/ai/slips/sessions/${encodeURIComponent(sessionId)}/photos/${encodeURIComponent(photoId)}`,
+    { method: "DELETE" },
+  );
+}
+export function readSalesSlipPhotos(
+  sessionId: string,
+  photos: {
+    photoId: string;
+    photo: import("./types").SalesSlipPhotoInput;
+    feedback: string | null;
+  }[],
+  signal?: AbortSignal,
+) {
+  const body = new FormData();
+  body.append(
+    "metadata",
+    new Blob(
+      [
+        JSON.stringify({
+          photos: photos.map((p) => ({
+            photoId: p.photoId,
+            feedback: p.feedback,
+          })),
+        }),
+      ],
+      { type: "application/json" },
+    ),
+  );
+  for (const entry of photos) {
+    const bytes = Uint8Array.from(atob(entry.photo.contentBase64), (char) =>
+      char.charCodeAt(0),
+    );
+    body.append(
+      "photos",
+      new Blob([bytes], { type: entry.photo.contentType }),
+      entry.photo.fileName,
+    );
+  }
+  return requestApi<
+    import("@/shared/api/generated/openapi").components["schemas"]["SlipConversationResult"]
+  >(`/ai/slips/sessions/${encodeURIComponent(sessionId)}/extract`, {
+    method: "POST",
+    body,
+    signal,
+  });
+}
 export function getSalesSlipPhotoInfo(id: number) {
   return fetchApi<import("./types").SalesSlipPhotoInfo | null>(
     `/sales-slips/${id}/source-photo/info`,
