@@ -95,14 +95,24 @@ public class SlipExtractionService {
         addReview(reviews, UNIT_PRICE, index, "단가 확인 필요");
       if (item.varietyId() != null && variety == null)
         warnings.add("품종 매칭을 확인하지 못했습니다: " + Objects.toString(item.itemName(), "미확인 품목"));
+      if (item.unit() != null
+          && item.boxes() != null
+          && item.quantity() != null
+          && (long) item.unit() * item.boxes() != item.quantity().longValue()) {
+        String reason = "단위 × 상자 수와 수량 불일치";
+        warnings.add(Objects.toString(item.itemName(), "품목") + ": " + reason);
+        addReview(reviews, UNIT, index, reason);
+        addReview(reviews, BOXES, index, reason);
+        addReview(reviews, QUANTITY, index, reason);
+      }
       Long calculated =
           item.quantity() != null && item.unitPrice() != null
               ? (long) item.quantity() * item.unitPrice()
               : null;
       if (calculated != null && item.amount() != null && !calculated.equals(item.amount())) {
         warnings.add(Objects.toString(item.itemName(), "품목") + ": 사진 금액과 수량 × 단가가 다릅니다.");
-        addReview(reviews, QUANTITY, index, "사진 금액과 불일치·수량 확인 필요");
-        addReview(reviews, UNIT_PRICE, index, "사진 금액과 불일치·단가 확인 필요");
+        addReview(reviews, QUANTITY, index, "수량 × 단가와 사진 금액 불일치·수량 확인 필요");
+        addReview(reviews, UNIT_PRICE, index, "수량 × 단가와 사진 금액 불일치·단가 확인 필요");
         addReview(reviews, AMOUNT, index, "사진 금액 대조 필요");
       }
       items.add(
@@ -142,7 +152,14 @@ public class SlipExtractionService {
       SlipFieldReview.Field field,
       Integer itemIndex,
       String reason) {
-    reviews.putIfAbsent(
-        field.name() + ":" + itemIndex, new SlipFieldReview(field, itemIndex, reason));
+    reviews.merge(
+        field.name() + ":" + itemIndex,
+        new SlipFieldReview(field, itemIndex, reason),
+        (previous, added) -> {
+          if (previous.reason().contains(added.reason())) return previous;
+          String combined = added.reason() + " · " + previous.reason();
+          return new SlipFieldReview(
+              field, itemIndex, combined.substring(0, Math.min(200, combined.length())));
+        });
   }
 }

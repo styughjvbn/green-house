@@ -24,6 +24,104 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.provider.Arguments;
 
 class SlipExtractionServiceTest {
+  static Stream<Arguments> arithmeticChecks() {
+    return Stream.of(
+        Arguments.of(50, 2, 100, 3000, 300000L, false, false),
+        Arguments.of(50, 2, 99, 3000, 297000L, true, false),
+        Arguments.of(50, 2, 100, 3000, 299000L, false, true),
+        Arguments.of(50, 2, 99, 3000, 300000L, true, true),
+        Arguments.of(null, 2, 100, 3000, 299000L, false, true),
+        Arguments.of(50, null, 100, 3000, 299000L, false, true),
+        Arguments.of(50, 2, 99, null, 300000L, true, false),
+        Arguments.of(50, 2, 99, 3000, null, true, false),
+        Arguments.of(50, 2, null, 3000, 300000L, false, false),
+        Arguments.of(50, 2, 100, 0, 0L, false, false),
+        Arguments.of(Integer.MAX_VALUE, 2, 1, 1, 1L, true, false),
+        Arguments.of(
+            1,
+            Integer.MAX_VALUE,
+            Integer.MAX_VALUE,
+            Integer.MAX_VALUE,
+            4611686014132420609L,
+            false,
+            false));
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.MethodSource("arithmeticChecks")
+  void checksQuantityAndAmountIndependentlyWithoutChangingReadValues(
+      Integer unit,
+      Integer boxes,
+      Integer quantity,
+      Integer unitPrice,
+      Long amount,
+      boolean quantityMismatch,
+      boolean amountMismatch) {
+    var tools =
+        new AgentToolGateway(
+            mock(VarietySearchApi.class),
+            mock(BusinessPartnerQueryApi.class),
+            Clock.systemUTC(),
+            5,
+            120);
+    try (var factory = Validation.buildDefaultValidatorFactory();
+        var scope = tools.open("r", "worker")) {
+      var service =
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+      var item =
+          new SlipModelResult.Item(
+              "하니문", null, null, null, unit, boxes, quantity, unitPrice, amount, null);
+      var raw =
+          new SlipModelResult(
+              "DIRECT",
+              "2026-10-15",
+              null,
+              null,
+              null,
+              List.of(item),
+              List.of(),
+              95,
+              1024,
+              1,
+              List.of());
+      var result = service.validate("r", raw, scope);
+      var actual = result.items().getFirst();
+      assertThat(actual.unit()).isEqualTo(unit);
+      assertThat(actual.boxes()).isEqualTo(boxes);
+      assertThat(actual.quantity()).isEqualTo(quantity);
+      assertThat(actual.unitPrice()).isEqualTo(unitPrice);
+      assertThat(actual.amount()).isEqualTo(amount);
+      for (var field :
+          List.of(
+              SlipFieldReview.Field.UNIT,
+              SlipFieldReview.Field.BOXES,
+              SlipFieldReview.Field.QUANTITY))
+        assertThat(
+                result.reviewFields().stream()
+                    .anyMatch(
+                        r ->
+                            r.field() == field
+                                && Integer.valueOf(0).equals(r.itemIndex())
+                                && r.reason().contains("단위 × 상자 수")))
+            .isEqualTo(quantityMismatch);
+      for (var field :
+          List.of(
+              SlipFieldReview.Field.QUANTITY,
+              SlipFieldReview.Field.UNIT_PRICE,
+              SlipFieldReview.Field.AMOUNT))
+        assertThat(
+                result.reviewFields().stream()
+                    .anyMatch(
+                        r ->
+                            r.field() == field
+                                && Integer.valueOf(0).equals(r.itemIndex())
+                                && (r.reason().contains("수량 × 단가")
+                                    || (field == SlipFieldReview.Field.AMOUNT
+                                        && r.reason().contains("금액 대조")))))
+            .isEqualTo(amountMismatch);
+    }
+  }
+
   @Test
   void preservesUncertainValuesAndReturnsSpecificReviewTargets() {
     var tools =
