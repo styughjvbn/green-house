@@ -71,20 +71,15 @@ public class SlipExtractionService {
     if (date == null) addReview(reviews, SALE_DATE, null, "판매일·출하일 확인 필요");
     var partner = scope.partner(result.partnerId());
     if (partner != null && (!partner.active() || partner.partnerType() == null)) partner = null;
-    if (partner != null) {
-      SalesType matchedType =
-          partner.partnerType() == PartnerType.AUCTION_HOUSE ? SalesType.AUCTION : SalesType.DIRECT;
-      if (type != null && type != matchedType)
-        warnings.add(
-            "거래처 유형에 맞춰 판매 유형을 "
-                + (matchedType == SalesType.AUCTION ? "경매 판매" : "일반 판매")
-                + "로 변경했습니다.");
-      type = matchedType;
-    } else {
-      type = null;
-      addReview(reviews, PARTNER, null, "거래처 직접 선택 필요");
-      addReview(reviews, SALES_TYPE, null, "판매 유형 확인 필요");
+    if (partner != null && type != null) {
+      boolean auctionPartner = partner.partnerType() == PartnerType.AUCTION_HOUSE;
+      if (auctionPartner != (type == SalesType.AUCTION)) {
+        partner = null;
+        warnings.add("전표 가격 기재 여부와 거래처 유형 불일치·거래처 확인 필요");
+      }
     }
+    if (partner == null) addReview(reviews, PARTNER, null, "거래처 직접 선택 필요");
+    if (type == null) addReview(reviews, SALES_TYPE, null, "가격 기재 여부·판매 유형 확인 필요");
     if (partner != null && result.partnerName() == null)
       addReview(reviews, PARTNER, null, "추정 거래처 확인 필요");
     if (partner == null && result.partnerId() != null)

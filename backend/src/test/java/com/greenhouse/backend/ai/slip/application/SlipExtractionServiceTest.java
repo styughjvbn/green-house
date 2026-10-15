@@ -283,7 +283,7 @@ class SlipExtractionServiceTest {
 
   @org.junit.jupiter.params.ParameterizedTest
   @org.junit.jupiter.params.provider.MethodSource("partnerTypes")
-  void derivesSalesTypeFromTheMatchedPartnerEvenWhenTheModelTypeIsMissingOrWrong(
+  void preservesPriceBasedSalesTypeAndRejectsIncompatiblePartners(
       PartnerType partnerType, String modelType) {
     var partners = mock(BusinessPartnerQueryApi.class);
     when(partners.searchOptions("거래처", null, 10))
@@ -302,19 +302,23 @@ class SlipExtractionServiceTest {
           new SlipModelResult(
               modelType, null, "사진 원문", 3L, null, List.of(), List.of(), 90, 1024, 1, List.of());
       var result = service.validate("r", raw, scope);
-      assertThat(result.partnerId()).isEqualTo(3L);
-      assertThat(result.partnerName()).isEqualTo("등록 거래처");
-      assertThat(result.rawPartnerName()).isEqualTo("사진 원문");
-      var expected =
-          partnerType == PartnerType.AUCTION_HOUSE ? SalesType.AUCTION : SalesType.DIRECT;
+      var expected = modelType == null ? null : SalesType.valueOf(modelType);
       assertThat(result.salesType()).isEqualTo(expected);
-      if (modelType != null && !modelType.equals(expected.name()))
-        assertThat(result.warnings()).anyMatch(w -> w.contains("판매 유형"));
+      boolean incompatible =
+          expected != null
+              && (partnerType == PartnerType.AUCTION_HOUSE) != (expected == SalesType.AUCTION);
+      assertThat(result.partnerId()).isEqualTo(incompatible ? null : 3L);
+      assertThat(result.rawPartnerName()).isEqualTo("사진 원문");
+      if (incompatible) assertThat(result.warnings()).anyMatch(w -> w.contains("거래처 유형 불일치"));
+      assertThat(
+              result.reviewFields().stream()
+                  .anyMatch(r -> r.field() == SlipFieldReview.Field.SALES_TYPE))
+          .isEqualTo(modelType == null);
     }
   }
 
   @Test
-  void leavesSalesTypeUnconfirmedForUnmatchedInactiveOrUnselectedPartners() {
+  void preservesPriceBasedSalesTypeForUnmatchedInactiveOrUnselectedPartners() {
     var partners = mock(BusinessPartnerQueryApi.class);
     when(partners.searchOptions("거래처", null, 10))
         .thenReturn(
@@ -340,7 +344,7 @@ class SlipExtractionServiceTest {
                     List.of()),
                 scope);
         assertThat(result.partnerId()).isNull();
-        assertThat(result.salesType()).isNull();
+        assertThat(result.salesType()).isEqualTo(SalesType.AUCTION);
         assertThat(result.partnerName()).isEqualTo("사진 원문");
       }
     }
