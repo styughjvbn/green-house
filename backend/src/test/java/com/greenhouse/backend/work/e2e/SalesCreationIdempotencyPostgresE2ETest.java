@@ -789,7 +789,7 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
                 type == SalesType.DIRECT ? 1000 : 0,
                 "과거 품목",
                 List.of(),
-                "분",
+                10,
                 3)),
         null,
         true);
@@ -810,7 +810,7 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     assertThat(first.data().path("salesStatus").asText()).isEqualTo(request.salesStatus());
     assertThat(first.data().has("historicalAuctionImport")).isFalse();
     assertThat(first.data().path("items").get(0).path("allocations")).isEmpty();
-    assertThat(first.data().path("items").get(0).path("unit").asText()).isEqualTo("분");
+    assertThat(first.data().path("items").get(0).path("unit").asInt()).isEqualTo(10);
     assertThat(first.data().path("items").get(0).path("boxes").asInt()).isEqualTo(3);
     assertThat(first.data().path("totalAmount").asInt())
         .isEqualTo(type == SalesType.DIRECT ? 150000 : 0);

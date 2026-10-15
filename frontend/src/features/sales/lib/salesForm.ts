@@ -257,6 +257,13 @@ export function salesAllocationIssue(
     const quantity = Number(item.quantity);
     if (!Number.isSafeInteger(quantity) || quantity < 1)
       return "품목 수량은 1분 이상 입력하세요.";
+    if (
+      item.unit.trim() &&
+      (!Number.isInteger(Number(item.unit)) ||
+        Number(item.unit) < 1 ||
+        Number(item.unit) > 2147483647)
+    )
+      return "단위는 1 이상의 정수로 입력하세요.";
     if (recordOnly) {
       if (!item.itemName.trim()) return "품종명을 입력하세요.";
       continue;
@@ -377,7 +384,7 @@ export function toCreateSalesSlipPayload(
       itemName: item.itemName,
       genus: nullableText(item.genus),
       spec: nullableText(item.spec),
-      unit: nullableText(item.unit),
+      unit: item.unit.trim() ? Number(item.unit) : null,
       boxes: item.boxes ? Number(item.boxes) : null,
       quantity: Number(item.quantity),
       unitPrice: form.salesType === "AUCTION" ? 0 : Number(item.unitPrice),
@@ -429,7 +436,7 @@ export function toSalesSlipForm(salesSlip: SalesSlip): SalesSlipForm {
         itemName: item.itemName,
         genus: item.genus ?? "",
         spec: item.spec ?? "",
-        unit: item.unit ?? "",
+        unit: item.unit == null ? "" : String(item.unit),
         boxes: item.boxes == null ? "" : String(item.boxes),
         quantity: String(item.quantity),
         unitPrice: String(item.unitPrice),

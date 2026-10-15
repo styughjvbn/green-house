@@ -53,6 +53,7 @@ record SalesCreationRequestPayload(
       Integer unitPrice,
       String memo,
       List<Allocation> allocations,
+      // Preserve the legacy numeric-text representation only for creation fingerprints.
       @JsonInclude(JsonInclude.Include.NON_NULL) String unit,
       @JsonInclude(JsonInclude.Include.NON_NULL) Integer boxes) {
     static Item from(SalesSlipItemInput value) {
@@ -75,7 +76,7 @@ record SalesCreationRequestPayload(
                                   : new Allocation(
                                       allocation.orchidGroupId(), allocation.quantity()))
                       .toList(),
-              value.unit(),
+              value.unit() == null ? null : value.unit().toString(),
               value.boxes());
     }
   }

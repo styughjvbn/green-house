@@ -41,7 +41,7 @@ export type CreateSalesSlipPayload = {
     itemName: string;
     genus: string | null;
     spec: string | null;
-    unit: string | null;
+    unit: number | null;
     boxes: number | null;
     quantity: number;
     unitPrice: number;

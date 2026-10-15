@@ -19,7 +19,7 @@ export function withRecognizedSalesSlip(
     itemName: item.itemName ?? "",
     genus: item.genus ?? "",
     spec: item.spec ?? "",
-    unit: item.unit ?? "",
+    unit: item.unit == null ? "" : String(item.unit),
     memo: item.memo ?? "",
     boxes: item.boxes != null && item.boxes > 0 ? String(item.boxes) : "",
     quantity:

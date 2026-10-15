@@ -44,6 +44,27 @@ class SalesCreationFingerprintCompatibilityTest {
   }
 
   @Test
+  void numericUnitsKeepCanonicalLegacyTextFingerprints() throws Exception {
+    var request = mapper.readValue("{\"items\":[{\"unit\":10}]}", SalesSlipCommand.class);
+    var legacy =
+        mapper.readTree(
+            mapper.writeValueAsString(request).replace("\"unit\":10", "\"unit\":\"10\""));
+    assertThat(hash(SalesCreationRequestPayload.from(request))).isEqualTo(hash(legacy));
+  }
+
+  @Test
+  void storedTextUnitsAreProjectedAsNumbersWithoutChangingHistoricalJson() throws Exception {
+    for (String raw : List.of("10", " 0010 ", "분", "10개", "0", "1.5", "2147483648")) {
+      String snapshot = "{\"items\":[{\"unit\":\"" + raw + "\"}]}";
+      var result = SalesSlipCreationService.readStoredResponse(snapshot);
+      assertThat(result.items().getFirst().unit())
+          .isEqualTo(raw.equals("10") || raw.equals(" 0010 ") ? 10 : null);
+      assertThat(mapper.readTree(snapshot).path("items").get(0).path("unit").asText())
+          .isEqualTo(raw);
+    }
+  }
+
+  @Test
   void fieldChangesRequireCreationReceiptCompatibilityReview() throws Exception {
     try (var input = getClass().getResourceAsStream("/sales/creation-v1-fields.json")) {
       assertThat(input).isNotNull();

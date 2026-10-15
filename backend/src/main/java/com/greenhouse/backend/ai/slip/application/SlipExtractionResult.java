@@ -25,7 +25,7 @@ public record SlipExtractionResult(
       String rawItemName,
       String rawGenus,
       String spec,
-      String unit,
+      Integer unit,
       Integer boxes,
       Integer quantity,
       Integer unitPrice,

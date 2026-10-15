@@ -16,6 +16,32 @@ import org.junit.jupiter.api.Test;
 
 class HttpAgentRuntimeAdapterTest {
   @Test
+  void rejectsFractionalUnitsFromRuntimeInsteadOfTruncatingThem() throws Exception {
+    var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext(
+        "/infer/slip",
+        exchange -> {
+          exchange.getRequestBody().readAllBytes();
+          byte[] body = "{\"items\":[{\"unit\":1.5}]}".getBytes(StandardCharsets.UTF_8);
+          exchange.sendResponseHeaders(200, body.length);
+          exchange.getResponseBody().write(body);
+          exchange.close();
+        });
+    server.start();
+    try {
+      var adapter =
+          new HttpAgentRuntimeAdapter(
+              "http://127.0.0.1:" + server.getAddress().getPort(), "secret", 5);
+      assertThatThrownBy(() -> adapter.extract("r", "token", "image/png", new byte[] {1}))
+          .isInstanceOf(AgentException.class)
+          .extracting("code")
+          .isEqualTo("AI_INVALID_RESULT");
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  @Test
   void sendsScopedCredentialsToConfiguredRuntimeAndMapsBusyResponse() throws Exception {
     var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
     var authorization = new AtomicReference<String>();

@@ -1,9 +1,12 @@
 package com.greenhouse.backend.sales.document.application;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.cfg.JsonNodeFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.sales.api.document.SalesSlipDocument;
@@ -37,6 +40,8 @@ public class SalesSlipCreationService {
       JsonMapper.builder()
           .findAndAddModules()
           .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+          .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+          .disable(JsonNodeFeature.STRIP_TRAILING_BIGDECIMAL_ZEROES)
           .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
           .build();
 
@@ -61,6 +66,27 @@ public class SalesSlipCreationService {
 
   private final SalesSlipAuditSupport auditSupport;
 
+  static SalesSlipDocument readStoredResponse(String snapshot) throws JsonProcessingException {
+    var source = RECEIPT_MAPPER.readTree(snapshot);
+    for (var item : source.path("items")) {
+      if (item instanceof ObjectNode row && row.path("unit").isTextual()) {
+        String raw = row.path("unit").asText().trim();
+        Integer unit = null;
+        if (raw.matches("[0-9]+")) {
+          try {
+            int parsed = Integer.parseInt(raw);
+            if (parsed > 0) unit = parsed;
+          } catch (NumberFormatException ignored) {
+            // Historical text stays in the receipt; only this response projection is numeric.
+          }
+        }
+        if (unit == null) row.putNull("unit");
+        else row.put("unit", unit);
+      }
+    }
+    return RECEIPT_MAPPER.treeToValue(source, SalesSlipDocument.class);
+  }
+
   public SalesSlipDocument create(SalesSlipCommand request) {
     return create(request, null);
   }
@@ -82,7 +108,7 @@ public class SalesSlipCreationService {
     receipt.validate(fingerprint);
     try {
       if (receipt.getResponseSnapshot() != null) {
-        return RECEIPT_MAPPER.readValue(receipt.getResponseSnapshot(), SalesSlipDocument.class);
+        return readStoredResponse(receipt.getResponseSnapshot());
       }
       if (inserted != 1) {
         throw new IllegalStateException("완료되지 않은 판매 생성 요청 기록입니다.");

@@ -4663,9 +4663,9 @@ components:
           maxLength: 100
           minLength: 0
         unit:
-          type: string
-          maxLength: 30
-          minLength: 0
+          type: integer
+          format: int32
+          minimum: 1
         unitPrice:
           type: integer
           format: int32
@@ -4867,7 +4867,8 @@ components:
         spec:
           type: string
         unit:
-          type: string
+          type: integer
+          format: int32
         unitPrice:
           type: integer
           format: int32
@@ -8279,7 +8280,8 @@ components:
         spec:
           type: string
         unit:
-          type: string
+          type: integer
+          format: int32
         unitPrice:
           type: integer
           format: int32

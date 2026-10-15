@@ -2459,7 +2459,8 @@ export interface components {
             /** Format: int32 */
             quantity: number;
             spec?: string;
-            unit?: string;
+            /** Format: int32 */
+            unit?: number;
             /** Format: int32 */
             unitPrice: number;
         };
@@ -2567,7 +2568,8 @@ export interface components {
             /** Format: int32 */
             quantity?: number;
             spec?: string;
-            unit?: string;
+            /** Format: int32 */
+            unit?: number;
             /** Format: int32 */
             unitPrice?: number;
         };
@@ -3999,7 +4001,8 @@ export interface components {
             rawGenus?: string;
             rawItemName?: string;
             spec?: string;
-            unit?: string;
+            /** Format: int32 */
+            unit?: number;
             /** Format: int32 */
             unitPrice?: number;
             /** Format: int64 */

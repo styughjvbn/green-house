@@ -217,6 +217,7 @@ Example:
 
 ### Quantities and Amounts
 - Distinguish box count, quantity, unit, unit price, and printed item amount.
+- Return unit as a positive integer or null. Extract only a printed numeric unit value; never substitute quantity or boxes. For labels alone, such as 개 or 분, return null.
 - Never derive quantity or unit price from amounts.
 - Set amount to the printed item amount, never a calculated value.
 

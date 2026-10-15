@@ -20,7 +20,7 @@ public record SlipModelResult(
       @Size(max = 100) String genus,
       @Positive Long varietyId,
       @Size(max = 100) String spec,
-      @Size(max = 30) String unit,
+      @Min(1) Integer unit,
       @Min(1) Integer boxes,
       @Min(1) Integer quantity,
       @Min(0) Integer unitPrice,

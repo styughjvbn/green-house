@@ -46,8 +46,9 @@
             "maxLength": 100
           },
           "unit": {
-            "type": ["string", "null"],
-            "maxLength": 30
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "maximum": 2147483647
           },
           "boxes": {
             "type": ["integer", "null"],

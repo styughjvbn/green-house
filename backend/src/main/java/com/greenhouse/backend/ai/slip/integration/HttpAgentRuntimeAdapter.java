@@ -1,6 +1,7 @@
 package com.greenhouse.backend.ai.slip.integration;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.greenhouse.backend.ai.api.AgentException;
 import com.greenhouse.backend.ai.slip.application.SlipConversationInput;
@@ -26,7 +27,11 @@ public class HttpAgentRuntimeAdapter implements AgentRuntimePort {
   private final long timeout;
   private final HttpClient client =
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-  private final JsonMapper json = JsonMapper.builder().findAndAddModules().build();
+  private final JsonMapper json =
+      JsonMapper.builder()
+          .findAndAddModules()
+          .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
+          .build();
 
   public HttpAgentRuntimeAdapter(
       @Value("${app.ai.runtime-url:http://127.0.0.1:8091}") String url,

@@ -7,6 +7,7 @@ import {
 } from "../src/extraction.js";
 import {
   RuntimeError,
+  validateResult,
   inputPhotos,
   type AgentProvider,
   type PhotoInput,
@@ -22,6 +23,29 @@ const result = (confidence: number) => ({
   items: [],
   warnings: [],
   confidence,
+});
+
+test("extraction units accept only positive integer numbers or null", () => {
+  const item = {
+    itemName: "품종",
+    genus: null,
+    varietyId: null,
+    spec: "중",
+    unit: null as unknown,
+    boxes: null,
+    quantity: 2,
+    unitPrice: 100,
+    amount: 200,
+    memo: null,
+  };
+  for (const unit of [null, 1, 10, 2147483647])
+    assert.doesNotThrow(() =>
+      validateResult({ ...result(90), items: [{ ...item, unit }] }),
+    );
+  for (const unit of [0, -1, 1.5, "10", "분", 2147483648])
+    assert.throws(() =>
+      validateResult({ ...result(90), items: [{ ...item, unit }] }),
+    );
 });
 async function photo(
   photoId: string,

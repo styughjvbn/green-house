@@ -10,7 +10,7 @@ public record SalesSlipDocumentItem(
     String itemName,
     String genus,
     String spec,
-    String unit,
+    Integer unit,
     Integer boxes,
     Integer quantity,
     Integer unitPrice,

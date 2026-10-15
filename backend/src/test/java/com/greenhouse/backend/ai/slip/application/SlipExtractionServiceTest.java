@@ -54,8 +54,7 @@ class SlipExtractionServiceTest {
               3L,
               null,
               List.of(
-                  new SlipModelResult.Item(
-                      "오독 품종", "오독 속", 7L, "A", "분", null, 2, 100, 999L, null)),
+                  new SlipModelResult.Item("오독 품종", "오독 속", 7L, "A", 10, null, 2, 100, 999L, null)),
               List.of(),
               90,
               1024,

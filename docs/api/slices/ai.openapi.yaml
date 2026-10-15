@@ -161,7 +161,8 @@ components:
         spec:
           type: string
         unit:
-          type: string
+          type: integer
+          format: int32
         unitPrice:
           type: integer
           format: int32

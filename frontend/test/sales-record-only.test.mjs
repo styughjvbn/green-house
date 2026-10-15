@@ -19,7 +19,7 @@ test("completed records preserve facts entered after selecting the registration 
       genus: "팔레놉시스",
       quantity: "150",
       unitPrice: "1000",
-      unit: "분",
+      unit: "10",
       boxes: "3",
       allocations: [
         { orchidGroupId: "12", quantity: "150", availableQuantity: 10 },

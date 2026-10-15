@@ -108,13 +108,13 @@ class SalesWriteQueryPostgresE2ETest extends WorkE2ETestBase {
             item.unitPrice(),
             item.memo(),
             item.allocations(),
-            "분",
+            10,
             2);
     var directRequest =
         new SalesSlipCommand(
             DATE, SalesType.DIRECT, partner, null, null, "작성중", "현금", null, List.of(withPacking));
     var direct = creation.create(directRequest);
-    assertThat(queries.getSalesSlip(direct.id()).items().getFirst().unit()).isEqualTo("분");
+    assertThat(queries.getSalesSlip(direct.id()).items().getFirst().unit()).isEqualTo(10);
     assertThat(queries.getSalesSlip(direct.id()).items().getFirst().boxes()).isEqualTo(2);
     assertThat(
             jdbc.queryForObject(

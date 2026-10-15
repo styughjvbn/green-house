@@ -65,7 +65,8 @@ export function SalesSlipItemEditor({
           <TextField
             disabled={disabled}
             label="단위"
-            maxLength={30}
+            type="number"
+            min={1}
             value={item.unit}
             onChange={(value) => onChange(index, "unit", value)}
           />
