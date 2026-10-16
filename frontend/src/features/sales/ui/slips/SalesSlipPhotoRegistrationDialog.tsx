@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { SalesSlipPhotoViewer } from "./SalesSlipPhotoViewer";
-import { Camera, ImagePlus, X } from "lucide-react";
+import { Camera, ImagePlus, LoaderCircle, X } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import {
   selectedSalesGroups,
 } from "../../lib/salesForm";
 import { SalesSlipCreateForm } from "./SalesSlipCreateForm";
+import { SalesSlipPhotoProgress } from "./SalesSlipPhotoProgress";
 
 export function SalesSlipPhotoRegistrationDialog({
   onClose,
@@ -193,6 +194,15 @@ export function SalesSlipPhotoRegistrationDialog({
             </p>
           ) : null}
         </div>
+        {photos.busy ? (
+          <SalesSlipPhotoProgress
+            key={photos.busy}
+            operation={photos.busy}
+            readingCount={
+              photos.entries.filter((entry) => entry.read === "reading").length
+            }
+          />
+        ) : null}
         {selected ? (
           <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] lg:grid-cols-[14rem_minmax(0,1fr)] lg:grid-rows-1">
             <nav
@@ -212,8 +222,14 @@ export function SalesSlipPhotoRegistrationDialog({
                     {index + 1}. {entry.photo.fileName}
                   </span>
                   <span
-                    className={`mt-1 block text-xs ${entry.error ? "text-[#9b341e]" : "text-[#526158]"}`}
+                    className={`mt-1 flex items-center gap-1.5 text-xs ${entry.error ? "text-[#9b341e]" : "text-[#526158]"}`}
                   >
+                    {entry.save === "saving" || entry.read === "reading" ? (
+                      <LoaderCircle
+                        className="h-3.5 w-3.5 shrink-0 animate-spin motion-reduce:animate-none"
+                        aria-hidden="true"
+                      />
+                    ) : null}
                     {entry.save === "saved"
                       ? "저장 완료"
                       : entry.save === "saving"
@@ -251,9 +267,17 @@ export function SalesSlipPhotoRegistrationDialog({
                       }
                       onClick={readSelected}
                     >
-                      {selected.read === "ready"
-                        ? "자동 입력 재실행"
-                        : "자동 입력"}
+                      {selected.read === "reading" ? (
+                        <LoaderCircle
+                          className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                      {selected.read === "reading"
+                        ? "자동 입력 중…"
+                        : selected.read === "ready"
+                          ? "자동 입력 재실행"
+                          : "자동 입력"}
                     </button>
                     <button
                       type="button"
