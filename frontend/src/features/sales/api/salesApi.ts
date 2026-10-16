@@ -703,6 +703,15 @@ export function removeSalesSlipSessionPhoto(
     { method: "DELETE" },
   );
 }
+export function cancelSalesSlipPhotoReading(
+  sessionId: string,
+  requestId: string,
+) {
+  return requestApi<void>(
+    `/ai/slips/sessions/${encodeURIComponent(sessionId)}/requests/${encodeURIComponent(requestId)}/cancel`,
+    { method: "POST" },
+  );
+}
 export function readSalesSlipPhotos(
   sessionId: string,
   photos: {
@@ -710,6 +719,7 @@ export function readSalesSlipPhotos(
     photo: import("./types").SalesSlipPhotoInput;
   }[],
   signal?: AbortSignal,
+  requestId?: string,
 ) {
   const body = new FormData();
   body.append(
@@ -741,6 +751,7 @@ export function readSalesSlipPhotos(
     method: "POST",
     body,
     signal,
+    headers: requestId ? { "X-AI-Request-Id": requestId } : undefined,
   });
 }
 export function getSalesSlipPhotoInfo(id: number) {

@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 class SlipExtractionControllerTest {
@@ -60,10 +61,9 @@ class SlipExtractionControllerTest {
   }
 
   @Test
-  void batchMultipartPassesPhotoIdsAndFeedbackInOneCallAndRejectsMismatchedFiles()
-      throws Exception {
+  void batchMultipartPassesPhotoIdsAndClientRequestIdAndRejectsMismatchedFiles() throws Exception {
     var service = mock(SlipConversationService.class);
-    when(service.extract(eq("worker"), eq("session"), any()))
+    when(service.extract(eq("worker"), eq("session"), any(), eq("client-request")))
         .thenReturn(
             new SlipConversationResult(
                 "session",
@@ -82,6 +82,7 @@ class SlipExtractionControllerTest {
                 .getBytes(StandardCharsets.UTF_8));
     mvc.perform(
             multipart("/api/ai/slips/sessions/session/extract")
+                .header("X-AI-Request-Id", "client-request")
                 .file(metadata)
                 .file(new MockMultipartFile("photos", "p.png", "image/png", new byte[] {1}))
                 .principal(() -> "worker"))
@@ -92,15 +93,27 @@ class SlipExtractionControllerTest {
             eq("worker"),
             eq("session"),
             argThat(
-                input ->
-                    input.photos().size() == 1 && input.photos().get(0).photoId().equals("p")));
+                input -> input.photos().size() == 1 && input.photos().get(0).photoId().equals("p")),
+            eq("client-request"));
     mvc.perform(
             multipart("/api/ai/slips/sessions/session/extract")
+                .header("X-AI-Request-Id", "client-request")
                 .file(metadata)
                 .file(new MockMultipartFile("photos", "p.png", "image/png", new byte[] {1}))
                 .file(new MockMultipartFile("photos", "q.png", "image/png", new byte[] {1}))
                 .principal(() -> "worker"))
         .andExpect(status().isBadRequest());
     verifyNoMoreInteractions(service);
+  }
+
+  @Test
+  void cancellationPassesTheActorAndSpecificRequestToTheService() throws Exception {
+    var service = mock(SlipConversationService.class);
+    var mvc = MockMvcBuilders.standaloneSetup(new SlipConversationController(service)).build();
+    mvc.perform(
+            MockMvcRequestBuilders.post("/api/ai/slips/sessions/session/requests/request/cancel")
+                .principal(() -> "worker"))
+        .andExpect(status().isOk());
+    verify(service).cancel("worker", "session", "request");
   }
 }

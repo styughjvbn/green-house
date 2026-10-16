@@ -11,6 +11,7 @@ import {
   closeSalesSlipPhotoSession,
   removeSalesSlipSessionPhoto,
   readSalesSlipPhotos,
+  cancelSalesSlipPhotoReading,
 } from "../api/salesApi";
 import type { CreateSalesSlipPayload, SalesSlipPhotoInput } from "../api/types";
 import {
@@ -57,6 +58,14 @@ export function useSalesSlipPhotoRegistration(
   const [entries, setEntries] = useState<PhotoEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<"upload" | "read" | "save" | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const activeRead = useRef<{
+    requestId: string;
+    sessionId?: string;
+    controller: AbortController;
+    cancelRequested: boolean;
+    cancellation?: Promise<void>;
+  } | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const sessionId = useRef<string | null>(null);
   const activeRequest = useRef<AbortController | null>(null);
@@ -199,16 +208,49 @@ export function useSalesSlipPhotoRegistration(
     }
   }
 
+  function cancelReading() {
+    const run = activeRead.current;
+    if (!run || run.cancellation) return run?.cancellation;
+    run.cancelRequested = true;
+    setCancelling(true);
+    run.cancellation = (async () => {
+      if (run.sessionId)
+        await cancelSalesSlipPhotoReading(run.sessionId, run.requestId);
+      run.controller.abort();
+    })()
+      .catch((error) => {
+        if (mounted.current)
+          setUploadError(
+            `중지 요청을 확인하지 못했습니다. 다시 시도해주세요. ${message(error)}`,
+          );
+        run.cancelRequested = false;
+        run.cancellation = undefined;
+      })
+      .finally(() => {
+        if (mounted.current) setCancelling(false);
+      });
+    return run.cancellation;
+  }
+
   async function readEntries(targets: PhotoEntry[]) {
     if (running.current || !targets.length) return;
     running.current = true;
     setBusy("read");
     const controller = new AbortController();
     activeRequest.current = controller;
+    const run = {
+      requestId: createUuid(),
+      controller,
+      cancelRequested: false,
+    } as NonNullable<typeof activeRead.current>;
+    activeRead.current = run;
     for (const entry of targets)
       patch(entry.id, { read: "reading", error: null });
     try {
       const id = await ensureSession(controller.signal);
+      if (controller.signal.aborted || run.cancelRequested)
+        throw new DOMException("Aborted", "AbortError");
+      run.sessionId = id;
       const batch = await readSalesSlipPhotos(
         id,
         targets.map((entry) => ({
@@ -216,8 +258,9 @@ export function useSalesSlipPhotoRegistration(
           photo: entry.photo,
         })),
         controller.signal,
+        run.requestId,
       );
-      if (controller.signal.aborted)
+      if (controller.signal.aborted || run.cancelRequested)
         throw new DOMException("Aborted", "AbortError");
       const rows = batch.photos ?? [];
       if (
@@ -268,11 +311,16 @@ export function useSalesSlipPhotoRegistration(
       for (const entry of targets)
         patch(entry.id, {
           read: "failed",
-          error: controller.signal.aborted
-            ? "자동 입력을 취소했습니다."
-            : message(error),
+          error:
+            controller.signal.aborted ||
+            run.cancelRequested ||
+            (error instanceof ApiError && error.code === "AI_CANCELLED")
+              ? "자동 입력을 중지했습니다."
+              : message(error),
         });
     } finally {
+      await run.cancellation;
+      if (activeRead.current === run) activeRead.current = null;
       activeRequest.current = null;
       running.current = false;
       if (mounted.current) setBusy(null);
@@ -439,6 +487,7 @@ export function useSalesSlipPhotoRegistration(
     selectedId: selected?.id,
     setSelectedId,
     busy,
+    cancelling,
     uploadError,
     actions,
     confirmReview: (field: SalesReviewField, indices?: number[]) => {
@@ -465,6 +514,6 @@ export function useSalesSlipPhotoRegistration(
             !entry.pendingPayload,
         ),
       ),
-    cancelReading: () => activeRequest.current?.abort(),
+    cancelReading,
   };
 }

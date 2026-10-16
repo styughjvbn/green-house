@@ -63,6 +63,8 @@ Spring은 세션 생성 시 활성 상태이며 실제 연결된 난 묶음이 �
 
 `POST /infer/slip`의 대화 요청은 세션 ID와 최대 10개의 사진 ID·이미지을 받는다. 한 번의 요청이 한 turn이며 미처리 사진은 일괄 처리하고 개별 재추출 요청은 해당 사진만 처리한다. 응답의 사진 ID 집합은 요청과 정확히 같아야 한다. 읽을 수 없는 사진은 개별 `result: null`로 표시한다. 매 turn 새로운 도구 토큰과 현재 deadline을 MCP 서버에 전달하고 후보 ID는 이번 실행에서 다시 조회한다.
 
+Spring은 요청별 중지 명령을 `/sessions/{sessionId}/requests/{requestId}/cancel`로 전달한다. Runtime은 해당 요청의 AbortSignal을 Codex/OpenAI 실행에 전달하고 종료 후 응답한다. 취소가 먼저 도착하면 해당 ID의 실행을 시작하지 않으며, 다른 요청이나 기존 대화는 중지하지 않는다. 취소는 `AI_TIMEOUT`과 구분한 `AI_CANCELLED`로 반환한다. 등록 창 종료도 진행 중인 해당 대화를 중지한다.
+
 대화는 30분 비활성·30회 추출·최대 100개 동시 보관으로 제한한다. OpenAI 대화 이력은 2MB 상한을 적용한다. 창을 닫으면 `DELETE /sessions/{sessionId}`로 폐기하며 서버 재시작·만료 시 창을 다시 연다. 추출 완료 뒤 사람이 검토·저장하는 기존 흐름은 유지한다. 일괄 요청은 사진별 8MB·전체 multipart 82MB, 내부 Base64 JSON 112MB까지 허용한다. 큰 묶음은 양쪽의 실행 시간·도구 호출 한도를 운영 상황에 맞춰 조정한다.
 
 ## AI 입력 이미지와 신뢰도

@@ -37,6 +37,14 @@ public class SlipConversationController {
     return ApiResponse.ok(null);
   }
 
+  @PostMapping("/{sessionId}/requests/{requestId}/cancel")
+  @Operation(description = "소유한 등록 대화의 지정 요청을 중지합니다. 실행 종료를 확인한 뒤 반환하며 대화는 유지합니다.")
+  public ApiResponse<Void> cancel(
+      @PathVariable String sessionId, @PathVariable String requestId, Principal principal) {
+    service.cancel(actor(principal), sessionId, requestId);
+    return ApiResponse.ok(null);
+  }
+
   @DeleteMapping("/{sessionId}/photos/{photoId}")
   public ApiResponse<Void> removePhoto(
       @PathVariable String sessionId, @PathVariable String photoId, Principal principal) {
@@ -50,6 +58,7 @@ public class SlipConversationController {
           "선택 사진 1~10장을 동일 대화의 한 요청으로 추출합니다. metadata 순서와 photos 파일 순서는 일치해야 합니다. 사진별 최대 8MB. 결과는 사진 ID로 연결합니다.")
   public ApiResponse<SlipConversationResult> extract(
       @PathVariable String sessionId,
+      @RequestHeader(value = "X-AI-Request-Id", required = false) String requestId,
       @Valid @RequestPart("metadata") Metadata metadata,
       @RequestPart("photos") List<MultipartFile> photos,
       Principal principal)
@@ -65,9 +74,11 @@ public class SlipConversationController {
       inputs.add(
           new SlipConversationInput.Photo(photo.photoId(), file.getContentType(), file.getBytes()));
     }
+    var input = new SlipConversationInput(List.copyOf(inputs));
     return ApiResponse.ok(
-        service.extract(
-            actor(principal), sessionId, new SlipConversationInput(List.copyOf(inputs))));
+        requestId == null
+            ? service.extract(actor(principal), sessionId, input)
+            : service.extract(actor(principal), sessionId, input, requestId));
   }
 
   @io.swagger.v3.oas.annotations.media.Schema(name = "AiSlipConversationMetadata")

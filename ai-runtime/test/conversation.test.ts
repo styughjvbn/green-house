@@ -56,6 +56,194 @@ test("removed free-text feedback never enters the extraction prompt", () => {
   assert.doesNotMatch(prompt, /feedback|999|수량을/);
 });
 
+test("cancellation aborts only the requested turn, waits for cleanup and preserves the session", async () => {
+  let entered!: () => void;
+  const started = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  let aborted = false;
+  let cleaned = false;
+  let calls = 0;
+  const server = createRuntimeServer(
+    {
+      name: "mock",
+      model: "mock",
+      async run(value, context) {
+        calls++;
+        context.session!.threadId ??= "same-thread";
+        if (value.requestId === "cancel-me") {
+          entered();
+          await new Promise<void>((resolve) =>
+            context.signal.addEventListener(
+              "abort",
+              () => {
+                aborted = true;
+                resolve();
+              },
+              { once: true },
+            ),
+          );
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          cleaned = true;
+          // Even a late result must never be applied after cancellation.
+        } else assert.equal(context.session!.threadId, "same-thread");
+        return output(value);
+      },
+    },
+    "s".repeat(32),
+    "http://127.0.0.1:1",
+  );
+  const url = await start(server);
+  const send = (path: string, body?: unknown) =>
+    fetch(url + path, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${"s".repeat(32)}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  try {
+    await send("/sessions", { sessionId: input.sessionId });
+    const pending = send("/infer/slip", {
+      ...input,
+      requestId: "cancel-me",
+      photos: [photo("photo-0")],
+    });
+    await started;
+    assert.equal(
+      (await send(`/sessions/${input.sessionId}/requests/old-request/cancel`))
+        .status,
+      200,
+    );
+    assert.equal(aborted, false);
+    assert.equal(
+      (await send(`/sessions/${input.sessionId}/requests/cancel-me/cancel`))
+        .status,
+      200,
+    );
+    assert.equal(aborted, true);
+    assert.equal(cleaned, true);
+    const stopped = await pending;
+    assert.equal(stopped.status, 409);
+    assert.equal((await stopped.json()).error.code, "AI_CANCELLED");
+    assert.equal(
+      (
+        await send("/infer/slip", {
+          ...input,
+          requestId: "next",
+          photos: [photo("photo-0")],
+        })
+      ).status,
+      200,
+    );
+    const before = calls;
+    await send(`/sessions/${input.sessionId}/requests/not-started/cancel`);
+    assert.equal(
+      (
+        await send("/infer/slip", {
+          ...input,
+          requestId: "not-started",
+          photos: [photo("photo-0")],
+        })
+      ).status,
+      409,
+    );
+    assert.equal(calls, before);
+  } finally {
+    await stop(server);
+  }
+});
+
+test("Codex receives the abort signal and resumes the same thread after interruption", async () => {
+  const state: SessionState = {
+    history: [],
+    turns: 0,
+    expiresAt: Date.now() + 60000,
+  };
+  let entered!: () => void;
+  const started = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  let starts = 0,
+    resumes = 0;
+  const current: SlipInput = { ...input, photos: [photo("photo-0")] };
+  const provider = codexProvider(
+    "",
+    "/tmp/isolated-home",
+    "http://127.0.0.1:1",
+    () =>
+      ({
+        startThread() {
+          starts++;
+          return {
+            async runStreamed(
+              _parts: unknown,
+              options: { signal: AbortSignal },
+            ) {
+              return {
+                events: (async function* () {
+                  yield {
+                    type: "thread.started",
+                    thread_id: "interrupted-thread",
+                  };
+                  entered();
+                  await new Promise<void>((_resolve, reject) =>
+                    options.signal.addEventListener(
+                      "abort",
+                      () => reject(new DOMException("Aborted", "AbortError")),
+                      { once: true },
+                    ),
+                  );
+                })(),
+              };
+            },
+          };
+        },
+        resumeThread(id: string) {
+          resumes++;
+          assert.equal(id, "interrupted-thread");
+          return {
+            async runStreamed() {
+              return {
+                events: (async function* () {
+                  yield {
+                    type: "item.completed",
+                    item: {
+                      type: "agent_message",
+                      text: JSON.stringify(output(current)),
+                    },
+                  };
+                  yield { type: "turn.completed" };
+                })(),
+              };
+            },
+          };
+        },
+      }) as unknown as Codex,
+  );
+  const controller = new AbortController();
+  const context = {
+    signal: controller.signal,
+    callTool: async () => ({}),
+    maxToolCalls: 5,
+    session: state,
+  };
+  const pending = provider.run(current, context);
+  await started;
+  controller.abort();
+  await assert.rejects(pending, { name: "AbortError" });
+  validateResult(
+    await provider.run(current, {
+      ...context,
+      signal: new AbortController().signal,
+    }),
+    current,
+  );
+  assert.equal(starts, 1);
+  assert.equal(resumes, 1);
+});
+
 test("one batch of ten photos and individual rereads reuse the Codex thread", async () => {
   const names = Array.from({ length: 12 }, (_, i) => `초기참조품종${i}`);
   const state: SessionState = {

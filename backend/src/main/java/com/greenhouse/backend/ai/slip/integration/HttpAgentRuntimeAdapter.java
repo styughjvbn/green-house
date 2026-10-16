@@ -67,6 +67,10 @@ public class HttpAgentRuntimeAdapter implements AgentRuntimePort {
     call("/sessions/" + sessionId, null, Map.class);
   }
 
+  public void cancelRequest(String sessionId, String requestId) {
+    call("/sessions/" + sessionId + "/requests/" + requestId + "/cancel", Map.of(), Map.class);
+  }
+
   public SlipConversationModelResult extractConversation(
       String requestId, String sessionId, String token, SlipConversationInput input) {
     var photos =
@@ -126,7 +130,8 @@ public class HttpAgentRuntimeAdapter implements AgentRuntimePort {
                 : json.readTree(response.body()).path("error").path("code").asText();
         String code =
             switch (remoteCode) {
-              case "AI_BUSY",
+              case "AI_CANCELLED",
+                  "AI_BUSY",
                   "AI_TIMEOUT",
                   "AI_TOOL_LIMIT",
                   "AI_INVALID_RESULT",
@@ -144,12 +149,13 @@ public class HttpAgentRuntimeAdapter implements AgentRuntimePort {
               case "AI_BUSY", "AI_TOOL_LIMIT" -> 429;
               case "AI_TIMEOUT" -> 504;
               case "AI_SESSION_EXPIRED" -> 410;
-              case "AI_SESSION_LIMIT" -> 409;
+              case "AI_SESSION_LIMIT", "AI_CANCELLED" -> 409;
               case "AI_NOT_CONFIGURED", "AI_UNAVAILABLE" -> 503;
               default -> 502;
             };
         String message =
             switch (code) {
+              case "AI_CANCELLED" -> "자동 입력을 중지했습니다.";
               case "AI_TOOL_LIMIT" -> "후보 검색 횟수가 한도를 초과했습니다. 읽은 내용을 직접 확인하거나 다시 시도해주세요.";
               case "AI_NOT_CONFIGURED" -> "사진 인식 실행기 설정이 필요합니다. 직접 입력은 사용할 수 있습니다.";
               case "AI_BUSY" -> "다른 전표를 읽고 있습니다. 잠시 후 다시 시도해주세요.";

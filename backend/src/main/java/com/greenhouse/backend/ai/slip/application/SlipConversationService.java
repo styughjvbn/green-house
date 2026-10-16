@@ -11,6 +11,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +54,12 @@ public class SlipConversationService {
 
   public SlipConversationResult extract(
       String actor, String sessionId, SlipConversationInput input) {
+    return extract(actor, sessionId, input, UUID.randomUUID().toString());
+  }
+
+  public SlipConversationResult extract(
+      String actor, String sessionId, SlipConversationInput input, String requestId) {
+    validateRequestId(requestId);
     var session = require(actor, sessionId);
     if (input == null
         || input.photos() == null
@@ -70,9 +77,11 @@ public class SlipConversationService {
     }
     if (!slot.tryAcquire())
       throw new AgentException(429, "AI_BUSY", "다른 전표를 읽고 있습니다. 잠시 후 다시 시도해주세요.");
-    String requestId = UUID.randomUUID().toString();
+    var run = new ActiveRequest(requestId, new CompletableFuture<>());
     try (var scope = tools.open(requestId, actor)) {
       synchronized (session) {
+        if (session.cancelled.contains(requestId)) throw cancelled();
+        session.active = run;
         var next = new HashMap<>(session.photos);
         for (var photo : input.photos()) {
           String fingerprint = fingerprint(photo);
@@ -87,6 +96,9 @@ public class SlipConversationService {
         session.expiresAt = clock.instant().plusSeconds(1800);
       }
       var result = runtime.extractConversation(requestId, sessionId, scope.token(), input);
+      synchronized (session) {
+        if (session.cancelled.contains(requestId)) throw cancelled();
+      }
       if (result == null || result.photos() == null || result.photos().size() != ids.size())
         throw invalidResult();
       var seen = new HashSet<String>();
@@ -104,9 +116,38 @@ public class SlipConversationService {
       }
       return new SlipConversationResult(sessionId, requestId, List.copyOf(photos));
     } finally {
+      synchronized (session) {
+        if (session.active == run) session.active = null;
+      }
       slot.release();
+      run.finished().complete(null);
     }
   }
+
+  public void cancel(String actor, String sessionId, String requestId) {
+    validateRequestId(requestId);
+    var session = require(actor, sessionId);
+    ActiveRequest run;
+    synchronized (session) {
+      if (!session.cancelled.contains(requestId) && session.cancelled.size() >= 100)
+        throw new AgentException(409, "AI_SESSION_LIMIT", "중지 요청 한도를 초과했습니다. 등록 창을 다시 열어주세요.");
+      session.cancelled.add(requestId);
+      run = session.active;
+    }
+    runtime.cancelRequest(sessionId, requestId);
+    if (run != null && run.id().equals(requestId)) run.finished().join();
+  }
+
+  private void validateRequestId(String requestId) {
+    if (requestId == null || !requestId.matches("[-a-zA-Z0-9]{1,64}"))
+      throw new AgentException(400, "AI_INVALID_REQUEST", "요청 ID를 확인해주세요.");
+  }
+
+  private AgentException cancelled() {
+    return new AgentException(409, "AI_CANCELLED", "자동 입력을 중지했습니다.");
+  }
+
+  private record ActiveRequest(String id, CompletableFuture<Void> finished) {}
 
   private Conversation require(String actor, String sessionId) {
     var session = sessions.get(sessionId);
@@ -135,6 +176,8 @@ public class SlipConversationService {
     final String actor;
     volatile Instant expiresAt;
     final Map<String, String> photos = new HashMap<>();
+    final Set<String> cancelled = new HashSet<>();
+    ActiveRequest active;
 
     Conversation(String actor, Instant expiresAt) {
       this.actor = actor;

@@ -16,6 +16,45 @@ import org.junit.jupiter.api.Test;
 
 class HttpAgentRuntimeAdapterTest {
   @Test
+  void sendsScopedCancellationAndPreservesTheCancelledErrorCode() throws Exception {
+    var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    var observed = new AtomicReference<String>();
+    server.createContext(
+        "/sessions/s/requests/r/cancel",
+        exchange -> {
+          observed.set(exchange.getRequestMethod() + " " + exchange.getRequestURI());
+          exchange.getRequestBody().readAllBytes();
+          byte[] body = "{}".getBytes(StandardCharsets.UTF_8);
+          exchange.sendResponseHeaders(200, body.length);
+          exchange.getResponseBody().write(body);
+          exchange.close();
+        });
+    server.createContext(
+        "/infer/slip",
+        exchange -> {
+          exchange.getRequestBody().readAllBytes();
+          byte[] body = "{\"error\":{\"code\":\"AI_CANCELLED\"}}".getBytes(StandardCharsets.UTF_8);
+          exchange.sendResponseHeaders(409, body.length);
+          exchange.getResponseBody().write(body);
+          exchange.close();
+        });
+    server.start();
+    try {
+      var adapter =
+          new HttpAgentRuntimeAdapter(
+              "http://127.0.0.1:" + server.getAddress().getPort(), "secret", 5);
+      adapter.cancelRequest("s", "r");
+      assertThat(observed.get()).isEqualTo("POST /sessions/s/requests/r/cancel");
+      assertThatThrownBy(() -> adapter.extract("r", "token", "image/png", new byte[] {1}))
+          .isInstanceOf(AgentException.class)
+          .extracting("code")
+          .isEqualTo("AI_CANCELLED");
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  @Test
   void rejectsFractionalUnitsFromRuntimeInsteadOfTruncatingThem() throws Exception {
     var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
     server.createContext(

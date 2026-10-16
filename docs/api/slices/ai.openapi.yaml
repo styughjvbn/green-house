@@ -19,6 +19,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAiSlipSession'
+  /api/ai/slips/sessions/{sessionId}/requests/{requestId}/cancel:
+    post:
+      tags:
+      - ai-slip-controller
+      description: 소유한 등록 대화의 지정 요청을 중지합니다. 실행 종료를 확인한 뒤 반환하며 대화는 유지합니다.
+      operationId: cancel_1
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
   /api/ai/slips/sessions/{sessionId}/extract:
     post:
       tags:
@@ -29,6 +53,11 @@ paths:
       - name: sessionId
         in: path
         required: true
+        schema:
+          type: string
+      - name: X-AI-Request-Id
+        in: header
+        required: false
         schema:
           type: string
       requestBody:

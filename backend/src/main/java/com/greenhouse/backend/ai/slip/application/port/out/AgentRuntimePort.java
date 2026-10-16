@@ -12,6 +12,8 @@ public interface AgentRuntimePort {
 
   void closeSession(String sessionId);
 
+  void cancelRequest(String sessionId, String requestId);
+
   SlipConversationModelResult extractConversation(
       String requestId, String sessionId, String toolToken, SlipConversationInput input);
 }

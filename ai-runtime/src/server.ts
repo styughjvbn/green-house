@@ -58,6 +58,15 @@ export function createRuntimeServer(
   )
     throw new Error("Invalid AI_MIN_CONFIDENCE");
   let active = false;
+  let activeRun:
+    | {
+        controller: AbortController;
+        sessionId?: string;
+        requestId?: string;
+        cancelled: boolean;
+        finished: Promise<void>;
+      }
+    | undefined;
   const sessions = new Map<string, SessionState>();
   function cleanSessions() {
     for (const [id, state] of sessions)
@@ -120,8 +129,44 @@ export function createRuntimeServer(
       }
       return;
     }
+    const cancel = request.url?.match(
+      /^\/sessions\/([a-f0-9-]{36})\/requests\/([-a-zA-Z0-9]{1,64})\/cancel$/,
+    );
+    if (request.method === "POST" && cancel) {
+      request.resume();
+      const [, sessionId, requestId] = cancel;
+      const session = sessions.get(sessionId);
+      if (!session) {
+        send(410, { error: { code: "AI_SESSION_EXPIRED" } });
+        return;
+      }
+      session.cancelledRequests ??= new Set();
+      if (
+        !session.cancelledRequests.has(requestId) &&
+        session.cancelledRequests.size >= 100
+      ) {
+        send(409, { error: { code: "AI_SESSION_LIMIT" } });
+        return;
+      }
+      session.cancelledRequests.add(requestId);
+      const run = activeRun;
+      if (run?.sessionId === sessionId && run.requestId === requestId) {
+        run.cancelled = true;
+        run.controller.abort();
+        await run.finished;
+      }
+      send(200, { cancelled: true });
+      return;
+    }
     if (request.method === "DELETE" && request.url?.startsWith("/sessions/")) {
-      sessions.delete(request.url.slice("/sessions/".length));
+      const sessionId = request.url.slice("/sessions/".length);
+      const run = activeRun;
+      if (run?.sessionId === sessionId) {
+        run.cancelled = true;
+        run.controller.abort();
+        await run.finished;
+      }
+      sessions.delete(sessionId);
       send(200, { closed: true });
       return;
     }
@@ -136,6 +181,15 @@ export function createRuntimeServer(
     }
     active = true;
     const controller = new AbortController();
+    let finish!: () => void;
+    const run: NonNullable<typeof activeRun> = {
+      controller,
+      cancelled: false,
+      finished: new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    };
+    activeRun = run;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let requestId = "invalid";
     const started = performance.now();
@@ -192,9 +246,16 @@ export function createRuntimeServer(
           throw new RuntimeError(400, "AI_INVALID_IMAGE");
         imageBytes += bytes;
       }
+      requestId = input.requestId;
       const session = input.photos ? sessions.get(input.sessionId) : undefined;
       if (input.photos && !session)
         throw new RuntimeError(410, "AI_SESSION_EXPIRED");
+      run.sessionId = input.sessionId;
+      run.requestId = input.requestId;
+      if (session?.cancelledRequests?.has(input.requestId)) {
+        run.cancelled = true;
+        throw new RuntimeError(409, "AI_CANCELLED");
+      }
       if (session) {
         if (
           session.turns >= 30 ||
@@ -204,7 +265,6 @@ export function createRuntimeServer(
         session.turns++;
         session.expiresAt = Date.now() + 30 * 60 * 1000;
       }
-      requestId = input.requestId;
       const diagnostic = (event: string, fields = {}) =>
         log(event, { ...fields, requestId, provider: provider.name }, true);
       input.timeoutSeconds = Math.min(input.timeoutSeconds, maxSeconds);
@@ -239,15 +299,18 @@ export function createRuntimeServer(
       stage = "validation";
       diagnostic("result_validation_started");
 
+      if (run.cancelled) throw new RuntimeError(409, "AI_CANCELLED");
       if (controller.signal.aborted) throw new RuntimeError(504, "AI_TIMEOUT");
       send(200, result);
       success = true;
     } catch (error) {
-      const failure = controller.signal.aborted
-        ? new RuntimeError(504, "AI_TIMEOUT")
-        : error instanceof RuntimeError
-          ? error
-          : new RuntimeError(502, "AI_RUNTIME_FAILED");
+      const failure = run.cancelled
+        ? new RuntimeError(409, "AI_CANCELLED")
+        : controller.signal.aborted
+          ? new RuntimeError(504, "AI_TIMEOUT")
+          : error instanceof RuntimeError
+            ? error
+            : new RuntimeError(502, "AI_RUNTIME_FAILED");
       failureCode = failure.code;
       log("ai_run_failed", {
         requestId,
@@ -263,6 +326,8 @@ export function createRuntimeServer(
       clearTimeout(uploadTimer);
       clearTimeout(timer);
       active = false;
+      if (activeRun === run) activeRun = undefined;
+      finish();
       log("ai_run", {
         requestId,
         provider: provider.name,

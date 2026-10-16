@@ -15,6 +15,9 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 
@@ -59,6 +62,71 @@ class SlipConversationServiceTest {
   private SlipModelResult result(String name) {
     return new SlipModelResult(
         null, null, name, null, null, List.of(), List.of(), 90, 1024, 1, List.of());
+  }
+
+  @Test
+  void cancellationIsOwnedAndPreventsRequestsThatHaveNotStarted() throws Exception {
+    var service = service();
+    String session = service.open("worker").sessionId();
+    assertThatThrownBy(() -> service.cancel("other", session, "r"))
+        .isInstanceOf(AgentException.class)
+        .extracting("code")
+        .isEqualTo("AI_SESSION_EXPIRED");
+    verify(runtime, never()).cancelRequest(anyString(), anyString());
+    service.cancel("worker", session, "r");
+    assertThatThrownBy(
+            () ->
+                service.extract(
+                    "worker", session, new SlipConversationInput(List.of(photo("p"))), "r"))
+        .isInstanceOf(AgentException.class)
+        .extracting("code")
+        .isEqualTo("AI_CANCELLED");
+    verify(runtime, never()).extractConversation(anyString(), anyString(), anyString(), any());
+  }
+
+  @Test
+  void cancellationWaitsForTheActiveRequestAndKeepsTheConversationReusable() throws Exception {
+    var service = service();
+    String session = service.open("worker").sessionId();
+    var entered = new CountDownLatch(1);
+    var stopped = new CountDownLatch(1);
+    when(runtime.extractConversation(eq("r"), eq(session), anyString(), any()))
+        .thenAnswer(
+            call -> {
+              entered.countDown();
+              if (!stopped.await(5, TimeUnit.SECONDS))
+                throw new IllegalStateException("test timeout");
+              throw new AgentException(409, "AI_CANCELLED", "중지");
+            });
+    doAnswer(
+            call -> {
+              stopped.countDown();
+              return null;
+            })
+        .when(runtime)
+        .cancelRequest(session, "r");
+    try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
+      var task =
+          pool.submit(
+              () ->
+                  service.extract(
+                      "worker", session, new SlipConversationInput(List.of(photo("p"))), "r"));
+      assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
+      service.cancel("worker", session, "r");
+      assertThatThrownBy(() -> task.get(5, TimeUnit.SECONDS))
+          .hasCauseInstanceOf(AgentException.class);
+      when(runtime.extractConversation(eq("next"), eq(session), anyString(), any()))
+          .thenReturn(
+              new SlipConversationModelResult(
+                  List.of(new SlipConversationModelResult.Photo("p", null))));
+      assertThat(
+              service
+                  .extract(
+                      "worker", session, new SlipConversationInput(List.of(photo("p"))), "next")
+                  .photos())
+          .hasSize(1);
+      verify(runtime, times(1)).openSession(eq(session), any());
+    }
   }
 
   @Test

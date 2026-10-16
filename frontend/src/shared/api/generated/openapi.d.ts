@@ -1070,6 +1070,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ai/slips/sessions/{sessionId}/requests/{requestId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 소유한 등록 대화의 지정 요청을 중지합니다. 실행 종료를 확인한 뒤 반환하며 대화는 유지합니다. */
+        post: operations["cancel_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ai/slips/sessions/{sessionId}/extract": {
         parameters: {
             query?: never;
@@ -7918,10 +7935,35 @@ export interface operations {
             };
         };
     };
-    extract: {
+    cancel_1: {
         parameters: {
             query?: never;
             header?: never;
+            path: {
+                sessionId: string;
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    extract: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-AI-Request-Id"?: string;
+            };
             path: {
                 sessionId: string;
             };

@@ -7,7 +7,7 @@ export function SalesSlipPhotoProgress({
   operation,
   readingCount,
 }: {
-  operation: "upload" | "read" | "save";
+  operation: "upload" | "read" | "save" | "cancel";
   readingCount: number;
 }) {
   const [seconds, setSeconds] = useState(0);
@@ -19,17 +19,21 @@ export function SalesSlipPhotoProgress({
     return () => window.clearInterval(timer);
   }, []);
   const title =
-    operation === "read"
-      ? `사진 ${readingCount}장 자동 입력 중`
-      : operation === "upload"
-        ? "사진 준비 중"
-        : "전표 저장 중";
+    operation === "cancel"
+      ? "자동 입력 중지 중"
+      : operation === "read"
+        ? `사진 ${readingCount}장 자동 입력 중`
+        : operation === "upload"
+          ? "사진 준비 중"
+          : "전표 저장 중";
   const description =
-    operation === "read"
-      ? "사진을 분석해 입력값을 가져오고 있습니다. 여러 장은 시간이 더 걸릴 수 있습니다."
-      : operation === "upload"
-        ? "선택한 사진을 확인하고 등록 대화를 준비하고 있습니다."
-        : "저장 결과를 확인하고 있습니다. 잠시 기다려주세요.";
+    operation === "cancel"
+      ? "처리 종료를 확인하고 있습니다. 완료되면 다시 요청할 수 있습니다."
+      : operation === "read"
+        ? "사진을 분석해 입력값을 가져오고 있습니다. 여러 장은 시간이 더 걸릴 수 있습니다."
+        : operation === "upload"
+          ? "선택한 사진을 확인하고 등록 대화를 준비하고 있습니다."
+          : "저장 결과를 확인하고 있습니다. 잠시 기다려주세요.";
   return (
     <div className="flex shrink-0 items-center gap-3 border-b border-[#cfe0d2] bg-[#eaf6ed] px-4 py-3 text-[#234b31]">
       <LoaderCircle

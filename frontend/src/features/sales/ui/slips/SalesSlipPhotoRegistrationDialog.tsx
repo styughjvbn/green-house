@@ -147,9 +147,10 @@ export function SalesSlipPhotoRegistrationDialog({
               <button
                 type="button"
                 className={buttonClass}
-                onClick={photos.cancelReading}
+                disabled={photos.cancelling}
+                onClick={() => void photos.cancelReading()}
               >
-                읽기 중지
+                {photos.cancelling ? "중지 중…" : "읽기 중지"}
               </button>
             ) : null}
           </div>
@@ -196,8 +197,8 @@ export function SalesSlipPhotoRegistrationDialog({
         </div>
         {photos.busy ? (
           <SalesSlipPhotoProgress
-            key={photos.busy}
-            operation={photos.busy}
+            key={photos.cancelling ? "cancel" : photos.busy}
+            operation={photos.cancelling ? "cancel" : photos.busy}
             readingCount={
               photos.entries.filter((entry) => entry.read === "reading").length
             }

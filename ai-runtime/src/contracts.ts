@@ -37,6 +37,7 @@ export type PhotoInput = {
 };
 export type SessionState = {
   threadId?: string;
+  cancelledRequests?: Set<string>;
   varietyNames?: string[];
   history: unknown[];
   turns: number;
