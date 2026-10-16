@@ -1241,6 +1241,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseDirectSaleChangeResult'
+  /api/sales-slips/image-previews:
+    post:
+      tags:
+      - sales-controller
+      description: 원본은 보존하고 전표 사진의 보정·문서 분리·빈 행 제거 결과를 임시 미리보기로 생성합니다. 판매 저장과 AI 입력에는 반영하지 않습니다. 미리보기는 5분 후 만료됩니다.
+      operationId: prepare
+      parameters:
+      - name: rotationDegrees
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: -1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+              required:
+              - image
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSalesSlipImagePreview'
   /api/orchid-groups:
     get:
       tags:
@@ -3271,6 +3303,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/sales-slips/image-previews/{id}/images/{imageId}:
+    get:
+      tags:
+      - sales-controller
+      operationId: image
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            image/png:
+              schema:
+                type: string
+                format: byte
   /api/sales-slips/auction-shipments:
     get:
       tags:
@@ -4496,6 +4554,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePartnerAnalyticsResponse'
+  /api/sales-slips/image-previews/{id}:
+    delete:
+      tags:
+      - sales-controller
+      operationId: remove
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
   /api/orchid-group-collections/{collectionId}/members/{orchidGroupId}:
     delete:
       tags:
@@ -6726,6 +6803,71 @@ components:
       required:
       - correctionDate
       - reason
+    ApiResponseSalesSlipImagePreview:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SalesSlipImagePreview'
+        message:
+          type: string
+    SalesSlipImagePreview:
+      type: object
+      properties:
+        clockwiseDegrees:
+          type: integer
+          format: int32
+        deskewDegrees:
+          type: number
+          format: double
+        documentCount:
+          type: integer
+          format: int32
+        expiresAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+          format: uuid
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipPreviewImage'
+        removedRows:
+          type: integer
+          format: int32
+        reviewRequired:
+          type: boolean
+        sourceHeight:
+          type: integer
+          format: int32
+        sourceWidth:
+          type: integer
+          format: int32
+        tableCount:
+          type: integer
+          format: int32
+        warnings:
+          type: array
+          items:
+            type: string
+        workingHeight:
+          type: integer
+          format: int32
+        workingWidth:
+          type: integer
+          format: int32
+    SalesSlipPreviewImage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+          - CORRECTED
+          - DOCUMENT
+          - TABLE
     OrchidGroupCreateRequest:
       type: object
       properties:

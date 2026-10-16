@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { SalesSlipImagePreparationPreview } from "./SalesSlipImagePreparationPreview";
 import { SalesSlipPhotoViewer } from "./SalesSlipPhotoViewer";
 import { Camera, ImagePlus, LoaderCircle, X } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
@@ -258,6 +259,11 @@ export function SalesSlipPhotoRegistrationDialog({
                     {selected.photo.fileName}
                   </h3>
                   <div className="flex flex-wrap gap-2">
+                    <SalesSlipImagePreparationPreview
+                      key={selected.id}
+                      photo={selected.photo}
+                      disabled={photos.busy !== null}
+                    />
                     <button
                       type="button"
                       className={buttonClass}

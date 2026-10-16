@@ -645,6 +645,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sales-slips/image-previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 원본은 보존하고 전표 사진의 보정·문서 분리·빈 행 제거 결과를 임시 미리보기로 생성합니다. 판매 저장과 AI 입력에는 반영하지 않습니다. 미리보기는 5분 후 만료됩니다. */
+        post: operations["prepare"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orchid-groups": {
         parameters: {
             query?: never;
@@ -1670,6 +1687,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sales-slips/image-previews/{id}/images/{imageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["image"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sales-slips/auction-shipments": {
         parameters: {
             query?: never;
@@ -2367,6 +2400,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/image-previews/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3364,6 +3413,43 @@ export interface components {
             /** Format: date */
             correctionDate: string;
             reason: string;
+        };
+        ApiResponseSalesSlipImagePreview: {
+            data?: components["schemas"]["SalesSlipImagePreview"];
+            message?: string;
+        };
+        SalesSlipImagePreview: {
+            /** Format: int32 */
+            clockwiseDegrees?: number;
+            /** Format: double */
+            deskewDegrees?: number;
+            /** Format: int32 */
+            documentCount?: number;
+            /** Format: date-time */
+            expiresAt?: string;
+            /** Format: uuid */
+            id?: string;
+            images?: components["schemas"]["SalesSlipPreviewImage"][];
+            /** Format: int32 */
+            removedRows?: number;
+            reviewRequired?: boolean;
+            /** Format: int32 */
+            sourceHeight?: number;
+            /** Format: int32 */
+            sourceWidth?: number;
+            /** Format: int32 */
+            tableCount?: number;
+            warnings?: string[];
+            /** Format: int32 */
+            workingHeight?: number;
+            /** Format: int32 */
+            workingWidth?: number;
+        };
+        SalesSlipPreviewImage: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            kind?: "CORRECTED" | "DOCUMENT" | "TABLE";
         };
         OrchidGroupCreateRequest: {
             /** Format: int32 */
@@ -7059,6 +7145,35 @@ export interface operations {
             };
         };
     };
+    prepare: {
+        parameters: {
+            query?: {
+                rotationDegrees?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseSalesSlipImagePreview"];
+                };
+            };
+        };
+    };
     getOrchidGroups: {
         parameters: {
             query?: {
@@ -9032,6 +9147,29 @@ export interface operations {
             };
         };
     };
+    image: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                imageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+        };
+    };
     getAuctionShipmentOptions: {
         parameters: {
             query?: never;
@@ -10024,6 +10162,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponsePartnerAnalyticsResponse"];
+                };
+            };
+        };
+    };
+    remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseVoid"];
                 };
             };
         };

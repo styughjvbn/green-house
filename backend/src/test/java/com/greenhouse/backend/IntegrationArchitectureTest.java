@@ -11,8 +11,10 @@ import org.junit.jupiter.api.Test;
 
 class IntegrationArchitectureTest {
   // Concrete technology isolation without a port requires an exact class and reviewed reason.
-  // No such integration implementation exists today; do not create a port to satisfy this test.
-  private static final Map<String, String> REVIEWED_TECHNOLOGY_BOUNDARIES = Map.of();
+  private static final Map<String, String> REVIEWED_TECHNOLOGY_BOUNDARIES =
+      Map.of(
+          "com.greenhouse.backend.sales.document.integration.image.SlipImageConfiguration",
+          "Composition root for the external bounded OpenCV processor; application consumes its public API.");
 
   @Test
   void integrationImplementationsRequireAnExplicitBoundary() {

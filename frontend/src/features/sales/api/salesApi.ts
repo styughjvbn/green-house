@@ -765,3 +765,34 @@ export function getSalesSlipPhoto(id: number, signal?: AbortSignal) {
     { signal },
   );
 }
+
+export function prepareSalesSlipPhoto(
+  photo: import("./types").SalesSlipPhotoInput,
+  rotationDegrees: number,
+  signal?: AbortSignal,
+) {
+  const bytes = Uint8Array.from(atob(photo.contentBase64), (char) =>
+    char.charCodeAt(0),
+  );
+  const body = new FormData();
+  body.append(
+    "image",
+    new Blob([bytes], { type: photo.contentType }),
+    photo.fileName,
+  );
+  body.append("rotationDegrees", String(rotationDegrees));
+  return requestApi<
+    import("@/shared/api/generated/openapi").components["schemas"]["SalesSlipImagePreview"]
+  >(
+    "/sales-slips/image-previews",
+    { method: "POST", body, signal },
+    "사진 전처리를 완료하지 못했습니다.",
+  );
+}
+
+export function removeSalesSlipImagePreview(id: string) {
+  return requestApi<void>(
+    `/sales-slips/image-previews/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
+}
