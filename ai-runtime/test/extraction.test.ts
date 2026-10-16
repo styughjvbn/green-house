@@ -93,7 +93,6 @@ async function photo(
         .png()
         .toBuffer()
     ).toString("base64"),
-    feedback: null,
   };
 }
 const request = (photos: PhotoInput[]): SlipInput => ({
@@ -157,7 +156,7 @@ test("resizing fits either orientation, preserves small originals and never enla
 
 test("batch retries only low-confidence larger originals and shares session, deadline and tool budget", async () => {
   const high = await photo("high", 3000, 1500);
-  const low = { ...high, photoId: "low", feedback: "수량을 다시 확인" };
+  const low = { ...high, photoId: "low" };
   const small = await photo("small", 800, 600);
   const input = request([high, low, small]);
   const calls: SlipInput[] = [];
@@ -203,7 +202,6 @@ test("batch retries only low-confidence larger originals and shares session, dea
     calls[1].photos?.map((p) => p.photoId),
     ["low"],
   );
-  assert.equal(calls[1].photos![0].feedback, low.feedback);
   assert.equal(
     calls[1].photos![0].contentBase64,
     (await resizePhoto(low, 2048)).photo.contentBase64,

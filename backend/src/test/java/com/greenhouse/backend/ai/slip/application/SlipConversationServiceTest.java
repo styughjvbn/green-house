@@ -52,8 +52,8 @@ class SlipConversationServiceTest {
     return out.toByteArray();
   }
 
-  private SlipConversationInput.Photo photo(String id, String feedback) throws Exception {
-    return new SlipConversationInput.Photo(id, "image/png", image(0), feedback);
+  private SlipConversationInput.Photo photo(String id) throws Exception {
+    return new SlipConversationInput.Photo(id, "image/png", image(0));
   }
 
   private SlipModelResult result(String name) {
@@ -62,7 +62,7 @@ class SlipConversationServiceTest {
   }
 
   @Test
-  void tenPhotosSingleAndFeedbackRequestsShareOneOwnedConversationAndResultsFollowIds()
+  void tenPhotosAndIndividualRereadsShareOneOwnedConversationAndResultsFollowIds()
       throws Exception {
     var service = service();
     var names = List.of("하니문", "프라그랑스");
@@ -81,32 +81,22 @@ class SlipConversationServiceTest {
               return new SlipConversationModelResult(rows);
             });
     var photos = new ArrayList<SlipConversationInput.Photo>();
-    for (int i = 0; i < 10; i++) photos.add(photo("photo-" + i, null));
+    for (int i = 0; i < 10; i++) photos.add(photo("photo-" + i));
     var batch = service.extract("worker", session, new SlipConversationInput(photos));
     assertThat(batch.photos()).hasSize(10);
     for (var row : batch.photos()) assertThat(row.result().partnerName()).isEqualTo(row.photoId());
     service.extract("worker", session, new SlipConversationInput(List.of(photos.get(0))));
-    service.extract(
-        "worker", session, new SlipConversationInput(List.of(photo("photo-0", "수량은 20개"))));
+    service.extract("worker", session, new SlipConversationInput(List.of(photo("photo-0"))));
     verify(runtime).openSession(session, names);
     verify(varieties, times(1)).findActiveNamesWithLinkedGroups();
     verify(runtime, times(3)).extractConversation(anyString(), eq(session), anyString(), any());
-    verify(runtime)
-        .extractConversation(
-            anyString(),
-            eq(session),
-            anyString(),
-            argThat(
-                input ->
-                    input.photos().get(0).feedback() != null
-                        && input.photos().get(0).feedback().equals("수량은 20개")));
   }
 
   @Test
   void sessionOwnershipExpiryAndClosePreventFurtherInference() throws Exception {
     var service = service();
     var session = service.open("worker").sessionId();
-    var input = new SlipConversationInput(List.of(photo("p", null)));
+    var input = new SlipConversationInput(List.of(photo("p")));
     assertThatThrownBy(() -> service.extract("other", session, input))
         .isInstanceOf(AgentException.class)
         .extracting("code")
@@ -136,14 +126,14 @@ class SlipConversationServiceTest {
                 List.of(
                     new SlipConversationModelResult.Photo("p", null),
                     new SlipConversationModelResult.Photo("p", null))));
-    var input = new SlipConversationInput(List.of(photo("p", null), photo("q", null)));
+    var input = new SlipConversationInput(List.of(photo("p"), photo("q")));
     assertThatThrownBy(() -> service.extract("worker", session, input))
         .isInstanceOf(AgentException.class)
         .extracting("code")
         .isEqualTo("AI_INVALID_RESULT");
     var replaced =
         new SlipConversationInput(
-            List.of(new SlipConversationInput.Photo("p", "image/png", image(0xffffff), null)));
+            List.of(new SlipConversationInput.Photo("p", "image/png", image(0xffffff))));
     assertThatThrownBy(() -> service.extract("worker", session, replaced))
         .isInstanceOf(AgentException.class)
         .extracting("code")

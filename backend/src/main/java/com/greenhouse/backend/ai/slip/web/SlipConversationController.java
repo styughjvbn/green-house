@@ -47,7 +47,7 @@ public class SlipConversationController {
   @PostMapping(value = "/{sessionId}/extract", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @Operation(
       description =
-          "선택 사진 1~10장을 동일 대화의 한 요청으로 추출합니다. metadata 순서와 photos 파일 순서는 일치해야 합니다. 사진별 최대 8MB, 피드백 최대 1000자. 결과는 사진 ID로 연결합니다.")
+          "선택 사진 1~10장을 동일 대화의 한 요청으로 추출합니다. metadata 순서와 photos 파일 순서는 일치해야 합니다. 사진별 최대 8MB. 결과는 사진 ID로 연결합니다.")
   public ApiResponse<SlipConversationResult> extract(
       @PathVariable String sessionId,
       @Valid @RequestPart("metadata") Metadata metadata,
@@ -63,8 +63,7 @@ public class SlipConversationController {
       if (file.isEmpty() || file.getSize() > 8 * 1024 * 1024)
         throw new AgentException(413, "AI_IMAGE_TOO_LARGE", "사진별 최대 크기는 8MB입니다.");
       inputs.add(
-          new SlipConversationInput.Photo(
-              photo.photoId(), file.getContentType(), file.getBytes(), photo.feedback()));
+          new SlipConversationInput.Photo(photo.photoId(), file.getContentType(), file.getBytes()));
     }
     return ApiResponse.ok(
         service.extract(
@@ -75,9 +74,7 @@ public class SlipConversationController {
   public record Metadata(@NotEmpty @Size(max = 10) List<@NotNull @Valid Photo> photos) {}
 
   @io.swagger.v3.oas.annotations.media.Schema(name = "AiSlipPhotoMetadata")
-  public record Photo(
-      @NotBlank @Pattern(regexp = "[-a-zA-Z0-9]{1,64}") String photoId,
-      @Size(max = 1000) String feedback) {}
+  public record Photo(@NotBlank @Pattern(regexp = "[-a-zA-Z0-9]{1,64}") String photoId) {}
 
   private String actor(Principal principal) {
     return principal == null ? "local" : principal.getName();

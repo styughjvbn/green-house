@@ -184,10 +184,7 @@ export function createRuntimeServer(
           !/^[-a-zA-Z0-9]{1,64}$/.test(photo.photoId) ||
           !["image/jpeg", "image/png"].includes(photo.contentType) ||
           typeof photo.contentBase64 !== "string" ||
-          photo.contentBase64.length > 11184812 ||
-          (photo.feedback != null &&
-            (typeof photo.feedback !== "string" ||
-              photo.feedback.length > 1000))
+          photo.contentBase64.length > 11184812
         )
           throw new RuntimeError(400, "AI_INVALID_REQUEST");
         const bytes = Buffer.from(photo.contentBase64, "base64").length;

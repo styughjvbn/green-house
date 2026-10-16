@@ -34,7 +34,6 @@ export type PhotoInput = {
   photoId: string;
   contentType: string;
   contentBase64: string;
-  feedback?: string | null;
 };
 export type SessionState = {
   threadId?: string;
@@ -89,12 +88,11 @@ export function turnPrompt(input: SlipInput) {
 - Extract data only from photos in the current request, separately by photoId. Never mix values from previous photos.
 - Return each requested photoId exactly once in photos.
 - Set result=null for unreadable photos.
-- Apply user feedback only to its corresponding photo. Verify feedback against the original image.
 - Revalidate all matched IDs using lookup tools in the current execution, even if they appear in previous conversations.
 
-## Photo IDs and User Feedback
+## Photo IDs
 
-${JSON.stringify(input.photos.map((p) => ({ photoId: p.photoId, feedback: p.feedback ?? null })))}`
+${JSON.stringify(input.photos.map((p) => ({ photoId: p.photoId })))}`
     : "Read the sales slip values and look up the required candidates.";
 }
 export type ToolName = "search_varieties" | "search_partners";

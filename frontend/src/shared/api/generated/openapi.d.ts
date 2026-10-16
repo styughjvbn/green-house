@@ -1079,7 +1079,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 선택 사진 1~10장을 동일 대화의 한 요청으로 추출합니다. metadata 순서와 photos 파일 순서는 일치해야 합니다. 사진별 최대 8MB, 피드백 최대 1000자. 결과는 사진 ID로 연결합니다. */
+        /** @description 선택 사진 1~10장을 동일 대화의 한 요청으로 추출합니다. metadata 순서와 photos 파일 순서는 일치해야 합니다. 사진별 최대 8MB. 결과는 사진 ID로 연결합니다. */
         post: operations["extract"];
         delete?: never;
         options?: never;
@@ -3983,7 +3983,6 @@ export interface components {
             photos: components["schemas"]["AiSlipPhotoMetadata"][];
         };
         AiSlipPhotoMetadata: {
-            feedback?: string;
             photoId: string;
         };
         AiSlipExtractionItem: {

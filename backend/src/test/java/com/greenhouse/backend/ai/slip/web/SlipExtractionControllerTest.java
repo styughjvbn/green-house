@@ -93,9 +93,7 @@ class SlipExtractionControllerTest {
             eq("session"),
             argThat(
                 input ->
-                    input.photos().size() == 1
-                        && input.photos().get(0).photoId().equals("p")
-                        && input.photos().get(0).feedback().equals("수량 20개")));
+                    input.photos().size() == 1 && input.photos().get(0).photoId().equals("p")));
     mvc.perform(
             multipart("/api/ai/slips/sessions/session/extract")
                 .file(metadata)

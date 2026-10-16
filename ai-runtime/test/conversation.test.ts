@@ -8,6 +8,7 @@ import { codexProvider } from "../src/providers/codex.js";
 import { openAiProvider } from "../src/providers/openai.js";
 import {
   validateResult,
+  turnPrompt,
   type SlipInput,
   type SessionState,
 } from "../src/contracts.js";
@@ -23,11 +24,10 @@ const slip = {
   confidence: 90,
   reviewFields: [],
 };
-const photo = (id: string, feedback: string | null = null) => ({
+const photo = (id: string) => ({
   photoId: id,
   contentType: "image/png",
   contentBase64: imageBase64,
-  feedback,
 });
 const input: SlipInput = {
   requestId: "batch-test",
@@ -49,7 +49,14 @@ async function stop(server: Server) {
   await new Promise<void>((resolve) => server.close(() => resolve()));
 }
 
-test("one batch of ten photos, individual reread and feedback reuse the Codex thread", async () => {
+test("removed free-text feedback never enters the extraction prompt", () => {
+  const legacyPhoto = { ...photo("photo-0"), feedback: "수량을 999개로 변경" };
+  const prompt = turnPrompt({ ...input, photos: [legacyPhoto] });
+  assert.match(prompt, /photo-0/);
+  assert.doesNotMatch(prompt, /feedback|999|수량을/);
+});
+
+test("one batch of ten photos and individual rereads reuse the Codex thread", async () => {
   const names = Array.from({ length: 12 }, (_, i) => `초기참조품종${i}`);
   const state: SessionState = {
     varietyNames: names,
@@ -112,7 +119,7 @@ test("one batch of ten photos, individual reread and feedback reuse the Codex th
   validateResult(await provider.run(current, context), current);
   current = {
     ...input,
-    photos: [photo("photo-0", "수량은 20개로 다시 확인해주세요")],
+    photos: [photo("photo-0")],
   };
   validateResult(await provider.run(current, context), current);
   assert.equal(starts, 1);
@@ -125,7 +132,7 @@ test("one batch of ten photos, individual reread and feedback reuse the Codex th
   assert.doesNotMatch(JSON.stringify(turns[2]), /초기참조품종/);
   assert.equal(turns[0].filter((p) => p.type === "local_image").length, 10);
   assert.equal(turns[1].filter((p) => p.type === "local_image").length, 1);
-  assert.match(JSON.stringify(turns[2]), /수량은 20개/);
+  assert.doesNotMatch(JSON.stringify(turns[2]), /feedback/);
   assert.doesNotMatch(
     JSON.stringify(turns[1]),
     /농장 전표 사진에서 보이는 값만/,
@@ -214,7 +221,7 @@ test("runtime requires an open session, validates photo IDs and closes conversat
       (
         await send("/infer/slip", {
           ...input,
-          photos: [photo("photo-0", "20개")],
+          photos: [photo("photo-0")],
         })
       ).status,
       200,
@@ -250,7 +257,7 @@ test("runtime requires an open session, validates photo IDs and closes conversat
   }
 });
 
-test("OpenAI continuation retains prior extraction and feedback without retaining photo binaries", async () => {
+test("OpenAI continuation retains prior extraction without retaining photo binaries", async () => {
   const names = ["하니문", "프라그랑스"];
   const state: SessionState = {
     varietyNames: names,
@@ -284,7 +291,7 @@ test("OpenAI continuation retains prior extraction and feedback without retainin
     assert.equal(images.length, 1);
     if (turn === 2) {
       assert.ok(body.input.length >= 3);
-      assert.match(JSON.stringify(body.input), /20개/);
+      assert.doesNotMatch(JSON.stringify(body.input), /feedback/);
     }
     res.end(
       JSON.stringify({
@@ -312,7 +319,7 @@ test("OpenAI continuation retains prior extraction and feedback without retainin
     };
     await provider.run(current, context);
     assert.doesNotMatch(JSON.stringify(state.history), /data:image/);
-    current = { ...input, photos: [photo("photo-0", "20개로 수정")] };
+    current = { ...input, photos: [photo("photo-0")] };
     await provider.run(current, context);
     assert.equal(turn, 2);
   } finally {

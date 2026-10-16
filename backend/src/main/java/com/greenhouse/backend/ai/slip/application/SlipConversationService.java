@@ -64,9 +64,8 @@ public class SlipConversationService {
       if (photo == null
           || photo.photoId() == null
           || !photo.photoId().matches("[-a-zA-Z0-9]{1,64}")
-          || !ids.add(photo.photoId())
-          || (photo.feedback() != null && photo.feedback().length() > 1000))
-        throw new AgentException(400, "AI_INVALID_REQUEST", "사진 ID와 피드백을 확인해주세요.");
+          || !ids.add(photo.photoId()))
+        throw new AgentException(400, "AI_INVALID_REQUEST", "사진 ID를 확인해주세요.");
       UploadImage.validate(photo.contentType(), photo.image());
     }
     if (!slot.tryAcquire())

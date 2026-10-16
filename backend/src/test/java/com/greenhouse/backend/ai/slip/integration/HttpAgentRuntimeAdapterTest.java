@@ -136,8 +136,7 @@ class HttpAgentRuntimeAdapterTest {
       assertThat(sessionJson.path("varietyNames").get(0).asText()).isEqualTo("하니문");
       assertThat(sessionJson.path("varietyNames").get(1).asText()).isEqualTo("프라그랑스");
       var photos = new ArrayList<Photo>();
-      for (int i = 0; i < 10; i++)
-        photos.add(new Photo("p-" + i, "image/png", new byte[] {1}, i == 0 ? "수량 20개" : null));
+      for (int i = 0; i < 10; i++) photos.add(new Photo("p-" + i, "image/png", new byte[] {1}));
       var result =
           adapter.extractConversation(
               "request", "session", "token", new SlipConversationInput(photos));
@@ -146,7 +145,7 @@ class HttpAgentRuntimeAdapterTest {
       assertThat(json.path("sessionId").asText()).isEqualTo("session");
       assertThat(json.has("varietyNames")).isFalse();
       assertThat(json.path("photos").size()).isEqualTo(10);
-      assertThat(json.path("photos").get(0).path("feedback").asText()).isEqualTo("수량 20개");
+      assertThat(json.path("photos").get(0).has("feedback")).isFalse();
       adapter.closeSession("session");
       assertThat(requests)
           .containsExactly("POST /sessions", "POST /infer/slip", "DELETE /sessions/session");

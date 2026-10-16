@@ -42,8 +42,6 @@ type PhotoEntry = {
     imageLongEdge?: number;
     attempts?: number;
   } | null;
-  feedback: string;
-  feedbackHistory: { text: string; requestId: string }[];
   error: string | null;
   pendingPayload: CreateSalesSlipPayload | null;
   requestKey: ReturnType<typeof createPendingCreationRequestKey>;
@@ -172,8 +170,6 @@ export function useSalesSlipPhotoRegistration(
             notes: [],
             recognized: false,
             recognition: null,
-            feedback: "",
-            feedbackHistory: [],
             error: null,
             pendingPayload: null,
             requestKey: createPendingCreationRequestKey(
@@ -218,7 +214,6 @@ export function useSalesSlipPhotoRegistration(
         targets.map((entry) => ({
           photoId: entry.id,
           photo: entry.photo,
-          feedback: entry.feedback.trim() || null,
         })),
         controller.signal,
       );
@@ -237,7 +232,7 @@ export function useSalesSlipPhotoRegistration(
           patch(entry.id, {
             read: "failed",
             error:
-              "사진 내용을 읽지 못했습니다. 피드백을 추가하거나 다시 촬영해주세요.",
+              "사진 내용을 읽지 못했습니다. 다시 읽거나 다시 촬영해주세요.",
           });
           continue;
         }
@@ -267,16 +262,6 @@ export function useSalesSlipPhotoRegistration(
               : null,
           notes,
           error: null,
-          feedback: "",
-          feedbackHistory: entry.feedback.trim()
-            ? [
-                ...entry.feedbackHistory,
-                {
-                  text: entry.feedback.trim(),
-                  requestId: batch.requestId ?? "",
-                },
-              ]
-            : entry.feedbackHistory,
         });
       }
     } catch (error) {
@@ -284,7 +269,7 @@ export function useSalesSlipPhotoRegistration(
         patch(entry.id, {
           read: "failed",
           error: controller.signal.aborted
-            ? "내용 읽기를 취소했습니다."
+            ? "자동 입력을 취소했습니다."
             : message(error),
         });
     } finally {
@@ -480,15 +465,6 @@ export function useSalesSlipPhotoRegistration(
             !entry.pendingPayload,
         ),
       ),
-    setFeedback: (value: string) => {
-      if (
-        selected &&
-        !busy &&
-        selected.save === "draft" &&
-        !selected.pendingPayload
-      )
-        patch(selected.id, { feedback: value });
-    },
     cancelReading: () => activeRequest.current?.abort(),
   };
 }

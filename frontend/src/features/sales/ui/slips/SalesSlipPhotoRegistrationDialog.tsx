@@ -36,7 +36,7 @@ export function SalesSlipPhotoRegistrationDialog({
       !entry.pendingPayload,
   );
   const buttonClass =
-    "inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[#cfd8cc] bg-white px-3 text-sm font-semibold text-[#29422e] hover:bg-[#f7faf6] focus-visible:outline-2 focus-visible:outline-[#159447] disabled:opacity-60";
+    "inline-flex h-8 items-center justify-center gap-2 rounded-md border border-[#cfd8cc] bg-white px-3 text-sm font-semibold text-[#29422e] hover:bg-[#f7faf6] focus-visible:outline-2 focus-visible:outline-[#159447] disabled:opacity-60";
 
   function requestClose() {
     if (photos.busy === "save" || photos.busy === "upload") return;
@@ -140,7 +140,7 @@ export function SalesSlipPhotoRegistrationDialog({
                 void photos.readAll();
               }}
             >
-              미처리 사진 내용 읽기
+              미처리 사진 자동 입력
             </button>
             {photos.busy === "read" ? (
               <button
@@ -225,8 +225,8 @@ export function SalesSlipPhotoRegistrationDialog({
                             : entry.read === "reading"
                               ? "내용 읽는 중"
                               : entry.read === "failed"
-                                ? "내용 읽기 실패"
-                                : "내용 읽기 대기"}
+                                ? "자동 입력 실패"
+                                : "자동 입력 대기"}
                   </span>
                 </button>
               ))}
@@ -252,8 +252,8 @@ export function SalesSlipPhotoRegistrationDialog({
                       onClick={readSelected}
                     >
                       {selected.read === "ready"
-                        ? "다시 읽기"
-                        : "내용 읽어 입력"}
+                        ? "자동 입력 재실행"
+                        : "자동 입력"}
                     </button>
                     <button
                       type="button"
@@ -291,64 +291,6 @@ export function SalesSlipPhotoRegistrationDialog({
                       ? " · 고해상도 재인식 시도"
                       : ""}
                   </p>
-                ) : null}
-                {selected.save !== "saved" ? (
-                  <div className="mt-3 space-y-2">
-                    <label
-                      htmlFor={`photo-feedback-${selected.id}`}
-                      className="block text-sm font-semibold text-[#29422e]"
-                    >
-                      다시 읽을 내용 알려주기
-                    </label>
-                    <div className="flex items-start gap-2">
-                      <textarea
-                        id={`photo-feedback-${selected.id}`}
-                        rows={2}
-                        maxLength={1000}
-                        value={selected.feedback}
-                        disabled={
-                          photos.busy !== null ||
-                          Boolean(selected.pendingPayload)
-                        }
-                        onChange={(event) =>
-                          photos.setFeedback(event.target.value)
-                        }
-                        placeholder="예: 두 번째 품목은 수량 20개, 단가 3,000원이에요."
-                        className="min-w-0 flex-1 rounded-md border border-[#cfd8cc] bg-white px-3 py-2 text-sm disabled:opacity-60"
-                      />
-                      <button
-                        type="button"
-                        className={buttonClass}
-                        disabled={
-                          photos.busy !== null ||
-                          Boolean(selected.pendingPayload) ||
-                          !selected.feedback.trim()
-                        }
-                        onClick={readSelected}
-                      >
-                        피드백 반영해 다시 읽기
-                      </button>
-                    </div>
-                    <p className="text-xs text-[#5c6a60]">
-                      이 사진의 이전 대화와 피드백을 참고해 다시 읽습니다.
-                      적용하면 입력 내용이 바뀝니다.
-                    </p>
-                    {selected.feedbackHistory.length ? (
-                      <details className="text-sm text-[#526158]">
-                        <summary className="cursor-pointer">
-                          이전에 전달한 피드백 {selected.feedbackHistory.length}
-                          개
-                        </summary>
-                        <ul className="mt-2 list-inside list-disc space-y-1">
-                          {selected.feedbackHistory.map((feedback, index) => (
-                            <li key={`${feedback.requestId}-${index}`}>
-                              {feedback.text}
-                            </li>
-                          ))}
-                        </ul>
-                      </details>
-                    ) : null}
-                  </div>
                 ) : null}
                 {selected.notes.length ? (
                   <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-[#526158]">

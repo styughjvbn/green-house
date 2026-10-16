@@ -77,7 +77,6 @@ public class HttpAgentRuntimeAdapter implements AgentRuntimePort {
                   photo.put("photoId", p.photoId());
                   photo.put("contentType", p.contentType());
                   photo.put("contentBase64", Base64.getEncoder().encodeToString(p.image()));
-                  photo.put("feedback", p.feedback());
                   return photo;
                 })
             .toList();
