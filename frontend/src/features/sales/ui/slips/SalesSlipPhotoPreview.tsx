@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Image from "next/image";
+import { SalesSlipPhotoViewer } from "./SalesSlipPhotoViewer";
 import { getSalesSlipPhoto, getSalesSlipPhotoInfo } from "../../api/salesApi";
 
 export function SalesSlipPhotoPreview({
@@ -60,11 +60,10 @@ export function SalesSlipPhotoPreview({
               </button>
             </p>
           ) : photo.data ? (
-            <Image
+            <SalesSlipPhotoViewer
               src={`data:${photo.data.contentType};base64,${photo.data.contentBase64}`}
               width={900}
               height={1200}
-              unoptimized
               alt="전표에 첨부된 사진"
               className="max-h-[70dvh] w-full object-contain"
             />

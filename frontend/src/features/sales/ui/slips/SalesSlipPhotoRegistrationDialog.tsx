@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import Image from "next/image";
+import { SalesSlipPhotoViewer } from "./SalesSlipPhotoViewer";
 import { Camera, ImagePlus, X } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
 import {
@@ -269,12 +269,11 @@ export function SalesSlipPhotoRegistrationDialog({
                     </button>
                   </div>
                 </div>
-                <Image
+                <SalesSlipPhotoViewer
                   src={`data:${selected.photo.contentType};base64,${selected.photo.contentBase64}`}
                   alt="확인할 전표 사진 원본"
                   width={900}
                   height={600}
-                  unoptimized
                   className="max-h-72 w-full rounded-md bg-[#f7faf6] object-contain"
                 />
                 <p className="mt-2 text-xs text-[#5c6a60]">
