@@ -48,14 +48,9 @@ export function createSalesSlipDraftActions(
             receiptEnabled: false,
             receiptAmount: "",
             items:
-              salesType === "AUCTION"
-                ? (current.items.length > 0
-                    ? current.items
-                    : [createEmptySalesItem()]
-                  ).map((item) => ({ ...item, unitPrice: "0" }))
-                : current.items.length > 0
-                  ? current.items
-                  : [createEmptySalesItem()],
+              current.items.length > 0
+                ? current.items
+                : [createEmptySalesItem()],
           },
     );
   }
