@@ -19,6 +19,7 @@ repositories {
 }
 
 dependencies {
+	implementation(project(":slip-image-core"))
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -127,7 +128,9 @@ tasks.register<Test>("workE2eTest") {
 		includeTags("work-e2e")
 	}
 	shouldRunAfter(tasks.named("test"))
-	systemProperty("greenhouse.cli.runtime-classpath", sourceSets["main"].runtimeClasspath.asPath)
+	doFirst {
+		systemProperty("greenhouse.cli.runtime-classpath", sourceSets["main"].runtimeClasspath.asPath)
+	}
 
 	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")
 }
