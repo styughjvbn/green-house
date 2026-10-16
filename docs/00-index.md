@@ -27,6 +27,7 @@ docs/
   features/
     README.md
     sales-auction-settlement.md
+    image-processing.md
     authentication.md
     work-operation-and-orchid-collection.md
     orchid-group-mutation-transition.md
@@ -79,6 +80,7 @@ docs/
 | 파일 | 역할 |
 |---|---|
 | [`features/sales-auction-settlement.md`](features/sales-auction-settlement.md) | 판매, 경매 출하, 정산, 입금 정책 |
+| [`features/image-processing.md`](features/image-processing.md) | 전표 이미지 처리 흐름·옵션, 검증 범위와 성능 측정 기준 |
 | [`features/authentication.md`](features/authentication.md) | 세션 인증·인가와 데모 인증 |
 | [`features/work-operation-and-orchid-collection.md`](features/work-operation-and-orchid-collection.md) | 작업 실행, 대상 스냅샷, 그룹·전파 정책 |
 | [`features/orchid-group-mutation-transition.md`](features/orchid-group-mutation-transition.md) | 난 묶음 단일 writer·원장 보존·복원 경계 |
