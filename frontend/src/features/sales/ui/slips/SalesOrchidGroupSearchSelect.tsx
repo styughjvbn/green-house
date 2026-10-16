@@ -12,11 +12,13 @@ export function SalesOrchidGroupSearchSelect({
   label = "난 묶음 선택",
   disabled = false,
   selectedIds = [],
+  initialKeyword = "",
   onSelect,
 }: {
   label?: string;
   disabled?: boolean;
   selectedIds?: string[];
+  initialKeyword?: string;
   onSelect: (value: SalesOrchidGroupOption[]) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -94,6 +96,7 @@ export function SalesOrchidGroupSearchSelect({
           houses={houses.data ?? []}
           groups={groups}
           initialSelectedIds={new Set()}
+          initialKeyword={initialKeyword}
           onClose={close}
           onConfirm={(ids) => {
             onSelect(

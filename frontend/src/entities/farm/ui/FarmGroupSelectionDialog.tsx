@@ -47,6 +47,7 @@ export function FarmGroupSelectionDialog({
   groups,
   houses,
   initialSelectedIds,
+  initialKeyword = "",
   onClose,
   onConfirm,
   title,
@@ -64,6 +65,7 @@ export function FarmGroupSelectionDialog({
   groups: OrchidGroup[];
   houses: House[];
   initialSelectedIds: Set<number>;
+  initialKeyword?: string;
   onClose: () => void;
   onConfirm: (selectedIds: Set<number>) => void;
   title: string;
@@ -75,7 +77,7 @@ export function FarmGroupSelectionDialog({
   const [selectedIds, setSelectedIds] = useState(
     () => new Set(initialSelectedIds),
   );
-  const [keyword, setKeyword] = useState("");
+  const [keyword, setKeyword] = useState(initialKeyword);
   const [houseNavigation, setHouseNavigation] = useState<{
     houseId: number;
   } | null>(null);

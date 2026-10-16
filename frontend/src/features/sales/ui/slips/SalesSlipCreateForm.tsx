@@ -502,6 +502,7 @@ export function SalesSlipCreateForm({
                         <div className="w-full sm:w-auto">
                           <SalesOrchidGroupSearchSelect
                             label="난 묶음 연결"
+                            initialKeyword={group.itemName}
                             disabled={inputsDisabled}
                             selectedIds={selectedGroups.map(
                               (group) => group.orchidGroupId,
