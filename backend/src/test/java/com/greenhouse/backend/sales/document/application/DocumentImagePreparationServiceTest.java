@@ -34,7 +34,10 @@ class DocumentImagePreparationServiceTest {
     byte[] before = original.clone();
     var preview = service.prepare("owner", "image/png", original, 90);
     assertThat(original).containsExactly(before);
-    assertThat(preview.images()).hasSize(3);
+    assertThat(preview.images()).hasSize(4);
+    assertThat(preview.images())
+        .extracting(DocumentImagePreparationService.PreviewImage::kind)
+        .contains(DocumentImagePreparationService.ImageKind.DOCUMENT_COMPACTED);
     assertThat(preview.reviewRequired()).isTrue();
     assertThat(preview.warnings()).containsExactly("방향 확인");
     assertThat(preview.expiresAt()).isEqualTo(now.plusSeconds(300));
@@ -179,6 +182,8 @@ class DocumentImagePreparationServiceTest {
             new byte[] {1, 2},
             "paper-01.png",
             new byte[] {3},
+            "paper-01-compacted.png",
+            new byte[] {6},
             "table-01-compacted.png",
             new byte[] {4},
             "05-row-decisions.png",

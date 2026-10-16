@@ -121,20 +121,13 @@ public final class SlipProcessor implements SlipImageProcessor {
                     if (ys.size() < 3 || xs.size() < 2) continue;
                     tableIndex++;
                     List<Row> rows = classifyRows(work, binary, grid, region, ys, options, tableScope);
-                    List<Mat> kept = new ArrayList<>();
-                    int previous = 0;
                     for (Row row : rows) {
-                        int a = row.top() - region.y, b = row.bottom() - region.y;
-                        if (row.removed()) {
-                            if (a > previous) kept.add(tableScope.own(work.submat(new Rect(region.x, region.y + previous, region.width, a - previous))));
-                            previous = b;
-                            if (rowOverlay != null) Imgproc.rectangle(rowOverlay, new Point(region.x, row.top()),
-                                    new Point(region.x + region.width - 1, row.bottom()), new Scalar(0, 0, 255), 2);
-                        }
+                        if (row.removed() && rowOverlay != null) Imgproc.rectangle(rowOverlay,
+                                new Point(region.x, row.top()), new Point(region.x + region.width - 1, row.bottom()),
+                                new Scalar(0, 0, 255), 2);
                     }
-                    if (previous < region.height) kept.add(tableScope.own(work.submat(new Rect(region.x, region.y + previous, region.width, region.height - previous))));
-                    Mat compact = tableScope.mat();
-                    Core.vconcat(kept, compact);
+                    Mat compact = RowCompactor.compact(tableScope.own(work.submat(region)), region.y,
+                            region.y + region.height, rows, tableScope);
                     images.put(String.format("table-%02d-compacted.png", tableIndex), png(compact, tableScope));
                     tables.add(new Table(tableIndex, new Box(region.x, region.y, region.width, region.height),
                             ys.stream().map(y -> y + region.y).toList(), xs.stream().map(x -> x + region.x).toList(),
@@ -152,7 +145,7 @@ public final class SlipProcessor implements SlipImageProcessor {
             PaperSeparator.Result separated = PaperSeparator.separate(work, tables, quad != null, m.scale, options.outputMode());
             images.putAll(separated.images());
             warnings.addAll(separated.warnings());
-            // Keep document layout outside each table; only table crops are physically shortened.
+            // Report coordinates continue to describe the unshortened corrected image.
             return new ProcessingResult(new Report(correction, sw, sh, work.cols(), work.rows(),
                     List.copyOf(corners), List.copyOf(warnings), List.copyOf(tables),
                     new Rotation(options.rotationDegrees() == -1 ? "AUTO" : "MANUAL", orientation.quarterTurns() * 90,

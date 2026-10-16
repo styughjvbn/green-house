@@ -22,6 +22,7 @@ const buttonClass =
 const labels = {
   CORRECTED: "전체 보정",
   DOCUMENT: "분리된 문서",
+  DOCUMENT_COMPACTED: "문서 상단 + 빈 행을 제거한 표",
   TABLE: "빈 행을 제거한 표",
 };
 

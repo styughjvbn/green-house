@@ -46,6 +46,7 @@ class ResourceLifecycleTest {
         var review = engine.process(image, base.withOutputMode(OutputMode.REVIEW));
         assertEquals(all.report(), production.report()); assertEquals(all.report(), review.report());
         assertTrue(production.images().containsKey("paper-01.png"));
+        assertTrue(production.images().containsKey("paper-01-compacted.png"));
         assertTrue(production.images().containsKey("table-01-compacted.png"));
         for (String key : production.images().keySet()) assertArrayEquals(all.images().get(key), production.images().get(key));
         assertFalse(production.images().containsKey("05-row-decisions.png"));

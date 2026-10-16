@@ -79,6 +79,8 @@ final class PaperSeparator {
                             Imgproc.cvtColor(layerScope.own(image.submat(crop)), cutout, Imgproc.COLOR_BGR2BGRA);
                             Core.insertChannel(layerScope.own(regionMask.submat(crop)), cutout, 3);
                             images.put(String.format("paper-%02d.png", index), png(cutout, layerScope));
+                            List<Table> paperTables = supported.stream().filter(t -> inside(regionMask, t.bounds())).toList();
+                            compactPaper(cutout, crop, paperTables, index, images, warnings, layerScope);
                             List<XY> outline = outline(regionMask, layerScope);
                             if (overlay != null) {
                                 MatOfPoint polygon = layerScope.own(new MatOfPoint(outline.stream().map(p -> new Point(p.x(), p.y())).toArray(Point[]::new)));
@@ -88,7 +90,7 @@ final class PaperSeparator {
                             }
                             papers.add(new Paper(index, new Box(crop.x, crop.y, crop.width, crop.height), outline,
                                     knownDocumentQuad ? "DOCUMENT_QUAD" : seams.isEmpty() ? "CONNECTED_PAPER_REGION" : "VISIBLE_EDGE_SPLIT",
-                                    !knownDocumentQuad, supported.stream().filter(t -> inside(regionMask, t.bounds())).map(Table::index).toList()));
+                                    !knownDocumentQuad, paperTables.stream().map(Table::index).toList()));
 
                         }
                     }
@@ -104,6 +106,25 @@ final class PaperSeparator {
             if (unresolved > 0) warnings.add("여러 표가 있지만 종이 사이 경계가 불확실한 영역 " + unresolved + "개는 하나로 유지했습니다. 표 개수는 종이 개수와 같지 않을 수 있습니다.");
             return new Result(List.copyOf(papers), Collections.unmodifiableMap(images), List.copyOf(warnings));
         }
+    }
+
+    /** Preserve the paper header; shorten detected empty rows and discard content below the last table. */
+    private static void compactPaper(Mat cutout, Rect crop, List<Table> tables, int index,
+                                     Map<String, byte[]> images, List<String> warnings, Scope scope) {
+        if (tables.isEmpty()) return;
+        int previousBottom = crop.y;
+        for (Table table : tables) {
+            Box box = table.bounds();
+            if (box.x() < crop.x || box.y() < crop.y || box.x() + box.width() > crop.x + crop.width
+                    || box.y() + box.height() > crop.y + crop.height || box.y() < previousBottom) {
+                warnings.add("문서 " + index + ": 표가 잘렸거나 세로 영역이 겹쳐 문서 빈 행 축약을 생략했습니다.");
+                return;
+            }
+            previousBottom = box.y() + box.height();
+        }
+        List<Row> rows = tables.stream().flatMap(table -> table.rows().stream()).toList();
+        Mat compact = RowCompactor.compact(cutout, crop.y, previousBottom, rows, scope);
+        images.put(String.format("paper-%02d-compacted.png", index), png(compact, scope));
     }
 
     private static boolean inside(Mat mask, Box box) {

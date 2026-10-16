@@ -92,6 +92,7 @@ public class DocumentImagePreparationService {
 
   private static ImageKind kind(String name) {
     if (name.equals("01-corrected.png")) return ImageKind.CORRECTED;
+    if (name.matches("paper-\\d+-compacted\\.png")) return ImageKind.DOCUMENT_COMPACTED;
     if (name.matches("paper-\\d+\\.png")) return ImageKind.DOCUMENT;
     if (name.matches("table-\\d+-compacted\\.png")) return ImageKind.TABLE;
     return null;
@@ -136,6 +137,7 @@ public class DocumentImagePreparationService {
   public enum ImageKind {
     CORRECTED,
     DOCUMENT,
+    DOCUMENT_COMPACTED,
     TABLE
   }
 

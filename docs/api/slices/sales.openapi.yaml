@@ -1724,6 +1724,7 @@ components:
           enum:
           - CORRECTED
           - DOCUMENT
+          - DOCUMENT_COMPACTED
           - TABLE
     SalesSlipResponse:
       type: object

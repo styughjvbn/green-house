@@ -3449,7 +3449,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             /** @enum {string} */
-            kind?: "CORRECTED" | "DOCUMENT" | "TABLE";
+            kind?: "CORRECTED" | "DOCUMENT" | "DOCUMENT_COMPACTED" | "TABLE";
         };
         OrchidGroupCreateRequest: {
             /** Format: int32 */

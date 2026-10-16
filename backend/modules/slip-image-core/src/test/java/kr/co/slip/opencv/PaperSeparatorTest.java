@@ -27,6 +27,68 @@ class PaperSeparatorTest {
         } finally { image.release(); }
     }
 
+    @Test void compactedPaperPreservesHeaderAndCutsOffFooterUsingTableRows() {
+        Mat image = new Mat(600, 400, CvType.CV_8UC3, PAPER);
+        var table = new Table(1, new Box(40, 150, 300, 300), List.of(), List.of(),
+                List.of(new Row(1, 200, 250, 0, 0, true, "EMPTY"),
+                        new Row(2, 300, 400, 0, 0, true, "EMPTY")), 2);
+        try {
+            Imgproc.rectangle(image, new Point(80, 30), new Point(120, 60), new Scalar(0, 0, 255), -1);
+            var result = PaperSeparator.separate(image, List.of(table), true);
+            try (MatScope scope = new MatScope()) {
+                MatOfByte bytes = scope.own(new MatOfByte(result.images().get("paper-01-compacted.png")));
+                Mat compact = scope.own(Imgcodecs.imdecode(bytes, Imgcodecs.IMREAD_UNCHANGED));
+                assertEquals(300, compact.rows());
+                assertEquals(400, compact.cols());
+                assertEquals(4, compact.channels());
+                assertArrayEquals(new double[] {0, 0, 255, 255}, compact.get(40, 100));
+                assertEquals(List.of(1), result.papers().getFirst().tableIndices());
+                assertTrue(result.images().containsKey("paper-01.png"));
+            }
+        } finally { image.release(); }
+    }
+
+    @Test void stackedTablesKeepInterTableContentAndTrimAfterTheLastTable() {
+        Mat image = new Mat(600, 400, CvType.CV_8UC3, PAPER);
+        var upper = new Table(1, new Box(40, 100, 300, 100), List.of(), List.of(),
+                List.of(new Row(1, 130, 150, 0, 0, true, "EMPTY")), 1);
+        var lower = new Table(2, new Box(40, 300, 300, 200), List.of(), List.of(),
+                List.of(new Row(1, 350, 400, 0, 0, true, "EMPTY")), 1);
+        try {
+            Imgproc.rectangle(image, new Point(80, 240), new Point(120, 260), new Scalar(0, 0, 255), -1);
+            var result = PaperSeparator.separate(image, List.of(upper, lower), true);
+            try (MatScope scope = new MatScope()) {
+                MatOfByte bytes = scope.own(new MatOfByte(result.images().get("paper-01-compacted.png")));
+                Mat compact = scope.own(Imgcodecs.imdecode(bytes, Imgcodecs.IMREAD_UNCHANGED));
+                assertEquals(430, compact.rows());
+                assertArrayEquals(new double[] {0, 0, 255, 255}, compact.get(230, 100));
+            }
+        } finally { image.release(); }
+    }
+
+    @Test void noTableDoesNotInventATrimBoundary() {
+        Mat image = new Mat(600, 400, CvType.CV_8UC3, PAPER);
+        try {
+            var result = PaperSeparator.separate(image, List.of(), true);
+            assertFalse(result.images().containsKey("paper-01-compacted.png"));
+            assertTrue(result.images().containsKey("paper-01.png"));
+        } finally { image.release(); }
+    }
+
+    @Test void sideBySideOrClippedTablesKeepOriginalPaperWithWarning() {
+        Mat image = new Mat(600, 400, CvType.CV_8UC3, PAPER);
+        try {
+            for (List<Table> tables : List.of(
+                    List.of(table(1, 10, 100, 150, 200), table(2, 200, 100, 150, 200)),
+                    List.of(table(1, -10, 100, 300, 200)))) {
+                var result = PaperSeparator.separate(image, tables, true);
+                assertFalse(result.images().containsKey("paper-01-compacted.png"));
+                assertTrue(result.images().containsKey("paper-01.png"));
+                assertTrue(result.warnings().stream().anyMatch(w -> w.contains("축약을 생략")));
+            }
+        } finally { image.release(); }
+    }
+
     @Test void trapezoidalPaperIsSeparatedFromDeskWithTransparentCorners() {
         Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
         MatOfPoint polygon = new MatOfPoint(new Point(140, 100), new Point(700, 130), new Point(680, 900), new Point(90, 860));
