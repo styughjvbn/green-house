@@ -5,6 +5,7 @@ import kr.co.slip.api.ProcessingResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -129,11 +130,12 @@ class PaperSeparatorTest {
         } finally { image.release(); }
     }
 
-    @Test void twoTablesWithoutObservedSeamAreNotArbitrarilySplit() {
+    @ParameterizedTest @CsvSource({"200,430", "200,230", "300,350", "400,230"})
+    void twoTablesWithoutObservedSeamAreNotArbitrarilySplit(int lowerLeft, int lowerWidth) {
         Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
         try {
             Imgproc.rectangle(image, new Point(100, 70), new Point(700, 930), PAPER, -1);
-            var result = PaperSeparator.separate(image, List.of(table(1, 180, 260, 430, 140), table(2, 200, 630, 430, 240)), false);
+            var result = PaperSeparator.separate(image, List.of(table(1, 180, 260, 430, 140), table(2, lowerLeft, 630, lowerWidth, 240)), false);
             assertEquals(1, result.papers().size());
             assertEquals("CONNECTED_PAPER_REGION", result.papers().getFirst().method());
             assertTrue(result.warnings().stream().anyMatch(w -> w.contains("하나로 유지")));
@@ -167,15 +169,19 @@ class PaperSeparatorTest {
         finally { image.release(); }
     }
 
-    @Test void creaseAboveANarrowFooterIsNotAnotherSheet() {
+    @ParameterizedTest @CsvSource({"200,230", "300,350", "400,230"})
+    void observedPaperEdgeSplitsTablesWithDifferentWidthsAndLeftOffsets(int lowerLeft, int lowerWidth) {
         Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
         try {
-            Imgproc.rectangle(image, new Point(100, 70), new Point(700, 930), PAPER, -1);
-            Imgproc.line(image, new Point(100, 430), new Point(700, 430), new Scalar(150, 155, 150), 3);
+            Imgproc.rectangle(image, new Point(100, 70), new Point(700, 830), PAPER, -1);
+            Imgproc.rectangle(image, new Point(120, 430), new Point(720, 930), PAPER, -1);
+            Imgproc.line(image, new Point(120, 430), new Point(720, 430), new Scalar(150, 155, 150), 3);
             var result = PaperSeparator.separate(image,
-                    List.of(table(1, 180, 260, 430, 140), table(2, 400, 630, 230, 140)), false);
-            assertEquals(1, result.papers().size());
-            assertEquals(List.of(1, 2), result.papers().getFirst().tableIndices());
+                    List.of(table(1, 180, 260, 430, 140), table(2, lowerLeft, 630, lowerWidth, 140)), false);
+            assertEquals(2, result.papers().size());
+            assertEquals("VISIBLE_EDGE_SPLIT", result.papers().getFirst().method());
+            assertEquals(List.of(1), result.papers().getFirst().tableIndices());
+            assertEquals(List.of(2), result.papers().getLast().tableIndices());
         } finally { image.release(); }
     }
 

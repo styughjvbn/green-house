@@ -241,9 +241,6 @@ final class PaperSeparator {
                 Box above = tables.get(i).bounds(), below = tables.get(i + 1).bounds();
                 double minY = above.y() + above.height() - pixels.length(12), maxY = below.y() - pixels.length(15);
                 if (maxY <= minY || below.y() - above.y() < image.rows() * .12) continue;
-                // A narrow footer or broken grid is not evidence of another sheet.
-                if (Math.min(above.width(), below.width()) < Math.max(above.width(), below.width()) * .7
-                        || Math.abs(above.x() - below.x()) > Math.min(above.width(), below.width()) * .2) continue;
                 Seam best = null;
                 double midX = bounds.x + bounds.width / 2.;
                 for (Segment segment : segments) {
