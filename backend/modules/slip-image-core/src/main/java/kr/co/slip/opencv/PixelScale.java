@@ -1,6 +1,6 @@
 package kr.co.slip.opencv;
 
-/** Spatial thresholds relative to processing the same source with the default size limit. */
+/** Spatial thresholds relative to processing the same source with the original 2200px calibration limit. */
 record PixelScale(double factor) {
     static final int REFERENCE_DIMENSION = 2200;
     static final PixelScale IDENTITY = new PixelScale(1);

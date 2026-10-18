@@ -26,7 +26,7 @@ public class DocumentImagePreparationService {
   public DocumentImagePreparationService(
       SlipImageProcessor processor,
       Clock clock,
-      @Value("${sales.document.image.max-dimension:2200}") int maxDimension) {
+      @Value("${sales.document.image.max-dimension:2048}") int maxDimension) {
     this.processor = processor;
     this.clock = clock;
     this.options =

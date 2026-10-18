@@ -36,5 +36,5 @@ public record ProcessingOptions(int maxDimension, int protectedTopRows,
         return new ProcessingOptions(maxDimension, protectedTopRows,
                 minimumInkRatio, rotationDegrees, mode);
     }
-    public static ProcessingOptions defaults() { return new ProcessingOptions(2200, 2, .015); }
+    public static ProcessingOptions defaults() { return new ProcessingOptions(2048, 2, .015); }
 }

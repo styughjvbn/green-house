@@ -20,6 +20,7 @@ class ResolutionTest {
     @Test void scaleUsesActualResizeAndDoesNotUpscaleSmallSources() {
         assertEquals(1, PixelScale.forSource(600, 3000).factor());
         assertEquals(1, PixelScale.forSource(1400, 2200).factor());
+        assertEquals(2048. / 2200, PixelScale.forSource(4000, ProcessingOptions.defaults().maxDimension()).factor(), 1e-9);
         PixelScale half = PixelScale.forSource(4000, 1100);
         assertEquals(.5, half.factor());
         assertEquals(10, half.length(20));
@@ -29,7 +30,7 @@ class ResolutionTest {
         assertEquals(800. / 900, PixelScale.forSource(4000, 800).capped(800, 900).factor(), 1e-9);
     }
 
-    @ParameterizedTest @ValueSource(ints = {800, 1100, 1600, 2200, 3000})
+    @ParameterizedTest @ValueSource(ints = {800, 1100, 1600, 2048, 2200, 3000})
     void keepsWrittenRowsAndRemovesBlankRowsAtDifferentResolutions(int dimension) {
         Mat reference = new Mat(2200, 1600, CvType.CV_8UC3, Scalar.all(255));
         Mat source = new Mat();
@@ -61,7 +62,7 @@ class ResolutionTest {
         } finally { reference.release(); source.release(); encoded.release(); }
     }
 
-    @ParameterizedTest @ValueSource(ints = {800, 1100, 2200, 3000})
+    @ParameterizedTest @ValueSource(ints = {800, 1100, 2048, 2200, 3000})
     void overlappingPaperBoundariesScaleWithResolution(int dimension) {
         double factor = dimension / 2200.;
         Mat reference = new Mat(2200, 1760, CvType.CV_8UC3, new Scalar(70, 110, 150));

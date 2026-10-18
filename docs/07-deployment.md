@@ -680,4 +680,4 @@ Java 포맷 기준은 Spotless의 Google Java Format이다. `backend`에서 `./g
 
 연결된 결과의 누적 낙찰액을 공통 총액 projection에 합산하되 실제 받을 금액·수납·품목 단가와 혼동하지 않는다. 수량·lot 연결·거래처 오류는 V40 전체를 rollback하며, schema 확장이나 부분 전표를 남기지 않는다. 동일 Flyway 이력의 재실행은 이관을 반복하지 않는다. 데이터 대사와 재고·원장 불변 검증은 위 운영 미적용 마이그레이션 통합 절차를 따른다.
 
-전표 이미지 전처리 미리보기는 Spring 프로세스의 OpenCV를 사용한다. Java 21·지원 OS/CPU 네이티브 라이브러리와 쓰기·네이티브 로딩이 가능한 임시 디렉터리가 필요하다. 기본 실행 제한은 `sales.document.image.workers=2`, `queue-capacity=4`, `opencv-threads=1`, 긴 변 최대 `max-dimension=2200`이다. 실행기 종료 대기는 30초이며 JNI 처리 중 창을 닫아도 네이티브 연산이 즉시 중지되지는 않는다. 임시 PNG 보관은 프로세스당 최대 16건·합계 64MiB이고 native 메모리는 JVM heap 제한에 포함되지 않는다. 원본 업로드의 JPEG/PNG·8MiB·2,500만 화소 제한은 유지한다.
+전표 이미지 전처리 미리보기는 Spring 프로세스의 OpenCV를 사용한다. Java 21·지원 OS/CPU 네이티브 라이브러리와 쓰기·네이티브 로딩이 가능한 임시 디렉터리가 필요하다. 기본 실행 제한은 `sales.document.image.workers=2`, `queue-capacity=4`, `opencv-threads=1`, 긴 변 최대 `max-dimension=2048`이다. 실행기 종료 대기는 30초이며 JNI 처리 중 창을 닫아도 네이티브 연산이 즉시 중지되지는 않는다. 임시 PNG 보관은 프로세스당 최대 16건·합계 64MiB이고 native 메모리는 JVM heap 제한에 포함되지 않는다. 원본 업로드의 JPEG/PNG·8MiB·2,500만 화소 제한은 유지한다.
