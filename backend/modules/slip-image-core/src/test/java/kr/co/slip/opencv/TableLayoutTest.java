@@ -57,6 +57,8 @@ class TableLayoutTest {
     @Test void listingUsesItsSevenColumnsAndNoPrintedChoiceArea() {
         try (MatScope scope = new MatScope()) {
             Mat grid = scope.own(Mat.zeros(400, 1001, CvType.CV_8UC1));
+            for (int x : List.of(0, 132, 333, 450, 566, 683, 819, 1000))
+                Imgproc.line(grid, new Point(x, 0), new Point(x, 399), Scalar.all(255), 2);
             var layout = TableLayout.detect(grid, new Rect(0, 0, 1001, 400),
                     List.of(0, 132, 333, 450, 566, 683, 819, 1000), List.of(0, 80, 160, 240), PixelScale.IDENTITY);
             assertEquals(TableLayout.Kind.LISTING_REQUEST, layout.kind());
@@ -67,9 +69,35 @@ class TableLayoutTest {
     @Test void normalizesListingColumnsAgainstGridEdgesRatherThanCropPadding() {
         try (MatScope scope = new MatScope()) {
             Mat grid = scope.own(Mat.zeros(400, 672, CvType.CV_8UC1));
+            for (int x : List.of(6, 88, 215, 289, 363, 437, 522, 635))
+                Imgproc.line(grid, new Point(x, 0), new Point(x, 399), Scalar.all(255), 2);
             assertEquals(TableLayout.Kind.LISTING_REQUEST, TableLayout.detect(grid, new Rect(0, 0, 672, 400),
                     List.of(6, 88, 215, 289, 363, 437, 522, 635),
                     List.of(0, 80, 160, 240), PixelScale.IDENTITY).kind());
+        }
+    }
+
+    @ParameterizedTest @ValueSource(ints = {-12, 12})
+    void slantedDividersAndNearbyHorizontalPeaksStillIdentifyTheMergedHeader(int drift) {
+        try (MatScope scope = new MatScope()) {
+            Mat grid = scope.own(Mat.zeros(650, 1100, CvType.CV_8UC1));
+            List<Integer> xs = Arrays.stream(RECEIPT).mapToObj(x -> 20 + (int)Math.round(x * 1000)).toList();
+            for (int i = 0; i < xs.size(); i++) {
+                int top = i >= 3 && i <= 5 ? 120 : 0;
+                Imgproc.line(grid, new Point(xs.get(i) + drift, top), new Point(xs.get(i) - drift, 600), Scalar.all(255), 2);
+            }
+            var layout = TableLayout.detect(grid, new Rect(0, 0, 1060, 601), xs,
+                    List.of(0, 60, 70, 120, 180, 240, 300, 360, 420, 480, 540, 600), PixelScale.IDENTITY);
+            assertEquals(TableLayout.Kind.CONSIGNMENT_RECEIPT, layout.kind());
+            assertEquals(3, layout.headerRows());
+        }
+    }
+
+    @Test void matchingListingProportionsWithoutVisibleDividersRemainUnknown() {
+        try (MatScope scope = new MatScope()) {
+            Mat grid = scope.own(Mat.zeros(400, 1001, CvType.CV_8UC1));
+            assertEquals(TableLayout.Kind.UNKNOWN, TableLayout.detect(grid, new Rect(0, 0, 1001, 400),
+                    List.of(0, 132, 333, 450, 566, 683, 819, 1000), List.of(0, 80, 160, 240), PixelScale.IDENTITY).kind());
         }
     }
 
