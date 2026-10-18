@@ -1,5 +1,4 @@
-import { useRef } from "react";
-import { SalesSlipImagePreparationPreview } from "./SalesSlipImagePreparationPreview";
+import { useRef, useState } from "react";
 import { SalesSlipPhotoViewer } from "./SalesSlipPhotoViewer";
 import { Camera, ImagePlus, LoaderCircle, X } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
@@ -25,25 +24,48 @@ export function SalesSlipPhotoRegistrationDialog({
   onSaved: (slip: SalesSlip) => Promise<void>;
 }) {
   const photos = useSalesSlipPhotoRegistration(onSaved);
+  const [rotations, setRotations] = useState<Record<string, number>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const selected = photos.selected;
   const remaining = photos.entries.filter(
-    (entry) => entry.save !== "saved",
+    (entry) => entry.parentId && entry.save !== "saved",
   ).length;
   const unreadEntries = photos.entries.filter(
     (entry) =>
+      entry.parentId !== null &&
       ["waiting", "failed"].includes(entry.read) &&
       entry.save === "draft" &&
       !entry.pendingPayload,
   );
+  const originals = photos.entries.filter((entry) => !entry.parentId);
+  const documents = photos.entries.filter((entry) => entry.parentId);
+  const children = photos.entries.filter(
+    (entry) => entry.parentId === selected?.id,
+  );
+  const parent = photos.entries.find(
+    (entry) => entry.id === selected?.parentId,
+  );
+  const selectedFamily = selected
+    ? photos.entries.filter(
+        (entry) => entry.id === selected.id || entry.parentId === selected.id,
+      )
+    : [];
+  const cannotRemove = selectedFamily.some(
+    (entry) => entry.save !== "draft" || entry.pendingPayload,
+  );
+  const blocking = photos.busy !== null && photos.busy !== "read";
   const buttonClass =
     "inline-flex h-8 items-center justify-center gap-2 rounded-md border border-[#cfd8cc] bg-white px-3 text-sm font-semibold text-[#29422e] hover:bg-[#f7faf6] focus-visible:outline-2 focus-visible:outline-[#159447] disabled:opacity-60";
 
   function requestClose() {
-    if (photos.busy === "save" || photos.busy === "upload") return;
+    if (blocking) return;
     if (
-      remaining &&
+      (remaining ||
+        originals.some(
+          (entry) =>
+            !photos.entries.some((child) => child.parentId === entry.id),
+        )) &&
       !window.confirm("저장하지 않은 사진과 입력 내용이 사라집니다. 닫을까요?")
     )
       return;
@@ -93,14 +115,14 @@ export function SalesSlipPhotoRegistrationDialog({
               사진으로 등록
             </DialogTitle>
             <p className="mt-1 text-sm text-[#5c6a60]">
-              사진 한 장당 전표 한 건을 등록합니다. 내용을 읽은 뒤
-              날짜·거래처·품목을 확인하고 저장하세요.
+              사진 보정으로 문서를 분리한 뒤 자동 입력하세요. 보정된 문서별로
+              내용을 확인하고 전표를 저장합니다.
             </p>
           </div>
           <button
             type="button"
             aria-label="닫기"
-            disabled={photos.busy === "save" || photos.busy === "upload"}
+            disabled={blocking}
             onClick={requestClose}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#d9dfda] text-[#435047] disabled:opacity-60"
           >
@@ -112,7 +134,7 @@ export function SalesSlipPhotoRegistrationDialog({
             <button
               type="button"
               className={buttonClass}
-              disabled={photos.busy !== null || photos.entries.length >= 10}
+              disabled={photos.busy !== null || originals.length >= 10}
               onClick={() => cameraRef.current?.click()}
             >
               <Camera className="h-4 w-4" aria-hidden="true" />
@@ -121,7 +143,7 @@ export function SalesSlipPhotoRegistrationDialog({
             <button
               type="button"
               className={buttonClass}
-              disabled={photos.busy !== null || photos.entries.length >= 10}
+              disabled={photos.busy !== null || originals.length >= 10}
               onClick={() => fileRef.current?.click()}
             >
               <ImagePlus className="h-4 w-4" aria-hidden="true" />
@@ -156,8 +178,8 @@ export function SalesSlipPhotoRegistrationDialog({
             ) : null}
           </div>
           <p className="text-xs text-[#5c6a60]" role="status">
-            사진 {photos.entries.length}장 · 저장 완료{" "}
-            {photos.entries.length - remaining}건 / 최대 10장
+            원본 {originals.length}/10장 · 보정 문서 {documents.length}/10개 ·
+            저장 완료 {documents.length - remaining}건
           </p>
           <input
             ref={fileRef}
@@ -211,17 +233,23 @@ export function SalesSlipPhotoRegistrationDialog({
               aria-label="등록할 전표 사진"
               className="flex gap-2 overflow-x-auto border-b border-[#dbe8dc] p-3 lg:block lg:space-y-2 lg:overflow-y-auto lg:border-r lg:border-b-0"
             >
-              {photos.entries.map((entry, index) => (
+              {photos.entries.map((entry) => (
                 <button
                   key={entry.id}
                   type="button"
                   aria-current={entry.id === selected.id ? "true" : undefined}
                   disabled={photos.busy !== null}
-                  className={`min-w-40 rounded-md border p-3 text-left lg:w-full ${entry.id === selected.id ? "border-[#159447] bg-[#e8f6eb]" : "border-[#d9e3db] bg-white"} disabled:opacity-60`}
+                  className={`w-48 min-w-40 shrink-0 rounded-md border p-3 text-left ${entry.parentId ? "ml-4 lg:w-[calc(100%-1rem)]" : "lg:w-full"} ${entry.id === selected.id ? "border-[#159447] bg-[#e8f6eb]" : "border-[#d9e3db] bg-white"} disabled:opacity-60`}
                   onClick={() => photos.setSelectedId(entry.id)}
                 >
-                  <span className="block text-sm font-semibold break-all text-[#17251b]">
-                    {index + 1}. {entry.photo.fileName}
+                  <span
+                    title={entry.photo.fileName}
+                    className="block truncate text-sm font-semibold text-[#17251b]"
+                  >
+                    {entry.parentId
+                      ? "└ "
+                      : `${originals.findIndex((original) => original.id === entry.id) + 1}. `}
+                    {entry.photo.fileName}
                   </span>
                   <span
                     className={`mt-1 flex items-center gap-1.5 text-xs ${entry.error ? "text-[#9b341e]" : "text-[#526158]"}`}
@@ -232,19 +260,25 @@ export function SalesSlipPhotoRegistrationDialog({
                         aria-hidden="true"
                       />
                     ) : null}
-                    {entry.save === "saved"
-                      ? "저장 완료"
-                      : entry.save === "saving"
-                        ? "저장 중"
-                        : entry.pendingPayload
-                          ? "저장 응답 확인 필요"
-                          : entry.read === "ready"
-                            ? "검토 후 저장"
-                            : entry.read === "reading"
-                              ? "내용 읽는 중"
-                              : entry.read === "failed"
-                                ? "자동 입력 실패"
-                                : "자동 입력 대기"}
+                    {!entry.parentId
+                      ? photos.entries.some(
+                          (child) => child.parentId === entry.id,
+                        )
+                        ? "원본 · 보정 완료"
+                        : "원본 · 사진 보정 필요"
+                      : entry.save === "saved"
+                        ? "저장 완료"
+                        : entry.save === "saving"
+                          ? "저장 중"
+                          : entry.pendingPayload
+                            ? "저장 응답 확인 필요"
+                            : entry.read === "ready"
+                              ? "검토 후 저장"
+                              : entry.read === "reading"
+                                ? "내용 읽는 중"
+                                : entry.read === "failed"
+                                  ? "자동 입력 실패"
+                                  : "자동 입력 대기"}
                   </span>
                 </button>
               ))}
@@ -259,54 +293,118 @@ export function SalesSlipPhotoRegistrationDialog({
                     {selected.photo.fileName}
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    <SalesSlipImagePreparationPreview
-                      key={selected.id}
-                      photo={selected.photo}
-                      disabled={photos.busy !== null}
-                    />
+                    {!selected.parentId && !children.length ? (
+                      <label className="flex items-center gap-2 text-xs text-[#526158]">
+                        회전
+                        <select
+                          aria-label="사진 보정 회전"
+                          value={rotations[selected.id] ?? -1}
+                          disabled={photos.busy !== null}
+                          onChange={(event) =>
+                            setRotations((current) => ({
+                              ...current,
+                              [selected.id]: Number(event.target.value),
+                            }))
+                          }
+                          className="h-8 rounded-md border border-[#cfd8cc] bg-white px-2"
+                        >
+                          <option value={-1}>자동</option>
+                          {[0, 90, 180, 270].map((degrees) => (
+                            <option key={degrees} value={degrees}>
+                              {degrees}° 시계 방향
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
+                    {!selected.parentId ? (
+                      <button
+                        type="button"
+                        className={buttonClass}
+                        disabled={photos.busy !== null || children.length > 0}
+                        onClick={() =>
+                          void photos.prepareSelected(
+                            rotations[selected.id] ?? -1,
+                          )
+                        }
+                      >
+                        {photos.busy === "prepare"
+                          ? "사진 보정 중…"
+                          : children.length
+                            ? "보정 완료"
+                            : "사진 보정"}
+                      </button>
+                    ) : null}
+                    {selected.parentId ? (
+                      <button
+                        type="button"
+                        className={buttonClass}
+                        disabled={photos.busy !== null || cannotRemove}
+                        onClick={readSelected}
+                      >
+                        {selected.read === "reading" ? (
+                          <LoaderCircle
+                            className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                            aria-hidden="true"
+                          />
+                        ) : null}
+                        {selected.read === "reading"
+                          ? "자동 입력 중…"
+                          : selected.read === "ready"
+                            ? "자동 입력 재실행"
+                            : "자동 입력"}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className={buttonClass}
-                      disabled={
-                        photos.busy !== null ||
-                        selected.save === "saved" ||
-                        Boolean(selected.pendingPayload)
-                      }
-                      onClick={readSelected}
-                    >
-                      {selected.read === "reading" ? (
-                        <LoaderCircle
-                          className="h-4 w-4 animate-spin motion-reduce:animate-none"
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                      {selected.read === "reading"
-                        ? "자동 입력 중…"
-                        : selected.read === "ready"
-                          ? "자동 입력 재실행"
-                          : "자동 입력"}
-                    </button>
-                    <button
-                      type="button"
-                      className={buttonClass}
-                      disabled={
-                        photos.busy !== null ||
-                        selected.save === "saved" ||
-                        Boolean(selected.pendingPayload)
-                      }
+                      disabled={photos.busy !== null || cannotRemove}
                       onClick={photos.removeSelected}
                     >
                       사진 제거
                     </button>
                   </div>
                 </div>
-                <SalesSlipPhotoViewer
-                  src={`data:${selected.photo.contentType};base64,${selected.photo.contentBase64}`}
-                  alt="확인할 전표 사진 원본"
-                  width={900}
-                  height={600}
-                  className="max-h-72 w-full rounded-md bg-[#f7faf6] object-contain"
-                />
+                <div
+                  className={`grid gap-4 ${selected.parentId ? "grid-cols-2" : "sm:grid-cols-2"}`}
+                >
+                  {(selected.parentId
+                    ? [parent, selected]
+                    : [selected, ...children]
+                  )
+                    .filter((entry) => entry != null)
+                    .map((entry) => (
+                      <figure key={entry.id} className="min-w-0">
+                        <figcaption className="mb-2 text-xs font-semibold break-all text-[#526158]">
+                          {entry.parentId ? "보정된 문서" : "원본"} ·{" "}
+                          {entry.photo.fileName}
+                        </figcaption>
+                        <SalesSlipPhotoViewer
+                          src={`data:${entry.photo.contentType};base64,${entry.photo.contentBase64}`}
+                          alt={
+                            entry.parentId
+                              ? "보정된 전표 문서"
+                              : "전표 사진 원본"
+                          }
+                          width={900}
+                          height={600}
+                          className="max-h-80 w-full rounded-md bg-[#f7faf6] object-contain"
+                        />
+                      </figure>
+                    ))}
+                </div>
+                {!selected.parentId ? (
+                  <p className="mt-3 text-sm text-[#526158]">
+                    {children.length
+                      ? "왼쪽 목록에서 보정된 문서를 선택해 자동 입력과 전표 등록을 진행하세요."
+                      : "사진 보정을 눌러 등록할 문서 사진을 먼저 만들어주세요."}
+                  </p>
+                ) : null}
+                {!selected.parentId && selected.error ? (
+                  <p role="alert" className="mt-3 text-sm text-[#9b341e]">
+                    {selected.error}
+                  </p>
+                ) : null}
                 <p className="mt-2 text-xs text-[#5c6a60]">
                   사진 ID: {selected.id.slice(0, 12)}
                 </p>
@@ -336,7 +434,7 @@ export function SalesSlipPhotoRegistrationDialog({
                   </p>
                 ) : null}
               </section>
-              {selected.save === "saved" ? (
+              {!selected.parentId ? null : selected.save === "saved" ? (
                 <div
                   role="status"
                   className="m-5 rounded-md border border-[#cfe0d2] bg-white p-4 text-sm text-[#10783a]"
@@ -368,9 +466,11 @@ export function SalesSlipPhotoRegistrationDialog({
                   pendingLabel={
                     photos.busy === "read"
                       ? "내용 읽는 중"
-                      : photos.busy === "upload"
-                        ? "사진 추가 중"
-                        : "저장 중"
+                      : photos.busy === "prepare"
+                        ? "사진 보정 중"
+                        : photos.busy === "upload"
+                          ? "사진 추가 중"
+                          : "저장 중"
                   }
                   onConnectGroups={photos.connectGroups}
                   selectedGroups={selectedSalesGroups(selected.form.items)}

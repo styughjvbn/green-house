@@ -3,7 +3,7 @@
   DirectReturnArrivalState,
 } from "./directChangeTypes";
 import type { DirectChangePendingRequest } from "../lib/directChangeRequests";
-import { fetchApi, requestApi } from "@/shared/api/client";
+import { fetchApi, requestApi, requestApiBlob } from "@/shared/api/client";
 import type {
   BusinessPartner,
   BusinessPartnerOption,
@@ -787,6 +787,18 @@ export function prepareSalesSlipPhoto(
     "/sales-slips/image-previews",
     { method: "POST", body, signal },
     "사진 전처리를 완료하지 못했습니다.",
+  );
+}
+
+export function getSalesSlipPreparedImage(
+  previewId: string,
+  imageId: string,
+  signal?: AbortSignal,
+) {
+  return requestApiBlob(
+    `/sales-slips/image-previews/${encodeURIComponent(previewId)}/images/${encodeURIComponent(imageId)}`,
+    { signal },
+    "보정된 사진을 가져오지 못했습니다.",
   );
 }
 

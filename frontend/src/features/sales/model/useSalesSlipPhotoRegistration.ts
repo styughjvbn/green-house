@@ -12,6 +12,9 @@ import {
   removeSalesSlipSessionPhoto,
   readSalesSlipPhotos,
   cancelSalesSlipPhotoReading,
+  prepareSalesSlipPhoto,
+  getSalesSlipPreparedImage,
+  removeSalesSlipImagePreview,
 } from "../api/salesApi";
 import type { CreateSalesSlipPayload, SalesSlipPhotoInput } from "../api/types";
 import {
@@ -26,11 +29,17 @@ import {
   clearEditedSalesReviews,
   confirmSalesReview,
 } from "../lib/salesPhotoForm";
+import { useMutation } from "@tanstack/react-query";
+import {
+  preparedPhotoName,
+  toPreparedSalesPhoto,
+} from "../lib/preparedSalesPhoto";
 import { createSalesSlipDraftActions } from "./salesSlipDraftActions";
 import type { SalesSlipForm, SalesReviewField } from "./types";
 
 type PhotoEntry = {
   id: string;
+  parentId: string | null;
   photo: SalesSlipPhotoInput;
   form: SalesSlipForm;
   read: "waiting" | "reading" | "ready" | "failed";
@@ -57,7 +66,9 @@ export function useSalesSlipPhotoRegistration(
   const { businessDate } = useRuntimeContext();
   const [entries, setEntries] = useState<PhotoEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"upload" | "read" | "save" | null>(null);
+  const [busy, setBusy] = useState<
+    "upload" | "prepare" | "read" | "save" | null
+  >(null);
   const [cancelling, setCancelling] = useState(false);
   const activeRead = useRef<{
     requestId: string;
@@ -106,25 +117,158 @@ export function useSalesSlipPhotoRegistration(
       );
   }
   function setForm(id: string, update: SetStateAction<SalesSlipForm>) {
-    if (mounted.current)
-      setEntries((current) =>
-        current.map((entry) =>
-          entry.id === id && entry.save !== "saved" && !entry.pendingPayload
-            ? {
-                ...entry,
-                form: clearEditedSalesReviews(
-                  entry.form,
-                  typeof update === "function" ? update(entry.form) : update,
-                ),
-                error: null,
-              }
-            : entry,
-        ),
-      );
+    setEntries((current) =>
+      current.map((entry) =>
+        entry.id === id && entry.save !== "saved" && !entry.pendingPayload
+          ? {
+              ...entry,
+              form: clearEditedSalesReviews(
+                entry.form,
+                typeof update === "function" ? update(entry.form) : update,
+              ),
+              error: null,
+            }
+          : entry,
+      ),
+    );
   }
   const actions = createSalesSlipDraftActions((update) => {
     if (selected) setForm(selected.id, update);
   });
+
+  function createEntry(
+    id: string,
+    photo: SalesSlipPhotoInput,
+    parentId: string | null,
+  ): PhotoEntry {
+    return {
+      id,
+      photo,
+      parentId,
+      form: withSalesRecordingMode(createInitialSalesForm(businessDate), true),
+      read: "waiting",
+      save: "draft",
+      notes: [],
+      recognized: false,
+      recognition: null,
+      error: null,
+      pendingPayload: null,
+      requestKey: createPendingCreationRequestKey(
+        `greenhouse:sales-photo-create:v1:${id}`,
+        createUuid,
+        () => window.sessionStorage,
+      ),
+    };
+  }
+
+  const preparation = useMutation({
+    mutationFn: async ({
+      entry,
+      signal,
+      rotationDegrees,
+    }: {
+      entry: PhotoEntry;
+      signal: AbortSignal;
+      rotationDegrees: number;
+    }) => {
+      const preview = await prepareSalesSlipPhoto(
+        entry.photo,
+        rotationDegrees,
+        signal,
+      );
+      try {
+        if (!preview.id)
+          throw new Error("사진 보정 결과를 확인하지 못했습니다.");
+        const documents = (preview.images ?? []).filter(
+          (image) => image.kind === "DOCUMENT_COMPACTED",
+        );
+        if (!documents.length)
+          throw new Error(
+            "문서를 보정하지 못했습니다. 사진 방향과 문서가 잘리지 않았는지 확인해주세요.",
+          );
+        if (
+          entries.filter((item) => item.parentId).length + documents.length >
+          MAX_PHOTOS
+        )
+          throw new Error(
+            "보정된 문서는 최대 10개까지 등록할 수 있습니다. 기존 문서를 제거한 뒤 다시 시도해주세요.",
+          );
+        const photos = await Promise.all(
+          documents.map(async (image, index) => {
+            if (!image.id)
+              throw new Error("보정된 문서 사진을 찾지 못했습니다.");
+            const blob = await getSalesSlipPreparedImage(
+              preview.id!,
+              image.id,
+              signal,
+            );
+            return toPreparedSalesPhoto(
+              blob,
+              preparedPhotoName(entry.photo.fileName, index + 1),
+            );
+          }),
+        );
+        return {
+          photos,
+          warnings: [
+            ...(preview.warnings ?? []),
+            ...(documents.length < (preview.documentCount ?? 0)
+              ? [
+                  "일부 문서는 보정하지 못했습니다. 원본과 보정 결과의 문서 수를 확인해주세요.",
+                ]
+              : []),
+          ],
+        };
+      } finally {
+        if (preview.id)
+          void removeSalesSlipImagePreview(preview.id).catch(() => {});
+      }
+    },
+  });
+
+  async function prepareSelected(rotationDegrees = -1) {
+    if (
+      !selected ||
+      selected.parentId ||
+      running.current ||
+      entries.some((item) => item.parentId === selected.id)
+    )
+      return;
+    running.current = true;
+    setBusy("prepare");
+    patch(selected.id, { error: null });
+    const controller = new AbortController();
+    activeRequest.current = controller;
+    try {
+      const result = await preparation.mutateAsync({
+        entry: selected,
+        signal: controller.signal,
+        rotationDegrees,
+      });
+      if (!mounted.current || controller.signal.aborted) return;
+      const children = result.photos.map((photo) =>
+        createEntry(createUuid(), photo, selected.id),
+      );
+      setEntries((current) => {
+        const position = current.findIndex((entry) => entry.id === selected.id);
+        if (position < 0) return current;
+        return [
+          ...current.slice(0, position + 1),
+          ...children,
+          ...current.slice(position + 1),
+        ];
+      });
+      patch(selected.id, { notes: result.warnings });
+    } catch (error) {
+      if (mounted.current && !controller.signal.aborted)
+        patch(selected.id, { error: message(error) });
+    } finally {
+      preparation.reset();
+      activeRequest.current = null;
+      running.current = false;
+      if (mounted.current) setBusy(null);
+    }
+  }
 
   async function addFiles(files: File[]) {
     if (running.current || !files.length) return;
@@ -135,7 +279,11 @@ export function useSalesSlipPhotoRegistration(
     const additions: PhotoEntry[] = [];
     try {
       for (const file of files) {
-        if (entries.length + additions.length >= MAX_PHOTOS) {
+        if (
+          entries.filter((entry) => !entry.parentId).length +
+            additions.length >=
+          MAX_PHOTOS
+        ) {
           errors.push(`한 번에 최대 ${MAX_PHOTOS}장까지 등록할 수 있습니다.`);
           break;
         }
@@ -167,26 +315,7 @@ export function useSalesSlipPhotoRegistration(
             additions.some((entry) => entry.id === id)
           )
             continue;
-          additions.push({
-            id,
-            photo,
-            form: withSalesRecordingMode(
-              createInitialSalesForm(businessDate),
-              true,
-            ),
-            read: "waiting",
-            save: "draft",
-            notes: [],
-            recognized: false,
-            recognition: null,
-            error: null,
-            pendingPayload: null,
-            requestKey: createPendingCreationRequestKey(
-              `greenhouse:sales-photo-create:v1:${id}`,
-              createUuid,
-              () => window.sessionStorage,
-            ),
-          });
+          additions.push(createEntry(id, photo, null));
         } catch (error) {
           errors.push(`${file.name}: ${message(error)}`);
         }
@@ -233,7 +362,12 @@ export function useSalesSlipPhotoRegistration(
   }
 
   async function readEntries(targets: PhotoEntry[]) {
-    if (running.current || !targets.length) return;
+    if (
+      running.current ||
+      !targets.length ||
+      targets.some((entry) => !entry.parentId)
+    )
+      return;
     running.current = true;
     setBusy("read");
     const controller = new AbortController();
@@ -328,7 +462,13 @@ export function useSalesSlipPhotoRegistration(
   }
 
   async function saveSelected() {
-    if (!selected || selected.save === "saved" || running.current) return;
+    if (
+      !selected ||
+      !selected.parentId ||
+      selected.save === "saved" ||
+      running.current
+    )
+      return;
     let payload: CreateSalesSlipPayload;
     try {
       const issue = salesAllocationIssue(
@@ -389,32 +529,33 @@ export function useSalesSlipPhotoRegistration(
   }
 
   async function removeSelected() {
-    if (
-      !selected ||
-      busy ||
-      selected.pendingPayload ||
-      selected.save === "saved"
-    )
+    if (!selected || running.current) return;
+    const targets = entries.filter(
+      (entry) => entry.id === selected.id || entry.parentId === selected.id,
+    );
+    if (targets.some((entry) => entry.pendingPayload || entry.save !== "draft"))
       return;
     running.current = true;
     setBusy("upload");
     try {
-      if (sessionId.current)
-        await removeSalesSlipSessionPhoto(sessionId.current, selected.id);
+      if (sessionId.current) {
+        for (const entry of targets.filter((entry) => entry.parentId))
+          await removeSalesSlipSessionPhoto(sessionId.current, entry.id);
+      }
+      if (!mounted.current) return;
+      const ids = new Set(targets.map((entry) => entry.id));
+      setEntries((current) => current.filter((entry) => !ids.has(entry.id)));
+      setSelectedId(
+        selected.parentId ??
+          entries.find((entry) => !ids.has(entry.id))?.id ??
+          null,
+      );
     } catch (error) {
       patch(selected.id, { error: message(error) });
-      return;
     } finally {
       running.current = false;
       if (mounted.current) setBusy(null);
     }
-    if (!mounted.current) return;
-    setEntries((current) =>
-      current.filter((entry) => entry.id !== selected.id),
-    );
-    setSelectedId(
-      entries.find((entry) => entry.id !== selected.id)?.id ?? null,
-    );
   }
   function setRecordingMode(recordOnly: boolean) {
     if (!selected) return;
@@ -499,16 +640,20 @@ export function useSalesSlipPhotoRegistration(
     setRecordingMode,
     connectGroups,
     addFiles,
+    prepareSelected,
     saveSelected,
     removeSelected,
     readSelected: () =>
-      selected && selected.save === "draft" && !selected.pendingPayload
+      selected?.parentId &&
+      selected.save === "draft" &&
+      !selected.pendingPayload
         ? readEntries([selected])
         : Promise.resolve(),
     readAll: () =>
       readEntries(
         entries.filter(
           (entry) =>
+            entry.parentId !== null &&
             ["waiting", "failed"].includes(entry.read) &&
             entry.save === "draft" &&
             !entry.pendingPayload,

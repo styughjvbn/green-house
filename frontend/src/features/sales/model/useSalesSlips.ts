@@ -44,7 +44,12 @@ import {
   salesSlipPageQueryOptions,
 } from "./salesQueryOptions";
 import { salesQueryKeys } from "./salesQueryKeys";
-import type { SalesSlipForm, SalesFilterState } from "./types";
+import type {
+  SalesSlipForm,
+  SalesFilterState,
+  SalesItemForm,
+  SalesAllocationForm,
+} from "./types";
 
 export function useSalesSlips({
   initialShowCreateSlip = false,
