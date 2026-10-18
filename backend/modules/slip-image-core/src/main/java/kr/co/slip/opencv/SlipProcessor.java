@@ -99,7 +99,7 @@ public final class SlipProcessor implements SlipImageProcessor {
             List<Rect> regions = tableRegions(horizontal, work.size(), m);
             Mat rowOverlay = options.outputMode().review() ? m.own(work.clone()) : null;
             Map<String, byte[]> images = new LinkedHashMap<>();
-            images.put("01-corrected.png", png(work, m));
+            images.put("01-corrected" + ImageEncoding.extension(options.outputMode()), ImageEncoding.encode(work, options.outputMode()));
             if (options.outputMode().diagnostics()) {
                 try (Mats drawing = new Mats(m.scale)) {
                     Mat overlay = drawing.own(work.clone());
@@ -130,17 +130,19 @@ public final class SlipProcessor implements SlipImageProcessor {
                 }
             }
             if (tables.isEmpty()) warnings.add("안정적인 표 격자를 찾지 못해 빈 행을 제거하지 않았습니다.");
-            PaperSeparator.Result separated = PaperSeparator.separate(work, tables, quad != null, m.scale, options.outputMode());
+            Map<Integer, Mat> cutouts = new HashMap<>();
+            PaperSeparator.Result separated = PaperSeparator.separate(work, tables, quad != null, m.scale, options.outputMode(),
+                    (index, cutout) -> cutouts.put(index, m.own(cutout.clone())));
             images.putAll(separated.images());
             warnings.addAll(separated.warnings());
-            tables = analyzeDocuments(binary, grid, tables, separated, options, images, warnings, m);
+            tables = analyzeDocuments(binary, grid, tables, separated, cutouts, options, images, warnings, m);
             for (Table table : tables) {
                 try (Mats tableScope = new Mats(m.scale)) {
                     Box b = table.bounds();
                     Rect region = new Rect(b.x(), b.y(), b.width(), b.height());
                     if (table.rows().isEmpty() || !table.rows().stream().allMatch(Row::removed)) {
                         Mat compact = RowCompactor.compact(tableScope.own(work.submat(region)), b.y(), table.rows(), tableScope);
-                        if (compact != null) images.put(String.format("table-%02d-compacted.png", table.index()), png(compact, tableScope));
+                        if (compact != null) images.put(String.format("table-%02d-compacted%s", table.index(), ImageEncoding.extension(options.outputMode())), ImageEncoding.encode(compact, options.outputMode()));
                     }
                     if (rowOverlay != null) for (Row row : table.rows()) if (row.removed())
                         Imgproc.rectangle(rowOverlay, new Point(b.x(), row.top()),
@@ -157,7 +159,7 @@ public final class SlipProcessor implements SlipImageProcessor {
     }
 
     private static List<Table> analyzeDocuments(Mat binary, Mat grid, List<Table> geometry,
-                                                PaperSeparator.Result separated, ProcessingOptions options,
+                                                PaperSeparator.Result separated, Map<Integer, Mat> cutouts, ProcessingOptions options,
                                                 Map<String, byte[]> images, List<String> warnings, Mats parent) {
         if (separated.papers().isEmpty()) {
             warnings.add("문서 분리 결과가 없어 전체 사진을 하나의 분석 범위로 사용합니다.");
@@ -169,8 +171,7 @@ public final class SlipProcessor implements SlipImageProcessor {
                 .collect(java.util.stream.Collectors.groupingBy(i -> i, java.util.stream.Collectors.counting()));
         for (Paper paper : separated.papers()) {
             try (Mats scope = new Mats(parent.scale)) {
-                MatOfByte bytes = scope.own(new MatOfByte(images.get(String.format("paper-%02d.png", paper.index()))));
-                Mat cutout = scope.own(Imgcodecs.imdecode(bytes, Imgcodecs.IMREAD_UNCHANGED));
+                Mat cutout = cutouts.get(paper.index());
                 Mat alpha = scope.mat(), invisible = scope.mat();
                 Core.extractChannel(cutout, alpha, 3);
                 Core.compare(alpha, Scalar.all(0), invisible, Core.CMP_EQ);
@@ -201,9 +202,10 @@ public final class SlipProcessor implements SlipImageProcessor {
                     List<Table> decided = BlankRowCutoff.apply(documentTables.stream()
                             .map(t -> analyzed.get(t.index())).toList());
                     decided.forEach(table -> analyzed.put(table.index(), table));
-                    PaperCompactor.compact(cutout, crop, decided, paper.index(), images, warnings, scope);
+                    PaperCompactor.compact(cutout, crop, decided, paper.index(), images, warnings, scope, options.outputMode());
                 }
             }
+            parent.release(cutouts.get(paper.index()));
         }
         for (Table table : geometry) if (!owners.containsKey(table.index()))
             warnings.add("표 " + table.index() + ": 분리 문서에 속하지 않아 행 제거를 생략했습니다.");

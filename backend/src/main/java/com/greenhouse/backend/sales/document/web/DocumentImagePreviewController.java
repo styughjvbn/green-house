@@ -58,11 +58,11 @@ public class DocumentImagePreviewController {
             minimumInkRatio));
   }
 
-  @GetMapping(value = "/{id}/images/{imageId}", produces = MediaType.IMAGE_PNG_VALUE)
+  @GetMapping(value = "/{id}/images/{imageId}", produces = MediaType.IMAGE_JPEG_VALUE)
   public ResponseEntity<byte[]> image(
       @PathVariable UUID id, @PathVariable UUID imageId, Principal principal) {
     return ResponseEntity.ok()
-        .contentType(MediaType.IMAGE_PNG)
+        .contentType(MediaType.IMAGE_JPEG)
         .cacheControl(CacheControl.noStore())
         .header("X-Content-Type-Options", "nosniff")
         .body(service.image(actor(principal), id, imageId));

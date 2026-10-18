@@ -18,43 +18,40 @@ test("prepared documents retain their source name with a bounded numbered JPEG s
   assert.ok(preparedPhotoName("x".repeat(255) + ".jpg", 1).length <= 255);
 });
 
-test("prepared documents flatten transparency to white and release image resources", async (context) => {
-  const calls = [];
-  const previousBitmap = globalThis.createImageBitmap;
-  const previousDocument = globalThis.document;
+test("prepared documents preserve server JPEG bytes without image conversion", async (context) => {
+  const previousReader = globalThis.FileReader;
   context.after(() => {
-    if (previousBitmap === undefined) delete globalThis.createImageBitmap;
-    else globalThis.createImageBitmap = previousBitmap;
-    if (previousDocument === undefined) delete globalThis.document;
-    else globalThis.document = previousDocument;
+    if (previousReader === undefined) delete globalThis.FileReader;
+    else globalThis.FileReader = previousReader;
   });
-  globalThis.createImageBitmap = async () => ({
-    width: 100,
-    height: 200,
-    close: () => calls.push("close"),
-  });
-  const canvas = {
-    width: 0,
-    height: 0,
-    getContext: () => ({
-      set fillStyle(value) {
-        calls.push(value);
-      },
-      fillRect: (...args) => calls.push(args),
-      drawImage: () => calls.push("draw"),
-    }),
-    toDataURL: (type) => {
-      assert.equal(type, "image/jpeg");
-      return "data:image/jpeg;base64,YQ==";
-    },
+  globalThis.FileReader = class {
+    async readAsDataURL(blob) {
+      this.result = `data:${blob.type};base64,${Buffer.from(await blob.arrayBuffer()).toString("base64")}`;
+      this.onload();
+    }
   };
-  globalThis.document = { createElement: () => canvas };
-  const photo = await toPreparedSalesPhoto(new Blob(), "document_01.jpg");
+  const bytes = Buffer.from([0xff, 0xd8, 1, 2, 0xff, 0xd9]);
+  const photo = await toPreparedSalesPhoto(
+    new Blob([bytes], { type: "image/jpeg" }),
+    "document_01.jpg",
+  );
   assert.deepEqual(photo, {
     fileName: "document_01.jpg",
     contentType: "image/jpeg",
-    contentBase64: "YQ==",
+    contentBase64: bytes.toString("base64"),
   });
-  assert.deepEqual(calls, ["#ffffff", [0, 0, 100, 200], "draw", "close"]);
-  assert.deepEqual([canvas.width, canvas.height], [100, 200]);
+});
+
+test("prepared documents reject non-JPEG and oversized responses", async () => {
+  await assert.rejects(
+    toPreparedSalesPhoto(new Blob(["png"], { type: "image/png" }), "a.jpg"),
+    /형식/,
+  );
+  await assert.rejects(
+    toPreparedSalesPhoto(
+      new Blob([new Uint8Array(8 * 1024 * 1024 + 1)], { type: "image/jpeg" }),
+      "a.jpg",
+    ),
+    /8MB/,
+  );
 });

@@ -1,9 +1,9 @@
 package kr.co.slip.opencv;
 
+import kr.co.slip.api.OutputMode;
 import java.util.List;
 import java.util.Map;
 import org.opencv.core.*;
-import org.opencv.imgcodecs.Imgcodecs;
 import static kr.co.slip.api.ProcessingResult.*;
 
 /** Compacts a separated document after its tables have been analyzed. */
@@ -13,6 +13,11 @@ final class PaperCompactor {
     /** Preserve the complete separated document above its consecutive-blank-row cutoff. */
     static void compact(Mat cutout, Rect crop, List<Table> tables, int index,
                                      Map<String, byte[]> images, List<String> warnings, MatScope scope) {
+        compact(cutout, crop, tables, index, images, warnings, scope, OutputMode.ALL);
+    }
+
+    static void compact(Mat cutout, Rect crop, List<Table> tables, int index,
+                        Map<String, byte[]> images, List<String> warnings, MatScope scope, OutputMode mode) {
         if (tables.isEmpty()) return;
         int previousBottom = crop.y;
         for (Table table : tables) {
@@ -26,12 +31,7 @@ final class PaperCompactor {
         }
         List<Row> rows = tables.stream().flatMap(table -> table.rows().stream()).toList();
         Mat compact = RowCompactor.compact(cutout, crop.y, rows, scope);
-        if (compact != null) images.put(String.format("paper-%02d-compacted.png", index), png(compact, scope));
+        if (compact != null) images.put(String.format("paper-%02d-compacted%s", index, ImageEncoding.extension(mode)), ImageEncoding.encode(compact, mode));
     }
 
-    private static byte[] png(Mat image, MatScope scope) {
-        MatOfByte bytes = scope.own(new MatOfByte());
-        if (!Imgcodecs.imencode(".png", image, bytes)) throw new IllegalStateException("PNG encode failed");
-        return bytes.toArray();
-    }
 }

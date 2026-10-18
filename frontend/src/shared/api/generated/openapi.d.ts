@@ -9179,7 +9179,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "image/png": string;
+                    "image/jpeg": string;
                 };
             };
         };

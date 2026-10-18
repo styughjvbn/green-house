@@ -36,6 +36,11 @@ final class PaperSeparator {
     }
 
     static Result separate(Mat image, List<Table> tables, boolean knownDocumentQuad, PixelScale pixels, OutputMode mode) {
+        return separate(image, tables, knownDocumentQuad, pixels, mode, null);
+    }
+
+    static Result separate(Mat image, List<Table> tables, boolean knownDocumentQuad, PixelScale pixels, OutputMode mode,
+                           java.util.function.BiConsumer<Integer, Mat> cutoutConsumer) {
         NativeOpenCv.load();
         try (Scope m = new Scope()) {
             Mat mask = knownDocumentQuad ? m.own(new Mat(image.size(), CvType.CV_8UC1, Scalar.all(255)))
@@ -80,7 +85,8 @@ final class PaperSeparator {
                             Mat cutout = layerScope.mat();
                             Imgproc.cvtColor(layerScope.own(image.submat(crop)), cutout, Imgproc.COLOR_BGR2BGRA);
                             Core.insertChannel(layerScope.own(regionMask.submat(crop)), cutout, 3);
-                            images.put(String.format("paper-%02d.png", index), png(cutout));
+                            if (cutoutConsumer != null) cutoutConsumer.accept(index, cutout);
+                            images.put(String.format("paper-%02d%s", index, ImageEncoding.extension(mode)), ImageEncoding.encode(cutout, mode));
                             List<XY> outline = outline(regionMask);
                             if (overlay != null) {
                                 MatOfPoint polygon = layerScope.own(new MatOfPoint(outline.stream().map(p -> new Point(p.x(), p.y())).toArray(Point[]::new)));
@@ -102,7 +108,7 @@ final class PaperSeparator {
             if (overlay != null) images.put("06-paper-contours.png", png(overlay));
             if (usedMask != null) images.put("07-paper-mask.png", png(usedMask));
             if (papers.isEmpty()) warnings.add("종이와 배경을 안정적으로 분리하지 못했습니다. 종이 이미지를 임의로 잘라내지 않았습니다.");
-            else if (!knownDocumentQuad) warnings.add("종이 분리는 색상·외곽의 볼록 포락선·겹침 경계에 대한 추정입니다. 가려진 내용을 복원하지 않으며 작은 가림 물체나 배경이 포함될 수 있어 paper PNG를 검토하세요.");
+            else if (!knownDocumentQuad) warnings.add("종이 분리는 색상·외곽의 볼록 포락선·겹침 경계에 대한 추정입니다. 가려진 내용을 복원하지 않으며 작은 가림 물체나 배경이 포함될 수 있어 분리 문서 이미지를 검토하세요.");
             if (unresolved > 0) warnings.add("여러 표가 있지만 종이 사이 경계가 불확실한 영역 " + unresolved + "개는 하나로 유지했습니다. 표 개수는 종이 개수와 같지 않을 수 있습니다.");
             return new Result(List.copyOf(papers), Collections.unmodifiableMap(images), List.copyOf(warnings));
         }

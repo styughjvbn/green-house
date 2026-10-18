@@ -3335,7 +3335,7 @@ paths:
         '200':
           description: OK
           content:
-            image/png:
+            image/jpeg:
               schema:
                 type: string
                 format: byte

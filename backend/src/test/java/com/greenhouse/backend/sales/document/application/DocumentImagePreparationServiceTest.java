@@ -172,7 +172,7 @@ class DocumentImagePreparationServiceTest {
     when(processor.process(any(), any()))
         .thenReturn(
             new ProcessingResult(
-                result().report(), Map.of("01-corrected.png", new byte[64 * 1024 * 1024 + 1])));
+                result().report(), Map.of("01-corrected.jpg", new byte[64 * 1024 * 1024 + 1])));
     assertCode(
         () -> service.prepare("o", "image/png", png(), -1, .015),
         "DOCUMENT_IMAGE_PREVIEW_CAPACITY");
@@ -181,7 +181,7 @@ class DocumentImagePreparationServiceTest {
   }
 
   @Test
-  void realNativeBeanProducesReadablePngThroughTheHostService() throws Exception {
+  void realNativeBeanProducesReadableJpegThroughTheHostService() throws Exception {
     var configuration = new SlipImageConfiguration();
     try (var nativeProcessor = configuration.slipImageProcessor(1, 0, 1)) {
       var service =
@@ -238,15 +238,15 @@ class DocumentImagePreparationServiceTest {
     return new ProcessingResult(
         report,
         Map.of(
-            "01-corrected.png",
+            "01-corrected.jpg",
             new byte[] {1, 2},
-            "paper-01.png",
+            "paper-01.jpg",
             new byte[] {3},
-            "paper-01-compacted.png",
+            "paper-01-compacted.jpg",
             new byte[] {6},
-            "table-01-compacted.png",
+            "table-01-compacted.jpg",
             new byte[] {4},
-            "05-row-decisions.png",
+            "05-row-decisions.jpg",
             new byte[] {5}));
   }
 }

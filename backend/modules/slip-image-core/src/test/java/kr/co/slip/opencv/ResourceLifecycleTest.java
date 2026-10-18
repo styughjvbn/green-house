@@ -37,7 +37,7 @@ class ResourceLifecycleTest {
         scope.close(); scope.close(); assertTrue(roi.empty());
     }
 
-    @Test void modesSkipDiagnosticsWithoutChangingReportsOrProductionImages() {
+    @Test void modesSkipDiagnosticsWithoutChangingAnalysisAndReturnProductionJpegs() {
         byte[] image = fixture();
         SlipProcessor engine = new SlipProcessor();
         ProcessingOptions base = ProcessingOptions.defaults().withRotation(0);
@@ -45,10 +45,19 @@ class ResourceLifecycleTest {
         var production = engine.process(image, base.withOutputMode(OutputMode.PRODUCTION));
         var review = engine.process(image, base.withOutputMode(OutputMode.REVIEW));
         assertEquals(all.report(), production.report()); assertEquals(all.report(), review.report());
-        assertTrue(production.images().containsKey("paper-01.png"));
-        assertTrue(production.images().containsKey("paper-01-compacted.png"));
-        assertTrue(production.images().containsKey("table-01-compacted.png"));
-        for (String key : production.images().keySet()) assertArrayEquals(all.images().get(key), production.images().get(key));
+        assertTrue(production.images().containsKey("paper-01.jpg"));
+        assertTrue(production.images().containsKey("paper-01-compacted.jpg"));
+        assertTrue(production.images().containsKey("table-01-compacted.jpg"));
+        for (String key : production.images().keySet()) {
+            assertTrue(key.endsWith(".jpg"));
+            try (MatScope scope = new MatScope()) {
+                Mat decoded = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(production.images().get(key))), Imgcodecs.IMREAD_UNCHANGED));
+                Mat diagnostic = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(all.images().get(key.replace(".jpg", ".png")))), Imgcodecs.IMREAD_UNCHANGED));
+                assertFalse(decoded.empty());
+                assertEquals(3, decoded.channels());
+                assertEquals(diagnostic.size(), decoded.size());
+            }
+        }
         assertFalse(production.images().containsKey("05-row-decisions.png"));
         assertTrue(review.images().containsKey("05-row-decisions.png"));
         assertTrue(review.images().containsKey("06-paper-contours.png"));

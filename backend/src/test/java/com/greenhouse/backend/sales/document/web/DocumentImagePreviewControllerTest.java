@@ -106,7 +106,7 @@ class DocumentImagePreviewControllerTest {
             get("/api/sales-slips/image-previews/{id}/images/{imageId}", id, imageId)
                 .principal(() -> "worker"))
         .andExpect(status().isOk())
-        .andExpect(content().contentType("image/png"))
+        .andExpect(content().contentType("image/jpeg"))
         .andExpect(header().string("Cache-Control", "no-store"))
         .andExpect(header().string("X-Content-Type-Options", "nosniff"))
         .andExpect(content().bytes(new byte[] {1, 2}));

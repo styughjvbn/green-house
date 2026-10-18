@@ -4,7 +4,7 @@ Green House에서 코어를 사용·수정할 때 필요한 기술 기준입니�
 
 ## 1. 처리 흐름
 
-코어는 Java 21과 OpenCV 4.9.0-0으로 동작합니다. Spring·HTTP·DB에 의존하지 않으며 OCR이나 GPU를 사용하지 않습니다. 입력은 사진의 `byte[]`, 출력은 `ProcessingResult(report, images)`입니다. `images`는 파일명 → PNG 바이트의 Map이며 `report`는 Java record입니다. 디스크 저장은 호스트가 담당합니다.
+코어는 Java 21과 OpenCV 4.9.0-0으로 동작합니다. Spring·HTTP·DB에 의존하지 않으며 OCR이나 GPU를 사용하지 않습니다. 입력은 사진의 `byte[]`, 출력은 `ProcessingResult(report, images)`입니다. `images`는 파일명 → 이미지 바이트의 Map이며 `report`는 Java record입니다. 디스크 저장은 호스트가 담당합니다.
 
 | 단계 | 처리 | 결과·실패 시 동작 |
 |---|---|---|
@@ -38,6 +38,8 @@ Green House에서 코어를 사용·수정할 때 필요한 기술 기준입니�
 
 ### 사용할 결과
 
+운영(`PRODUCTION`) 결과는 흰 배경 JPEG(품질 92)이며 아래 파일명의 `.png` 대신 `.jpg`를 사용합니다. `REVIEW`·`ALL`은 마스크와 투명 배경 검토를 위한 PNG를 유지합니다. 문서 분석은 인코딩 전 메모리 이미지와 알파 마스크를 사용하며 중간 PNG 압축·재디코딩을 하지 않습니다. 호스트 미리보기 API는 JPEG를 반환하고 프론트는 재압축 없이 첨부합니다.
+
 | 결과 | 용도 |
 |---|---|
 | `01-corrected.png` | 회전·원근을 보정한 전체 사진. 빈 행은 잘라내지 않음 |
@@ -62,7 +64,7 @@ Green House에서 코어를 사용·수정할 때 필요한 기술 기준입니�
 | minimumInkRatio | 0.015 (1.5%) | 빈 행 판정 잉크 비율, 0–0.1. 높이면 필기 있는 행을 삭제할 위험도 증가 |
 | outputMode | ALL | 운영 호출은 PRODUCTION을 명시. 검토할 때 REVIEW, 상세 진단은 ALL |
 
-`PRODUCTION`은 전체 보정·검출된 표/종이 PNG와 report, `REVIEW`는 여기에 행 판정·종이 윤곽 표시, `ALL`은 선 표시와 수평·수직·종이 마스크까지 생성합니다. 선택하지 않은 진단 영상은 복제·그리기·PNG 인코딩부터 생략합니다. 모드 간 보고서·공통 PNG 동일성은 테스트합니다.
+`PRODUCTION`은 전체 보정·검출된 표/종이 JPEG와 report, `REVIEW`는 PNG 결과에 행 판정·종이 윤곽 표시, `ALL`은 선 표시와 수평·수직·종이 마스크까지 생성합니다. 선택하지 않은 진단 영상은 복제·그리기·인코딩부터 생략합니다. 모드 간 보고서 동일성·출력 크기와 운영 JPEG의 흰 배경을 테스트합니다.
 
 기본 처리 크기는 2048px이며, 내부 임계값의 기존 보정 기준 2200px은 유지합니다. 길이 임계값은 `s = min(원본 긴 변, maxDimension) / min(원본 긴 변, 2200)`에, 면적은 `s²`에 비례합니다. 색상·각도·잉크 비율은 유지하며 내부 최대 900px 종이 분석은 별도 좌표계 배율을 적용합니다. 비례 조정은 저해상도에서 같은 판정을 보장하지 않습니다. 최종 보정 캔버스는 회전·원근 변환 때문에 maxDimension보다 커질 수 있습니다.
 
@@ -71,7 +73,7 @@ Green House에서 코어를 사용·수정할 때 필요한 기술 기준입니�
 - `SlipProcessors.bounded(...)`로 생성한 인스턴스 하나를 Spring 싱글톤으로 공유합니다. `process()`도 같은 제한 실행기에 제출하고 기다리며, `processAsync()`는 Future를 반환합니다. 저수준 `new SlipProcessor()`는 제한을 우회합니다.
 - 기본은 worker 2개·대기열 4개·OpenCV 내부 스레드 1개입니다. 한도는 실행기 인스턴스별이며, 포화되면 `ProcessingRejectedException`으로 즉시 거절합니다. OpenCV 스레드 설정은 JVM 전체에 적용됩니다.
 - 비동기 loader는 worker 확보 후 파일을 읽으므로 대기열에 원본 바이트 전체를 보관하지 않을 수 있습니다. 호스트는 요청 종료 후 사라지는 업로드 임시 파일의 수명을 별도로 관리합니다.
-- Mat·ROI·커널·컨투어·PNG 인코딩 버퍼의 픽셀 참조는 단계별 scope/finally에서 명시적으로 release합니다. 호출자는 Mat을 받지 않으며 반환된 PNG byte[]와 파일 저장 메모리를 관리합니다. Java Mat wrapper의 native header 삭제에는 finalization 동작도 남아 있습니다.
+- Mat·ROI·커널·컨투어·이미지 인코딩 버퍼의 픽셀 참조는 단계별 scope/finally에서 명시적으로 release합니다. 호출자는 Mat을 받지 않으며 반환된 이미지 byte[]와 파일 저장 메모리를 관리합니다. Java Mat wrapper의 native header 삭제에는 finalization 동작도 남아 있습니다.
 - 취소·interrupt는 실행 중 JNI 연산을 즉시 멈추지 않습니다. 실제 반환까지 worker를 점유합니다. 같은 worker의 loader/callback에서 같은 실행기로 동기 재진입하거나 close하지 않습니다.
 - Bean 종료 시 close를 호출합니다. 종료 대기 한도 초과는 예외로 알리며 실행 중 native 작업이 남을 수 있습니다.
 

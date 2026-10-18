@@ -99,7 +99,7 @@ public class DocumentImagePreparationService {
   }
 
   private static SourceRegion sourceRegion(String name, ProcessingResult.Report report) {
-    if (!name.matches("paper-\\d+-compacted\\.png")) return null;
+    if (!name.matches("paper-\\d+-compacted\\.jpg")) return null;
     int index = Integer.parseInt(name.substring(6, name.indexOf("-compacted")));
     var paper = report.papers().stream().filter(p -> p.index() == index).findFirst().orElse(null);
     if (paper == null) return null;
@@ -127,10 +127,10 @@ public class DocumentImagePreparationService {
   }
 
   private static ImageKind kind(String name) {
-    if (name.equals("01-corrected.png")) return ImageKind.CORRECTED;
-    if (name.matches("paper-\\d+-compacted\\.png")) return ImageKind.DOCUMENT_COMPACTED;
-    if (name.matches("paper-\\d+\\.png")) return ImageKind.DOCUMENT;
-    if (name.matches("table-\\d+-compacted\\.png")) return ImageKind.TABLE;
+    if (name.equals("01-corrected.jpg")) return ImageKind.CORRECTED;
+    if (name.matches("paper-\\d+-compacted\\.jpg")) return ImageKind.DOCUMENT_COMPACTED;
+    if (name.matches("paper-\\d+\\.jpg")) return ImageKind.DOCUMENT;
+    if (name.matches("table-\\d+-compacted\\.jpg")) return ImageKind.TABLE;
     return null;
   }
 
