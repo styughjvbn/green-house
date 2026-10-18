@@ -63,7 +63,7 @@ final class PaperSeparator {
                     Rect bounds = Imgproc.boundingRect(contour);
                     List<Table> supported = tables.stream().filter(t -> inside(component, t.bounds())).sorted(
                             Comparator.comparingInt(t -> t.bounds().y())).toList();
-                    List<Seam> seams = knownDocumentQuad ? List.of() : seams(image, component, bounds, supported, pixels, componentScope);
+                    List<Seam> seams = knownDocumentQuad ? List.of() : seams(image, component, bounds, supported, pixels);
                     if (supported.size() >= 2 && seams.isEmpty()) unresolved++;
                     for (int layer = 0; layer <= seams.size(); layer++) {
                         try (Scope layerScope = new Scope()) {
@@ -71,17 +71,17 @@ final class PaperSeparator {
                             if (Core.countNonZero(regionMask) < image.total() * .025) continue;
                             // Convexify each sheet after splitting. Convexifying the whole stack first
                             // would introduce desk triangles between staggered sheets of different widths.
-                            convexify(regionMask, layerScope);
+                            convexify(regionMask);
+                            List<Table> paperTables = supported.stream().filter(t -> inside(regionMask, t.bounds())).toList();
+                            protectTableContent(regionMask, paperTables, seams, layer, pixels);
                             if (usedMask != null) Core.bitwise_or(usedMask, regionMask, usedMask);
                             Rect crop = Imgproc.boundingRect(regionMask);
                             int index = papers.size() + 1;
                             Mat cutout = layerScope.mat();
                             Imgproc.cvtColor(layerScope.own(image.submat(crop)), cutout, Imgproc.COLOR_BGR2BGRA);
                             Core.insertChannel(layerScope.own(regionMask.submat(crop)), cutout, 3);
-                            images.put(String.format("paper-%02d.png", index), png(cutout, layerScope));
-                            List<Table> paperTables = supported.stream().filter(t -> inside(regionMask, t.bounds())).toList();
-                            compactPaper(cutout, crop, paperTables, index, images, warnings, layerScope);
-                            List<XY> outline = outline(regionMask, layerScope);
+                            images.put(String.format("paper-%02d.png", index), png(cutout));
+                            List<XY> outline = outline(regionMask);
                             if (overlay != null) {
                                 MatOfPoint polygon = layerScope.own(new MatOfPoint(outline.stream().map(p -> new Point(p.x(), p.y())).toArray(Point[]::new)));
                                 Imgproc.polylines(overlay, List.of(polygon), true, new Scalar(220, 40, 200), 3);
@@ -99,8 +99,8 @@ final class PaperSeparator {
 
                 }
             }
-            if (overlay != null) images.put("06-paper-contours.png", png(overlay, m));
-            if (usedMask != null) images.put("07-paper-mask.png", png(usedMask, m));
+            if (overlay != null) images.put("06-paper-contours.png", png(overlay));
+            if (usedMask != null) images.put("07-paper-mask.png", png(usedMask));
             if (papers.isEmpty()) warnings.add("종이와 배경을 안정적으로 분리하지 못했습니다. 종이 이미지를 임의로 잘라내지 않았습니다.");
             else if (!knownDocumentQuad) warnings.add("종이 분리는 색상·외곽의 볼록 포락선·겹침 경계에 대한 추정입니다. 가려진 내용을 복원하지 않으며 작은 가림 물체나 배경이 포함될 수 있어 paper PNG를 검토하세요.");
             if (unresolved > 0) warnings.add("여러 표가 있지만 종이 사이 경계가 불확실한 영역 " + unresolved + "개는 하나로 유지했습니다. 표 개수는 종이 개수와 같지 않을 수 있습니다.");
@@ -108,29 +108,27 @@ final class PaperSeparator {
         }
     }
 
-    /** Preserve the paper header; shorten detected empty rows and discard content below the last table. */
-    private static void compactPaper(Mat cutout, Rect crop, List<Table> tables, int index,
-                                     Map<String, byte[]> images, List<String> warnings, Scope scope) {
-        if (tables.isEmpty()) return;
-        int previousBottom = crop.y;
-        for (Table table : tables) {
-            Box box = table.bounds();
-            if (box.x() < crop.x || box.y() < crop.y || box.x() + box.width() > crop.x + crop.width
-                    || box.y() + box.height() > crop.y + crop.height || box.y() < previousBottom) {
-                warnings.add("문서 " + index + ": 표가 잘렸거나 세로 영역이 겹쳐 문서 빈 행 축약을 생략했습니다.");
-                return;
-            }
-            previousBottom = box.y() + box.height();
-        }
-        List<Row> rows = tables.stream().flatMap(table -> table.rows().stream()).toList();
-        Mat compact = RowCompactor.compact(cutout, crop.y, previousBottom, rows, scope);
-        images.put(String.format("paper-%02d-compacted.png", index), png(compact, scope));
-    }
-
     private static boolean inside(Mat mask, Box box) {
         int x = Math.min(mask.cols() - 1, Math.max(0, box.x() + box.width() / 2));
         int y = Math.min(mask.rows() - 1, Math.max(0, box.y() + box.height() / 2));
         return mask.get(y, x)[0] != 0;
+    }
+
+    /** Grid evidence protects writing even when a shadow or hand confuses the paper mask. */
+    private static void protectTableContent(Mat mask, List<Table> tables, List<Seam> seams, int layer, PixelScale pixels) {
+        try (Scope scope = new Scope()) {
+            Mat protectedMask = scope.own(Mat.zeros(mask.size(), CvType.CV_8UC1));
+            for (Table table : tables) {
+                Box b = table.bounds();
+                int margin = Math.max(pixels.length(12), (int) Math.round(b.width() * .04));
+                int left = Math.max(0, b.x() - margin), top = Math.max(0, b.y() - pixels.length(12));
+                int right = Math.min(mask.cols(), b.x() + b.width() + margin);
+                int bottom = Math.min(mask.rows(), b.y() + b.height() + pixels.length(40));
+                if (right > left && bottom > top)
+                    Imgproc.rectangle(protectedMask, new Point(left, top), new Point(right - 1, bottom - 1), Scalar.all(255), -1);
+            }
+            Core.bitwise_or(mask, band(protectedMask, seams, layer, scope), mask);
+        }
     }
 
     private static Mat foreground(Mat image, List<Table> tables, PixelScale pixels, Scope parent) {
@@ -213,7 +211,7 @@ final class PaperSeparator {
         return new ColorModel(center, sigma);
     }
 
-    private static List<Seam> seams(Mat image, Mat mask, Rect bounds, List<Table> tables, PixelScale pixels, Scope parent) {
+    private static List<Seam> seams(Mat image, Mat mask, Rect bounds, List<Table> tables, PixelScale pixels) {
         try (Scope m = new Scope()) {
             if (tables.size() < 2) return List.of();
             Mat gray = m.mat(), blur = m.mat(), edges = m.mat(), lines = m.mat();
@@ -243,6 +241,9 @@ final class PaperSeparator {
                 Box above = tables.get(i).bounds(), below = tables.get(i + 1).bounds();
                 double minY = above.y() + above.height() - pixels.length(12), maxY = below.y() - pixels.length(15);
                 if (maxY <= minY || below.y() - above.y() < image.rows() * .12) continue;
+                // A narrow footer or broken grid is not evidence of another sheet.
+                if (Math.min(above.width(), below.width()) < Math.max(above.width(), below.width()) * .7
+                        || Math.abs(above.x() - below.x()) > Math.min(above.width(), below.width()) * .2) continue;
                 Seam best = null;
                 double midX = bounds.x + bounds.width / 2.;
                 for (Segment segment : segments) {
@@ -269,7 +270,7 @@ final class PaperSeparator {
                     double support = Math.abs(dx) / span;
                     if (best == null || support > best.support()) best = new Seam(a, b, support);
                 }
-                if (best == null) best = colorSeam(image, mask, bounds, (int) minY, (int) maxY, pixels, m);
+                if (best == null) best = colorSeam(image, mask, bounds, (int) minY, (int) maxY, pixels);
                 if (best != null && (result.isEmpty() || best.y(bounds.x + bounds.width / 2.) - result.getLast().y(bounds.x + bounds.width / 2.) > pixels.length(40)))
                     result.add(best);
             }
@@ -278,7 +279,7 @@ final class PaperSeparator {
         }
     }
 
-    private static Seam colorSeam(Mat image, Mat mask, Rect bounds, int start, int end, PixelScale pixels, Scope parent) {
+    private static Seam colorSeam(Mat image, Mat mask, Rect bounds, int start, int end, PixelScale pixels) {
         try (Scope m = new Scope()) {
             Mat blurred = m.mat(), lab = m.mat();
             Imgproc.GaussianBlur(image, blurred, new Size(pixels.odd(5), pixels.odd(5)), 0);
@@ -338,7 +339,7 @@ final class PaperSeparator {
         return result;
     }
 
-    private static void convexify(Mat mask, Scope parent) {
+    private static void convexify(Mat mask) {
         try (Scope m = new Scope()) {
             List<MatOfPoint> contours = new ArrayList<>();
             Imgproc.findContours(m.own(mask.clone()), contours, m.mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -356,7 +357,7 @@ final class PaperSeparator {
         }
     }
 
-    private static List<XY> outline(Mat mask, Scope parent) {
+    private static List<XY> outline(Mat mask) {
         try (Scope m = new Scope()) {
             List<MatOfPoint> contours = new ArrayList<>();
             Imgproc.findContours(m.own(mask.clone()), contours, m.mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -369,7 +370,7 @@ final class PaperSeparator {
 
         }
     }
-    private static byte[] png(Mat image, Scope m) {
+    private static byte[] png(Mat image) {
         MatOfByte bytes = new MatOfByte();
         try {
             if (!Imgcodecs.imencode(".png", image, bytes)) throw new IllegalStateException("PNG encode failed");

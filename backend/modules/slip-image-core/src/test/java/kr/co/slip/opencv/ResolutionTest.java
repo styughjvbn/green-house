@@ -37,23 +37,27 @@ class ResolutionTest {
         try {
             for (int y = 300; y <= 1860; y += 120)
                 Imgproc.line(reference, new Point(160, y), new Point(1440, y), Scalar.all(0), 3);
-            for (int x = 160; x <= 1440; x += 320)
-                Imgproc.line(reference, new Point(x, 300), new Point(x, 1860), Scalar.all(0), 3);
-            for (int i = 0; i < 13; i++) Imgproc.putText(reference, "FIXED", new Point(500, 375 + i * 120),
-                    Imgproc.FONT_HERSHEY_SIMPLEX, 1, Scalar.all(0), 3);
-            Imgproc.putText(reference, "BLUE", new Point(850, 735), Imgproc.FONT_HERSHEY_SIMPLEX, 1.2, new Scalar(180, 60, 20), 3);
-            Imgproc.putText(reference, "BLACK", new Point(850, 1095), Imgproc.FONT_HERSHEY_SIMPLEX, 1.2, Scalar.all(0), 3);
+            for (double x : new double[]{0, .132, .333, .450, .566, .683, .819, 1})
+                Imgproc.line(reference, new Point(160 + x * 1280, 300), new Point(160 + x * 1280, 1860), Scalar.all(0), 3);
+            Imgproc.putText(reference, "BLUE", new Point(850, 735), Imgproc.FONT_HERSHEY_SIMPLEX, 1.2, new Scalar(180, 60, 20), 6);
+            Imgproc.putText(reference, "BLACK", new Point(850, 1095), Imgproc.FONT_HERSHEY_SIMPLEX, 1.2, Scalar.all(0), 6);
+            Imgproc.putText(reference, "MIDDLE", new Point(850, 975), Imgproc.FONT_HERSHEY_SIMPLEX, 1.2, Scalar.all(0), 6);
             Imgproc.resize(reference, source, new Size(2400, 3300), 0, 0, Imgproc.INTER_CUBIC);
             Imgcodecs.imencode(".png", source, encoded);
+            // Keep the fixture threshold fixed while comparing resolutions.
             var result = new SlipProcessor().process(encoded.toArray(),
-                    ProcessingOptions.defaults().withMaxDimension(dimension).withRotation(0));
+                    new ProcessingOptions(dimension, 2, .01, 0));
             assertEquals(dimension, result.report().workingHeight());
             assertEquals(1, result.report().tables().size());
             List<Row> rows = result.report().tables().getFirst().rows();
             assertEquals(13, rows.size());
             assertFalse(rows.get(3).removed(), "Blue writing must survive");
             assertFalse(rows.get(6).removed(), "Black writing must survive");
-            assertEquals(9, rows.stream().filter(Row::removed).count(), () -> "Only two headers and two written rows remain: " + rows);
+            assertFalse(rows.get(2).removed());
+            assertFalse(rows.get(4).removed());
+            assertFalse(rows.get(5).removed());
+            assertFalse(rows.get(7).removed());
+            assertEquals(5, rows.stream().filter(Row::removed).count(), () -> "Keep the first of two consecutive blanks and remove the tail: " + rows);
         } finally { reference.release(); source.release(); encoded.release(); }
     }
 

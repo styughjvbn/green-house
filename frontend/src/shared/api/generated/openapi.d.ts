@@ -7149,6 +7149,8 @@ export interface operations {
         parameters: {
             query?: {
                 rotationDegrees?: number;
+                /** @description 빈 행 판정 잉크 비율. 0.015는 1.5%이며, 이 값 이하인 행을 빈 행으로 판정합니다. */
+                minimumInkRatio?: number;
             };
             header?: never;
             path?: never;

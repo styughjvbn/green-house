@@ -32,7 +32,7 @@ class DocumentImagePreparationServiceTest {
     var service = service();
     byte[] original = png();
     byte[] before = original.clone();
-    var preview = service.prepare("owner", "image/png", original, 90);
+    var preview = service.prepare("owner", "image/png", original, 90, .025);
     assertThat(original).containsExactly(before);
     assertThat(preview.images()).hasSize(4);
     assertThat(preview.images())
@@ -48,7 +48,8 @@ class DocumentImagePreparationServiceTest {
                 options ->
                     options.outputMode() == OutputMode.PRODUCTION
                         && options.rotationDegrees() == 90
-                        && options.maxDimension() == 2200));
+                        && options.maxDimension() == 2200
+                        && options.minimumInkRatio() == .025));
     assertThat(service.image("owner", preview.id(), preview.images().getFirst().id()))
         .containsExactly(1, 2);
   }
@@ -56,7 +57,7 @@ class DocumentImagePreparationServiceTest {
   @Test
   void isolatesOwnersExpiresPreviewsAndReleasesExplicitly() throws Exception {
     var service = service();
-    var preview = service.prepare("owner", "image/png", png(), -1);
+    var preview = service.prepare("owner", "image/png", png(), -1, .015);
     var image = preview.images().getFirst().id();
     assertCode(
         () -> service.image("other", preview.id(), image), "DOCUMENT_IMAGE_PREVIEW_NOT_FOUND");
@@ -65,7 +66,7 @@ class DocumentImagePreparationServiceTest {
     service.remove("owner", preview.id());
     assertCode(
         () -> service.image("owner", preview.id(), image), "DOCUMENT_IMAGE_PREVIEW_NOT_FOUND");
-    var next = service.prepare("owner", "image/png", png(), -1);
+    var next = service.prepare("owner", "image/png", png(), -1, .015);
     when(clock.instant()).thenReturn(now.plusSeconds(300));
     assertCode(
         () -> service.image("owner", next.id(), next.images().getFirst().id()),
@@ -76,10 +77,26 @@ class DocumentImagePreparationServiceTest {
   void rejectsInvalidInputsBeforeNativeProcessing() throws Exception {
     var service = service();
     assertCode(
-        () -> service.prepare("o", "image/png", new byte[] {1}, -1),
+        () -> service.prepare("o", "image/png", new byte[] {1}, -1, .015),
         "DOCUMENT_IMAGE_INVALID_INPUT");
-    assertCode(() -> service.prepare("o", "image/png", png(), 45), "DOCUMENT_IMAGE_INVALID_INPUT");
-    assertCode(() -> service.prepare("o", "image/gif", png(), -1), "DOCUMENT_IMAGE_INVALID_INPUT");
+    assertCode(
+        () -> service.prepare("o", "image/png", png(), 45, .015), "DOCUMENT_IMAGE_INVALID_INPUT");
+    assertCode(
+        () -> service.prepare("o", "image/gif", png(), -1, .015), "DOCUMENT_IMAGE_INVALID_INPUT");
+    verify(processor, never()).process(any(), any());
+  }
+
+  @Test
+  void rejectsInvalidInkRatiosBeforeNativeProcessing() throws Exception {
+    var service = service();
+    for (double ratio :
+        new double[] {
+          -.001, .101, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY
+        }) {
+      assertCode(
+          () -> service.prepare("o", "image/png", png(), -1, ratio),
+          "DOCUMENT_IMAGE_INVALID_INPUT");
+    }
     verify(processor, never()).process(any(), any());
   }
 
@@ -88,24 +105,25 @@ class DocumentImagePreparationServiceTest {
     var service = service();
     when(processor.process(any(), any())).thenThrow(new ProcessingRejectedException("full"));
     assertCode(
-        () -> service.prepare("o", "image/png", png(), -1), "DOCUMENT_IMAGE_PROCESSING_BUSY");
+        () -> service.prepare("o", "image/png", png(), -1, .015), "DOCUMENT_IMAGE_PROCESSING_BUSY");
     doThrow(new ProcessingInterruptedException(new InterruptedException()))
         .when(processor)
         .process(any(), any());
     assertCode(
-        () -> service.prepare("o", "image/png", png(), -1),
+        () -> service.prepare("o", "image/png", png(), -1, .015),
         "DOCUMENT_IMAGE_PROCESSING_INTERRUPTED");
   }
 
   @Test
   void boundsRetainedResultsAndAllowsNewPreviewAfterRemoval() throws Exception {
     var service = service();
-    var first = service.prepare("o", "image/png", png(), -1);
-    for (int i = 1; i < 16; i++) service.prepare("o", "image/png", png(), -1);
+    var first = service.prepare("o", "image/png", png(), -1, .015);
+    for (int i = 1; i < 16; i++) service.prepare("o", "image/png", png(), -1, .015);
     assertCode(
-        () -> service.prepare("o", "image/png", png(), -1), "DOCUMENT_IMAGE_PREVIEW_CAPACITY");
+        () -> service.prepare("o", "image/png", png(), -1, .015),
+        "DOCUMENT_IMAGE_PREVIEW_CAPACITY");
     service.remove("o", first.id());
-    assertThat(service.prepare("o", "image/png", png(), -1)).isNotNull();
+    assertThat(service.prepare("o", "image/png", png(), -1, .015)).isNotNull();
   }
 
   @Test
@@ -116,9 +134,10 @@ class DocumentImagePreparationServiceTest {
             new ProcessingResult(
                 result().report(), Map.of("01-corrected.png", new byte[64 * 1024 * 1024 + 1])));
     assertCode(
-        () -> service.prepare("o", "image/png", png(), -1), "DOCUMENT_IMAGE_PREVIEW_CAPACITY");
+        () -> service.prepare("o", "image/png", png(), -1, .015),
+        "DOCUMENT_IMAGE_PREVIEW_CAPACITY");
     when(processor.process(any(), any())).thenReturn(result());
-    assertThat(service.prepare("o", "image/png", png(), -1)).isNotNull();
+    assertThat(service.prepare("o", "image/png", png(), -1, .015)).isNotNull();
   }
 
   @Test
@@ -128,7 +147,7 @@ class DocumentImagePreparationServiceTest {
       var service =
           new DocumentImagePreparationService(
               nativeProcessor, Clock.fixed(now, ZoneOffset.UTC), 2200);
-      var preview = service.prepare("o", "image/png", png(), 0);
+      var preview = service.prepare("o", "image/png", png(), 0, .015);
       assertThat(preview.images()).isNotEmpty();
       for (var image : preview.images()) {
         assertThat(

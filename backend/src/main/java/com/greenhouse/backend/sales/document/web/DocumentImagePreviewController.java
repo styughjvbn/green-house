@@ -6,6 +6,8 @@ import com.greenhouse.backend.sales.document.application.DocumentImagePreparatio
 import com.greenhouse.backend.sales.document.application.DocumentImagePreparationService.PreparationException;
 import com.greenhouse.backend.sales.document.application.DocumentImagePreparationService.Preview;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
 import java.security.Principal;
@@ -31,6 +33,17 @@ public class DocumentImagePreviewController {
   public ApiResponse<Preview> prepare(
       @RequestPart("image") MultipartFile image,
       @RequestParam(defaultValue = "-1") int rotationDegrees,
+      @Parameter(
+              description = "빈 행 판정 잉크 비율. 0.015는 1.5%이며, 이 값 이하인 행을 빈 행으로 판정합니다.",
+              schema =
+                  @Schema(
+                      type = "number",
+                      format = "double",
+                      defaultValue = "0.015",
+                      minimum = "0",
+                      maximum = "0.1"))
+          @RequestParam(defaultValue = "0.015")
+          double minimumInkRatio,
       Principal principal)
       throws IOException {
     if (image.isEmpty() || image.getSize() > UploadImage.MAX_BYTES)
@@ -38,7 +51,11 @@ public class DocumentImagePreviewController {
           400, "DOCUMENT_IMAGE_INVALID_INPUT", "사진은 최대 8MB까지 등록할 수 있습니다.");
     return ApiResponse.ok(
         service.prepare(
-            actor(principal), image.getContentType(), image.getBytes(), rotationDegrees));
+            actor(principal),
+            image.getContentType(),
+            image.getBytes(),
+            rotationDegrees,
+            minimumInkRatio));
   }
 
   @GetMapping(value = "/{id}/images/{imageId}", produces = MediaType.IMAGE_PNG_VALUE)

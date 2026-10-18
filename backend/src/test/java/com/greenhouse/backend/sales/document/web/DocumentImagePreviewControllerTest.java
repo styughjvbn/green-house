@@ -9,6 +9,7 @@ import com.greenhouse.backend.sales.document.application.DocumentImagePreparatio
 import com.greenhouse.backend.sales.document.application.DocumentImagePreparationService.PreparationException;
 import java.util.List;
 import java.util.UUID;
+import kr.co.slip.api.ProcessingOptions;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -41,7 +42,7 @@ class DocumentImagePreviewControllerTest {
         Assertions.assertThatThrownBy(
                 () ->
                     controller.prepare(
-                        new MockMultipartFile("image", new byte[] {1}), -1, () -> "demo"))
+                        new MockMultipartFile("image", new byte[] {1}), -1, .015, () -> "demo"))
             .isInstanceOf(AccessDeniedException.class);
         Assertions.assertThatThrownBy(
                 () -> controller.image(UUID.randomUUID(), UUID.randomUUID(), () -> "demo"))
@@ -56,7 +57,7 @@ class DocumentImagePreviewControllerTest {
   @Test
   void passesActorAndRotationAndUsesCommonErrorEnvelope() throws Exception {
     var service = mock(DocumentImagePreparationService.class);
-    when(service.prepare(eq("worker"), eq("image/png"), any(), eq(90)))
+    when(service.prepare(eq("worker"), eq("image/png"), any(), eq(90), eq(.025)))
         .thenThrow(new PreparationException(429, "DOCUMENT_IMAGE_PROCESSING_BUSY", "busy"));
     var mvc =
         MockMvcBuilders.standaloneSetup(new DocumentImagePreviewController(service))
@@ -66,12 +67,30 @@ class DocumentImagePreviewControllerTest {
             multipart("/api/sales-slips/image-previews")
                 .file(new MockMultipartFile("image", "a.png", "image/png", new byte[] {1}))
                 .param("rotationDegrees", "90")
+                .param("minimumInkRatio", "0.025")
                 .principal(() -> "worker"))
         .andExpect(status().isTooManyRequests())
         .andExpect(jsonPath("$.error.code").value("DOCUMENT_IMAGE_PROCESSING_BUSY"));
     mvc.perform(multipart("/api/sales-slips/image-previews"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.error.code").value("DOCUMENT_IMAGE_INVALID_INPUT"));
+  }
+
+  @Test
+  void omittedInkRatioUsesTheCoreDefault() throws Exception {
+    var service = mock(DocumentImagePreparationService.class);
+    var mvc = MockMvcBuilders.standaloneSetup(new DocumentImagePreviewController(service)).build();
+    mvc.perform(
+            multipart("/api/sales-slips/image-previews")
+                .file(new MockMultipartFile("image", "a.png", "image/png", new byte[] {1})))
+        .andExpect(status().isOk());
+    verify(service)
+        .prepare(
+            eq("local"),
+            eq("image/png"),
+            any(),
+            eq(-1),
+            eq(ProcessingOptions.defaults().minimumInkRatio()));
   }
 
   @Test

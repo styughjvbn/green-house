@@ -120,37 +120,108 @@ public final class SlipProcessor implements SlipImageProcessor {
                     List<Integer> xs = projections(tolerantVertical, false, .30);
                     if (ys.size() < 3 || xs.size() < 2) continue;
                     tableIndex++;
-                    List<Row> rows = classifyRows(work, binary, grid, region, ys, options, tableScope);
-                    for (Row row : rows) {
-                        if (row.removed() && rowOverlay != null) Imgproc.rectangle(rowOverlay,
-                                new Point(region.x, row.top()), new Point(region.x + region.width - 1, row.bottom()),
-                                new Scalar(0, 0, 255), 2);
-                    }
-                    Mat compact = RowCompactor.compact(tableScope.own(work.submat(region)), region.y,
-                            region.y + region.height, rows, tableScope);
-                    images.put(String.format("table-%02d-compacted.png", tableIndex), png(compact, tableScope));
+                    // Geometry only: paper separation must finish before any row decisions.
                     tables.add(new Table(tableIndex, new Box(region.x, region.y, region.width, region.height),
                             ys.stream().map(y -> y + region.y).toList(), xs.stream().map(x -> x + region.x).toList(),
-                            rows, (int) rows.stream().filter(Row::removed).count()));
+                            List.of(), 0));
 
                 }
             }
             if (tables.isEmpty()) warnings.add("안정적인 표 격자를 찾지 못해 빈 행을 제거하지 않았습니다.");
-            if (options.ignoreRepeatedPrint()) warnings.add("고정 인쇄 패턴은 5개 이상의 유사 높이 행에서 추정합니다. 흑백 필기·동일 내용 반복·도장·취소선은 검토가 필요합니다.");
-            if (rowOverlay != null) {
-                images.put("05-row-decisions.png", png(rowOverlay, m));
-                m.release(rowOverlay);
-            }
-            m.release(binary); m.release(horizontal); m.release(vertical); m.release(grid);
             PaperSeparator.Result separated = PaperSeparator.separate(work, tables, quad != null, m.scale, options.outputMode());
             images.putAll(separated.images());
             warnings.addAll(separated.warnings());
+            tables = analyzeDocuments(binary, grid, tables, separated, options, images, warnings, m);
+            for (Table table : tables) {
+                try (Mats tableScope = new Mats(m.scale)) {
+                    Box b = table.bounds();
+                    Rect region = new Rect(b.x(), b.y(), b.width(), b.height());
+                    if (table.rows().isEmpty() || !table.rows().stream().allMatch(Row::removed)) {
+                        Mat compact = RowCompactor.compact(tableScope.own(work.submat(region)), b.y(), table.rows(), tableScope);
+                        if (compact != null) images.put(String.format("table-%02d-compacted.png", table.index()), png(compact, tableScope));
+                    }
+                    if (rowOverlay != null) for (Row row : table.rows()) if (row.removed())
+                        Imgproc.rectangle(rowOverlay, new Point(b.x(), row.top()),
+                                new Point(b.x() + b.width() - 1, row.bottom()), new Scalar(0, 0, 255), 2);
+                }
+            }
+            if (rowOverlay != null) images.put("05-row-decisions.png", png(rowOverlay, m));
             // Report coordinates continue to describe the unshortened corrected image.
             return new ProcessingResult(new Report(correction, sw, sh, work.cols(), work.rows(),
                     List.copyOf(corners), List.copyOf(warnings), List.copyOf(tables),
                     new Rotation(options.rotationDegrees() == -1 ? "AUTO" : "MANUAL", orientation.quarterTurns() * 90,
                             skewAngle, options.rotationDegrees() == -1, orientation.method()), separated.papers()), Collections.unmodifiableMap(images));
         }
+    }
+
+    private static List<Table> analyzeDocuments(Mat binary, Mat grid, List<Table> geometry,
+                                                PaperSeparator.Result separated, ProcessingOptions options,
+                                                Map<String, byte[]> images, List<String> warnings, Mats parent) {
+        if (separated.papers().isEmpty()) {
+            warnings.add("문서 분리 결과가 없어 전체 사진을 하나의 분석 범위로 사용합니다.");
+            return BlankRowCutoff.apply(geometry.stream().map(table -> analyzeTable(binary, grid, table, 0, 0,
+                    options, warnings, parent)).toList());
+        }
+        Map<Integer, Table> analyzed = new HashMap<>();
+        Map<Integer, Long> owners = separated.papers().stream().flatMap(p -> p.tableIndices().stream())
+                .collect(java.util.stream.Collectors.groupingBy(i -> i, java.util.stream.Collectors.counting()));
+        for (Paper paper : separated.papers()) {
+            try (Mats scope = new Mats(parent.scale)) {
+                MatOfByte bytes = scope.own(new MatOfByte(images.get(String.format("paper-%02d.png", paper.index()))));
+                Mat cutout = scope.own(Imgcodecs.imdecode(bytes, Imgcodecs.IMREAD_UNCHANGED));
+                Mat alpha = scope.mat(), invisible = scope.mat();
+                Core.extractChannel(cutout, alpha, 3);
+                Core.compare(alpha, Scalar.all(0), invisible, Core.CMP_EQ);
+                Box box = paper.bounds();
+                Rect crop = new Rect(box.x(), box.y(), box.width(), box.height());
+                Mat localBinary = scope.own(scope.own(binary.submat(crop)).clone());
+                Mat localGrid = scope.own(scope.own(grid.submat(crop)).clone());
+                scope.own(localBinary.setTo(Scalar.all(0), invisible));
+                scope.own(localGrid.setTo(Scalar.all(0), invisible));
+                List<Table> documentTables = geometry.stream().filter(t -> paper.tableIndices().contains(t.index())).toList();
+                boolean complete = true;
+                for (Table table : documentTables) {
+                    Box b = table.bounds();
+                    Rect local = new Rect(b.x() - crop.x, b.y() - crop.y, b.width(), b.height());
+                    boolean contained = local.x >= 0 && local.y >= 0
+                            && local.x + local.width <= cutout.cols() && local.y + local.height <= cutout.rows();
+                    if (owners.get(table.index()) != 1 || !contained
+                            || Core.countNonZero(scope.own(alpha.submat(local))) < local.area()) {
+                        complete = false;
+                        warnings.add("문서 " + paper.index() + ": 표 " + table.index()
+                                + "의 소속 또는 전체 영역을 확인하지 못해 해당 표 분석과 문서 축약을 생략했습니다.");
+                        continue;
+                    }
+                    analyzed.put(table.index(), analyzeTable(localBinary, localGrid, table,
+                            crop.x, crop.y, options, warnings, scope));
+                }
+                if (complete) {
+                    List<Table> decided = BlankRowCutoff.apply(documentTables.stream()
+                            .map(t -> analyzed.get(t.index())).toList());
+                    decided.forEach(table -> analyzed.put(table.index(), table));
+                    PaperCompactor.compact(cutout, crop, decided, paper.index(), images, warnings, scope);
+                }
+            }
+        }
+        for (Table table : geometry) if (!owners.containsKey(table.index()))
+            warnings.add("표 " + table.index() + ": 분리 문서에 속하지 않아 행 제거를 생략했습니다.");
+        return geometry.stream().map(t -> analyzed.getOrDefault(t.index(), t)).toList();
+    }
+
+    private static Table analyzeTable(Mat binary, Mat grid, Table geometry, int originX, int originY,
+                                      ProcessingOptions options, List<String> warnings, Mats parent) {
+        Box b = geometry.bounds();
+        Rect region = new Rect(b.x() - originX, b.y() - originY, b.width(), b.height());
+        List<Integer> ys = geometry.horizontalLines().stream().map(y -> y - b.y()).toList();
+        List<Integer> xs = geometry.verticalLines().stream().map(x -> x - b.x()).toList();
+        TableLayout layout = TableLayout.detect(grid, region, xs, ys, parent.scale);
+        if (layout.kind() == TableLayout.Kind.UNKNOWN)
+            warnings.add("표 " + geometry.index() + ": 수탁증·상장의뢰서 양식을 확인하지 못해 행 제거를 생략했습니다.");
+        List<Row> rows = classifyRows(binary, grid, region, ys, layout, options, parent).stream()
+                .map(r -> new Row(r.index(), r.top() + originY, r.bottom() + originY,
+                        r.inkRatio(), r.inkPixels(), r.removed(), r.reason())).toList();
+        return new Table(geometry.index(), b, geometry.horizontalLines(), geometry.verticalLines(), rows,
+                (int) rows.stream().filter(Row::removed).count());
     }
 
     private static void clearBorder(Mat mask, int border) {
@@ -289,11 +360,30 @@ public final class SlipProcessor implements SlipImageProcessor {
             clearBorder(horizontal, m.px(12)); clearBorder(vertical, m.px(12));
             Core.bitwise_or(horizontal, vertical, grid);
             Imgproc.dilate(grid, grid, m.kernel(5, 5));
-            Imgproc.threshold(gray, ink, 110, 255, Imgproc.THRESH_BINARY_INV);
-            Core.subtract(ink, grid, ink);
+            // A fixed darkness threshold counts a hand's shadow as dense bottom ink.
+            // Compare locally thresholded strokes instead of absolute paper brightness.
+            Core.subtract(binary, grid, ink);
+            Mat hsv = m.mat(), blue = m.mat();
+            Imgproc.cvtColor(image, hsv, Imgproc.COLOR_BGR2HSV);
+            Core.inRange(hsv, new Scalar(90, 20, 30), new Scalar(140, 255, 255), blue);
+            // Handwritten account numbers in the footer are not a printed header.
+            Mat headingInk = m.mat();
+            Core.subtract(ink, blue, headingInk);
             double top = 0, bottom = 0;
             int count = 0;
-            for (Rect region : tableRegions(horizontal, image.size(), m)) {
+            List<Rect> regions = tableRegions(horizontal, image.size(), m);
+            double largest = regions.stream().mapToDouble(r -> r.area()).max().orElse(0);
+            Rect main = regions.stream().max(Comparator.comparingDouble(r -> r.area())).orElse(null);
+            if (main != null) {
+                double[] heading = externalHeadingScores(headingInk, main, m);
+                // A visible upright title vetoes a flip caused by dense footer rows.
+                // Footer text alone cannot introduce an otherwise unsupported inversion.
+                if (heading[0] > image.total() * .0003 && heading[0] > heading[1] * 1.8)
+                    return new double[]{1, 0};
+            }
+            for (Rect region : regions) {
+                // Small footer grids must not outweigh the main table header.
+                if (region.area() < largest * .6) continue;
                 Mat tolerant = m.mat();
                 Imgproc.dilate(m.own(horizontal.submat(region)), tolerant, m.kernel(1, 9));
                 List<Integer> ys = projections(tolerant, true, .50);
@@ -311,6 +401,22 @@ public final class SlipProcessor implements SlipImageProcessor {
             return count == 0 ? new double[]{0, 0} : new double[]{top / count, bottom / count};
 
         }
+    }
+
+    private static double[] externalHeadingScores(Mat ink, Rect table, Mats m) {
+        Mat labels = m.mat(), stats = m.mat(), centers = m.mat();
+        int count = Imgproc.connectedComponentsWithStats(ink, labels, stats, centers);
+        double[] scores = new double[2];
+        for (int i = 1; i < count; i++) {
+            int x = (int) stats.get(i, Imgproc.CC_STAT_LEFT)[0], y = (int) stats.get(i, Imgproc.CC_STAT_TOP)[0];
+            int width = (int) stats.get(i, Imgproc.CC_STAT_WIDTH)[0], height = (int) stats.get(i, Imgproc.CC_STAT_HEIGHT)[0];
+            if (height < ink.rows() * .008 || height > ink.rows() * .06 || width > ink.cols() * .15
+                    || x + width < table.x || x > table.x + table.width) continue;
+            double area = stats.get(i, Imgproc.CC_STAT_AREA)[0];
+            if (y + height < table.y) scores[0] += area;
+            else if (y > table.y + table.height) scores[1] += area;
+        }
+        return scores;
     }
 
     private static Point[] documentQuad(Mat image, Mats parent) {
@@ -364,7 +470,36 @@ public final class SlipProcessor implements SlipImageProcessor {
             double[] inside = medianColor(image, innerNear), outside = medianColor(image, outerFar);
             double contrast = 0;
             for (int i = 0; i < 3; i++) contrast += Math.pow(inside[i] - outside[i], 2);
-            return Math.sqrt(contrast) > 20;
+            if (Math.sqrt(contrast) <= 20) return false;
+            // Paper must end at individual edges too; a table may have dark surroundings
+            // on its sides while the actual header continues above its top border.
+            Point center = new Point(Arrays.stream(points).mapToDouble(p -> p.x).average().orElseThrow(),
+                    Arrays.stream(points).mapToDouble(p -> p.y).average().orElseThrow());
+            int supported = 0;
+            for (int edge = 0; edge < points.length; edge++) {
+                Point a = points[edge], b = points[(edge + 1) % points.length];
+                double dx = b.x - a.x, dy = b.y - a.y, length = Math.hypot(dx, dy);
+                if (length == 0) continue;
+                double nx = -dy / length, ny = dx / length;
+                if (nx * (center.x - (a.x + b.x) / 2) + ny * (center.y - (a.y + b.y) / 2) < 0) {
+                    nx = -nx; ny = -ny;
+                }
+                List<Double> differences = new ArrayList<>();
+                for (int sample = 1; sample <= 9; sample++) {
+                    double x = a.x + dx * sample / 10., y = a.y + dy * sample / 10.;
+                    int ix = (int) Math.round(x + nx * m.px(14)), iy = (int) Math.round(y + ny * m.px(14));
+                    int ox = (int) Math.round(x - nx * m.px(14)), oy = (int) Math.round(y - ny * m.px(14));
+                    if (ix < 0 || iy < 0 || ox < 0 || oy < 0 || ix >= image.cols() || ox >= image.cols()
+                            || iy >= image.rows() || oy >= image.rows()) continue;
+                    double[] ic = image.get(iy, ix), oc = image.get(oy, ox);
+                    double distance = 0;
+                    for (int c = 0; c < 3; c++) distance += Math.pow(ic[c] - oc[c], 2);
+                    differences.add(Math.sqrt(distance));
+                }
+                differences.sort(Double::compare);
+                if (differences.size() >= 5 && differences.get(differences.size() / 2) > 25) supported++;
+            }
+            return supported == 4;
 
         }
     }
@@ -545,78 +680,37 @@ public final class SlipProcessor implements SlipImageProcessor {
         return peaks;
     }
 
-    private static List<Row> classifyRows(Mat image, Mat binary, Mat grid, Rect region,
-                                           List<Integer> ys, ProcessingOptions options, Mats parent) {
+    private static List<Row> classifyRows(Mat binary, Mat grid, Rect region,
+                                           List<Integer> ys, TableLayout layout, ProcessingOptions options, Mats parent) {
         try (Mats m = new Mats(parent.scale)) {
-            Mat expandedGrid = m.mat(), content = m.mat(), hsv = m.mat(), blue = m.mat();
+            Mat expandedGrid = m.mat(), content = m.mat();
             Imgproc.dilate(grid, expandedGrid, m.kernel(5, 5));
             Core.subtract(binary, expandedGrid, content);
-            Imgproc.cvtColor(image, hsv, Imgproc.COLOR_BGR2HSV);
-            Core.inRange(hsv, new Scalar(90, 48, 30), new Scalar(140, 255, 245), blue);
-            // Blue handwriting is evidence even when its shape coincides with a repeated printed label.
-            Core.subtract(blue, expandedGrid, blue);
-            int normalizedHeight = m.px(64);
-            List<Mat> normalized = new ArrayList<>(), colored = new ArrayList<>();
-            List<Integer> heights = new ArrayList<>();
-            for (int i = 0; i < ys.size() - 1; i++) heights.add(ys.get(i + 1) - ys.get(i));
-            List<Integer> sortedHeights = new ArrayList<>(heights);
-            Collections.sort(sortedHeights);
-            int typical = sortedHeights.get(sortedHeights.size() / 2);
-            for (int i = 0; i < heights.size(); i++) {
-                int inset = Math.min(m.px(5), Math.max(m.px(2), heights.get(i) / 8));
-                Rect r = new Rect(region.x + m.px(4), region.y + ys.get(i) + inset,
-                        Math.max(1, region.width - 2 * m.px(4)), Math.max(1, heights.get(i) - 2 * inset));
-                Mat n = m.mat(), c = m.mat();
-                Imgproc.resize(m.own(content.submat(r)), n, new Size(region.width - 2 * m.px(4), normalizedHeight), 0, 0, Imgproc.INTER_NEAREST);
-                Imgproc.resize(m.own(blue.submat(r)), c, n.size(), 0, 0, Imgproc.INTER_NEAREST);
-                normalized.add(n); colored.add(c);
-            }
-            Mat template = m.zeros(normalizedHeight, region.width - 2 * m.px(4), CvType.CV_8UC1);
-            List<Integer> eligible = new ArrayList<>();
-            for (int i = options.protectedTopRows(); i < heights.size(); i++)
-                if (Math.abs(heights.get(i) - typical) <= typical * .20) eligible.add(i);
-            if (options.ignoreRepeatedPrint() && eligible.size() >= 5) {
-                Mat sum = m.zeros(template.rows(), template.cols(), CvType.CV_32FC1);
-                for (int index : eligible) {
-                    Mat padded = m.mat(), value = m.mat();
-                    // Retain a one-pixel matching radius when downsampling introduces rounding jitter.
-                    Imgproc.dilate(normalized.get(index), padded, m.lineKernel(m.scale.odd(3), m.scale.odd(5)));
-                    padded.convertTo(value, CvType.CV_32FC1, 1. / 255);
-                    Core.add(sum, value, sum);
-                }
-                Core.compare(sum, Scalar.all(Math.ceil(eligible.size() * .70)), template, Core.CMP_GE);
-            }
+            int protectedRows = Math.max(options.protectedTopRows(), layout.headerRows());
             List<Row> result = new ArrayList<>();
-            for (int i = 0; i < normalized.size(); i++) {
-                Mat residual = m.mat();
-                Core.subtract(normalized.get(i), template, residual);
-                Core.bitwise_or(residual, colored.get(i), residual);
-                int ink = significantPixels(residual, m.scale.area(options.minimumComponentArea()), m);
-                double ratio = ink / (double) residual.total();
-                boolean protectedRow = i < options.protectedTopRows() || heights.get(i) < typical * .65 || heights.get(i) > typical * 1.35;
-                boolean empty = !protectedRow && ratio < options.minimumInkRatio();
-                result.add(new Row(i, region.y + ys.get(i), region.y + ys.get(i + 1), ratio, ink, empty,
-                        protectedRow ? "PROTECTED_HEADER_OR_MERGED_ROW" : empty ? "NO_SIGNIFICANT_INK" : "CONTENT_PRESENT"));
+            for (int i = 0; i < ys.size() - 1; i++) {
+                int height = ys.get(i + 1) - ys.get(i);
+                int inset = Math.min(m.px(5), Math.max(m.px(2), height / 8));
+                Rect r = new Rect(region.x + m.px(4), region.y + ys.get(i) + inset,
+                        Math.max(1, region.width - 2 * m.px(4)), Math.max(1, height - 2 * inset));
+                int ink = Core.countNonZero(m.own(content.submat(r)));
+                int area = r.width * r.height;
+                if (layout.kind() == TableLayout.Kind.CONSIGNMENT_RECEIPT) {
+                    int left = Math.max(r.x, region.x + layout.printedLeft() - m.px(3));
+                    int right = Math.min(r.x + r.width, region.x + layout.printedRight() + m.px(3));
+                    Rect printed = new Rect(left, r.y, right - left, r.height);
+                    ink -= Core.countNonZero(m.own(content.submat(printed)));
+                    area -= printed.width * printed.height;
+                }
+                double ratio = ink / (double) area;
+                boolean unknown = layout.kind() == TableLayout.Kind.UNKNOWN;
+                boolean protectedRow = i < protectedRows;
+                boolean empty = !unknown && !protectedRow && ratio <= options.minimumInkRatio();
+                result.add(new Row(i, region.y + ys.get(i), region.y + ys.get(i + 1), ratio, ink,
+                        false, unknown ? "UNRECOGNIZED_LAYOUT" : protectedRow ? "PROTECTED_HEADER"
+                                : empty ? BlankRowCutoff.EMPTY : "CONTENT_PRESENT"));
             }
             return List.copyOf(result);
-
-        }
-    }
-
-    private static int significantPixels(Mat binary, int minimumArea, Mats parent) {
-        try (Mats m = new Mats(parent.scale)) {
-            Mat labels = m.mat(), stats = m.mat(), centroids = m.mat();
-            int count = Imgproc.connectedComponentsWithStats(binary, labels, stats, centroids);
-            int pixels = 0;
-            for (int i = 1; i < count; i++) {
-                int area = (int) stats.get(i, Imgproc.CC_STAT_AREA)[0];
-                int width = (int) stats.get(i, Imgproc.CC_STAT_WIDTH)[0];
-                int height = (int) stats.get(i, Imgproc.CC_STAT_HEIGHT)[0];
-                // Narrow residual grid fragments must not make every row nonempty.
-                if (area >= minimumArea && width >= m.px(2) && height >= m.px(3)) pixels += area;
-            }
-            return pixels;
-
         }
     }
 

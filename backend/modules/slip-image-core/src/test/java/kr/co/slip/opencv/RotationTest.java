@@ -101,6 +101,32 @@ class RotationTest {
             assertThrows(IllegalArgumentException.class, () -> ProcessingOptions.defaults().withRotation(degrees));
     }
 
+    @ParameterizedTest @ValueSource(ints = {0, 180})
+    void shadowAcrossBlankRowsDoesNotBecomeBottomHeaderInk(int degrees) {
+        Mat image = table();
+        Mat shadow = image.submat(new Rect(250, 900, 1300, 650));
+        try {
+            Core.multiply(shadow, Scalar.all(.32), shadow);
+            if (degrees == 180) Core.rotate(image, image, Core.ROTATE_180);
+            var result = processor.process(encode(image), ProcessingOptions.defaults());
+            assertEquals(degrees, result.report().rotation().clockwiseDegrees());
+        } finally { shadow.release(); image.release(); }
+    }
+
+    @Test
+    void externalTitleProtectsOrientationFromDenseBlueFooterNotes() {
+        Mat image = table();
+        try {
+            Imgproc.putText(image, "OFFICIAL TITLE", new Point(400, 220),
+                    Imgproc.FONT_HERSHEY_SIMPLEX, 2, Scalar.all(0), 3);
+            for (int y : new int[]{1375, 1455})
+                Imgproc.putText(image, "1234-5678-ACCOUNT-DETAILS", new Point(330, y),
+                        Imgproc.FONT_HERSHEY_SIMPLEX, 1.2, new Scalar(180, 70, 40), 3);
+            var result = processor.process(encode(image), ProcessingOptions.defaults());
+            assertEquals(0, result.report().rotation().clockwiseDegrees());
+        } finally { image.release(); }
+    }
+
     private static Mat table() {
         Mat image = new Mat(1800, 1800, CvType.CV_8UC3, Scalar.all(255));
         for (int y = 300; y <= 1500; y += 80) Imgproc.line(image, new Point(300, y), new Point(1500, y), Scalar.all(0), 2);

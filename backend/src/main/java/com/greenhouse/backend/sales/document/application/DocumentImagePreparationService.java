@@ -35,14 +35,21 @@ public class DocumentImagePreparationService {
             .withOutputMode(OutputMode.PRODUCTION);
   }
 
-  public Preview prepare(String actor, String contentType, byte[] original, int rotationDegrees) {
+  public Preview prepare(
+      String actor,
+      String contentType,
+      byte[] original,
+      int rotationDegrees,
+      double minimumInkRatio) {
     ProcessingResult result;
     try {
       UploadImage.validate(contentType, original);
-      result = processor.process(original, options.withRotation(rotationDegrees));
+      result =
+          processor.process(
+              original, options.withRotation(rotationDegrees).withMinimumInkRatio(minimumInkRatio));
     } catch (IllegalArgumentException e) {
       throw new PreparationException(
-          400, "DOCUMENT_IMAGE_INVALID_INPUT", "사진 형식·크기와 회전 값을 확인해 주세요.");
+          400, "DOCUMENT_IMAGE_INVALID_INPUT", "사진 형식·크기, 회전 값과 잉크 비율을 확인해 주세요.");
     } catch (ProcessingRejectedException e) {
       throw new PreparationException(
           429, "DOCUMENT_IMAGE_PROCESSING_BUSY", "다른 사진을 처리 중입니다. 잠시 후 다시 시도해 주세요.");
