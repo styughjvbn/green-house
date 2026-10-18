@@ -6,9 +6,11 @@ import { LoaderCircle } from "lucide-react";
 export function SalesSlipPhotoProgress({
   operation,
   readingCount,
+  preparationMode = "automatic",
 }: {
   operation: "upload" | "prepare" | "read" | "save" | "cancel";
   readingCount: number;
+  preparationMode?: "automatic" | "manual";
 }) {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
@@ -20,7 +22,9 @@ export function SalesSlipPhotoProgress({
   }, []);
   const title =
     operation === "prepare"
-      ? "사진 보정 중"
+      ? preparationMode === "manual"
+        ? "문서 영역 적용 중"
+        : "문서 영역 자동 지정 중"
       : operation === "cancel"
         ? "자동 입력 중지 중"
         : operation === "read"
@@ -30,7 +34,9 @@ export function SalesSlipPhotoProgress({
             : "전표 저장 중";
   const description =
     operation === "prepare"
-      ? "문서를 분리하고 빈 행 아래를 정리하고 있습니다."
+      ? preparationMode === "manual"
+        ? "지정한 영역으로 문서 사진을 만들고 있습니다."
+        : "사진에서 자동 입력에 사용할 문서 영역을 찾고 있습니다."
       : operation === "cancel"
         ? "처리 종료를 확인하고 있습니다. 완료되면 다시 요청할 수 있습니다."
         : operation === "read"

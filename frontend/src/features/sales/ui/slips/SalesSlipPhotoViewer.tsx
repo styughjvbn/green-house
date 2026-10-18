@@ -17,12 +17,14 @@ export function SalesSlipPhotoViewer({
   className,
   width = 900,
   height = 1200,
+  onLoad,
 }: {
   src: string;
   alt: string;
   className?: string;
   width?: number;
   height?: number;
+  onLoad?: (width: number, height: number) => void;
 }) {
   const [open, setOpen] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
@@ -42,6 +44,12 @@ export function SalesSlipPhotoViewer({
           width={width}
           height={height}
           unoptimized
+          onLoad={(event) =>
+            onLoad?.(
+              event.currentTarget.naturalWidth,
+              event.currentTarget.naturalHeight,
+            )
+          }
           className={className}
         />
         <span className="pointer-events-none absolute right-2 bottom-2 inline-flex items-center gap-1 rounded bg-black/65 px-2 py-1 text-xs font-semibold text-white">
