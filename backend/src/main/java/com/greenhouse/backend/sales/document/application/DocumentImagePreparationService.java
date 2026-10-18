@@ -71,7 +71,8 @@ public class DocumentImagePreparationService {
               if (kind == null) return;
               UUID imageId = UUID.randomUUID();
               images.put(imageId, entry.getValue());
-              metadata.add(new PreviewImage(imageId, kind));
+              metadata.add(
+                  new PreviewImage(imageId, kind, sourceRegion(entry.getKey(), result.report())));
             });
     var report = result.report();
     var rotation = report.rotation();
@@ -95,6 +96,34 @@ public class DocumentImagePreparationService {
             List.copyOf(metadata));
     store(id, new StoredPreview(actor, expiresAt, Map.copyOf(images)));
     return preview;
+  }
+
+  private static SourceRegion sourceRegion(String name, ProcessingResult.Report report) {
+    if (!name.matches("paper-\\d+-compacted\\.png")) return null;
+    int index = Integer.parseInt(name.substring(6, name.indexOf("-compacted")));
+    var paper = report.papers().stream().filter(p -> p.index() == index).findFirst().orElse(null);
+    if (paper == null) return null;
+    var bounds = paper.bounds();
+    int bottom =
+        report.tables().stream()
+            .filter(t -> paper.tableIndices().contains(t.index()))
+            .flatMap(t -> t.rows().stream())
+            .filter(ProcessingResult.Row::removed)
+            .mapToInt(ProcessingResult.Row::top)
+            .min()
+            .orElse(bounds.y() + bounds.height());
+    var source =
+        report.sourceBounds(
+            new ProcessingResult.Box(
+                bounds.x(),
+                bounds.y(),
+                bounds.width(),
+                Math.min(bounds.height(), bottom - bounds.y())));
+    return new SourceRegion(
+        (double) source.x() / report.sourceWidth(),
+        (double) source.y() / report.sourceHeight(),
+        (double) source.width() / report.sourceWidth(),
+        (double) source.height() / report.sourceHeight());
   }
 
   private static ImageKind kind(String name) {
@@ -149,7 +178,10 @@ public class DocumentImagePreparationService {
   }
 
   @Schema(name = "SalesSlipPreviewImage")
-  public record PreviewImage(UUID id, ImageKind kind) {}
+  public record PreviewImage(UUID id, ImageKind kind, SourceRegion sourceRegion) {}
+
+  @Schema(name = "SalesSlipSourceRegion", description = "EXIF 방향이 반영된 원본의 정규화 사각형 좌표(0~1)")
+  public record SourceRegion(double x, double y, double width, double height) {}
 
   @Schema(name = "SalesSlipImagePreview")
   public record Preview(

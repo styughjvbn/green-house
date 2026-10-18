@@ -55,6 +55,46 @@ class DocumentImagePreparationServiceTest {
   }
 
   @Test
+  void exportsSourceCoordinatesForTheCompactedDocumentOnly() throws Exception {
+    var service = service();
+    var row = new ProcessingResult.Row(1, 600, 700, 0, 0, true, "CONSECUTIVE_EMPTY_ROWS_CUTOFF");
+    var table =
+        new ProcessingResult.Table(
+            1, new ProcessingResult.Box(40, 200, 400, 600), List.of(), List.of(), List.of(row), 1);
+    var paper =
+        new ProcessingResult.Paper(
+            1, new ProcessingResult.Box(40, 200, 400, 600), List.of(), "TEST", false, List.of(1));
+    var report =
+        new ProcessingResult.Report(
+            "TEST",
+            400,
+            500,
+            800,
+            1000,
+            List.of(),
+            List.of(),
+            List.of(table),
+            new ProcessingResult.Rotation("MANUAL", 0, 0, false, "TEST"),
+            List.of(paper),
+            List.of(.5, 0., 0., 0., .5, 0., 0., 0., 1.));
+    when(processor.process(any(), any()))
+        .thenReturn(new ProcessingResult(report, result().images()));
+    var preview = service.prepare("owner", "image/png", png(), 0, .015);
+    var document =
+        preview.images().stream()
+            .filter(i -> i.kind() == DocumentImagePreparationService.ImageKind.DOCUMENT_COMPACTED)
+            .findFirst()
+            .orElseThrow();
+    assertThat(document.sourceRegion())
+        .isEqualTo(new DocumentImagePreparationService.SourceRegion(.05, .2, .5, .4));
+    assertThat(
+            preview.images().stream()
+                .filter(
+                    i -> i.kind() != DocumentImagePreparationService.ImageKind.DOCUMENT_COMPACTED))
+        .allMatch(i -> i.sourceRegion() == null);
+  }
+
+  @Test
   void isolatesOwnersExpiresPreviewsAndReleasesExplicitly() throws Exception {
     var service = service();
     var preview = service.prepare("owner", "image/png", png(), -1, .015);
@@ -193,7 +233,8 @@ class DocumentImagePreparationServiceTest {
             List.of("방향 확인"),
             List.of(),
             new ProcessingResult.Rotation("auto", 0, 0, true, "test"),
-            List.of());
+            List.of(),
+            List.of(1., 0., 0., 0., 1., 0., 0., 0., 1.));
     return new ProcessingResult(
         report,
         Map.of(

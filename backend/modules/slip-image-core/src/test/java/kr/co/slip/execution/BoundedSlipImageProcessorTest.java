@@ -15,7 +15,7 @@ class BoundedSlipImageProcessorTest {
     private static final ProcessingOptions OPTIONS = ProcessingOptions.defaults();
     private static final byte[] INPUT = {1};
     private static final ProcessingResult RESULT = new ProcessingResult(new ProcessingResult.Report("TEST", 1, 1, 1, 1,
-            List.of(), List.of(), List.of(), new ProcessingResult.Rotation("MANUAL", 0, 0, false, "TEST"), List.of()), Map.of());
+            List.of(), List.of(), List.of(), new ProcessingResult.Rotation("MANUAL", 0, 0, false, "TEST"), List.of(), List.of(1.,0.,0.,0.,1.,0.,0.,0.,1.)), Map.of());
     private static ExecutionSettings settings(int workers, int queue) { return new ExecutionSettings(workers, queue, Duration.ofSeconds(3)); }
 
     @Test void boundsConcurrencyQueueAndDeferredLoading() throws Exception {

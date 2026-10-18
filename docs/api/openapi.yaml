@@ -6879,6 +6879,24 @@ components:
           - DOCUMENT
           - DOCUMENT_COMPACTED
           - TABLE
+        sourceRegion:
+          $ref: '#/components/schemas/SalesSlipSourceRegion'
+    SalesSlipSourceRegion:
+      type: object
+      description: EXIF 방향이 반영된 원본의 정규화 사각형 좌표(0~1)
+      properties:
+        height:
+          type: number
+          format: double
+        width:
+          type: number
+          format: double
+        x:
+          type: number
+          format: double
+        y:
+          type: number
+          format: double
     OrchidGroupCreateRequest:
       type: object
       properties:

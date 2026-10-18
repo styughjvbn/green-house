@@ -45,11 +45,13 @@ public final class SlipProcessor implements SlipImageProcessor {
             double scale = Math.min(1, (double) options.maxDimension() / Math.max(sw, sh));
             Mat work = m.mat();
             Imgproc.resize(source, work, new Size(Math.round(sw * scale), Math.round(sh * scale)), 0, 0, Imgproc.INTER_AREA);
+            SourceCoordinates coordinates = new SourceCoordinates(sw, sh, work.cols(), work.rows());
             m.release(source);
             List<String> warnings = new ArrayList<>();
             int preOrientationWidth = work.cols(), preOrientationHeight = work.rows();
             Orientation orientation = orient(work, options.rotationDegrees(), warnings, m);
             if (work != orientation.image()) m.release(work);
+            coordinates.quarterTurn(orientation.quarterTurns(), preOrientationWidth, preOrientationHeight);
             work = orientation.image();
             Point[] quad = documentQuad(work, m);
             String correction;
@@ -61,7 +63,7 @@ public final class SlipProcessor implements SlipImageProcessor {
                     case 3 -> new XY((preOrientationWidth - 1 - p.y) / scale, p.x / scale);
                     default -> new XY(p.x / scale, p.y / scale);
                 });
-                Mat warped = warp(work, quad, m);
+                Mat warped = warp(work, quad, m, coordinates);
                 m.release(work);
                 work = warped;
                 correction = "DOCUMENT_PERSPECTIVE";
@@ -70,11 +72,11 @@ public final class SlipProcessor implements SlipImageProcessor {
                 warnings.add("문서 네 모서리를 신뢰할 수 없어 전체 사진을 유지합니다. 겹침·잘림 및 표 기반 보정 여부를 검토하세요.");
             }
             double skewAngle = skewAngle(work, m);
-            Mat straightened = rotateBound(work, skewAngle, m);
+            Mat straightened = rotateBound(work, skewAngle, m, coordinates);
             if (straightened != work) m.release(work);
             work = straightened;
             if (quad == null) {
-                Mat corrected = correctGridPerspective(work, m);
+                Mat corrected = correctGridPerspective(work, m, coordinates);
                 if (corrected != work) {
                     m.release(work);
                     work = corrected;
@@ -150,7 +152,7 @@ public final class SlipProcessor implements SlipImageProcessor {
             return new ProcessingResult(new Report(correction, sw, sh, work.cols(), work.rows(),
                     List.copyOf(corners), List.copyOf(warnings), List.copyOf(tables),
                     new Rotation(options.rotationDegrees() == -1 ? "AUTO" : "MANUAL", orientation.quarterTurns() * 90,
-                            skewAngle, options.rotationDegrees() == -1, orientation.method()), separated.papers()), Collections.unmodifiableMap(images));
+                            skewAngle, options.rotationDegrees() == -1, orientation.method()), separated.papers(), coordinates.inverse()), Collections.unmodifiableMap(images));
         }
     }
 
@@ -229,7 +231,7 @@ public final class SlipProcessor implements SlipImageProcessor {
     }
 
     /** Infer the two families of a planar grid, including when the sheet is clipped. */
-    private static Mat correctGridPerspective(Mat image, Mats parent) {
+    private static Mat correctGridPerspective(Mat image, Mats parent, SourceCoordinates coordinates) {
         try (Mats m = new Mats(parent.scale)) {
             Mat gray = m.mat(), edges = m.mat(), lines = m.mat();
             Imgproc.cvtColor(image, gray, Imgproc.COLOR_BGR2GRAY);
@@ -278,6 +280,7 @@ public final class SlipProcessor implements SlipImageProcessor {
             translation.put(0, 2, -minX); translation.put(1, 2, -minY);
             Core.gemm(translation, transform, 1, m.mat(), 0, shifted);
             Mat result = parent.mat();
+            coordinates.append(shifted);
             Imgproc.warpPerspective(image, result, shifted, new Size(Math.ceil(maxX - minX + 1), Math.ceil(maxY - minY + 1)),
                     Imgproc.INTER_CUBIC, Core.BORDER_CONSTANT, Scalar.all(255));
             return result;
@@ -541,13 +544,14 @@ public final class SlipProcessor implements SlipImageProcessor {
 
     private static double distance(Point a, Point b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
-    private static Mat warp(Mat src, Point[] q, Mats parent) {
+    private static Mat warp(Mat src, Point[] q, Mats parent, SourceCoordinates coordinates) {
         try (Mats m = new Mats(parent.scale)) {
             int width = (int) Math.round(Math.max(distance(q[0], q[1]), distance(q[3], q[2])));
             int height = (int) Math.round(Math.max(distance(q[0], q[3]), distance(q[1], q[2])));
             Mat transform = m.own(Imgproc.getPerspectiveTransform(m.own(new MatOfPoint2f(q)),
                     m.own(new MatOfPoint2f(new Point(0, 0), new Point(width - 1, 0), new Point(width - 1, height - 1), new Point(0, height - 1)))));
             Mat dst = parent.mat();
+            coordinates.append(transform);
             Imgproc.warpPerspective(src, dst, transform, new Size(width, height), Imgproc.INTER_CUBIC, Core.BORDER_REPLICATE);
             return dst;
 
@@ -602,6 +606,10 @@ public final class SlipProcessor implements SlipImageProcessor {
     }
 
     private static Mat rotateBound(Mat image, double angle, Mats parent) {
+        return rotateBound(image, angle, parent, null);
+    }
+
+    private static Mat rotateBound(Mat image, double angle, Mats parent, SourceCoordinates coordinates) {
         try (Mats m = new Mats(parent.scale)) {
             if (angle == 0) return image;
             Mat rotation = m.own(Imgproc.getRotationMatrix2D(new Point(image.cols() / 2., image.rows() / 2.), angle, 1));
@@ -611,6 +619,7 @@ public final class SlipProcessor implements SlipImageProcessor {
             rotation.put(0, 2, rotation.get(0, 2)[0] + (width - image.cols()) / 2.);
             rotation.put(1, 2, rotation.get(1, 2)[0] + (height - image.rows()) / 2.);
             Mat dst = parent.mat();
+            if (coordinates != null) coordinates.append(rotation);
             Imgproc.warpAffine(image, dst, rotation, new Size(width, height), Imgproc.INTER_CUBIC, Core.BORDER_CONSTANT, Scalar.all(255));
             return dst;
 

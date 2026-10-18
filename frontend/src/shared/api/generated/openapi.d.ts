@@ -3450,6 +3450,18 @@ export interface components {
             id?: string;
             /** @enum {string} */
             kind?: "CORRECTED" | "DOCUMENT" | "DOCUMENT_COMPACTED" | "TABLE";
+            sourceRegion?: components["schemas"]["SalesSlipSourceRegion"];
+        };
+        /** @description EXIF 방향이 반영된 원본의 정규화 사각형 좌표(0~1) */
+        SalesSlipSourceRegion: {
+            /** Format: double */
+            height?: number;
+            /** Format: double */
+            width?: number;
+            /** Format: double */
+            x?: number;
+            /** Format: double */
+            y?: number;
         };
         OrchidGroupCreateRequest: {
             /** Format: int32 */
