@@ -44,18 +44,12 @@ export function SalesSlipFloatingPhoto({
     start: Position;
     origin: Position;
     dragging: boolean;
-    target: HTMLButtonElement;
+    target: HTMLElement;
   } | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const frame = useRef<number | null>(null);
   const suppressClick = useRef(false);
 
-  function clearTimer() {
-    if (timer.current !== null) clearTimeout(timer.current);
-    timer.current = null;
-  }
   function finishGesture() {
-    clearTimer();
     const current = gesture.current;
     gesture.current = null;
     if (current?.target.hasPointerCapture(current.pointerId))
@@ -88,7 +82,7 @@ export function SalesSlipFloatingPhoto({
       setPosition((current) =>
         clampPosition(
           current ?? {
-            x: root.clientWidth - photo.offsetWidth - 12,
+            x: 12,
             y: root.clientHeight - photo.offsetHeight - 12,
           },
           root,
@@ -104,7 +98,6 @@ export function SalesSlipFloatingPhoto({
 
   useEffect(
     () => () => {
-      clearTimer();
       if (frame.current !== null) cancelAnimationFrame(frame.current);
     },
     [],
@@ -130,9 +123,9 @@ export function SalesSlipFloatingPhoto({
           !event.currentTarget.contains(event.target as Node)
         )
           return;
-        const target = (event.target as HTMLElement).closest("button");
-        if (!target) return;
-        clearTimer();
+        const target =
+          (event.target as HTMLElement).closest("button") ??
+          event.currentTarget;
         suppressClick.current = false;
         gesture.current = {
           pointerId: event.pointerId,
@@ -142,12 +135,6 @@ export function SalesSlipFloatingPhoto({
           target,
         };
         target.setPointerCapture(event.pointerId);
-        timer.current = setTimeout(() => {
-          if (!gesture.current) return;
-          gesture.current.dragging = true;
-          suppressClick.current = true;
-          setDragging(true);
-        }, 450);
       }}
       onPointerMove={(event) => {
         const current = gesture.current;
@@ -155,11 +142,10 @@ export function SalesSlipFloatingPhoto({
         const dx = event.clientX - current.start.x;
         const dy = event.clientY - current.start.y;
         if (!current.dragging) {
-          if (Math.hypot(dx, dy) > 8) {
-            clearTimer();
-            suppressClick.current = true;
-          }
-          return;
+          if (Math.hypot(dx, dy) <= 4) return;
+          current.dragging = true;
+          suppressClick.current = true;
+          setDragging(true);
         }
         const next = clampPosition(
           {
@@ -221,7 +207,7 @@ export function SalesSlipFloatingPhoto({
         className="h-44 w-full rounded bg-[#f7faf6] object-contain"
       />
       <p className="mt-1 text-center text-[11px] text-[#526158]">
-        클릭하여 확대 · 길게 눌러 이동
+        클릭하여 확대 · 드래그하여 이동
         <span className="sr-only">키보드 방향키로 위치 이동</span>
       </p>
     </div>

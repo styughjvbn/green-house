@@ -43,7 +43,7 @@ const photoStatuses = {
   waiting: { label: "사진 읽기 대기", tone: "waiting", icon: Clock3 },
   reading: { label: "읽어 입력 중", tone: "processing", icon: LoaderCircle },
   readFailed: { label: "사진 읽기 실패", tone: "error", icon: CircleAlert },
-  review: { label: "입력 내용 확인 필요", tone: "review", icon: CircleAlert },
+  review: { label: "확인 필요", tone: "review", icon: CircleAlert },
   needsAttention: { label: "확인 필요", tone: "error", icon: CircleAlert },
   saving: { label: "저장 중", tone: "processing", icon: LoaderCircle },
   saved: { label: "저장 완료", tone: "complete", icon: CheckCircle2 },
@@ -410,6 +410,13 @@ export function SalesSlipPhotoRegistrationDialog({
                               : entry.read === "ready"
                                 ? "review"
                                 : "waiting";
+                const reviewCount =
+                  Object.keys(entry.form.fieldReviews ?? {}).length +
+                  entry.form.items.reduce(
+                    (sum, item) =>
+                      sum + Object.keys(item.fieldReviews ?? {}).length,
+                    0,
+                  );
                 const badge = photoStatuses[status];
                 const StatusIcon = badge.icon;
                 return (
@@ -443,7 +450,11 @@ export function SalesSlipPhotoRegistrationDialog({
                         />
                         {status === "regionProcessing"
                           ? regionProcessingLabel
-                          : badge.label}
+                          : status === "review"
+                            ? reviewCount > 0
+                              ? `확인 필요 ${reviewCount}건`
+                              : "저장 대기"
+                            : badge.label}
                       </span>
                     </span>
                   </button>
