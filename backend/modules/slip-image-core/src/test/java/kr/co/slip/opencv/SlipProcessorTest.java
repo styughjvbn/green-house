@@ -1,6 +1,7 @@
 package kr.co.slip.opencv;
 
 import kr.co.slip.api.ProcessingResult;
+import kr.co.slip.api.DocumentForm;
 
 import kr.co.slip.api.ProcessingOptions;
 
@@ -86,6 +87,7 @@ class SlipProcessorTest {
             // A mark only in the excluded choice cells is deliberately not row evidence.
             Imgproc.circle(image, new Point(540, 960), 12, Scalar.all(0), 2);
             var result = processor.process(encode(image), new ProcessingOptions(2200, 2, .01, 0));
+            assertTrue(result.report().tables().stream().anyMatch(t -> t.form() == DocumentForm.CONSIGNMENT_RECEIPT));
             assertEquals(1, result.report().tables().size());
             var rows = result.report().tables().getFirst().rows();
             assertFalse(result.report().warnings().stream().anyMatch(w -> w.contains("양식을 확인하지 못해")));

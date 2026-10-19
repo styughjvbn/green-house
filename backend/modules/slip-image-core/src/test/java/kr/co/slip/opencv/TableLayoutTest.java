@@ -1,5 +1,6 @@
 package kr.co.slip.opencv;
 
+import kr.co.slip.api.DocumentForm;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ class TableLayoutTest {
                 Imgproc.line(grid, new Point(bounds.x + xs.get(i), bounds.y + (i >= 3 && i <= 5 ? 120 : 0)),
                         new Point(bounds.x + xs.get(i), bounds.y + 600), Scalar.all(255), 2);
             var layout = TableLayout.detect(grid, bounds, xs, ys, PixelScale.IDENTITY);
-            assertEquals(TableLayout.Kind.CONSIGNMENT_RECEIPT, layout.kind());
+            assertEquals(DocumentForm.CONSIGNMENT_RECEIPT, layout.kind());
             assertEquals(2, layout.headerRows());
             assertEquals(xs.get(2).intValue(), layout.printedLeft());
             assertEquals(xs.get(6).intValue(), layout.printedRight());
@@ -40,7 +41,7 @@ class TableLayoutTest {
                         new Point(xs.get(i), 600), Scalar.all(255), 2);
             var layout = TableLayout.detect(grid, new Rect(0, 0, 755, 601), xs,
                     List.of(0, 60, 120, 180, 240, 300), PixelScale.IDENTITY);
-            assertEquals(TableLayout.Kind.CONSIGNMENT_RECEIPT, layout.kind());
+            assertEquals(DocumentForm.CONSIGNMENT_RECEIPT, layout.kind());
         }
     }
 
@@ -49,7 +50,7 @@ class TableLayoutTest {
             Mat grid = scope.own(Mat.zeros(400, 1001, CvType.CV_8UC1));
             List<Integer> xs = Arrays.stream(RECEIPT).mapToObj(x -> (int) Math.round(x * 1000)).toList();
             for (int x : xs) Imgproc.line(grid, new Point(x, 0), new Point(x, 399), Scalar.all(255), 2);
-            assertEquals(TableLayout.Kind.UNKNOWN, TableLayout.detect(grid, new Rect(0, 0, 1001, 400), xs,
+            assertEquals(DocumentForm.UNKNOWN, TableLayout.detect(grid, new Rect(0, 0, 1001, 400), xs,
                     List.of(0, 80, 160, 240), PixelScale.IDENTITY).kind());
         }
     }
@@ -61,7 +62,7 @@ class TableLayoutTest {
                 Imgproc.line(grid, new Point(x, 0), new Point(x, 399), Scalar.all(255), 2);
             var layout = TableLayout.detect(grid, new Rect(0, 0, 1001, 400),
                     List.of(0, 132, 333, 450, 566, 683, 819, 1000), List.of(0, 80, 160, 240), PixelScale.IDENTITY);
-            assertEquals(TableLayout.Kind.LISTING_REQUEST, layout.kind());
+            assertEquals(DocumentForm.LISTING_REQUEST, layout.kind());
             assertEquals(0, layout.printedRight());
         }
     }
@@ -71,7 +72,7 @@ class TableLayoutTest {
             Mat grid = scope.own(Mat.zeros(400, 672, CvType.CV_8UC1));
             for (int x : List.of(6, 88, 215, 289, 363, 437, 522, 635))
                 Imgproc.line(grid, new Point(x, 0), new Point(x, 399), Scalar.all(255), 2);
-            assertEquals(TableLayout.Kind.LISTING_REQUEST, TableLayout.detect(grid, new Rect(0, 0, 672, 400),
+            assertEquals(DocumentForm.LISTING_REQUEST, TableLayout.detect(grid, new Rect(0, 0, 672, 400),
                     List.of(6, 88, 215, 289, 363, 437, 522, 635),
                     List.of(0, 80, 160, 240), PixelScale.IDENTITY).kind());
         }
@@ -88,7 +89,7 @@ class TableLayoutTest {
             }
             var layout = TableLayout.detect(grid, new Rect(0, 0, 1060, 601), xs,
                     List.of(0, 60, 70, 120, 180, 240, 300, 360, 420, 480, 540, 600), PixelScale.IDENTITY);
-            assertEquals(TableLayout.Kind.CONSIGNMENT_RECEIPT, layout.kind());
+            assertEquals(DocumentForm.CONSIGNMENT_RECEIPT, layout.kind());
             assertEquals(3, layout.headerRows());
         }
     }
@@ -96,7 +97,7 @@ class TableLayoutTest {
     @Test void matchingListingProportionsWithoutVisibleDividersRemainUnknown() {
         try (MatScope scope = new MatScope()) {
             Mat grid = scope.own(Mat.zeros(400, 1001, CvType.CV_8UC1));
-            assertEquals(TableLayout.Kind.UNKNOWN, TableLayout.detect(grid, new Rect(0, 0, 1001, 400),
+            assertEquals(DocumentForm.UNKNOWN, TableLayout.detect(grid, new Rect(0, 0, 1001, 400),
                     List.of(0, 132, 333, 450, 566, 683, 819, 1000), List.of(0, 80, 160, 240), PixelScale.IDENTITY).kind());
         }
     }
@@ -104,7 +105,7 @@ class TableLayoutTest {
     @Test void receiptColumnCountAloneDoesNotIdentifyAnUnrelatedForm() {
         try (MatScope scope = new MatScope()) {
             Mat grid = scope.own(Mat.zeros(400, 1001, CvType.CV_8UC1));
-            assertEquals(TableLayout.Kind.UNKNOWN, TableLayout.detect(grid, new Rect(0, 0, 1001, 400),
+            assertEquals(DocumentForm.UNKNOWN, TableLayout.detect(grid, new Rect(0, 0, 1001, 400),
                     List.of(0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000),
                     List.of(0, 80, 160, 240), PixelScale.IDENTITY).kind());
         }

@@ -66,7 +66,13 @@ class DocumentImagePreparationServiceTest {
     var row = new ProcessingResult.Row(1, 600, 700, 0, 0, true, "CONSECUTIVE_EMPTY_ROWS_CUTOFF");
     var table =
         new ProcessingResult.Table(
-            1, new ProcessingResult.Box(40, 200, 400, 600), List.of(), List.of(), List.of(row), 1);
+            1,
+            new ProcessingResult.Box(40, 200, 400, 600),
+            List.of(),
+            List.of(),
+            List.of(row),
+            1,
+            DocumentForm.CONSIGNMENT_RECEIPT);
     var paper =
         new ProcessingResult.Paper(
             1, new ProcessingResult.Box(40, 200, 400, 600), List.of(), "TEST", false, List.of(1));
@@ -91,6 +97,7 @@ class DocumentImagePreparationServiceTest {
             .filter(i -> i.kind() == DocumentImagePreparationService.ImageKind.DOCUMENT_COMPACTED)
             .findFirst()
             .orElseThrow();
+    assertThat(document.documentForm()).isEqualTo(DocumentForm.CONSIGNMENT_RECEIPT);
     assertThat(document.sourceRegion())
         .isEqualTo(new DocumentImagePreparationService.SourceRegion(.05, .2, .5, .4));
     assertThat(

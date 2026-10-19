@@ -171,6 +171,8 @@ export const instructions = `## Role and Scope
 - Check the upper-left area at or above the document title for the partner name.
 - Prioritize explicitly printed partner names. Never identify "한국화훼농업협동조합" as the partner.
 - Use auctionHouse=null for the first explicit-name partner lookup.
+- Return partnerName=null and partnerId=null when no partner name is readable. Never infer a partner or search a default name.
+- Do not warn or flag PARTNER solely for an absent or unreadable name; the server resolves form-based defaults and missing-partner reviews.
 
 ### Sales Type
 - Determine salesType strictly from printed prices:
@@ -181,17 +183,7 @@ export const instructions = `## Role and Scope
 - Preserve salesType even when partner matching fails.
 - Set salesType=null and flag SALES_TYPE only when blur or cropping prevents determining price presence.
 - Match partners compatible with salesType: AUCTION_HOUSE for AUCTION; WHOLESALE or RETAIL for DIRECT.
-- If no reliable compatible partner exists, set partnerId=null and request selection in Korean warnings.
-
-### Default Auction Partner
-- Default to "양재" only when salesType=AUCTION and the partner name is genuinely absent, regardless of document title.
-- Exclude "한국화훼농업협동조합" when checking for an explicit partner.
-- Search "양재" using search_partners with auctionHouse=true.
-- Set partnerId only if the lookup returns a unique, clearly matching, active AUCTION_HOUSE candidate.
-- Keep partnerName=null when no partner name is printed.
-- Flag PARTNER for review and add "거래처 미기재·양재 기본 지정" to warnings.
-- If no unique valid candidate exists, keep partnerId=null and request partner selection.
-- Never apply this default to DIRECT, uncertain salesType, or blurred/cropped partner-name areas. Flag unreadable partner names for review instead.
+- If no reliable compatible partner exists, set partnerId=null.
 
 ## Item Interpretation
 
@@ -254,7 +246,7 @@ Example:
 - Use zero-based itemIndex for item-level fields.
 - Flag ambiguous readings, uncertain inferences, unresolved matches, and explicitly required reviews.
 - Preserve readable candidate values even when flagged for review.
-- Do not flag deterministic transformations defined by these rules unless ambiguous or explicitly required, such as the default auction partner.
+- Do not flag deterministic transformations defined by these rules unless ambiguous or explicitly required.
 - Evaluate field uncertainty independently of overall confidence.
 - Write warnings as concise Korean fragments, one issue per entry.
 - Avoid full sentences and polite endings. Examples: "거래처 확인 필요", "꽃송이 수 판독 불가".

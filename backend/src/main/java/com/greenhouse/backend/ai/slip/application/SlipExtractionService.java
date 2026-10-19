@@ -12,17 +12,32 @@ import jakarta.validation.Validator;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.Semaphore;
-import lombok.RequiredArgsConstructor;
+import kr.co.slip.api.DocumentForm;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 public class SlipExtractionService {
   private final AgentRuntimePort runtime;
   private final AgentToolGateway tools;
   private final Validator validator;
+  private final long defaultAuctionPartnerId;
   private final Semaphore slot = new Semaphore(1);
+
+  public SlipExtractionService(
+      AgentRuntimePort runtime,
+      AgentToolGateway tools,
+      Validator validator,
+      @Value("${app.ai.default-auction-partner-id:0}") long defaultAuctionPartnerId) {
+    this.runtime = runtime;
+    this.tools = tools;
+    this.validator = validator;
+    if (defaultAuctionPartnerId < 0)
+      throw new IllegalArgumentException(
+          "Default auction partner ID must be positive or zero (disabled)");
+    this.defaultAuctionPartnerId = defaultAuctionPartnerId;
+  }
 
   public SlipExtractionResult extract(String actor, String contentType, byte[] image) {
     UploadImage.validate(contentType, image);
@@ -49,6 +64,11 @@ public class SlipExtractionService {
 
   SlipExtractionResult validate(
       String requestId, SlipModelResult result, AgentToolGateway.Scope scope) {
+    return validate(requestId, result, scope, DocumentForm.UNKNOWN);
+  }
+
+  SlipExtractionResult validate(
+      String requestId, SlipModelResult result, AgentToolGateway.Scope scope, DocumentForm form) {
     if (result == null || !validator.validate(result).isEmpty())
       throw new AgentException(502, "AI_INVALID_RESULT", "인식 결과 형식이 올바르지 않습니다. 다시 시도해주세요.");
     var warnings = new ArrayList<>(result.warnings());
@@ -70,6 +90,19 @@ public class SlipExtractionService {
       }
     if (date == null) addReview(reviews, SALE_DATE, null, "판매일·출하일 확인 필요");
     var partner = scope.partner(result.partnerId());
+    boolean fixedConsignmentPartner =
+        form == DocumentForm.CONSIGNMENT_RECEIPT
+            && type == SalesType.AUCTION
+            && (result.partnerName() == null || result.partnerName().isBlank());
+    if (fixedConsignmentPartner) {
+      partner = scope.lookupPartnerById(defaultAuctionPartnerId);
+      if (partner != null
+          && (!partner.active()
+              || partner.partnerType() != PartnerType.AUCTION_HOUSE
+              || partner.name() == null
+              || partner.name().isBlank())) partner = null;
+      if (partner != null) reviews.remove(PARTNER.name() + ":null");
+    }
     if (partner != null && (!partner.active() || partner.partnerType() == null)) partner = null;
     if (partner != null && type != null) {
       boolean auctionPartner = partner.partnerType() == PartnerType.AUCTION_HOUSE;
@@ -80,8 +113,6 @@ public class SlipExtractionService {
     }
     if (partner == null) addReview(reviews, PARTNER, null, "거래처 직접 선택 필요");
     if (type == null) addReview(reviews, SALES_TYPE, null, "가격 기재 여부·판매 유형 확인 필요");
-    if (partner != null && result.partnerName() == null)
-      addReview(reviews, PARTNER, null, "추정 거래처 확인 필요");
     if (partner == null && result.partnerId() != null)
       warnings.add("거래처 매칭을 확인하지 못했습니다. 직접 선택해주세요.");
     var items = new ArrayList<SlipExtractionResult.Item>();

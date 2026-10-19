@@ -166,3 +166,7 @@ export type SalesSlipPhotoExtraction =
   components["schemas"]["SlipExtractionResult"];
 export type SalesSlipPhotoInfo = components["schemas"]["PhotoInfo"];
 export type SalesSlipPhotoContent = components["schemas"]["PhotoContent"];
+
+export type SalesSlipDocumentForm = NonNullable<
+  components["schemas"]["AiSlipPhotoMetadata"]["documentForm"]
+>;

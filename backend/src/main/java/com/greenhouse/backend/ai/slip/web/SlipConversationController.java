@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
+import kr.co.slip.api.DocumentForm;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -72,7 +73,8 @@ public class SlipConversationController {
       if (file.isEmpty() || file.getSize() > 8 * 1024 * 1024)
         throw new AgentException(413, "AI_IMAGE_TOO_LARGE", "사진별 최대 크기는 8MB입니다.");
       inputs.add(
-          new SlipConversationInput.Photo(photo.photoId(), file.getContentType(), file.getBytes()));
+          new SlipConversationInput.Photo(
+              photo.photoId(), file.getContentType(), file.getBytes(), photo.documentForm()));
     }
     var input = new SlipConversationInput(List.copyOf(inputs));
     return ApiResponse.ok(
@@ -85,7 +87,9 @@ public class SlipConversationController {
   public record Metadata(@NotEmpty @Size(max = 10) List<@NotNull @Valid Photo> photos) {}
 
   @io.swagger.v3.oas.annotations.media.Schema(name = "AiSlipPhotoMetadata")
-  public record Photo(@NotBlank @Pattern(regexp = "[-a-zA-Z0-9]{1,64}") String photoId) {}
+  public record Photo(
+      @NotBlank @Pattern(regexp = "[-a-zA-Z0-9]{1,64}") String photoId,
+      DocumentForm documentForm) {}
 
   private String actor(Principal principal) {
     return principal == null ? "local" : principal.getName();

@@ -6869,6 +6869,12 @@ components:
     SalesSlipPreviewImage:
       type: object
       properties:
+        documentForm:
+          type: string
+          enum:
+          - CONSIGNMENT_RECEIPT
+          - LISTING_REQUEST
+          - UNKNOWN
         id:
           type: string
           format: uuid
@@ -8441,6 +8447,12 @@ components:
     AiSlipPhotoMetadata:
       type: object
       properties:
+        documentForm:
+          type: string
+          enum:
+          - CONSIGNMENT_RECEIPT
+          - LISTING_REQUEST
+          - UNKNOWN
         photoId:
           type: string
           minLength: 1

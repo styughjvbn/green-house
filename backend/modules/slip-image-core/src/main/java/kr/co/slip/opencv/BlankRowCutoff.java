@@ -18,7 +18,7 @@ final class BlankRowCutoff {
                     ? new Row(row.index(), row.top(), row.bottom(), row.inkRatio(), row.inkPixels(), true, CUTOFF)
                     : row).toList();
             return new Table(table.index(), table.bounds(), table.horizontalLines(), table.verticalLines(),
-                    rows, (int) rows.stream().filter(Row::removed).count());
+                    rows, (int) rows.stream().filter(Row::removed).count(), table.form());
         }).toList();
     }
 

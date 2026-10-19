@@ -8,7 +8,9 @@ import com.greenhouse.backend.ai.api.AgentException;
 import com.greenhouse.backend.ai.slip.application.port.out.AgentRuntimePort;
 import com.greenhouse.backend.ai.tool.application.AgentToolGateway;
 import com.greenhouse.backend.farm.api.variety.VarietySearchApi;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
+import com.greenhouse.backend.sales.api.partner.PartnerType;
 import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;
 import java.awt.image.BufferedImage;
@@ -19,6 +21,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
+import kr.co.slip.api.DocumentForm;
 import org.junit.jupiter.api.Test;
 
 class SlipConversationServiceTest {
@@ -31,18 +34,21 @@ class SlipConversationServiceTest {
 
   private final AgentRuntimePort runtime = mock(AgentRuntimePort.class);
   private final VarietySearchApi varieties = mock(VarietySearchApi.class);
+  private final BusinessPartnerQueryApi partners = mock(BusinessPartnerQueryApi.class);
   private final Clock clock = mock(Clock.class);
   private final Instant now = Instant.parse("2026-10-15T00:00:00Z");
 
   private SlipConversationService service() {
+    return service(0);
+  }
+
+  private SlipConversationService service(long defaultPartnerId) {
     when(clock.instant()).thenReturn(now);
-    var tools =
-        new AgentToolGateway(
-            mock(VarietySearchApi.class), mock(BusinessPartnerQueryApi.class), clock, 20, 120);
+    var tools = new AgentToolGateway(mock(VarietySearchApi.class), partners, clock, 20, 120);
     return new SlipConversationService(
         runtime,
         tools,
-        new SlipExtractionService(runtime, tools, factory.getValidator()),
+        new SlipExtractionService(runtime, tools, factory.getValidator(), defaultPartnerId),
         clock,
         varieties);
   }
@@ -198,6 +204,55 @@ class SlipConversationServiceTest {
         .isEqualTo("AI_PHOTO_ID_CONFLICT");
     verify(runtime, times(4)).extractConversation(anyString(), eq(session), anyString(), any());
     verify(runtime, times(1)).openSession(eq(session), any());
+  }
+
+  @Test
+  void documentFormsFollowPhotoIdsAndCannotChangeWithinAnExistingPhotoIdentity() throws Exception {
+    var service = service(3);
+    var session = service.open("worker").sessionId();
+    when(partners.getInfo(3L))
+        .thenReturn(
+            new BusinessPartnerInfo(
+                3L, "양재", PartnerType.AUCTION_HOUSE, true, null, null, null, null));
+    var raw =
+        new SlipModelResult(
+            "AUCTION",
+            "2026-10-19",
+            null,
+            null,
+            null,
+            List.of(),
+            List.of(),
+            90,
+            1024,
+            1,
+            List.of());
+    when(runtime.extractConversation(anyString(), eq(session), anyString(), any()))
+        .thenReturn(
+            new SlipConversationModelResult(
+                List.of(
+                    new SlipConversationModelResult.Photo("q", raw),
+                    new SlipConversationModelResult.Photo("p", raw))));
+    var p =
+        new SlipConversationInput.Photo(
+            "p", "image/png", image(0), DocumentForm.CONSIGNMENT_RECEIPT);
+    var q =
+        new SlipConversationInput.Photo("q", "image/png", image(0), DocumentForm.LISTING_REQUEST);
+    var rows =
+        service.extract("worker", session, new SlipConversationInput(List.of(p, q))).photos();
+    assertThat(rows)
+        .filteredOn(r -> r.photoId().equals("p"))
+        .allSatisfy(r -> assertThat(r.result().partnerId()).isEqualTo(3L));
+    assertThat(rows)
+        .filteredOn(r -> r.photoId().equals("q"))
+        .allSatisfy(r -> assertThat(r.result().partnerId()).isNull());
+    var changed =
+        new SlipConversationInput.Photo("p", "image/png", image(0), DocumentForm.LISTING_REQUEST);
+    assertThatThrownBy(
+            () -> service.extract("worker", session, new SlipConversationInput(List.of(changed))))
+        .isInstanceOf(AgentException.class)
+        .extracting("code")
+        .isEqualTo("AI_PHOTO_ID_CONFLICT");
   }
 
   @Test

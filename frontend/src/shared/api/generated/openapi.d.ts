@@ -3446,6 +3446,8 @@ export interface components {
             workingWidth?: number;
         };
         SalesSlipPreviewImage: {
+            /** @enum {string} */
+            documentForm?: "CONSIGNMENT_RECEIPT" | "LISTING_REQUEST" | "UNKNOWN";
             /** Format: uuid */
             id?: string;
             /** @enum {string} */
@@ -4098,6 +4100,8 @@ export interface components {
             photos: components["schemas"]["AiSlipPhotoMetadata"][];
         };
         AiSlipPhotoMetadata: {
+            /** @enum {string} */
+            documentForm?: "CONSIGNMENT_RECEIPT" | "LISTING_REQUEST" | "UNKNOWN";
             photoId: string;
         };
         AiSlipExtractionItem: {

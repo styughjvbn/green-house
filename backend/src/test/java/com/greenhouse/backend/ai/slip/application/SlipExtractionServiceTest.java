@@ -6,8 +6,10 @@ import static org.mockito.Mockito.*;
 import com.greenhouse.backend.ai.api.AgentException;
 import com.greenhouse.backend.ai.slip.application.port.out.AgentRuntimePort;
 import com.greenhouse.backend.ai.tool.application.AgentToolGateway;
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.api.variety.VarietySearchApi;
 import com.greenhouse.backend.sales.api.document.SalesType;
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerInfo;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import jakarta.validation.Validation;
@@ -20,6 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import javax.imageio.ImageIO;
+import kr.co.slip.api.DocumentForm;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.provider.Arguments;
 
@@ -67,7 +70,7 @@ class SlipExtractionServiceTest {
     try (var factory = Validation.buildDefaultValidatorFactory();
         var scope = tools.open("r", "worker")) {
       var service =
-          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 0);
       var item =
           new SlipModelResult.Item(
               "하니문", null, null, null, unit, boxes, quantity, unitPrice, amount, null);
@@ -123,6 +126,208 @@ class SlipExtractionServiceTest {
   }
 
   @Test
+  void acceptsConfirmedFixedPartnerWithoutInventingAReviewAndPreservesExplicitReviews() {
+    var partners = mock(BusinessPartnerQueryApi.class);
+    when(partners.searchOptions("양재", true, 10))
+        .thenReturn(
+            List.of(new BusinessPartnerQueryApi.Option(3L, "양재", PartnerType.AUCTION_HOUSE, true)));
+    var tools =
+        new AgentToolGateway(mock(VarietySearchApi.class), partners, Clock.systemUTC(), 5, 120);
+    try (var factory = Validation.buildDefaultValidatorFactory();
+        var scope = tools.open("r", "worker")) {
+      tools.execute(
+          "Bearer " + scope.token(),
+          "search_partners",
+          new AgentToolGateway.Arguments("양재", null, true));
+      var service =
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 0);
+      var explicitReview = new SlipFieldReview(SlipFieldReview.Field.PARTNER, null, "거래처 확인 필요");
+      for (var reviews : List.of(List.<SlipFieldReview>of(), List.of(explicitReview))) {
+        var raw =
+            new SlipModelResult(
+                "AUCTION",
+                "2026-10-19",
+                null,
+                3L,
+                null,
+                List.of(),
+                List.of(),
+                90,
+                1024,
+                1,
+                reviews);
+        var result = service.validate("r", raw, scope);
+        assertThat(result.partnerId()).isEqualTo(3L);
+        assertThat(result.partnerName()).isEqualTo("양재");
+        assertThat(result.rawPartnerName()).isNull();
+        assertThat(result.warnings()).isEmpty();
+        assertThat(result.reviewFields()).containsExactlyElementsOf(reviews);
+      }
+      var unknown =
+          new SlipModelResult(
+              "AUCTION",
+              "2026-10-19",
+              null,
+              99L,
+              null,
+              List.of(),
+              List.of(),
+              90,
+              1024,
+              1,
+              List.of());
+      assertThat(service.validate("r", unknown, scope).reviewFields())
+          .anyMatch(review -> review.field() == SlipFieldReview.Field.PARTNER);
+    }
+  }
+
+  @Test
+  void serverAssignsConsignmentPartnerWithoutAiLookupOrReviewAndQueriesOncePerBatch() {
+    var partners = mock(BusinessPartnerQueryApi.class);
+    when(partners.getInfo(3L))
+        .thenReturn(
+            new BusinessPartnerInfo(
+                3L, "이름을 변경한 경매장", PartnerType.AUCTION_HOUSE, true, null, null, null, null));
+    var tools =
+        new AgentToolGateway(mock(VarietySearchApi.class), partners, Clock.systemUTC(), 5, 120);
+    try (var factory = Validation.buildDefaultValidatorFactory();
+        var scope = tools.open("r", "worker")) {
+      var service =
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 3);
+      var raw =
+          new SlipModelResult(
+              "AUCTION",
+              "2026-10-19",
+              null,
+              null,
+              null,
+              List.of(),
+              List.of(),
+              90,
+              1024,
+              1,
+              List.of(new SlipFieldReview(SlipFieldReview.Field.PARTNER, null, "원문 거래처명 없음")));
+      for (int i = 0; i < 16; i++) {
+        var result = service.validate("r", raw, scope, DocumentForm.CONSIGNMENT_RECEIPT);
+        assertThat(result.partnerId()).isEqualTo(3L);
+        assertThat(result.partnerName()).isEqualTo("이름을 변경한 경매장");
+        assertThat(result.rawPartnerName()).isNull();
+        assertThat(result.reviewFields()).isEmpty();
+        assertThat(result.warnings()).isEmpty();
+      }
+      assertThat(scope.calls()).isZero();
+      verify(partners, times(1)).getInfo(3L);
+      verifyNoMoreInteractions(partners);
+      assertThat(scope.partner(3L)).isNull();
+    }
+  }
+
+  @Test
+  void formDefaultsNeverOverrideReadableNamesOrApplyToOtherFormsAndSalesTypes() {
+    var partners = mock(BusinessPartnerQueryApi.class);
+    var tools =
+        new AgentToolGateway(mock(VarietySearchApi.class), partners, Clock.systemUTC(), 5, 120);
+    try (var factory = Validation.buildDefaultValidatorFactory();
+        var scope = tools.open("r", "worker")) {
+      var service =
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 3);
+      for (DocumentForm form : DocumentForm.values()) {
+        for (String type : Arrays.asList("DIRECT", "AUCTION", null)) {
+          if (form == DocumentForm.CONSIGNMENT_RECEIPT && "AUCTION".equals(type)) continue;
+          var raw =
+              new SlipModelResult(
+                  type,
+                  "2026-10-19",
+                  null,
+                  null,
+                  null,
+                  List.of(),
+                  List.of(),
+                  90,
+                  1024,
+                  1,
+                  List.of());
+          var result = service.validate("r", raw, scope, form);
+          assertThat(result.partnerId()).isNull();
+          assertThat(result.reviewFields())
+              .anyMatch(r -> r.field() == SlipFieldReview.Field.PARTNER);
+        }
+      }
+      var explicit =
+          new SlipModelResult(
+              "AUCTION",
+              "2026-10-19",
+              "다른 경매장",
+              null,
+              null,
+              List.of(),
+              List.of(),
+              90,
+              1024,
+              1,
+              List.of());
+      var result = service.validate("r", explicit, scope, DocumentForm.CONSIGNMENT_RECEIPT);
+      assertThat(result.partnerId()).isNull();
+      assertThat(result.rawPartnerName()).isEqualTo("다른 경매장");
+      verifyNoInteractions(partners);
+    }
+  }
+
+  @Test
+  void unsetMissingInactiveOrNonAuctionFixedPartnersRemainUnselected() {
+    for (int scenario = 0; scenario < 4; scenario++) {
+      var partners = mock(BusinessPartnerQueryApi.class);
+      if (scenario == 1) {
+        when(partners.getInfo(3L)).thenThrow(new NotFoundException("거래처를 찾을 수 없습니다."));
+      } else if (scenario > 1) {
+        when(partners.getInfo(3L))
+            .thenReturn(
+                new BusinessPartnerInfo(
+                    3L,
+                    "양재",
+                    scenario == 2 ? PartnerType.AUCTION_HOUSE : PartnerType.WHOLESALE,
+                    scenario != 2,
+                    null,
+                    null,
+                    null,
+                    null));
+      }
+      var tools =
+          new AgentToolGateway(mock(VarietySearchApi.class), partners, Clock.systemUTC(), 5, 120);
+      try (var factory = Validation.buildDefaultValidatorFactory();
+          var scope = tools.open("r", "worker")) {
+        var service =
+            new SlipExtractionService(
+                mock(AgentRuntimePort.class), tools, factory.getValidator(), scenario == 0 ? 0 : 3);
+        var raw =
+            new SlipModelResult(
+                "AUCTION",
+                "2026-10-19",
+                null,
+                null,
+                null,
+                List.of(),
+                List.of(),
+                90,
+                1024,
+                1,
+                List.of());
+        for (int i = 0; i < 2; i++) {
+          var result = service.validate("r", raw, scope, DocumentForm.CONSIGNMENT_RECEIPT);
+          assertThat(result.partnerId()).isNull();
+          assertThat(result.reviewFields())
+              .anyMatch(r -> r.field() == SlipFieldReview.Field.PARTNER);
+        }
+        if (scenario == 0) verifyNoInteractions(partners);
+        else {
+          verify(partners, times(1)).getInfo(3L);
+          verifyNoMoreInteractions(partners);
+        }
+      }
+    }
+  }
+
+  @Test
   void preservesUncertainValuesAndReturnsSpecificReviewTargets() {
     var tools =
         new AgentToolGateway(
@@ -134,7 +339,7 @@ class SlipExtractionServiceTest {
     try (var factory = Validation.buildDefaultValidatorFactory();
         var scope = tools.open("r", "worker")) {
       var service =
-          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 0);
       var item = new SlipModelResult.Item("하니문", "속", null, "중", 10, 2, 20, 100, 2000L, null);
       var review = new SlipFieldReview(SlipFieldReview.Field.QUANTITY, 0, "수량 끝자리 불명확");
       var raw =
@@ -184,7 +389,7 @@ class SlipExtractionServiceTest {
     try (var factory = Validation.buildDefaultValidatorFactory();
         var scope = tools.open("r", "worker")) {
       var service =
-          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 0);
       for (var review :
           List.of(
               new SlipFieldReview(SlipFieldReview.Field.SALE_DATE, 0, "날짜 확인 필요"),
@@ -215,7 +420,7 @@ class SlipExtractionServiceTest {
     try (var factory = Validation.buildDefaultValidatorFactory();
         var scope = tools.open("request", "worker")) {
       var service =
-          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 0);
       tools.execute(
           "Bearer " + scope.token(),
           "search_varieties",
@@ -270,7 +475,7 @@ class SlipExtractionServiceTest {
     try (var factory = Validation.buildDefaultValidatorFactory();
         var scope = tools.open("r", "a")) {
       var service =
-          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 0);
       var raw =
           new SlipModelResult(
               "DIRECT",
@@ -324,7 +529,7 @@ class SlipExtractionServiceTest {
     ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "png", png);
     try (var factory = Validation.buildDefaultValidatorFactory();
         var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-      var service = new SlipExtractionService(runtime, tools, factory.getValidator());
+      var service = new SlipExtractionService(runtime, tools, factory.getValidator(), 0);
       var first = executor.submit(() -> service.extract("worker", "image/png", png.toByteArray()));
       try {
         assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
@@ -351,7 +556,7 @@ class SlipExtractionServiceTest {
     try (var factory = Validation.buildDefaultValidatorFactory();
         var scope = tools.open("r", "worker")) {
       var service =
-          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 0);
       var valid =
           new SlipModelResult(
               null, null, null, null, null, List.of(), List.of(), 65, 2048, 2, List.of());
@@ -395,7 +600,7 @@ class SlipExtractionServiceTest {
           "search_partners",
           new AgentToolGateway.Arguments("거래처", null, null));
       var service =
-          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 0);
       var raw =
           new SlipModelResult(
               modelType, null, "사진 원문", 3L, null, List.of(), List.of(), 90, 1024, 1, List.of());
@@ -432,7 +637,7 @@ class SlipExtractionServiceTest {
           "search_partners",
           new AgentToolGateway.Arguments("거래처", null, null));
       var service =
-          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator());
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 0);
       for (Long id : Arrays.asList(3L, 99L, null)) {
         var result =
             service.validate(

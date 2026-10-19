@@ -717,6 +717,7 @@ export function readSalesSlipPhotos(
   photos: {
     photoId: string;
     photo: import("./types").SalesSlipPhotoInput;
+    documentForm: import("./types").SalesSlipDocumentForm;
   }[],
   signal?: AbortSignal,
   requestId?: string,
@@ -729,6 +730,7 @@ export function readSalesSlipPhotos(
         JSON.stringify({
           photos: photos.map((p) => ({
             photoId: p.photoId,
+            documentForm: p.documentForm,
           })),
         }),
       ],

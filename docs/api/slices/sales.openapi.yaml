@@ -1726,6 +1726,12 @@ components:
     SalesSlipPreviewImage:
       type: object
       properties:
+        documentForm:
+          type: string
+          enum:
+          - CONSIGNMENT_RECEIPT
+          - LISTING_REQUEST
+          - UNKNOWN
         id:
           type: string
           format: uuid

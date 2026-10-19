@@ -55,6 +55,7 @@ app:
     runtime-secret: ${AI_RUNTIME_SECRET:}
     timeout-seconds: ${AI_TIMEOUT_SECONDS:120}
     max-tool-calls: ${AI_MAX_TOOL_CALLS:20}
+    default-auction-partner-id: ${AI_DEFAULT_AUCTION_PARTNER_ID:0}
   environment: ${APP_ENV:prod}
   auth:
     enabled: ${AUTH_ENABLED:true}

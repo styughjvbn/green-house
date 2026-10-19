@@ -1,6 +1,7 @@
 package kr.co.slip.opencv;
 
 import kr.co.slip.api.ProcessingResult;
+import kr.co.slip.api.DocumentForm;
 
 import kr.co.slip.api.ProcessingOptions;
 
@@ -200,13 +201,13 @@ public final class SlipProcessor implements SlipImageProcessor {
         List<Integer> ys = geometry.horizontalLines().stream().map(y -> y - b.y()).toList();
         List<Integer> xs = geometry.verticalLines().stream().map(x -> x - b.x()).toList();
         TableLayout layout = TableLayout.detect(grid, region, xs, ys, parent.scale);
-        if (layout.kind() == TableLayout.Kind.UNKNOWN)
+        if (layout.kind() == DocumentForm.UNKNOWN)
             warnings.add("표 " + geometry.index() + ": 수탁증·상장의뢰서 양식을 확인하지 못해 행 제거를 생략했습니다.");
         List<Row> rows = classifyRows(binary, grid, region, ys, layout, options, parent).stream()
                 .map(r -> new Row(r.index(), r.top() + originY, r.bottom() + originY,
                         r.inkRatio(), r.inkPixels(), r.removed(), r.reason())).toList();
         return new Table(geometry.index(), b, geometry.horizontalLines(), geometry.verticalLines(), rows,
-                (int) rows.stream().filter(Row::removed).count());
+                (int) rows.stream().filter(Row::removed).count(), layout.kind());
     }
 
     private static void clearBorder(Mat mask, int border) {
@@ -793,7 +794,7 @@ public final class SlipProcessor implements SlipImageProcessor {
                         Math.max(1, region.width - 2 * m.px(4)), Math.max(1, height - 2 * inset));
                 int ink = Core.countNonZero(m.own(content.submat(r)));
                 int area = r.width * r.height;
-                if (layout.kind() == TableLayout.Kind.CONSIGNMENT_RECEIPT) {
+                if (layout.kind() == DocumentForm.CONSIGNMENT_RECEIPT) {
                     int left = Math.max(r.x, region.x + layout.printedLeft() - m.px(3));
                     int right = Math.min(r.x + r.width, region.x + layout.printedRight() + m.px(3));
                     Rect printed = new Rect(left, r.y, right - left, r.height);
@@ -801,7 +802,7 @@ public final class SlipProcessor implements SlipImageProcessor {
                     area -= printed.width * printed.height;
                 }
                 double ratio = ink / (double) area;
-                boolean unknown = layout.kind() == TableLayout.Kind.UNKNOWN;
+                boolean unknown = layout.kind() == DocumentForm.UNKNOWN;
                 boolean protectedRow = i < protectedRows;
                 boolean empty = !unknown && !protectedRow && ratio <= options.minimumInkRatio();
                 result.add(new Row(i, region.y + ys.get(i), region.y + ys.get(i + 1), ratio, ink,

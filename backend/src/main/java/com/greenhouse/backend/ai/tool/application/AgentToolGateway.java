@@ -1,6 +1,7 @@
 package com.greenhouse.backend.ai.tool.application;
 
 import com.greenhouse.backend.ai.api.AgentException;
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.api.variety.VarietySearchApi;
 import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import java.security.SecureRandom;
@@ -74,8 +75,7 @@ public class AgentToolGateway {
         found.forEach(v -> scope.varieties.put(v.id(), v));
         result = found;
       } else {
-        var found = partners.searchOptions(args.query().trim(), args.auctionHouse(), 10);
-        found.forEach(p -> scope.partners.put(p.id(), p));
+        var found = scope.lookupPartners(args.query(), args.auctionHouse());
         result = found;
       }
       log.info(
@@ -97,6 +97,8 @@ public class AgentToolGateway {
 
   public record Arguments(String query, String genus, Boolean auctionHouse) {}
 
+  private record PartnerLookup(String query, Boolean auctionHouse) {}
+
   public final class Scope implements AutoCloseable {
     public final String requestId;
     public final String actor;
@@ -105,6 +107,10 @@ public class AgentToolGateway {
     private final AtomicInteger calls = new AtomicInteger();
     private final Map<Long, VarietySearchApi.Option> varieties = new ConcurrentHashMap<>();
     private final Map<Long, BusinessPartnerQueryApi.Option> partners = new ConcurrentHashMap<>();
+    private final Map<Long, Optional<BusinessPartnerQueryApi.Option>> partnerIdLookups =
+        new ConcurrentHashMap<>();
+    private final Map<PartnerLookup, List<BusinessPartnerQueryApi.Option>> partnerLookups =
+        new ConcurrentHashMap<>();
 
     private Scope(String requestId, String actor, String token, Instant expiresAt) {
       this.requestId = requestId;
@@ -123,6 +129,39 @@ public class AgentToolGateway {
 
     public VarietySearchApi.Option variety(Long id) {
       return id == null ? null : varieties.get(id);
+    }
+
+    /** Resolve configured defaults independently of names and agent search candidates. */
+    public BusinessPartnerQueryApi.Option lookupPartnerById(long id) {
+      if (id <= 0) return null;
+      return partnerIdLookups
+          .computeIfAbsent(
+              id,
+              key -> {
+                try {
+                  var found = AgentToolGateway.this.partners.getInfo(key);
+                  return Optional.of(
+                      new BusinessPartnerQueryApi.Option(
+                          found.id(), found.name(), found.partnerType(), found.active()));
+                } catch (NotFoundException e) {
+                  return Optional.empty();
+                }
+              })
+          .orElse(null);
+    }
+
+    /** Cache agent searches within this execution. */
+    public List<BusinessPartnerQueryApi.Option> lookupPartners(String query, Boolean auctionHouse) {
+      return partnerLookups.computeIfAbsent(
+          new PartnerLookup(query.trim(), auctionHouse),
+          key -> {
+            var found =
+                List.copyOf(
+                    AgentToolGateway.this.partners.searchOptions(
+                        key.query(), key.auctionHouse(), 10));
+            found.forEach(p -> partners.put(p.id(), p));
+            return found;
+          });
     }
 
     public BusinessPartnerQueryApi.Option partner(Long id) {

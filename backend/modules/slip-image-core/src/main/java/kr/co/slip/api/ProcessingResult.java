@@ -9,7 +9,12 @@ public record ProcessingResult(Report report, Map<String, byte[]> images) {
     public record Row(int index, int top, int bottom, double inkRatio, int inkPixels,
                       boolean removed, String reason) {}
     public record Table(int index, Box bounds, List<Integer> horizontalLines,
-                        List<Integer> verticalLines, List<Row> rows, int removedRows) {}
+                        List<Integer> verticalLines, List<Row> rows, int removedRows, DocumentForm form) {
+        public Table(int index, Box bounds, List<Integer> horizontalLines,
+                     List<Integer> verticalLines, List<Row> rows, int removedRows) {
+            this(index, bounds, horizontalLines, verticalLines, rows, removedRows, DocumentForm.UNKNOWN);
+        }
+    }
     public record Rotation(String mode, int clockwiseDegrees, double deskewCounterClockwiseDegrees,
                            boolean reviewRequired, String method) {}
     public record Paper(int index, Box bounds, List<XY> contour, String method,

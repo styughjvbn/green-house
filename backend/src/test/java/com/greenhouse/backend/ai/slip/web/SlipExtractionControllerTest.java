@@ -13,6 +13,7 @@ import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.List;
+import kr.co.slip.api.DocumentForm;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -78,7 +79,7 @@ class SlipExtractionControllerTest {
             "metadata",
             "metadata.json",
             "application/json",
-            "{\"photos\":[{\"photoId\":\"p\",\"feedback\":\"수량 20개\"}]}"
+            "{\"photos\":[{\"photoId\":\"p\",\"documentForm\":\"CONSIGNMENT_RECEIPT\",\"feedback\":\"수량 20개\"}]}"
                 .getBytes(StandardCharsets.UTF_8));
     mvc.perform(
             multipart("/api/ai/slips/sessions/session/extract")
@@ -93,7 +94,11 @@ class SlipExtractionControllerTest {
             eq("worker"),
             eq("session"),
             argThat(
-                input -> input.photos().size() == 1 && input.photos().get(0).photoId().equals("p")),
+                input ->
+                    input.photos().size() == 1
+                        && input.photos().get(0).photoId().equals("p")
+                        && input.photos().get(0).documentForm()
+                            == DocumentForm.CONSIGNMENT_RECEIPT),
             eq("client-request"));
     mvc.perform(
             multipart("/api/ai/slips/sessions/session/extract")

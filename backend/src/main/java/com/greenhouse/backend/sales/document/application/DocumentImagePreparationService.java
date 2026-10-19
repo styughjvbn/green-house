@@ -78,7 +78,11 @@ public class DocumentImagePreparationService {
               UUID imageId = UUID.randomUUID();
               images.put(imageId, entry.getValue());
               metadata.add(
-                  new PreviewImage(imageId, kind, sourceRegion(entry.getKey(), result.report())));
+                  new PreviewImage(
+                      imageId,
+                      kind,
+                      sourceRegion(entry.getKey(), result.report()),
+                      documentForm(entry.getKey(), result.report())));
             });
     var report = result.report();
     var rotation = report.rotation();
@@ -102,6 +106,22 @@ public class DocumentImagePreparationService {
             List.copyOf(metadata));
     store(id, new StoredPreview(actor, expiresAt, Map.copyOf(images)));
     return preview;
+  }
+
+  private static DocumentForm documentForm(String name, ProcessingResult.Report report) {
+    if (!name.matches("paper-\\d+(-compacted)?\\.jpg")) return DocumentForm.UNKNOWN;
+    int end = name.indexOf("-compacted");
+    if (end < 0) end = name.lastIndexOf('.');
+    int index = Integer.parseInt(name.substring(6, end));
+    var paper = report.papers().stream().filter(p -> p.index() == index).findFirst().orElse(null);
+    if (paper == null) return DocumentForm.UNKNOWN;
+    var forms =
+        report.tables().stream()
+            .filter(t -> paper.tableIndices().contains(t.index()))
+            .map(ProcessingResult.Table::form)
+            .distinct()
+            .toList();
+    return forms.size() == 1 && forms.getFirst() != null ? forms.getFirst() : DocumentForm.UNKNOWN;
   }
 
   private static SourceRegion sourceRegion(String name, ProcessingResult.Report report) {
@@ -184,7 +204,8 @@ public class DocumentImagePreparationService {
   }
 
   @Schema(name = "SalesSlipPreviewImage")
-  public record PreviewImage(UUID id, ImageKind kind, SourceRegion sourceRegion) {}
+  public record PreviewImage(
+      UUID id, ImageKind kind, SourceRegion sourceRegion, DocumentForm documentForm) {}
 
   @Schema(name = "SalesSlipSourceRegion", description = "EXIF 방향이 반영된 원본의 정규화 사각형 좌표(0~1)")
   public record SourceRegion(double x, double y, double width, double height) {}

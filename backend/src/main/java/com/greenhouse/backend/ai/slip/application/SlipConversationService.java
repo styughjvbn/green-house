@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
+import kr.co.slip.api.DocumentForm;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -67,6 +68,7 @@ public class SlipConversationService {
         || input.photos().size() > 10)
       throw new AgentException(400, "AI_INVALID_REQUEST", "사진은 한 번에 1~10장까지 읽을 수 있습니다.");
     var ids = new HashSet<String>();
+    var forms = new HashMap<String, DocumentForm>();
     for (var photo : input.photos()) {
       if (photo == null
           || photo.photoId() == null
@@ -74,6 +76,7 @@ public class SlipConversationService {
           || !ids.add(photo.photoId()))
         throw new AgentException(400, "AI_INVALID_REQUEST", "사진 ID를 확인해주세요.");
       UploadImage.validate(photo.contentType(), photo.image());
+      forms.put(photo.photoId(), photo.documentForm());
     }
     if (!slot.tryAcquire())
       throw new AgentException(429, "AI_BUSY", "다른 전표를 읽고 있습니다. 잠시 후 다시 시도해주세요.");
@@ -110,7 +113,9 @@ public class SlipConversationService {
         else
           photos.add(
               new SlipConversationResult.Photo(
-                  photo.photoId(), extraction.validate(requestId, photo.result(), scope), null));
+                  photo.photoId(),
+                  extraction.validate(requestId, photo.result(), scope, forms.get(photo.photoId())),
+                  null));
       }
       return new SlipConversationResult(sessionId, requestId, List.copyOf(photos));
     } finally {
@@ -163,6 +168,7 @@ public class SlipConversationService {
   private String fingerprint(SlipConversationInput.Photo photo) {
     try {
       var hash = MessageDigest.getInstance("SHA-256");
+      hash.update(photo.documentForm().name().getBytes(StandardCharsets.UTF_8));
       hash.update(photo.contentType().getBytes(StandardCharsets.UTF_8));
       return HexFormat.of().formatHex(hash.digest(photo.image()));
     } catch (NoSuchAlgorithmException e) {

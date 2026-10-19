@@ -1,5 +1,6 @@
 package kr.co.slip.opencv;
 
+import kr.co.slip.api.DocumentForm;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,11 +10,10 @@ import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 
 /** Header merging identifies the structure; column proportions corroborate the supported form. */
-record TableLayout(Kind kind, int headerRows, int printedLeft, int printedRight) {
-    enum Kind { CONSIGNMENT_RECEIPT, LISTING_REQUEST, UNKNOWN }
+record TableLayout(DocumentForm kind, int headerRows, int printedLeft, int printedRight) {
     private static final double[] RECEIPT_COLUMNS = {0, .116, .376, .420, .464, .509, .552, .693, .786, .879, 1};
     private static final double[] LISTING_COLUMNS = {0, .132, .333, .450, .566, .683, .819, 1};
-    static final TableLayout UNKNOWN = new TableLayout(Kind.UNKNOWN, 0, 0, 0);
+    static final TableLayout UNKNOWN = new TableLayout(DocumentForm.UNKNOWN, 0, 0, 0);
 
     static TableLayout detect(Mat grid, Rect region, List<Integer> xs, List<Integer> ys, PixelScale pixels) {
         if (ys.size() < 3 || xs.size() < 2) return UNKNOWN;
@@ -25,12 +25,12 @@ record TableLayout(Kind kind, int headerRows, int printedLeft, int printedRight)
         List<HeaderRow> rows = headerRows(grid, region, xs, ys, internal, pixels);
         int bodyStart = mergedHeaderEnd(rows);
         if (bodyStart > 0 && proportionsMatch(xs, origin, width, region.width, RECEIPT_COLUMNS))
-            return new TableLayout(Kind.CONSIGNMENT_RECEIPT, bodyStart,
+            return new TableLayout(DocumentForm.CONSIGNMENT_RECEIPT, bodyStart,
                     nearest(xs, origin + width * .376), nearest(xs, origin + width * .552));
         // Missing or unreadable lines do not establish a non-merged header.
         if (bodyStart < 0 && rows.size() >= 2 && rows.get(0).allDivided() && rows.get(1).allDivided()
                 && proportionsMatch(xs, origin, width, region.width, LISTING_COLUMNS))
-            return new TableLayout(Kind.LISTING_REQUEST, 1, 0, 0);
+            return new TableLayout(DocumentForm.LISTING_REQUEST, 1, 0, 0);
         return UNKNOWN;
     }
 

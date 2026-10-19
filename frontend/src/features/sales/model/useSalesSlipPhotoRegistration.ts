@@ -25,7 +25,11 @@ import {
   getSalesSlipPreparedImage,
   removeSalesSlipImagePreview,
 } from "../api/salesApi";
-import type { CreateSalesSlipPayload, SalesSlipPhotoInput } from "../api/types";
+import type {
+  CreateSalesSlipPayload,
+  SalesSlipPhotoInput,
+  SalesSlipDocumentForm,
+} from "../api/types";
 import {
   createInitialSalesForm,
   distributeSalesItems,
@@ -59,6 +63,7 @@ type PhotoEntry = {
   parentId: string | null;
   region: PhotoRegion | null;
   rotationDegrees: number;
+  documentForm: SalesSlipDocumentForm;
   photo: SalesSlipPhotoInput;
   form: SalesSlipForm;
   read: "waiting" | "reading" | "ready" | "failed";
@@ -178,6 +183,7 @@ export function useSalesSlipPhotoRegistration(
     parentId: string | null,
     region: PhotoRegion | null = null,
     rotationDegrees = 0,
+    documentForm: SalesSlipDocumentForm = "UNKNOWN",
   ): PhotoEntry {
     return {
       id,
@@ -185,6 +191,7 @@ export function useSalesSlipPhotoRegistration(
       parentId,
       region,
       rotationDegrees,
+      documentForm,
       form: withSalesRecordingMode(createInitialSalesForm(businessDate), true),
       read: "waiting",
       save: "draft",
@@ -245,6 +252,7 @@ export function useSalesSlipPhotoRegistration(
                 preparedPhotoName(entry.photo.fileName, index + 1),
               ),
               region,
+              documentForm: image.documentForm ?? "UNKNOWN",
             };
           }),
         );
@@ -316,14 +324,16 @@ export function useSalesSlipPhotoRegistration(
               rotationDegrees: rotations[entry.id] ?? -1,
             });
             if (!mounted.current || controller.signal.aborted) return;
-            const children = result.photos.map(({ photo, region }) =>
-              createEntry(
-                createUuid(),
-                photo,
-                entry.id,
-                region,
-                result.rotationDegrees,
-              ),
+            const children = result.photos.map(
+              ({ photo, region, documentForm }) =>
+                createEntry(
+                  createUuid(),
+                  photo,
+                  entry.id,
+                  region,
+                  result.rotationDegrees,
+                  documentForm,
+                ),
             );
             for (const child of previous)
               if (sessionId.current)
@@ -627,6 +637,7 @@ export function useSalesSlipPhotoRegistration(
             batchEntries.map((entry) => ({
               photoId: entry.id,
               photo: entry.photo,
+              documentForm: entry.documentForm,
             })),
             controller.signal,
             run.requestId,
