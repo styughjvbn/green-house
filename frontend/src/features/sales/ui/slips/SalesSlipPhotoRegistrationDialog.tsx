@@ -4,7 +4,17 @@ import { SalesSlipSourceRegions } from "./SalesSlipSourceRegions";
 import { samePhotoRegion, type PhotoRegionDraft } from "../../lib/photoRegions";
 import { SalesSlipFloatingPhoto } from "./SalesSlipFloatingPhoto";
 import { SalesSlipPhotoViewer } from "./SalesSlipPhotoViewer";
-import { Camera, ImagePlus, LoaderCircle, X } from "lucide-react";
+import {
+  Camera,
+  ImagePlus,
+  LoaderCircle,
+  X,
+  ScanLine,
+  Check,
+  CheckCircle2,
+  CircleAlert,
+  Clock3,
+} from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
 import {
   Dialog,
@@ -19,6 +29,37 @@ import {
 } from "../../lib/salesForm";
 import { SalesSlipCreateForm } from "./SalesSlipCreateForm";
 import { SalesSlipPhotoProgress } from "./SalesSlipPhotoProgress";
+
+const photoStatuses = {
+  regionsNeeded: { label: "영역 선택 필요", tone: "waiting", icon: ScanLine },
+  regionsReady: { label: "영역 선택 완료", tone: "complete", icon: Check },
+  regionProcessing: {
+    label: "전표 찾는 중",
+    tone: "processing",
+    icon: LoaderCircle,
+  },
+  regionFailed: { label: "영역 처리 실패", tone: "error", icon: CircleAlert },
+  waiting: { label: "사진 읽기 대기", tone: "waiting", icon: Clock3 },
+  reading: { label: "읽어 입력 중", tone: "processing", icon: LoaderCircle },
+  readFailed: { label: "사진 읽기 실패", tone: "error", icon: CircleAlert },
+  review: { label: "입력 내용 확인 필요", tone: "review", icon: CircleAlert },
+  needsAttention: { label: "확인 필요", tone: "error", icon: CircleAlert },
+  saving: { label: "저장 중", tone: "processing", icon: LoaderCircle },
+  saved: { label: "저장 완료", tone: "complete", icon: CheckCircle2 },
+  saveUncertain: {
+    label: "저장 결과 확인 필요",
+    tone: "review",
+    icon: CircleAlert,
+  },
+} as const;
+
+const photoStatusTones = {
+  waiting: "border-[#dce3df] bg-[#f3f6f4] text-[#526158]",
+  processing: "border-[#c9dcf4] bg-[#edf4ff] text-[#245b94]",
+  review: "border-[#efd7a8] bg-[#fff7e7] text-[#835719]",
+  complete: "border-[#bedfc7] bg-[#eaf6ed] text-[#176638]",
+  error: "border-[#efc8bf] bg-[#fff0eb] text-[#9b341e]",
+};
 
 const SalesSlipRegionEditor = dynamic(
   () =>
@@ -142,8 +183,16 @@ export function SalesSlipPhotoRegistrationDialog({
       ? (photos.regionProcessingProgress?.photoIds ??
         (regionEditor ? [regionEditor.ownerId] : []))
       : [];
-  const buttonClass =
-    "inline-flex h-8 items-center justify-center gap-2 rounded-md border border-[#cfd8cc] bg-white px-3 text-sm font-semibold text-[#29422e] hover:bg-[#f7faf6] focus-visible:outline-2 focus-visible:outline-[#159447] disabled:opacity-60";
+  const buttonBaseClass =
+    "inline-flex h-8 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#159447] disabled:opacity-60";
+  const buttonClass = `${buttonBaseClass} border-[#cfd8cc] bg-white text-[#29422e] hover:bg-[#f7faf6]`;
+  const primaryButtonClass = `${buttonBaseClass} border-[#159447] bg-[#159447] text-white hover:bg-[#10783a]`;
+  const nextBatchAction =
+    photos.photosWithoutDocumentRegionsCount && documents.length < 10
+      ? "detect"
+      : documentsPendingExtraction.length
+        ? "extract"
+        : null;
 
   function requestClose() {
     if (blocking) return;
@@ -229,7 +278,7 @@ export function SalesSlipPhotoRegistrationDialog({
             </button>
             <button
               type="button"
-              className={buttonClass}
+              className={originals.length ? buttonClass : primaryButtonClass}
               disabled={photos.busy !== null || originals.length >= 10}
               onClick={() => fileRef.current?.click()}
             >
@@ -238,7 +287,9 @@ export function SalesSlipPhotoRegistrationDialog({
             </button>
             <button
               type="button"
-              className={buttonClass}
+              className={
+                nextBatchAction === "detect" ? primaryButtonClass : buttonClass
+              }
               disabled={
                 photos.busy !== null ||
                 !photos.photosWithoutDocumentRegionsCount ||
@@ -250,7 +301,9 @@ export function SalesSlipPhotoRegistrationDialog({
             </button>
             <button
               type="button"
-              className={buttonClass}
+              className={
+                nextBatchAction === "extract" ? primaryButtonClass : buttonClass
+              }
               disabled={
                 photos.busy !== null || !documentsPendingExtraction.length
               }
@@ -340,61 +393,71 @@ export function SalesSlipPhotoRegistrationDialog({
               aria-label="등록할 전표 사진"
               className="flex gap-2 overflow-x-auto border-b border-[#dbe8dc] p-3 lg:block lg:space-y-2 lg:overflow-y-auto lg:border-r lg:border-b-0"
             >
-              {photos.entries.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  aria-current={entry.id === selected.id ? "true" : undefined}
-                  disabled={photos.busy !== null}
-                  className={`w-48 min-w-40 shrink-0 rounded-md border p-3 text-left ${entry.parentId ? "ml-4 lg:w-[calc(100%-1rem)]" : "lg:w-full"} ${entry.id === selected.id ? "border-[#159447] bg-[#e8f6eb]" : "border-[#d9e3db] bg-white"} disabled:opacity-60`}
-                  onClick={() => photos.setSelectedId(entry.id)}
-                >
-                  <span
-                    title={entry.photo.fileName}
-                    className="block truncate text-sm font-semibold text-[#17251b]"
+              {photos.entries.map((entry) => {
+                const status = !entry.parentId
+                  ? processingPhotoIds.includes(entry.id)
+                    ? "regionProcessing"
+                    : entry.error
+                      ? "regionFailed"
+                      : photos.entries.some(
+                            (child) => child.parentId === entry.id,
+                          )
+                        ? "regionsReady"
+                        : "regionsNeeded"
+                  : entry.save === "saved"
+                    ? "saved"
+                    : entry.save === "saving"
+                      ? "saving"
+                      : entry.pendingPayload
+                        ? "saveUncertain"
+                        : entry.read === "reading"
+                          ? "reading"
+                          : entry.read === "failed"
+                            ? "readFailed"
+                            : entry.error
+                              ? "needsAttention"
+                              : entry.read === "ready"
+                                ? "review"
+                                : "waiting";
+                const badge = photoStatuses[status];
+                const StatusIcon = badge.icon;
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    aria-current={entry.id === selected.id ? "true" : undefined}
+                    disabled={photos.busy !== null}
+                    className={`w-48 min-w-40 shrink-0 rounded-md border p-3 text-left ${entry.parentId ? "ml-4 lg:w-[calc(100%-1rem)]" : "lg:w-full"} ${entry.id === selected.id ? "border-[#159447] bg-[#e8f6eb]" : "border-[#d9e3db] bg-white"} disabled:opacity-60`}
+                    onClick={() => photos.setSelectedId(entry.id)}
                   >
-                    {entry.parentId
-                      ? "└ "
-                      : `${originals.findIndex((original) => original.id === entry.id) + 1}. `}
-                    {entry.photo.fileName}
-                  </span>
-                  <span
-                    className={`mt-1 flex items-center gap-1.5 text-xs ${entry.error ? "text-[#9b341e]" : "text-[#526158]"}`}
-                  >
-                    {entry.save === "saving" ||
-                    entry.read === "reading" ||
-                    processingPhotoIds.includes(entry.id) ? (
-                      <LoaderCircle
-                        className="h-3.5 w-3.5 shrink-0 animate-spin motion-reduce:animate-none"
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                    {!entry.parentId
-                      ? processingPhotoIds.includes(entry.id)
-                        ? `원본 · ${regionProcessingLabel}`
-                        : entry.error
-                          ? "원본 · 전표 찾기 실패"
-                          : photos.entries.some(
-                                (child) => child.parentId === entry.id,
-                              )
-                            ? "원본 · 전표 영역 선택 완료"
-                            : "원본 · 전표 영역 선택 필요"
-                      : entry.save === "saved"
-                        ? "저장 완료"
-                        : entry.save === "saving"
-                          ? "저장 중"
-                          : entry.pendingPayload
-                            ? "저장 결과 확인 필요"
-                            : entry.read === "ready"
-                              ? "입력 내용 확인 필요"
-                              : entry.read === "reading"
-                                ? "전표 읽어 입력 중"
-                                : entry.read === "failed"
-                                  ? "사진 읽기 실패"
-                                  : "사진 읽기 대기"}
-                  </span>
-                </button>
-              ))}
+                    <span
+                      title={entry.photo.fileName}
+                      className="block truncate text-sm font-semibold text-[#17251b]"
+                    >
+                      {entry.parentId
+                        ? "└ "
+                        : `${originals.findIndex((original) => original.id === entry.id) + 1}. `}
+                      {entry.photo.fileName}
+                    </span>
+                    <span className="mt-2 flex flex-wrap items-center gap-1.5">
+                      {!entry.parentId ? (
+                        <span className="text-xs text-[#526158]">원본</span>
+                      ) : null}
+                      <span
+                        className={`inline-flex max-w-full items-center gap-1 rounded border px-1.5 py-0.5 text-xs font-medium ${photoStatusTones[badge.tone]}`}
+                      >
+                        <StatusIcon
+                          className={`h-3.5 w-3.5 shrink-0 ${badge.tone === "processing" ? "animate-spin motion-reduce:animate-none" : ""}`}
+                          aria-hidden="true"
+                        />
+                        {status === "regionProcessing"
+                          ? regionProcessingLabel
+                          : badge.label}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
             </nav>
             <div className="relative min-h-0 min-w-0">
               <div ref={detailScrollRef} className="h-full overflow-y-auto">
@@ -435,7 +498,9 @@ export function SalesSlipPhotoRegistrationDialog({
                         <>
                           <button
                             type="button"
-                            className={buttonClass}
+                            className={
+                              children.length ? buttonClass : primaryButtonClass
+                            }
                             disabled={photos.busy !== null || cannotRemove}
                             onClick={() => {
                               if (
@@ -479,7 +544,11 @@ export function SalesSlipPhotoRegistrationDialog({
                       {selected.parentId ? (
                         <button
                           type="button"
-                          className={buttonClass}
+                          className={
+                            selected.read === "ready"
+                              ? buttonClass
+                              : primaryButtonClass
+                          }
                           disabled={photos.busy !== null || cannotRemove}
                           onClick={confirmAndExtractSelectedDocument}
                         >
