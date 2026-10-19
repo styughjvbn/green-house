@@ -3,8 +3,9 @@ package kr.co.slip.opencv;
 import java.util.Arrays;
 import java.util.List;
 import org.opencv.core.Mat;
+import org.opencv.core.CvType;
 
-/** Composes only transforms applied to the actual image, never orientation probes. */
+/** Composes image transforms; analysis probes use their own independent plan. */
 final class SourceCoordinates {
     private double[] forward;
 
@@ -35,6 +36,12 @@ final class SourceCoordinates {
         for (int y = 0; y < 3; y++) for (int x = 0; x < 3; x++)
             for (int k = 0; k < 3; k++) product[y * 3 + x] += next[y * 3 + k] * forward[k * 3 + x];
         forward = product;
+    }
+
+    Mat matrix(MatScope scope) {
+        Mat matrix = scope.own(new Mat(3, 3, CvType.CV_64F));
+        matrix.put(0, 0, forward);
+        return matrix;
     }
 
     List<Double> inverse() {

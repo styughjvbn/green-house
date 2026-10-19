@@ -29,6 +29,13 @@ public final class SlipProcessor implements SlipImageProcessor {
     }
 
     @Override public ProcessingResult process(byte[] input, ProcessingOptions options) {
+        Attempt first = attempt(input, options, 1024);
+        return first.retry() ? attempt(input, options, options.maxDimension()).result() : first.result();
+    }
+
+    private record Attempt(ProcessingResult result, boolean retry) {}
+
+    private Attempt attempt(byte[] input, ProcessingOptions options, int analysisLimit) {
         if (input == null || input.length == 0 || input.length > 20 * 1024 * 1024)
             throw new IllegalArgumentException("Image must be between 1 byte and 20 MiB");
         Objects.requireNonNull(options, "options");
@@ -48,42 +55,10 @@ public final class SlipProcessor implements SlipImageProcessor {
             SourceCoordinates coordinates = new SourceCoordinates(sw, sh, work.cols(), work.rows());
             m.release(source);
             List<String> warnings = new ArrayList<>();
-            int preOrientationWidth = work.cols(), preOrientationHeight = work.rows();
-            Orientation orientation = orient(work, options.rotationDegrees(), warnings, m);
-            if (work != orientation.image()) m.release(work);
-            coordinates.quarterTurn(orientation.quarterTurns(), preOrientationWidth, preOrientationHeight);
-            work = orientation.image();
-            Point[] quad = documentQuad(work, m);
-            String correction;
-            List<XY> corners = new ArrayList<>();
-            if (quad != null) {
-                for (Point p : quad) corners.add(switch (orientation.quarterTurns()) {
-                    case 1 -> new XY(p.y / scale, (preOrientationHeight - 1 - p.x) / scale);
-                    case 2 -> new XY((preOrientationWidth - 1 - p.x) / scale, (preOrientationHeight - 1 - p.y) / scale);
-                    case 3 -> new XY((preOrientationWidth - 1 - p.y) / scale, p.x / scale);
-                    default -> new XY(p.x / scale, p.y / scale);
-                });
-                Mat warped = warp(work, quad, m, coordinates);
-                m.release(work);
-                work = warped;
-                correction = "DOCUMENT_PERSPECTIVE";
-            } else {
-                correction = "FRAME_DESKEW";
-                warnings.add("문서 네 모서리를 신뢰할 수 없어 전체 사진을 유지합니다. 겹침·잘림 및 표 기반 보정 여부를 검토하세요.");
-            }
-            double skewAngle = skewAngle(work, m);
-            Mat straightened = rotateBound(work, skewAngle, m, coordinates);
-            if (straightened != work) m.release(work);
-            work = straightened;
-            if (quad == null) {
-                Mat corrected = correctGridPerspective(work, m, coordinates);
-                if (corrected != work) {
-                    m.release(work);
-                    work = corrected;
-                    correction = "GRID_PERSPECTIVE";
-                    warnings.add("문서 외곽 대신 표의 선 방향에서 원근 변환을 추정했습니다. 사진 전체에 동일한 평면을 가정합니다.");
-                }
-            }
+            if (analysisLimit > 1024) warnings.add("축소 분석의 표 구조가 불확실해 처리 해상도로 다시 분석했습니다.");
+            Correction correction = correct(work, options, warnings, coordinates, m, analysisLimit);
+            if (correction.image() != work) m.release(work);
+            work = correction.image();
             Mat gray = m.mat(), binary = m.mat();
             Imgproc.cvtColor(work, gray, Imgproc.COLOR_BGR2GRAY);
             Imgproc.adaptiveThreshold(gray, binary, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -131,11 +106,18 @@ public final class SlipProcessor implements SlipImageProcessor {
             }
             if (tables.isEmpty()) warnings.add("안정적인 표 격자를 찾지 못해 빈 행을 제거하지 않았습니다.");
             Map<Integer, Mat> cutouts = new HashMap<>();
-            PaperSeparator.Result separated = PaperSeparator.separate(work, tables, quad != null, m.scale, options.outputMode(),
+            PaperSeparator.Result separated = PaperSeparator.separate(work, tables, !correction.corners().isEmpty(), m.scale, options.outputMode(),
                     (index, cutout) -> cutouts.put(index, m.own(cutout.clone())));
             images.putAll(separated.images());
             warnings.addAll(separated.warnings());
             tables = analyzeDocuments(binary, grid, tables, separated, cutouts, options, images, warnings, m);
+            boolean uncertain = tables.isEmpty() || separated.papers().isEmpty()
+                    || tables.stream().anyMatch(table -> table.rows().isEmpty()
+                        || table.rows().stream().anyMatch(row -> row.reason().equals("UNRECOGNIZED_LAYOUT")));
+            if (correction.reduced() && uncertain) {
+                // Returning closes native buffers before the single full-resolution retry.
+                return new Attempt(null, true);
+            }
             for (Table table : tables) {
                 try (Mats tableScope = new Mats(m.scale)) {
                     Box b = table.bounds();
@@ -151,10 +133,9 @@ public final class SlipProcessor implements SlipImageProcessor {
             }
             if (rowOverlay != null) images.put("05-row-decisions.png", png(rowOverlay, m));
             // Report coordinates continue to describe the unshortened corrected image.
-            return new ProcessingResult(new Report(correction, sw, sh, work.cols(), work.rows(),
-                    List.copyOf(corners), List.copyOf(warnings), List.copyOf(tables),
-                    new Rotation(options.rotationDegrees() == -1 ? "AUTO" : "MANUAL", orientation.quarterTurns() * 90,
-                            skewAngle, options.rotationDegrees() == -1, orientation.method()), separated.papers(), coordinates.inverse()), Collections.unmodifiableMap(images));
+            return new Attempt(new ProcessingResult(new Report(correction.method(), sw, sh, work.cols(), work.rows(),
+                    correction.corners(), List.copyOf(warnings), List.copyOf(tables),
+                    correction.rotation(), separated.papers(), coordinates.inverse()), Collections.unmodifiableMap(images)), false);
         }
     }
 
@@ -232,17 +213,135 @@ public final class SlipProcessor implements SlipImageProcessor {
         Imgproc.rectangle(mask, new Point(0, 0), new Point(mask.cols() - 1, mask.rows() - 1), Scalar.all(0), border * 2);
     }
 
-    /** Infer the two families of a planar grid, including when the sheet is clipped. */
-    private static Mat correctGridPerspective(Mat image, Mats parent, SourceCoordinates coordinates) {
+    private record Correction(Mat image, String method, List<XY> corners, Rotation rotation, boolean reduced) {}
+
+    /** Estimate on a capped probe, then resample the processing image only once. */
+    private static Correction correct(Mat image, ProcessingOptions options, List<String> warnings,
+                                      SourceCoordinates coordinates, Mats parent, int analysisLimit) {
+        int longest = Math.max(image.cols(), image.rows());
+        double reduction = Math.min(1, (double) analysisLimit / longest);
+        try (Mats m = new Mats(parent.scale.downsampled(longest, analysisLimit))) {
+            Mat probe = m.mat();
+            Imgproc.resize(image, probe, new Size(Math.round(image.cols() * reduction), Math.round(image.rows() * reduction)),
+                    0, 0, Imgproc.INTER_AREA);
+            List<double[]> lines = detectLines(probe, m);
+            // Retry sparse detections at processing resolution; never enlarge a small source.
+            if (lines.size() < 3 && reduction < 1) {
+                m.release(probe);
+                probe = m.own(image.clone());
+                m.scale = parent.scale;
+                lines = detectLines(probe, m);
+            }
+            int initialWidth = probe.cols(), initialHeight = probe.rows();
+            SourceCoordinates plan = new SourceCoordinates(initialWidth, initialHeight, initialWidth, initialHeight);
+            Orientation orientation = orient(probe, options.rotationDegrees(), warnings, m, lines, initialWidth < image.cols() || initialHeight < image.rows());
+            if (probe != orientation.image()) m.release(probe);
+            plan.quarterTurn(orientation.quarterTurns(), initialWidth, initialHeight);
+            probe = orientation.image();
+            Point[] quad = documentQuad(probe, m);
+            String method = "FRAME_DESKEW";
+            List<XY> corners = new ArrayList<>();
+            if (quad != null) {
+                List<Double> inverse = plan.inverse();
+                for (Point point : quad) {
+                    double x = inverse.get(0) * point.x + inverse.get(1) * point.y + inverse.get(2);
+                    double y = inverse.get(3) * point.x + inverse.get(4) * point.y + inverse.get(5);
+                    // The source-to-processing resize can round the two axes differently.
+                    List<Double> original = coordinates.inverse();
+                    Point processing = new Point(x * image.cols() / initialWidth, y * image.rows() / initialHeight);
+                    corners.add(new XY(original.get(0) * processing.x + original.get(1) * processing.y + original.get(2),
+                            original.get(3) * processing.x + original.get(4) * processing.y + original.get(5)));
+                }
+                Mat warped = warp(probe, quad, m, plan);
+                m.release(probe);
+                probe = warped;
+                method = "DOCUMENT_PERSPECTIVE";
+            } else {
+                warnings.add("문서 네 모서리를 신뢰할 수 없어 전체 사진을 유지합니다. 겹침·잘림 및 표 기반 보정 여부를 검토하세요.");
+            }
+            double angle = skewAngle(transformLines(lines, plan.matrix(m)));
+            Mat straightened = rotateBound(probe, angle, m, plan);
+            if (straightened != probe) m.release(probe);
+            probe = straightened;
+            if (quad == null) {
+                List<double[]> perspectiveLines = reduction < 1 && initialWidth < image.cols()
+                        ? transformLines(lines, plan.matrix(m)) : detectLines(probe, m, LinePurpose.PERSPECTIVE);
+                Mat corrected = correctGridPerspective(probe, m, plan, perspectiveLines);
+                if (corrected != probe) {
+                    m.release(probe);
+                    probe = corrected;
+                    method = "GRID_PERSPECTIVE";
+                    warnings.add("문서 외곽 대신 표의 선 방향에서 원근 변환을 추정했습니다. 사진 전체에 동일한 평면을 가정합니다.");
+                }
+            }
+            Rotation rotation = new Rotation(options.rotationDegrees() == -1 ? "AUTO" : "MANUAL",
+                    orientation.quarterTurns() * 90, angle, options.rotationDegrees() == -1, orientation.method());
+            if (quad == null && angle == 0 && method.equals("FRAME_DESKEW")) {
+                Mat result = quarterTurn(image, orientation.quarterTurns(), parent);
+                coordinates.quarterTurn(orientation.quarterTurns(), image.cols(), image.rows());
+                return new Correction(result, method, List.copyOf(corners), rotation, initialWidth < image.cols() || initialHeight < image.rows());
+            }
+            double boost = (double) longest / Math.max(initialWidth, initialHeight);
+            Mat inputScale = m.own(Mat.eye(3, 3, CvType.CV_64F)), outputScale = m.own(Mat.eye(3, 3, CvType.CV_64F));
+            inputScale.put(0, 0, (double) initialWidth / image.cols());
+            inputScale.put(1, 1, (double) initialHeight / image.rows());
+            outputScale.put(0, 0, boost); outputScale.put(1, 1, boost);
+            Mat scaled = m.mat(), transform = m.mat();
+            Core.gemm(plan.matrix(m), inputScale, 1, m.mat(), 0, scaled);
+            Core.gemm(outputScale, scaled, 1, m.mat(), 0, transform);
+            Mat result = parent.mat();
+            coordinates.append(transform);
+            Imgproc.warpPerspective(image, result, transform,
+                    new Size(Math.round(probe.cols() * boost), Math.round(probe.rows() * boost)),
+                    Imgproc.INTER_CUBIC, quad == null ? Core.BORDER_CONSTANT : Core.BORDER_REPLICATE, Scalar.all(255));
+            return new Correction(result, method, List.copyOf(corners), rotation, initialWidth < image.cols() || initialHeight < image.rows());
+        }
+    }
+
+    private static List<double[]> detectLines(Mat image, Mats parent) {
+        return detectLines(image, parent, LinePurpose.SKEW);
+    }
+
+    private enum LinePurpose { SKEW, ORIENTATION, PERSPECTIVE }
+
+    private static List<double[]> detectLines(Mat image, Mats parent, LinePurpose purpose) {
         try (Mats m = new Mats(parent.scale)) {
             Mat gray = m.mat(), edges = m.mat(), lines = m.mat();
             Imgproc.cvtColor(image, gray, Imgproc.COLOR_BGR2GRAY);
             Imgproc.adaptiveThreshold(gray, edges, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, m.scale.odd(35), 12);
-            Imgproc.HoughLinesP(edges, lines, 1, Math.PI / 3600, m.px(90), image.cols() * .22, m.px(25));
+            boolean perspective = purpose == LinePurpose.PERSPECTIVE;
+            double theta = Math.PI / switch (purpose) { case SKEW -> 1800; case ORIENTATION -> 180; case PERSPECTIVE -> 3600; };
+            Imgproc.HoughLinesP(edges, lines, 1, theta, m.px(perspective ? 90 : 80),
+                    (perspective ? image.cols() : Math.min(image.cols(), image.rows())) * .22,
+                    m.px(purpose == LinePurpose.ORIENTATION ? 20 : 25));
+            List<double[]> result = new ArrayList<>();
+            for (int i = 0; i < lines.rows(); i++) result.add(lines.get(i, 0));
+            return List.copyOf(result);
+        }
+    }
+
+    /** Transform segment endpoints instead of repeating Hough detection after every correction. */
+    private static List<double[]> transformLines(List<double[]> lines, Mat transform) {
+        double[] h = new double[9]; transform.get(0, 0, h);
+        List<double[]> result = new ArrayList<>();
+        for (double[] segment : lines) {
+            double[] mapped = new double[4];
+            for (int i = 0; i < 4; i += 2) {
+                double x = segment[i], y = segment[i + 1], z = h[6] * x + h[7] * y + h[8];
+                mapped[i] = (h[0] * x + h[1] * y + h[2]) / z;
+                mapped[i + 1] = (h[3] * x + h[4] * y + h[5]) / z;
+            }
+            if (Arrays.stream(mapped).allMatch(Double::isFinite)) result.add(mapped);
+        }
+        return result;
+    }
+
+    /** Infer the two families of a planar grid, including when the sheet is clipped. */
+    private static Mat correctGridPerspective(Mat image, Mats parent, SourceCoordinates coordinates, List<double[]> lines) {
+        try (Mats m = new Mats(parent.scale)) {
             List<double[]> horizontal = new ArrayList<>(), vertical = new ArrayList<>();
             double cx = image.cols() / 2., cy = image.rows() / 2.;
-            for (int i = 0; i < lines.rows(); i++) {
-                double[] p = lines.get(i, 0);
+            for (double[] p : lines) {
                 double dx = p[2] - p[0], dy = p[3] - p[1];
                 if (Math.abs(dx) > image.cols() * .45 && Math.abs(dy / dx) < .10) {
                     double slope = dy / dx;
@@ -314,20 +413,19 @@ public final class SlipProcessor implements SlipImageProcessor {
 
     private record Orientation(Mat image, int quarterTurns, String method) {}
 
-    private static Orientation orient(Mat image, int requestedDegrees, List<String> warnings, Mats parent) {
+    private static Orientation orient(Mat image, int requestedDegrees, List<String> warnings, Mats parent, List<double[]> lines, boolean reduced) {
         if (requestedDegrees != -1) return new Orientation(quarterTurn(image, requestedDegrees / 90, parent),
                 requestedDegrees / 90, "USER_SPECIFIED");
         try (Mats m = new Mats(parent.scale)) {
             // Use a straightened probe for direction analysis. Source coordinates remain unaffected.
-            Mat probe = rotateBound(image, skewAngle(image, m), m);
-            Mat gray = m.mat(), edges = m.mat(), lines = m.mat();
-            Imgproc.cvtColor(probe, gray, Imgproc.COLOR_BGR2GRAY);
-            Imgproc.adaptiveThreshold(gray, edges, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, m.scale.odd(35), 12);
-            Imgproc.HoughLinesP(edges, lines, 1, Math.PI / 180, m.px(80), Math.min(probe.rows(), probe.cols()) * .22, m.px(20));
+            double angle = skewAngle(lines);
+            Mat probe = rotateBound(image, angle, m);
+            List<double[]> directions = reduced ? lines : detectLines(probe, m, LinePurpose.ORIENTATION);
             double horizontal = 0, vertical = 0;
-            for (int i = 0; i < lines.rows(); i++) {
-                double[] p = lines.get(i, 0);
-                double dx = Math.abs(p[2] - p[0]), dy = Math.abs(p[3] - p[1]);
+            for (double[] p : directions) {
+                double radians = Math.toRadians(reduced ? angle : 0), c = Math.cos(radians), sine = Math.sin(radians);
+                double dx = Math.abs(c * (p[2] - p[0]) + sine * (p[3] - p[1]));
+                double dy = Math.abs(-sine * (p[2] - p[0]) + c * (p[3] - p[1]));
                 if (dx > dy * 10) horizontal += dx;
                 if (dy > dx * 10) vertical += dy;
             }
@@ -560,51 +658,44 @@ public final class SlipProcessor implements SlipImageProcessor {
         }
     }
 
-    private static double skewAngle(Mat image, Mats parent) {
-        try (Mats m = new Mats(parent.scale)) {
-            Mat gray = m.mat(), edges = m.mat(), lines = m.mat();
-            Imgproc.cvtColor(image, gray, Imgproc.COLOR_BGR2GRAY);
-            Imgproc.adaptiveThreshold(gray, edges, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, m.scale.odd(35), 12);
-            Imgproc.HoughLinesP(edges, lines, 1, Math.PI / 1800, m.px(80), Math.min(image.cols(), image.rows()) * .22, m.px(25));
-            List<double[]> angles = new ArrayList<>();
-            double[] histogram = new double[90];
-            double total = 0;
-            for (int i = 0; i < lines.rows(); i++) {
-                double[] p = lines.get(i, 0);
-                double angle = Math.toDegrees(Math.atan2(p[3] - p[1], p[2] - p[0]));
-                angle = ((angle + 225) % 90) - 45;
-                double weight = Math.hypot(p[2] - p[0], p[3] - p[1]);
-                angles.add(new double[]{angle, weight});
-                histogram[Math.min(89, (int) Math.floor(angle + 45))] += weight;
-                total += weight;
-            }
-            if (angles.size() < 3) return 0;
-            int peak = 0;
-            double best = 0;
-            for (int i = 0; i < 90; i++) {
-                double weight = 0;
-                for (int j = -2; j <= 2; j++) weight += histogram[(i + j + 90) % 90];
-                if (weight > best) { best = weight; peak = i; }
-            }
-            if (best < total * .4) return 0;
-            double center = peak - 44.5;
-            List<double[]> inliers = new ArrayList<>();
-            for (double[] sample : angles) {
-                double delta = sample[0] - center;
-                if (delta > 45) delta -= 90;
-                if (delta < -45) delta += 90;
-                if (Math.abs(delta) <= 2.5) inliers.add(new double[]{center + delta, sample[1]});
-            }
-            if (inliers.size() < 3) return 0;
-            inliers.sort(Comparator.comparingDouble(p -> p[0]));
-            double half = inliers.stream().mapToDouble(p -> p[1]).sum() / 2, sum = 0;
-            for (double[] sample : inliers) {
-                sum += sample[1];
-                if (sum >= half) return Math.abs(sample[0]) < .08 ? 0 : sample[0];
-            }
-            return 0;
-
+    private static double skewAngle(List<double[]> lines) {
+        List<double[]> angles = new ArrayList<>();
+        double[] histogram = new double[90];
+        double total = 0;
+        for (double[] p : lines) {
+            double angle = Math.toDegrees(Math.atan2(p[3] - p[1], p[2] - p[0]));
+            angle = ((angle + 225) % 90) - 45;
+            double weight = Math.hypot(p[2] - p[0], p[3] - p[1]);
+            angles.add(new double[]{angle, weight});
+            histogram[Math.min(89, (int) Math.floor(angle + 45))] += weight;
+            total += weight;
         }
+        if (angles.size() < 3) return 0;
+        int peak = 0;
+        double best = 0;
+        for (int i = 0; i < 90; i++) {
+            double weight = 0;
+            for (int j = -2; j <= 2; j++) weight += histogram[(i + j + 90) % 90];
+            if (weight > best) { best = weight; peak = i; }
+        }
+        if (best < total * .4) return 0;
+        double center = peak - 44.5;
+        List<double[]> inliers = new ArrayList<>();
+        for (double[] sample : angles) {
+            double delta = sample[0] - center;
+            if (delta > 45) delta -= 90;
+            if (delta < -45) delta += 90;
+            if (Math.abs(delta) <= 2.5) inliers.add(new double[]{center + delta, sample[1]});
+        }
+        if (inliers.size() < 3) return 0;
+        inliers.sort(Comparator.comparingDouble(p -> p[0]));
+        double half = inliers.stream().mapToDouble(p -> p[1]).sum() / 2, sum = 0;
+        for (double[] sample : inliers) {
+            sum += sample[1];
+            if (sum >= half) return Math.abs(sample[0]) < .08 ? 0 : sample[0];
+        }
+        return 0;
+
     }
 
     private static Mat rotateBound(Mat image, double angle, Mats parent) {

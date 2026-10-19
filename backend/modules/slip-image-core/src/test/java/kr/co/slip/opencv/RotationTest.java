@@ -1,5 +1,7 @@
 package kr.co.slip.opencv;
 
+import java.util.List;
+
 import kr.co.slip.api.ProcessingOptions;
 
 import org.junit.jupiter.api.Test;
@@ -94,6 +96,45 @@ class RotationTest {
             assertEquals(-17, result.report().rotation().deskewCounterClockwiseDegrees(), 1.0);
             assertFalse(result.report().tables().isEmpty());
         } finally { image.release(); slanted.release(); transform.release(); }
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 90, 180, 270})
+    void combinedCorrectionMapsBackToOddSizedSourceAfterProbeScaling(int rotation) {
+        try (MatScope scope = new MatScope()) {
+            Mat image = scope.own(new Mat(1901, 1433, CvType.CV_8UC3, Scalar.all(65)));
+            MatOfPoint polygon = scope.own(new MatOfPoint(new Point(160, 130), new Point(1260, 180),
+                    new Point(1300, 1750), new Point(80, 1700)));
+            Imgproc.fillConvexPoly(image, polygon, Scalar.all(245));
+            for (int y = 400; y <= 1500; y += 100)
+                Imgproc.line(image, new Point(300, y), new Point(1100, y), Scalar.all(0), 2);
+            for (int x = 300; x <= 1100; x += 200)
+                Imgproc.line(image, new Point(x, 400), new Point(x, 1500), Scalar.all(0), 2);
+            Imgproc.circle(image, new Point(700, 900), 12, new Scalar(0, 0, 255), -1);
+            var result = processor.process(encode(image), ProcessingOptions.defaults().withRotation(rotation));
+            assertEquals(4, result.report().documentCorners().size());
+            Mat corrected = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(result.images().get("01-corrected.png"))), Imgcodecs.IMREAD_COLOR));
+            Mat red = scope.mat();
+            Core.inRange(corrected, new Scalar(0, 0, 200), new Scalar(50, 50, 255), red);
+            var moments = Imgproc.moments(red);
+            assertTrue(moments.get_m00() > 30);
+            double x = moments.get_m10() / moments.get_m00(), y = moments.get_m01() / moments.get_m00();
+            List<Double> h = result.report().workingToSource();
+            double w = h.get(6) * x + h.get(7) * y + h.get(8);
+            assertEquals(700, (h.get(0) * x + h.get(1) * y + h.get(2)) / w, 3);
+            assertEquals(900, (h.get(3) * x + h.get(4) * y + h.get(5)) / w, 3);
+        }
+    }
+
+    @Test void sparseLargeImageRetriesWithoutChangingExactQuarterTurnPixels() {
+        try (MatScope scope = new MatScope()) {
+            Mat image = scope.own(new Mat(1901, 1433, CvType.CV_8UC3, Scalar.all(255)));
+            Imgproc.circle(image, new Point(700, 900), 12, new Scalar(0, 0, 255), -1);
+            var result = processor.process(encode(image), ProcessingOptions.defaults().withRotation(90));
+            Mat corrected = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(result.images().get("01-corrected.png"))), Imgcodecs.IMREAD_COLOR));
+            assertEquals(1901, corrected.cols());
+            assertEquals(1433, corrected.rows());
+            assertArrayEquals(new double[]{0, 0, 255}, corrected.get(700, 1000), 1);
+        }
     }
 
     @Test void unsupportedRotationIsRejected() {

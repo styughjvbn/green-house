@@ -30,6 +30,13 @@ class ResolutionTest {
         assertEquals(800. / 900, PixelScale.forSource(4000, 800).capped(800, 900).factor(), 1e-9);
     }
 
+    @Test void correctionProbeRetainsSpatialCalibrationAtReducedAndFullResolution() {
+        PixelScale processing = PixelScale.forSource(4000, 2048);
+        assertEquals(1024. / 2200, processing.downsampled(2048, 1024).factor(), 1e-9);
+        assertEquals(processing.factor(), processing.downsampled(2048, 2048).factor(), 1e-9);
+        assertEquals(1, PixelScale.forSource(600, 2048).downsampled(600, 1024).factor());
+    }
+
     @ParameterizedTest @ValueSource(ints = {800, 1100, 1600, 2048, 2200, 3000})
     void keepsWrittenRowsAndRemovesBlankRowsAtDifferentResolutions(int dimension) {
         Mat reference = new Mat(2200, 1600, CvType.CV_8UC3, Scalar.all(255));

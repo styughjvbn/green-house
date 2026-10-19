@@ -19,6 +19,11 @@ record PixelScale(double factor) {
         return value % 2 == 0 ? value + 1 : value;
     }
 
+    /** Downsample a correction probe while retaining the original spatial calibration. */
+    PixelScale downsampled(int currentLongestSide, int cap) {
+        return new PixelScale(factor * Math.min(1, (double) cap / currentLongestSide));
+    }
+
     /** A capped analysis image has its own pixel scale, independent of the output resolution. */
     PixelScale capped(int currentLongestSide, int cap) {
         return new PixelScale(Math.min(currentLongestSide, cap)
