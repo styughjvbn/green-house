@@ -73,3 +73,26 @@ test("a failed turn preserves earlier results and does not submit the remaining 
     Array.from({ length: 10 }, (_, i) => i),
   );
 });
+
+test("automatic input only reads pending document drafts, preserving completed and unresolved saves", async () => {
+  const { pendingPhotoDocuments } =
+    await import("../src/features/sales/lib/photoExtractionBatches.ts");
+  const draft = {
+    parentId: "original",
+    read: "waiting",
+    save: "draft",
+    pendingPayload: null,
+  };
+  const entries = [
+    { ...draft, id: "original", parentId: null },
+    { ...draft, id: "first" },
+    { ...draft, id: "complete", read: "ready" },
+    { ...draft, id: "retry", read: "failed" },
+    { ...draft, id: "saved", save: "saved" },
+    { ...draft, id: "uncertain", pendingPayload: {} },
+  ];
+  assert.deepEqual(
+    pendingPhotoDocuments(entries).map((e) => e.id),
+    ["first", "retry"],
+  );
+});

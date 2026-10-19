@@ -21,3 +21,21 @@ export async function runPhotoExtractionBatches<T>(
     );
   }
 }
+
+/** Eligibility is local draft state; completed or unresolved saves are never reread in bulk. */
+export function pendingPhotoDocuments<
+  T extends {
+    parentId: string | null;
+    read: string;
+    save: string;
+    pendingPayload: unknown;
+  },
+>(entries: readonly T[]): T[] {
+  return entries.filter(
+    (entry) =>
+      entry.parentId !== null &&
+      ["waiting", "failed"].includes(entry.read) &&
+      entry.save === "draft" &&
+      !entry.pendingPayload,
+  );
+}

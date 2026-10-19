@@ -1,6 +1,7 @@
 import {
   PHOTO_EXTRACTION_BATCH_SIZE,
   runPhotoExtractionBatches,
+  pendingPhotoDocuments,
 } from "../lib/photoExtractionBatches";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { useEffect, useRef, useState, type SetStateAction } from "react";
@@ -268,7 +269,6 @@ export function useSalesSlipPhotoRegistration(
   ) {
     if (
       running.current ||
-      !targets.length ||
       targets.some(
         (entry) =>
           entry.parentId ||
@@ -280,6 +280,8 @@ export function useSalesSlipPhotoRegistration(
       )
     )
       return;
+    if (!targets.length) return entries;
+    const detectedDocuments = new Map<string, PhotoEntry[]>();
     running.current = true;
     setBusy("prepare");
     setUploadError(null);
@@ -327,6 +329,7 @@ export function useSalesSlipPhotoRegistration(
               if (sessionId.current)
                 await removeSalesSlipSessionPhoto(sessionId.current, child.id);
             if (!mounted.current || controller.signal.aborted) return;
+            detectedDocuments.set(entry.id, children);
             setEntries((current) => {
               const remaining = current.filter(
                 (item) => item.parentId !== entry.id,
@@ -363,6 +366,11 @@ export function useSalesSlipPhotoRegistration(
       );
       if (mounted.current && targets.length > 1 && failures.length)
         setUploadError(failures.join("\n"));
+      return entries.flatMap((entry) => {
+        if (entry.parentId)
+          return detectedDocuments.has(entry.parentId) ? [] : [entry];
+        return [entry, ...(detectedDocuments.get(entry.id) ?? [])];
+      });
     } finally {
       documentDetection.reset();
       activeRequest.current = null;
@@ -713,6 +721,17 @@ export function useSalesSlipPhotoRegistration(
     }
   }
 
+  async function automaticInput(rotations: Record<string, number>) {
+    if (running.current) return;
+    setUploadError(null);
+    const prepared = await detectDocumentRegions(
+      photosWithoutDocumentRegions,
+      rotations,
+    );
+    if (!mounted.current || !prepared) return;
+    await extractDocumentValues(pendingPhotoDocuments(prepared));
+  }
+
   async function saveSelected() {
     if (
       !selected ||
@@ -896,8 +915,7 @@ export function useSalesSlipPhotoRegistration(
     connectGroups,
     addFiles,
     detectSelectedPhotoRegions,
-    detectPendingPhotoRegions: (rotations: Record<string, number>) =>
-      detectDocumentRegions(photosWithoutDocumentRegions, rotations),
+    automaticInput,
     applyDocumentRegions,
     saveSelected,
     removeSelected,
@@ -907,16 +925,6 @@ export function useSalesSlipPhotoRegistration(
       !selected.pendingPayload
         ? extractDocumentValues([selected])
         : Promise.resolve(),
-    extractPendingDocuments: () =>
-      extractDocumentValues(
-        entries.filter(
-          (entry) =>
-            entry.parentId !== null &&
-            ["waiting", "failed"].includes(entry.read) &&
-            entry.save === "draft" &&
-            !entry.pendingPayload,
-        ),
-      ),
     cancelReading,
   };
 }

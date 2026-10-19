@@ -10,10 +10,12 @@ export function SalesSlipSourceRegions({
   photo,
   regions,
   onSelect,
+  disabled = false,
 }: {
   photo: SalesSlipPhotoInput;
   regions: PhotoRegionDraft[];
   onSelect: (id?: string) => void;
+  disabled?: boolean;
 }) {
   const [ratio, setRatio] = useState(1);
   return (
@@ -48,8 +50,12 @@ export function SalesSlipSourceRegions({
               strokeWidth={2}
               fill="#159447"
               fillOpacity={0.07}
-              className="pointer-events-auto cursor-pointer"
-              onClick={() => onSelect(item.id)}
+              className={
+                disabled
+                  ? "pointer-events-none"
+                  : "pointer-events-auto cursor-pointer"
+              }
+              onClick={disabled ? undefined : () => onSelect(item.id)}
             />
             <text
               x={item.region.x + 0.006}

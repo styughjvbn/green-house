@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { pendingPhotoDocuments } from "../../lib/photoExtractionBatches";
 import dynamic from "next/dynamic";
 import { SalesSlipSourceRegions } from "./SalesSlipSourceRegions";
 import { samePhotoRegion, type PhotoRegionDraft } from "../../lib/photoRegions";
@@ -100,13 +101,7 @@ export function SalesSlipPhotoRegistrationDialog({
   const remaining = photos.entries.filter(
     (entry) => entry.parentId && entry.save !== "saved",
   ).length;
-  const documentsPendingExtraction = photos.entries.filter(
-    (entry) =>
-      entry.parentId !== null &&
-      ["waiting", "failed"].includes(entry.read) &&
-      entry.save === "draft" &&
-      !entry.pendingPayload,
-  );
+  const documentsPendingExtraction = pendingPhotoDocuments(photos.entries);
   const originals = photos.entries.filter((entry) => !entry.parentId);
   const documents = photos.entries.filter((entry) => entry.parentId);
   const children = photos.entries.filter(
@@ -187,11 +182,6 @@ export function SalesSlipPhotoRegistrationDialog({
     "inline-flex h-8 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#159447] disabled:opacity-60";
   const buttonClass = `${buttonBaseClass} border-[#cfd8cc] bg-white text-[#29422e] hover:bg-[#f7faf6]`;
   const primaryButtonClass = `${buttonBaseClass} border-[#159447] bg-[#159447] text-white hover:bg-[#10783a]`;
-  const nextBatchAction = photos.photosWithoutDocumentRegionsCount
-    ? "detect"
-    : documentsPendingExtraction.length
-      ? "extract"
-      : null;
 
   function requestClose() {
     if (blocking) return;
@@ -250,8 +240,8 @@ export function SalesSlipPhotoRegistrationDialog({
               사진으로 등록
             </DialogTitle>
             <p className="mt-1 text-sm text-[#5c6a60]">
-              사진에서 전표를 찾은 뒤 내용을 읽어 입력합니다. 입력 내용을
-              확인하고 저장해주세요.
+              자동 입력을 누르면 전표 찾기부터 내용 입력까지 진행합니다. 입력
+              내용을 확인하고 저장해주세요.
             </p>
           </div>
           <button
@@ -286,24 +276,11 @@ export function SalesSlipPhotoRegistrationDialog({
             </button>
             <button
               type="button"
-              className={
-                nextBatchAction === "detect" ? primaryButtonClass : buttonClass
-              }
+              className={primaryButtonClass}
               disabled={
                 photos.busy !== null ||
-                !photos.photosWithoutDocumentRegionsCount
-              }
-              onClick={() => void photos.detectPendingPhotoRegions(rotations)}
-            >
-              모든 사진에서 전표 찾기
-            </button>
-            <button
-              type="button"
-              className={
-                nextBatchAction === "extract" ? primaryButtonClass : buttonClass
-              }
-              disabled={
-                photos.busy !== null || !documentsPendingExtraction.length
+                (!photos.photosWithoutDocumentRegionsCount &&
+                  !documentsPendingExtraction.length)
               }
               onClick={() => {
                 if (
@@ -315,10 +292,16 @@ export function SalesSlipPhotoRegistrationDialog({
                   )
                 )
                   return;
-                void photos.extractPendingDocuments();
+                void photos.automaticInput(rotations);
               }}
             >
-              남은 전표 읽어 입력
+              {photos.busy === "prepare" || photos.busy === "read" ? (
+                <LoaderCircle
+                  className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+              ) : null}
+              자동 입력
             </button>
             {photos.busy === "read" ? (
               <button
@@ -386,6 +369,15 @@ export function SalesSlipPhotoRegistrationDialog({
             }
           />
         ) : null}
+        {photos.busy === "read" ? (
+          <p
+            role="note"
+            className="shrink-0 border-b border-[#dbe8dc] bg-white px-4 py-2 text-xs text-[#526158]"
+          >
+            내용 입력 중에도 목록에서 원본과 잘라낸 전표를 확인할 수 있습니다.
+            입력값 편집은 자동 입력이 끝나면 가능합니다.
+          </p>
+        ) : null}
         {selected ? (
           <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] lg:grid-cols-[14rem_minmax(0,1fr)] lg:grid-rows-1">
             <nav
@@ -425,7 +417,7 @@ export function SalesSlipPhotoRegistrationDialog({
                     key={entry.id}
                     type="button"
                     aria-current={entry.id === selected.id ? "true" : undefined}
-                    disabled={photos.busy !== null}
+                    disabled={blocking}
                     className={`w-48 min-w-40 shrink-0 rounded-md border p-3 text-left ${entry.parentId ? "ml-4 lg:w-[calc(100%-1rem)]" : "lg:w-full"} ${entry.id === selected.id ? "border-[#159447] bg-[#e8f6eb]" : "border-[#d9e3db] bg-white"} disabled:opacity-60`}
                     onClick={() => photos.setSelectedId(entry.id)}
                   >
@@ -577,8 +569,8 @@ export function SalesSlipPhotoRegistrationDialog({
                   {!selected.parentId ? (
                     <p className="mb-3 text-sm text-[#526158]">
                       {children.length
-                        ? "전표 영역을 선택했습니다. 왼쪽 목록에서 잘라낸 전표를 선택하고 사진 읽어 입력을 누르세요. 영역이 맞지 않으면 전표 영역 수정으로 조정하세요."
-                        : "먼저 사진에서 전표 영역을 선택해주세요. 전표 자동 찾기 또는 직접 영역 선택을 이용하세요."}
+                        ? "전표 영역을 선택했습니다. 자동 입력을 누르면 내용을 읽어 입력합니다. 영역이 맞지 않으면 전표 영역 수정으로 조정하세요."
+                        : "자동 입력을 누르면 전표를 찾아 내용을 입력합니다. 직접 영역 선택으로 전표 영역을 먼저 지정할 수도 있습니다."}
                     </p>
                   ) : null}
                   <div
@@ -611,6 +603,7 @@ export function SalesSlipPhotoRegistrationDialog({
                                     child.save !== "draft" ||
                                     Boolean(child.pendingPayload),
                                 }))}
+                              disabled={photos.busy !== null}
                               onSelect={(id) => openRegionEditor(id)}
                             />
                           ) : (
