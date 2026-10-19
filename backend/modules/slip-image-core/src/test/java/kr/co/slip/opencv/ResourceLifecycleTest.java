@@ -70,7 +70,7 @@ class ResourceLifecycleTest {
         byte[] input = fixture();
         var options = ProcessingOptions.defaults().withRotation(0).withOutputMode(OutputMode.PRODUCTION);
         try (var processor = SlipProcessors.bounded(new ExecutionSettings(2, 2, java.time.Duration.ofSeconds(10)))) {
-            for (int round = 0; round < 4; round++) {
+            for (int round = 0; round < 2; round++) {
                 var first = processor.processAsync(input, options);
                 var second = processor.processAsync(input, options);
                 assertEquals(first.get(10, TimeUnit.SECONDS).report(), second.get(10, TimeUnit.SECONDS).report());

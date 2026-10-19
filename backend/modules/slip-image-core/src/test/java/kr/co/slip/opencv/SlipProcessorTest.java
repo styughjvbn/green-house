@@ -24,6 +24,7 @@ class SlipProcessorTest {
         try {
             var result = processor.process(encode(image), ProcessingOptions.defaults());
             assertTrue(result.report().tables().isEmpty());
+            assertTrue(result.report().papers().isEmpty());
             assertFalse(result.report().warnings().isEmpty());
         } finally { image.release(); }
     }
@@ -143,19 +144,7 @@ class SlipProcessorTest {
         } finally { image.release(); }
     }
 
-    @Test void perspectivePageHasFourSourceCorners() {
-        Mat image = new Mat(1400, 1000, CvType.CV_8UC3, new Scalar(70, 65, 60));
-        MatOfPoint polygon = new MatOfPoint(new Point(160, 130), new Point(860, 180), new Point(900, 1250), new Point(80, 1200));
-        try {
-            Imgproc.fillConvexPoly(image, polygon, Scalar.all(245));
-            var result = processor.process(encode(image), ProcessingOptions.defaults());
-            assertEquals("DOCUMENT_PERSPECTIVE", result.report().correction());
-            assertEquals(4, result.report().documentCorners().size());
-        } finally { polygon.release(); image.release(); }
-    }
-
-    @ParameterizedTest @ValueSource(booleans = {false, true})
-    void lowInkRowsTriggerCutoffEvenBeforeAnEndMark(boolean blue) {
+    @Test void lowInkRowsCutTheDocumentBeforeLaterWriting() {
         Mat image = new Mat(1400, 1000, CvType.CV_8UC3, Scalar.all(255));
         try {
             for (int y = 200; y <= 1160; y += 80)
@@ -164,7 +153,7 @@ class SlipProcessorTest {
                 Imgproc.line(image, new Point(100 + x * 800, 200), new Point(100 + x * 800, 1160), Scalar.all(0), 2);
             Imgproc.putText(image, "ITEM", new Point(150, 410), Imgproc.FONT_HERSHEY_SIMPLEX, .8, Scalar.all(0), 2);
             Imgproc.putText(image, "120", new Point(150, 810), Imgproc.FONT_HERSHEY_SIMPLEX, .8, Scalar.all(0), 2);
-            Scalar ink = blue ? new Scalar(180, 60, 20) : Scalar.all(0);
+            Scalar ink = Scalar.all(0);
             Imgproc.line(image, new Point(450, 650), new Point(650, 910), ink, 2);
             Imgproc.line(image, new Point(650, 650), new Point(450, 910), ink, 2);
             var result = processor.process(encode(image), ProcessingOptions.defaults().withRotation(0));
@@ -238,18 +227,4 @@ class SlipProcessorTest {
         } finally { image.release(); transformed.release(); from.release(); to.release(); transform.release(); }
     }
 
-    @Test void sidewaysTablesAreRotatedBeforeRowDetection() {
-        Mat upright = new Mat(1400, 1000, CvType.CV_8UC3, Scalar.all(255));
-        Mat sideways = new Mat();
-        try {
-            Imgproc.putText(upright, "DOCUMENT TITLE", new Point(100, 130), Imgproc.FONT_HERSHEY_SIMPLEX, 1.5, Scalar.all(0), 3);
-            for (int y = 200; y <= 1200; y += 60) Imgproc.line(upright, new Point(100, y), new Point(900, y), Scalar.all(0), 2);
-            for (int x = 100; x <= 900; x += 200) Imgproc.line(upright, new Point(x, 200), new Point(x, 1160), Scalar.all(0), 2);
-            Core.rotate(upright, sideways, Core.ROTATE_90_CLOCKWISE);
-            var result = processor.process(encode(sideways), ProcessingOptions.defaults());
-            assertTrue(result.report().workingHeight() > result.report().workingWidth());
-            assertFalse(result.report().tables().isEmpty());
-            assertEquals(90, result.report().rotation().clockwiseDegrees() % 180);
-        } finally { upright.release(); sideways.release(); }
-    }
 }

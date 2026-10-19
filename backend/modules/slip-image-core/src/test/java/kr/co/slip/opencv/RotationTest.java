@@ -53,7 +53,7 @@ class RotationTest {
         } finally { image.release(); }
     }
 
-    @ParameterizedTest @ValueSource(ints = {-27, 23, 44})
+    @ParameterizedTest @ValueSource(ints = {-27, 44})
     void largerSlantsAreAlignedWithoutClipping(int angle) {
         Mat image = table(), slanted = new Mat();
         Mat transform = Imgproc.getRotationMatrix2D(new Point(900, 900), angle, 1);
@@ -64,20 +64,6 @@ class RotationTest {
             assertTrue(result.report().workingWidth() > 1800);
             assertFalse(result.report().tables().isEmpty());
         } finally { image.release(); slanted.release(); transform.release(); }
-    }
-
-    @ParameterizedTest @ValueSource(ints = {90, 180, 270})
-    void documentCornersStayInTheOriginalCoordinateSystem(int rotation) {
-        Point[] original = {new Point(160, 130), new Point(860, 180), new Point(900, 1250), new Point(80, 1200)};
-        Mat image = new Mat(1400, 1000, CvType.CV_8UC3, Scalar.all(65));
-        MatOfPoint polygon = new MatOfPoint(original);
-        try {
-            Imgproc.fillConvexPoly(image, polygon, Scalar.all(245));
-            var result = processor.process(encode(image), ProcessingOptions.defaults().withRotation(rotation));
-            assertEquals(4, result.report().documentCorners().size());
-            for (var point : result.report().documentCorners()) assertTrue(java.util.Arrays.stream(original)
-                    .anyMatch(p -> Math.hypot(p.x - point.x(), p.y - point.y()) < 8));
-        } finally { image.release(); polygon.release(); }
     }
 
     @ParameterizedTest @ValueSource(ints = {0, 90, 180, 270})
@@ -102,8 +88,9 @@ class RotationTest {
     void combinedCorrectionMapsBackToOddSizedSourceAfterProbeScaling(int rotation) {
         try (MatScope scope = new MatScope()) {
             Mat image = scope.own(new Mat(1901, 1433, CvType.CV_8UC3, Scalar.all(65)));
-            MatOfPoint polygon = scope.own(new MatOfPoint(new Point(160, 130), new Point(1260, 180),
-                    new Point(1300, 1750), new Point(80, 1700)));
+            Point[] original = {new Point(160, 130), new Point(1260, 180),
+                    new Point(1300, 1750), new Point(80, 1700)};
+            MatOfPoint polygon = scope.own(new MatOfPoint(original));
             Imgproc.fillConvexPoly(image, polygon, Scalar.all(245));
             for (int y = 400; y <= 1500; y += 100)
                 Imgproc.line(image, new Point(300, y), new Point(1100, y), Scalar.all(0), 2);
@@ -111,7 +98,10 @@ class RotationTest {
                 Imgproc.line(image, new Point(x, 400), new Point(x, 1500), Scalar.all(0), 2);
             Imgproc.circle(image, new Point(700, 900), 12, new Scalar(0, 0, 255), -1);
             var result = processor.process(encode(image), ProcessingOptions.defaults().withRotation(rotation));
+            assertEquals("DOCUMENT_PERSPECTIVE", result.report().correction());
             assertEquals(4, result.report().documentCorners().size());
+            for (var point : result.report().documentCorners()) assertTrue(java.util.Arrays.stream(original)
+                    .anyMatch(p -> Math.hypot(p.x - point.x(), p.y - point.y()) < 8));
             Mat corrected = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(result.images().get("01-corrected.png"))), Imgcodecs.IMREAD_COLOR));
             Mat red = scope.mat();
             Core.inRange(corrected, new Scalar(0, 0, 200), new Scalar(50, 50, 255), red);

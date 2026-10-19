@@ -94,7 +94,7 @@ class DocumentImagePreviewControllerTest {
   }
 
   @Test
-  void servesPrivatePngWithoutCachingAndDeletesOnlyWithCallerIdentity() throws Exception {
+  void servesPrivateJpegWithoutCachingAndDeletesOnlyWithCallerIdentity() throws Exception {
     var service = mock(DocumentImagePreparationService.class);
     UUID id = UUID.randomUUID(), imageId = UUID.randomUUID();
     when(service.image("worker", id, imageId)).thenReturn(new byte[] {1, 2});

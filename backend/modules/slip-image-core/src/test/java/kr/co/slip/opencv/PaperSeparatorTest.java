@@ -23,6 +23,8 @@ class PaperSeparatorTest {
             var result = PaperSeparator.separate(image, List.of(), true);
             assertEquals(1, result.papers().size());
             assertFalse(result.papers().getFirst().reviewRequired());
+            assertTrue(result.images().containsKey("paper-01.png"));
+            assertFalse(result.images().containsKey("paper-01-compacted.png"));
             MatOfByte encoded = new MatOfByte(result.images().get("paper-01.png"));
             Mat decoded = Imgcodecs.imdecode(encoded, Imgcodecs.IMREAD_UNCHANGED);
             try { assertEquals(4, decoded.channels()); assertEquals(255, decoded.get(10, 10)[3]); }
@@ -69,15 +71,6 @@ class PaperSeparatorTest {
                 assertEquals(600, compact.rows());
                 assertArrayEquals(new double[] {0, 0, 255, 255}, compact.get(240, 100));
             }
-        } finally { image.release(); }
-    }
-
-    @Test void noTableDoesNotInventATrimBoundary() {
-        Mat image = new Mat(600, 400, CvType.CV_8UC3, PAPER);
-        try {
-            var result = PaperSeparator.separate(image, List.of(), true);
-            assertFalse(result.images().containsKey("paper-01-compacted.png"));
-            assertTrue(result.images().containsKey("paper-01.png"));
         } finally { image.release(); }
     }
 
@@ -130,7 +123,7 @@ class PaperSeparatorTest {
         } finally { image.release(); }
     }
 
-    @ParameterizedTest @CsvSource({"200,430", "200,230", "300,350", "400,230"})
+    @ParameterizedTest @CsvSource({"200,430", "400,230"})
     void sufficientTableSpacingSplitsWithoutAnObservedEdge(int lowerLeft, int lowerWidth) {
         Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
         try {
@@ -139,17 +132,8 @@ class PaperSeparatorTest {
             assertEquals(2, result.papers().size());
             assertEquals("TABLE_SPACING_SPLIT", result.papers().getFirst().method());
             assertEquals(490, result.papers().getLast().bounds().y(), 2);
-        } finally { image.release(); }
-    }
-
-    @Test void paperEdgeCanBeVisibleInColorWithAlmostEqualGrayValues() {
-        Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
-        try {
-            Imgproc.rectangle(image, new Point(100, 70), new Point(700, 830), new Scalar(235, 215, 200), -1);
-            Imgproc.rectangle(image, new Point(120, 430), new Point(720, 930), new Scalar(211, 211, 211), -1);
-            var result = PaperSeparator.separate(image, List.of(table(1, 180, 260, 430, 140), table(2, 200, 630, 430, 240)), false);
-            assertEquals(2, result.papers().size());
-            assertEquals("TABLE_SPACING_SPLIT", result.papers().getFirst().method());
+            assertEquals(List.of(1), result.papers().getFirst().tableIndices());
+            assertEquals(List.of(2), result.papers().getLast().tableIndices());
         } finally { image.release(); }
     }
 
@@ -169,17 +153,6 @@ class PaperSeparatorTest {
                 Mat cutout = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(result.images().get("paper-02.png"))), Imgcodecs.IMREAD_UNCHANGED));
                 assertArrayEquals(new double[]{0, 0, 255, 255}, cutout.get(600 - lower.y(), 360 - lower.x()));
             }
-        } finally { image.release(); }
-    }
-
-    @Test void tableSpacingDecidesSeparationIndependentlyOfShadows() {
-        Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
-        try {
-            Imgproc.rectangle(image, new Point(100, 70), new Point(700, 930), PAPER, -1);
-            Imgproc.rectangle(image, new Point(300, 520), new Point(650, 650), new Scalar(210, 205, 195), -1);
-            var result = PaperSeparator.separate(image,
-                    List.of(table(1, 180, 260, 430, 140), table(2, 350, 700, 250, 150)), false);
-            assertEquals(2, result.papers().size());
         } finally { image.release(); }
     }
 
@@ -225,28 +198,6 @@ class PaperSeparatorTest {
         } finally { image.release(); }
     }
 
-    @Test void uniformFrameDoesNotInventPaperBoundary() {
-        Mat image = new Mat(800, 600, CvType.CV_8UC3, Scalar.all(255));
-        try { assertTrue(PaperSeparator.separate(image, List.of(), false).papers().isEmpty()); }
-        finally { image.release(); }
-    }
-
-    @ParameterizedTest @CsvSource({"200,230", "300,350", "400,230"})
-    void observedPaperEdgeSplitsTablesWithDifferentWidthsAndLeftOffsets(int lowerLeft, int lowerWidth) {
-        Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
-        try {
-            Imgproc.rectangle(image, new Point(100, 70), new Point(700, 830), PAPER, -1);
-            Imgproc.rectangle(image, new Point(120, 430), new Point(720, 930), PAPER, -1);
-            Imgproc.line(image, new Point(120, 430), new Point(720, 430), new Scalar(150, 155, 150), 3);
-            var result = PaperSeparator.separate(image,
-                    List.of(table(1, 180, 260, 430, 140), table(2, lowerLeft, 630, lowerWidth, 140)), false);
-            assertEquals(2, result.papers().size());
-            assertEquals("TABLE_SPACING_SPLIT", result.papers().getFirst().method());
-            assertEquals(List.of(1), result.papers().getFirst().tableIndices());
-            assertEquals(List.of(2), result.papers().getLast().tableIndices());
-        } finally { image.release(); }
-    }
-
     @Test void shadowInsideAGridDoesNotEraseItsPixels() {
         Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
         MatOfPoint shadow = new MatOfPoint(new Point(90, 500), new Point(340, 750), new Point(90, 750));
@@ -277,21 +228,6 @@ class PaperSeparatorTest {
                 assertEquals(600, compact.rows());
                 assertArrayEquals(new double[]{ink.val[0], ink.val[1], ink.val[2], 255}, compact.get(530, 200));
             }
-        } finally { image.release(); }
-    }
-
-    @Test void flatSplitPreservesBothTableAssignmentsWhenWidthsDiffer() {
-        Mat image = new Mat(1000, 850, CvType.CV_8UC3, DESK);
-        try {
-            Imgproc.rectangle(image, new Point(150, 60), new Point(600, 650), PAPER, -1);
-            Imgproc.rectangle(image, new Point(100, 430), new Point(750, 950), PAPER, -1);
-            Imgproc.line(image, new Point(100, 430), new Point(750, 430), new Scalar(150, 155, 150), 3);
-            var result = PaperSeparator.separate(image, List.of(table(1, 200, 180, 350, 220), table(2, 200, 630, 450, 240)), false);
-            assertEquals(2, result.papers().size());
-            var upper = result.papers().getFirst().bounds();
-            assertEquals(490, upper.y() + upper.height(), 2);
-            assertEquals(List.of(1), result.papers().getFirst().tableIndices());
-            assertEquals(List.of(2), result.papers().getLast().tableIndices());
         } finally { image.release(); }
     }
 

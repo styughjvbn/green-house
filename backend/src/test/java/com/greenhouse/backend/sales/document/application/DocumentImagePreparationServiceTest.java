@@ -22,14 +22,18 @@ class DocumentImagePreparationServiceTest {
   private final Instant now = Instant.parse("2026-10-16T00:00:00Z");
 
   private DocumentImagePreparationService service() {
+    return service(2200, 5.5, 7);
+  }
+
+  private DocumentImagePreparationService service(int dimension, double separation, double header) {
     when(clock.instant()).thenReturn(now);
     when(processor.process(any(), any())).thenReturn(result());
-    return new DocumentImagePreparationService(processor, clock, 2200, 5.5, 7);
+    return new DocumentImagePreparationService(processor, clock, dimension, separation, header);
   }
 
   @Test
   void preservesOriginalUsesProductionOptionsAndExcludesDiagnosticImages() throws Exception {
-    var service = service();
+    var service = service(2048, 6.25, 8);
     byte[] original = png();
     byte[] before = original.clone();
     var preview = service.prepare("owner", "image/png", original, 90, .025);
@@ -48,26 +52,12 @@ class DocumentImagePreparationServiceTest {
                 options ->
                     options.outputMode() == OutputMode.PRODUCTION
                         && options.rotationDegrees() == 90
-                        && options.maxDimension() == 2200
+                        && options.maxDimension() == 2048
                         && options.minimumInkRatio() == .025
-                        && options.documentSeparationRowMultiplier() == 5.5));
+                        && options.documentSeparationRowMultiplier() == 6.25
+                        && options.documentHeaderRowMultiplier() == 8));
     assertThat(service.image("owner", preview.id(), preview.images().getFirst().id()))
         .containsExactly(1, 2);
-  }
-
-  @Test
-  void forwardsConfiguredDocumentSeparationMultiplier() throws Exception {
-    when(clock.instant()).thenReturn(now);
-    when(processor.process(any(), any())).thenReturn(result());
-    var service = new DocumentImagePreparationService(processor, clock, 2048, 6.25, 8);
-    service.prepare("owner", "image/png", png(), 0, .015);
-    verify(processor)
-        .process(
-            any(),
-            argThat(
-                options ->
-                    options.documentSeparationRowMultiplier() == 6.25
-                        && options.documentHeaderRowMultiplier() == 8));
   }
 
   @Test

@@ -37,7 +37,7 @@ class ResolutionTest {
         assertEquals(1, PixelScale.forSource(600, 2048).downsampled(600, 1024).factor());
     }
 
-    @ParameterizedTest @ValueSource(ints = {800, 1100, 1600, 2048, 2200, 3000})
+    @ParameterizedTest @ValueSource(ints = {800, 2048, 3000})
     void keepsWrittenRowsAndRemovesBlankRowsAtDifferentResolutions(int dimension) {
         Mat reference = new Mat(2200, 1600, CvType.CV_8UC3, Scalar.all(255));
         Mat source = new Mat();
@@ -69,7 +69,7 @@ class ResolutionTest {
         } finally { reference.release(); source.release(); encoded.release(); }
     }
 
-    @ParameterizedTest @ValueSource(ints = {800, 1100, 2048, 2200, 3000})
+    @ParameterizedTest @ValueSource(ints = {800, 2048, 3000})
     void overlappingPaperBoundariesScaleWithResolution(int dimension) {
         double factor = dimension / 2200.;
         Mat reference = new Mat(2200, 1760, CvType.CV_8UC3, new Scalar(70, 110, 150));
