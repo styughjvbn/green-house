@@ -6,11 +6,18 @@ import { LoaderCircle } from "lucide-react";
 export function SalesSlipPhotoProgress({
   operation,
   readingCount,
+  extractionProgress,
   regionProcessingMode = "automatic",
   regionProcessingProgress,
 }: {
   operation: "upload" | "prepare" | "read" | "save" | "cancel";
   readingCount: number;
+  extractionProgress?: {
+    completed: number;
+    total: number;
+    batchIndex: number;
+    batchCount: number;
+  };
   regionProcessingMode?: "automatic" | "manual";
   regionProcessingProgress?: {
     completed: number;
@@ -34,7 +41,9 @@ export function SalesSlipPhotoProgress({
       : operation === "cancel"
         ? "자동 입력 중지 중"
         : operation === "read"
-          ? `전표 ${readingCount}장 읽어 입력 중`
+          ? extractionProgress && extractionProgress.batchCount > 1
+            ? `전표 읽어 입력 중 (${extractionProgress.completed}/${extractionProgress.total}개 완료${extractionProgress.batchIndex ? ` · ${extractionProgress.batchIndex}/${extractionProgress.batchCount}묶음` : ""})`
+            : `전표 ${readingCount}장 읽어 입력 중`
           : operation === "upload"
             ? "사진 준비 중"
             : "전표 저장 중";

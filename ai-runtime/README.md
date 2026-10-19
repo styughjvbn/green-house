@@ -61,7 +61,7 @@ Spring은 세션 생성 시 활성 상태이며 실제 연결된 난 묶음이 �
 
 첫 사진 추가 시 Spring이 Runtime에 세션을 생성한다. `POST /sessions`는 공유 비밀값으로만 호출하며, 최초 추출에서 Codex thread를 열고 다음 요청은 `resumeThread`로 이어간다. OpenAI는 `store: false`를 유지하며 Node 메모리의 대화 이력을 이어 보낸다. 과거 사진 바이너리는 이력에서 제거하고 현재 요청의 사진만 전달한다.
 
-`POST /infer/slip`의 대화 요청은 세션 ID와 최대 10개의 사진 ID·이미지을 받는다. 한 번의 요청이 한 turn이며 미처리 사진은 일괄 처리하고 개별 재추출 요청은 해당 사진만 처리한다. 응답의 사진 ID 집합은 요청과 정확히 같아야 한다. 읽을 수 없는 사진은 개별 `result: null`로 표시한다. 매 turn 새로운 도구 토큰과 현재 deadline을 MCP 서버에 전달하고 후보 ID는 이번 실행에서 다시 조회한다.
+`POST /infer/slip`의 대화 요청은 세션 ID와 최대 10개의 사진 ID·이미지을 받는다. 한 번의 요청이 한 turn이며 프론트는 원본 최대 10장에서 만든 전표를 개수 제한 없이 보관하고, 미처리 전표를 목록 순서대로 최대 10개씩 나눠 같은 세션에 순차 요청한다. 개별 재추출 요청은 해당 사진만 처리한다. 응답의 사진 ID 집합은 요청과 정확히 같아야 한다. 읽을 수 없는 사진은 개별 `result: null`로 표시한다. 매 turn 새로운 도구 토큰과 현재 deadline을 MCP 서버에 전달하고 후보 ID는 이번 실행에서 다시 조회한다.
 
 Spring은 요청별 중지 명령을 `/sessions/{sessionId}/requests/{requestId}/cancel`로 전달한다. Runtime은 해당 요청의 AbortSignal을 Codex/OpenAI 실행에 전달하고 종료 후 응답한다. 취소가 먼저 도착하면 해당 ID의 실행을 시작하지 않으며, 다른 요청이나 기존 대화는 중지하지 않는다. 취소는 `AI_TIMEOUT`과 구분한 `AI_CANCELLED`로 반환한다. 등록 창 종료도 진행 중인 해당 대화를 중지한다.
 

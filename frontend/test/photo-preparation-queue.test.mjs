@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  createPhotoSlotBudget,
-  runConcurrentPhotoTasks,
-} from "../src/features/sales/lib/photoPreparationQueue.ts";
+import { runConcurrentPhotoTasks } from "../src/features/sales/lib/photoPreparationQueue.ts";
 import { resolveImagePreparationConcurrency } from "../src/shared/config/imagePreparation.ts";
 
 const deferred = () => {
@@ -91,46 +88,4 @@ test("unexpected failure waits for other active photos before releasing the batc
   assert.equal(settled, false);
   gate.resolve();
   await checked;
-});
-
-test("parallel reservations cannot exceed the document limit and failed downloads release slots once", async () => {
-  const reserve = createPhotoSlotBudget(10, 6);
-  const gate = deferred();
-  const settled = [];
-  await runConcurrentPhotoTasks(
-    [1, 2, 3],
-    3,
-    new AbortController().signal,
-    async (id) => {
-      if (id === 1) {
-        const release = reserve(3);
-        await gate.promise;
-        release();
-        release();
-        return;
-      }
-      if (id === 2) {
-        assert.throws(() => reserve(2), /최대 10개/);
-        reserve(1);
-        gate.resolve();
-        return;
-      }
-      await gate.promise;
-      await new Promise(setImmediate);
-      reserve(3);
-      settled.push(id);
-    },
-  );
-  assert.deepEqual(settled, [3]);
-  assert.throws(() => reserve(1), /최대 10개/);
-});
-
-test("replacement failures cannot reclaim slots already given to another photo", () => {
-  const reserve = createPhotoSlotBudget(10, 10);
-  const rollback = reserve(1, 2);
-  assert.throws(() => reserve(1), /최대 10개/);
-  rollback();
-  rollback();
-  reserve(2, 2);
-  assert.throws(() => reserve(3, 2), /최대 10개/);
 });

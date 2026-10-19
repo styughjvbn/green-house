@@ -1,3 +1,7 @@
+import {
+  PHOTO_EXTRACTION_BATCH_SIZE,
+  runPhotoExtractionBatches,
+} from "../lib/photoExtractionBatches";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { useEffect, useRef, useState, type SetStateAction } from "react";
 import type { SalesSlip, SalesOrchidGroupOption } from "@/entities/farm/types";
@@ -8,10 +12,7 @@ import {
   useRuntimeContext,
   useImagePreparationConcurrency,
 } from "@/shared/runtime/RuntimeContext";
-import {
-  createPhotoSlotBudget,
-  runConcurrentPhotoTasks,
-} from "../lib/photoPreparationQueue";
+import { runConcurrentPhotoTasks } from "../lib/photoPreparationQueue";
 import {
   createSalesSlip,
   openSalesSlipPhotoSession,
@@ -73,7 +74,7 @@ type PhotoEntry = {
   pendingPayload: CreateSalesSlipPayload | null;
   requestKey: ReturnType<typeof createPendingCreationRequestKey>;
 };
-const MAX_PHOTOS = 10;
+const MAX_ORIGINAL_PHOTOS = 10;
 const message = (error: unknown) =>
   error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.";
 
@@ -91,6 +92,12 @@ export function useSalesSlipPhotoRegistration(
     photoIds: string[];
     completed: number;
     total: number;
+  } | null>(null);
+  const [extractionProgress, setExtractionProgress] = useState<{
+    completed: number;
+    total: number;
+    batchIndex: number;
+    batchCount: number;
   } | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const activeRead = useRef<{
@@ -199,12 +206,10 @@ export function useSalesSlipPhotoRegistration(
       entry,
       signal,
       rotationDegrees,
-      reserveDocuments,
     }: {
       entry: PhotoEntry;
       signal: AbortSignal;
       rotationDegrees: number;
-      reserveDocuments: (count: number) => void;
     }) => {
       const preview = await prepareSalesSlipPhoto(
         entry.photo,
@@ -221,7 +226,6 @@ export function useSalesSlipPhotoRegistration(
           throw new Error(
             "전표를 자동으로 찾지 못했습니다. 사진 방향과 전표가 잘리지 않았는지 확인해주세요.",
           );
-        reserveDocuments(documents.length);
         const downloads = await Promise.allSettled(
           documents.map(async (image, index) => {
             if (!image.id)
@@ -281,10 +285,6 @@ export function useSalesSlipPhotoRegistration(
     setUploadError(null);
     const controller = new AbortController();
     activeRequest.current = controller;
-    const reserveSlots = createPhotoSlotBudget(
-      MAX_PHOTOS,
-      entries.filter((entry) => entry.parentId).length,
-    );
     setRegionProcessingProgress({
       photoIds: [],
       completed: 0,
@@ -307,16 +307,11 @@ export function useSalesSlipPhotoRegistration(
           const previous = entries.filter(
             (child) => child.parentId === entry.id,
           );
-          let releaseReservation: (() => void) | undefined;
-          let committed = false;
           try {
             const result = await documentDetection.mutateAsync({
               entry,
               signal: controller.signal,
               rotationDegrees: rotations[entry.id] ?? -1,
-              reserveDocuments: (count) => {
-                releaseReservation = reserveSlots(count, previous.length);
-              },
             });
             if (!mounted.current || controller.signal.aborted) return;
             const children = result.photos.map(({ photo, region }) =>
@@ -346,13 +341,11 @@ export function useSalesSlipPhotoRegistration(
                 ...remaining.slice(position + 1),
               ];
             });
-            committed = true;
           } catch (error) {
             if (!mounted.current || controller.signal.aborted) return;
             patch(entry.id, { error: message(error) });
             failures.push(`${entry.photo.fileName}: ${message(error)}`);
           } finally {
-            if (!committed) releaseReservation?.();
             if (mounted.current)
               setRegionProcessingProgress((current) =>
                 current
@@ -399,17 +392,6 @@ export function useSalesSlipPhotoRegistration(
     );
     if (!owner) return false;
     const previous = entries.filter((entry) => entry.parentId === ownerId);
-    if (
-      drafts.length +
-        entries.filter((entry) => entry.parentId && entry.parentId !== ownerId)
-          .length >
-      MAX_PHOTOS
-    ) {
-      patch(ownerId, {
-        error: "잘라낸 전표는 최대 10개까지 등록할 수 있습니다.",
-      });
-      return false;
-    }
     if (
       !drafts.length ||
       drafts.some((draft) => !parsePhotoRegion(draft.region)) ||
@@ -505,9 +487,11 @@ export function useSalesSlipPhotoRegistration(
         if (
           entries.filter((entry) => !entry.parentId).length +
             additions.length >=
-          MAX_PHOTOS
+          MAX_ORIGINAL_PHOTOS
         ) {
-          errors.push(`한 번에 최대 ${MAX_PHOTOS}장까지 등록할 수 있습니다.`);
+          errors.push(
+            `한 번에 최대 ${MAX_ORIGINAL_PHOTOS}장까지 등록할 수 있습니다.`,
+          );
           break;
         }
         try {
@@ -601,71 +585,113 @@ export function useSalesSlipPhotoRegistration(
       cancelRequested: false,
     } as NonNullable<typeof activeRead.current>;
     activeRead.current = run;
-    for (const entry of targets)
-      patch(entry.id, { read: "reading", error: null });
+    let currentBatch: PhotoEntry[] = [];
+    let completed = 0;
+    setExtractionProgress({
+      completed: 0,
+      total: targets.length,
+      batchIndex: 0,
+      batchCount: Math.ceil(targets.length / PHOTO_EXTRACTION_BATCH_SIZE),
+    });
     try {
       const id = await ensureSession(controller.signal);
       if (controller.signal.aborted || run.cancelRequested)
         throw new DOMException("Aborted", "AbortError");
       run.sessionId = id;
-      const batch = await readSalesSlipPhotos(
-        id,
-        targets.map((entry) => ({
-          photoId: entry.id,
-          photo: entry.photo,
-        })),
+      await runPhotoExtractionBatches(
+        targets,
         controller.signal,
-        run.requestId,
-      );
-      if (controller.signal.aborted || run.cancelRequested)
-        throw new DOMException("Aborted", "AbortError");
-      const rows = batch.photos ?? [];
-      if (
-        rows.length !== targets.length ||
-        new Set(rows.map((row) => row.photoId)).size !== targets.length ||
-        rows.some((row) => !targets.some((entry) => entry.id === row.photoId))
-      )
-        throw new Error("사진별 인식 결과를 확인하지 못했습니다.");
-      for (const entry of targets) {
-        const result = rows.find((row) => row.photoId === entry.id)?.result;
-        if (!result) {
-          patch(entry.id, {
-            read: "failed",
-            error:
-              "사진 내용을 읽지 못했습니다. 다시 읽거나 다시 촬영해주세요.",
+        async (batchEntries, batchIndex, batchCount) => {
+          if (run.cancelRequested)
+            throw new DOMException("Aborted", "AbortError");
+          currentBatch = batchEntries;
+          run.requestId = createUuid();
+          setExtractionProgress({
+            completed,
+            total: targets.length,
+            batchIndex,
+            batchCount,
           });
-          continue;
-        }
-        const salesType = result.salesType ?? entry.form.salesType;
-        const notes = [...(result.warnings ?? [])];
-        const partnerId =
-          result.partnerId != null ? String(result.partnerId) : "";
-        if (!partnerId) notes.push("거래처를 직접 선택해주세요.");
-        const entryActions = createSalesSlipDraftActions((update) =>
-          setForm(entry.id, update),
-        );
-        entryActions.selectSalesType(salesType);
-        setForm(entry.id, (current) =>
-          withRecognizedSalesSlip(current, result, partnerId),
-        );
-        if (!result.saleDate) notes.push("판매일·출하일을 확인해주세요.");
-        patch(entry.id, {
-          read: "ready",
-          recognized: true,
-          recognition:
-            result.confidence != null
-              ? {
-                  confidence: result.confidence,
-                  imageLongEdge: result.imageLongEdge,
-                  attempts: result.attempts,
-                }
-              : null,
-          notes,
-          error: null,
-        });
-      }
+          for (const entry of batchEntries)
+            patch(entry.id, { read: "reading", error: null });
+          const batch = await readSalesSlipPhotos(
+            id,
+            batchEntries.map((entry) => ({
+              photoId: entry.id,
+              photo: entry.photo,
+            })),
+            controller.signal,
+            run.requestId,
+          );
+          if (controller.signal.aborted || run.cancelRequested)
+            throw new DOMException("Aborted", "AbortError");
+          const rows = batch.photos ?? [];
+          if (
+            rows.length !== batchEntries.length ||
+            new Set(rows.map((row) => row.photoId)).size !==
+              batchEntries.length ||
+            rows.some(
+              (row) => !batchEntries.some((entry) => entry.id === row.photoId),
+            )
+          )
+            throw new Error("사진별 인식 결과를 확인하지 못했습니다.");
+          for (const entry of batchEntries) {
+            const result = rows.find((row) => row.photoId === entry.id)?.result;
+            if (!result) {
+              patch(entry.id, {
+                read: "failed",
+                error:
+                  "사진 내용을 읽지 못했습니다. 다시 읽거나 다시 촬영해주세요.",
+              });
+              continue;
+            }
+            const salesType = result.salesType ?? entry.form.salesType;
+            const notes = [...(result.warnings ?? [])];
+            const partnerId =
+              result.partnerId != null ? String(result.partnerId) : "";
+            if (!partnerId) notes.push("거래처를 직접 선택해주세요.");
+            const entryActions = createSalesSlipDraftActions((update) =>
+              setForm(entry.id, update),
+            );
+            entryActions.selectSalesType(salesType);
+            setForm(entry.id, (current) =>
+              withRecognizedSalesSlip(current, result, partnerId),
+            );
+            if (!result.saleDate) notes.push("판매일·출하일을 확인해주세요.");
+            patch(entry.id, {
+              read: "ready",
+              recognized: true,
+              recognition:
+                result.confidence != null
+                  ? {
+                      confidence: result.confidence,
+                      imageLongEdge: result.imageLongEdge,
+                      attempts: result.attempts,
+                    }
+                  : null,
+              notes,
+              error: null,
+            });
+          }
+          completed += batchEntries.length;
+          setExtractionProgress({
+            completed,
+            total: targets.length,
+            batchIndex,
+            batchCount,
+          });
+          currentBatch = [];
+        },
+      );
     } catch (error) {
-      for (const entry of targets)
+      if (
+        !currentBatch.length &&
+        mounted.current &&
+        !controller.signal.aborted &&
+        !run.cancelRequested
+      )
+        setUploadError(message(error));
+      for (const entry of currentBatch)
         patch(entry.id, {
           read: "failed",
           error:
@@ -680,7 +706,10 @@ export function useSalesSlipPhotoRegistration(
       if (activeRead.current === run) activeRead.current = null;
       activeRequest.current = null;
       running.current = false;
-      if (mounted.current) setBusy(null);
+      if (mounted.current) {
+        setExtractionProgress(null);
+        setBusy(null);
+      }
     }
   }
 
@@ -852,6 +881,7 @@ export function useSalesSlipPhotoRegistration(
     setSelectedId,
     busy,
     regionProcessingProgress,
+    extractionProgress,
     photosWithoutDocumentRegionsCount: photosWithoutDocumentRegions.length,
     cancelling,
     uploadError,

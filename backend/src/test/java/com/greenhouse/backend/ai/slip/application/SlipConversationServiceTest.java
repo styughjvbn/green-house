@@ -161,6 +161,46 @@ class SlipConversationServiceTest {
   }
 
   @Test
+  void batchesCanAccumulateMoreThanTenDocumentsButEachRequestStillHasTenAtMost() throws Exception {
+    var service = service();
+    String session = service.open("worker").sessionId();
+    when(runtime.extractConversation(anyString(), eq(session), anyString(), any()))
+        .thenAnswer(
+            call -> {
+              SlipConversationInput input = call.getArgument(3);
+              return new SlipConversationModelResult(
+                  input.photos().stream()
+                      .map(photo -> new SlipConversationModelResult.Photo(photo.photoId(), null))
+                      .toList());
+            });
+    var photos = new ArrayList<SlipConversationInput.Photo>();
+    for (int i = 0; i < 21; i++) photos.add(photo("photo-" + i));
+    for (int offset = 0; offset < photos.size(); offset += 10) {
+      var batch = photos.subList(offset, Math.min(offset + 10, photos.size()));
+      assertThat(service.extract("worker", session, new SlipConversationInput(batch)).photos())
+          .extracting(SlipConversationResult.Photo::photoId)
+          .containsExactlyElementsOf(
+              batch.stream().map(SlipConversationInput.Photo::photoId).toList());
+    }
+    service.extract("worker", session, new SlipConversationInput(List.of(photos.get(0))));
+    assertThatThrownBy(
+            () ->
+                service.extract(
+                    "worker", session, new SlipConversationInput(photos.subList(0, 11))))
+        .isInstanceOf(AgentException.class)
+        .extracting("code")
+        .isEqualTo("AI_INVALID_REQUEST");
+    var changed = new SlipConversationInput.Photo("photo-20", "image/png", image(0xffffff));
+    assertThatThrownBy(
+            () -> service.extract("worker", session, new SlipConversationInput(List.of(changed))))
+        .isInstanceOf(AgentException.class)
+        .extracting("code")
+        .isEqualTo("AI_PHOTO_ID_CONFLICT");
+    verify(runtime, times(4)).extractConversation(anyString(), eq(session), anyString(), any());
+    verify(runtime, times(1)).openSession(eq(session), any());
+  }
+
+  @Test
   void sessionOwnershipExpiryAndClosePreventFurtherInference() throws Exception {
     var service = service();
     var session = service.open("worker").sessionId();

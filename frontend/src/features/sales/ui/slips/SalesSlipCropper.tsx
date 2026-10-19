@@ -22,7 +22,6 @@ type Input = {
   selectedId: string | null;
   drawing: boolean;
   disabled: boolean;
-  maxRegions: number;
   onSelect: (id?: string) => void;
   onChange: (regions: PhotoRegionDraft[]) => void;
   onCreated: (id: string) => void;
@@ -52,7 +51,6 @@ export function SalesSlipCropper({
     selectedId,
     drawing,
     disabled,
-    maxRegions,
     onSelect,
     onChange,
     onCreated,
@@ -63,7 +61,6 @@ export function SalesSlipCropper({
       selectedId,
       drawing,
       disabled,
-      maxRegions,
       onSelect,
       onChange,
       onCreated,
@@ -74,7 +71,6 @@ export function SalesSlipCropper({
     selectedId,
     drawing,
     disabled,
-    maxRegions,
     onSelect,
     onChange,
     onCreated,
@@ -174,10 +170,7 @@ function createRegionCropper(
     syncing = true;
     try {
       canvas.disabled = input.disabled;
-      background.action =
-        input.drawing && input.regions.length < input.maxRegions
-          ? "select"
-          : "none";
+      background.action = input.drawing ? "select" : "none";
       const ids = new Set(input.regions.map((r) => r.id));
       for (const [id, box] of boxes)
         if (!ids.has(id)) {
@@ -232,12 +225,7 @@ function createRegionCropper(
       detail.relatedEvent.target as Element
     ).closest<CropperSelection>("cropper-selection");
     let id = target?.dataset.regionId;
-    if (
-      !id &&
-      detail.action === "select" &&
-      input.drawing &&
-      boxes.size < input.maxRegions
-    ) {
+    if (!id && detail.action === "select" && input.drawing) {
       id = `new-${createUuid()}`;
       const box = makeBox(id);
       box.resizable = true;

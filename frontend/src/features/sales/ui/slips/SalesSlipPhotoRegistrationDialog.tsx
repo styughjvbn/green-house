@@ -187,12 +187,11 @@ export function SalesSlipPhotoRegistrationDialog({
     "inline-flex h-8 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#159447] disabled:opacity-60";
   const buttonClass = `${buttonBaseClass} border-[#cfd8cc] bg-white text-[#29422e] hover:bg-[#f7faf6]`;
   const primaryButtonClass = `${buttonBaseClass} border-[#159447] bg-[#159447] text-white hover:bg-[#10783a]`;
-  const nextBatchAction =
-    photos.photosWithoutDocumentRegionsCount && documents.length < 10
-      ? "detect"
-      : documentsPendingExtraction.length
-        ? "extract"
-        : null;
+  const nextBatchAction = photos.photosWithoutDocumentRegionsCount
+    ? "detect"
+    : documentsPendingExtraction.length
+      ? "extract"
+      : null;
 
   function requestClose() {
     if (blocking) return;
@@ -292,8 +291,7 @@ export function SalesSlipPhotoRegistrationDialog({
               }
               disabled={
                 photos.busy !== null ||
-                !photos.photosWithoutDocumentRegionsCount ||
-                documents.length >= 10
+                !photos.photosWithoutDocumentRegionsCount
               }
               onClick={() => void photos.detectPendingPhotoRegions(rotations)}
             >
@@ -334,8 +332,8 @@ export function SalesSlipPhotoRegistrationDialog({
             ) : null}
           </div>
           <p className="text-xs text-[#5c6a60]" role="status">
-            원본 사진 {originals.length}/10장 · 전표 {documents.length}/10개 ·
-            저장 완료 {documents.length - remaining}건
+            원본 사진 {originals.length}/10장 · 전표 {documents.length}개 · 저장
+            완료 {documents.length - remaining}건
           </p>
           <input
             ref={fileRef}
@@ -382,6 +380,7 @@ export function SalesSlipPhotoRegistrationDialog({
             regionProcessingProgress={
               photos.regionProcessingProgress ?? undefined
             }
+            extractionProgress={photos.extractionProgress ?? undefined}
             readingCount={
               photos.entries.filter((entry) => entry.read === "reading").length
             }
@@ -756,12 +755,6 @@ export function SalesSlipPhotoRegistrationDialog({
             photo={regionOwner.photo}
             regions={editableRegions}
             selectedId={regionEditor.selectedId}
-            maxRegions={
-              10 -
-              photos.entries.filter(
-                (entry) => entry.parentId && entry.parentId !== regionOwner.id,
-              ).length
-            }
             busy={photos.busy !== null}
             error={regionOwner.error}
             onApply={applyDocumentRegions}

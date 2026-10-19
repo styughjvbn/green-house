@@ -18,7 +18,6 @@ export function SalesSlipRegionEditor({
   photo,
   regions,
   selectedId,
-  maxRegions,
   busy,
   error,
   onApply,
@@ -27,7 +26,6 @@ export function SalesSlipRegionEditor({
   photo: SalesSlipPhotoInput;
   regions: PhotoRegionDraft[];
   selectedId?: string;
-  maxRegions: number;
   busy: boolean;
   error: string | null;
   onApply: (regions: PhotoRegionDraft[]) => Promise<void>;
@@ -37,9 +35,7 @@ export function SalesSlipRegionEditor({
   const [selected, setSelected] = useState<string | null>(
     selectedId ?? regions[0]?.id ?? null,
   );
-  const [drawing, setDrawing] = useState(
-    !selectedId && regions.length < maxRegions,
-  );
+  const [drawing, setDrawing] = useState(!selectedId);
   const current = drafts.find((region) => region.id === selected);
   return (
     <Dialog
@@ -83,7 +79,7 @@ export function SalesSlipRegionEditor({
               type="button"
               aria-pressed={drawing}
               className={buttonClass}
-              disabled={busy || drafts.length >= maxRegions}
+              disabled={busy}
               onClick={() => setDrawing(true)}
             >
               새 영역 추가
@@ -111,7 +107,7 @@ export function SalesSlipRegionEditor({
               선택 영역 제거
             </button>
             <span className="text-xs text-[#526158]">
-              {drafts.length}/{maxRegions}개 ·{" "}
+              {drafts.length}개 ·{" "}
               {drawing
                 ? "빈 곳을 드래그해 전표 영역 선택"
                 : "사각형을 선택해 수정"}
@@ -123,7 +119,6 @@ export function SalesSlipRegionEditor({
             selectedId={selected}
             drawing={drawing}
             disabled={busy}
-            maxRegions={maxRegions}
             onSelect={(id) => {
               setSelected(id ?? null);
               setDrawing(false);

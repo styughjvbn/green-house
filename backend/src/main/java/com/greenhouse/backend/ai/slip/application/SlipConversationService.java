@@ -89,8 +89,6 @@ public class SlipConversationService {
             throw new AgentException(409, "AI_PHOTO_ID_CONFLICT", "동일한 사진 ID에 다른 사진을 사용할 수 없습니다.");
           next.put(photo.photoId(), fingerprint);
         }
-        if (next.size() > 10)
-          throw new AgentException(400, "AI_INVALID_REQUEST", "등록 사진은 최대 10장입니다.");
         session.photos.clear();
         session.photos.putAll(next);
         session.expiresAt = clock.instant().plusSeconds(1800);
