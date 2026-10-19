@@ -529,12 +529,10 @@ public final class SlipProcessor implements SlipImageProcessor {
             Imgproc.GaussianBlur(gray, blur, m.window(7), 0);
             Imgproc.Canny(blur, edges, 35, 100);
             Imgproc.morphologyEx(edges, edges, Imgproc.MORPH_CLOSE, m.kernel(7, 7));
-            List<MatOfPoint> contours = new ArrayList<>();
-            Imgproc.findContours(edges, contours, m.mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+            List<MatOfPoint> contours = m.findContours(edges, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
             Point[] best = null;
             double bestArea = image.total() * .45;
             for (MatOfPoint contour : contours) {
-                m.own(contour);
                 double area = Math.abs(Imgproc.contourArea(contour));
                 if (area < bestArea) continue;
                 MatOfPoint2f curve = m.own(new MatOfPoint2f(contour.toArray())), approx = m.own(new MatOfPoint2f());
@@ -721,11 +719,9 @@ public final class SlipProcessor implements SlipImageProcessor {
 
     private static List<Rect> tableRegions(Mat mask, Size size, Mats parent) {
         try (Mats m = new Mats(parent.scale)) {
-            List<MatOfPoint> contours = new ArrayList<>();
-            Imgproc.findContours(m.own(mask.clone()), contours, m.mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            List<MatOfPoint> contours = m.findContours(m.own(mask.clone()), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
             List<Rect> segments = new ArrayList<>();
             for (MatOfPoint contour : contours) {
-                m.own(contour);
                 Rect r = Imgproc.boundingRect(contour);
                 if (r.width > size.width * .30 && r.height < size.height * .04
                         && r.y > size.height * .035 && r.y + r.height < size.height * .985) segments.add(r);

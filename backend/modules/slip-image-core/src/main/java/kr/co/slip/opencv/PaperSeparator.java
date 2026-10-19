@@ -61,11 +61,9 @@ final class PaperSeparator {
             List<Paper> papers = new ArrayList<>();
             Mat usedMask = mode.diagnostics() ? m.own(Mat.zeros(image.size(), CvType.CV_8UC1)) : null;
             List<String> warnings = new ArrayList<>();
-            List<MatOfPoint> contours = new ArrayList<>();
-            Imgproc.findContours(m.own(mask.clone()), contours, m.mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            List<MatOfPoint> contours = m.findContours(m.own(mask.clone()), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
             List<MatOfPoint> candidates = new ArrayList<>();
             for (MatOfPoint contour : contours) {
-                m.own(contour);
                 Rect bounds = Imgproc.boundingRect(contour);
                 if (Imgproc.contourArea(contour) >= image.total() * .04 && bounds.width >= image.cols() * .18
                         && bounds.height >= image.rows() * .08) candidates.add(contour);
@@ -255,10 +253,9 @@ final class PaperSeparator {
 
     private static void convexify(Mat mask) {
         try (Scope m = new Scope()) {
-            List<MatOfPoint> contours = new ArrayList<>();
-            Imgproc.findContours(m.own(mask.clone()), contours, m.mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            List<MatOfPoint> contours = m.findContours(m.own(mask.clone()), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
             List<Point> all = new ArrayList<>();
-            for (MatOfPoint contour : contours) { m.own(contour); all.addAll(Arrays.asList(contour.toArray())); }
+            for (MatOfPoint contour : contours) { all.addAll(Arrays.asList(contour.toArray())); }
             if (all.size() < 3) return;
             MatOfPoint points = m.own(new MatOfPoint(all.toArray(Point[]::new)));
             MatOfInt indices = m.own(new MatOfInt());
@@ -273,10 +270,9 @@ final class PaperSeparator {
 
     private static List<XY> outline(Mat mask) {
         try (Scope m = new Scope()) {
-            List<MatOfPoint> contours = new ArrayList<>();
-            Imgproc.findContours(m.own(mask.clone()), contours, m.mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            List<MatOfPoint> contours = m.findContours(m.own(mask.clone()), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
             MatOfPoint largest = null;
-            for (MatOfPoint c : contours) { m.own(c); if (largest == null || Imgproc.contourArea(c) > Imgproc.contourArea(largest)) largest = c; }
+            for (MatOfPoint c : contours) { if (largest == null || Imgproc.contourArea(c) > Imgproc.contourArea(largest)) largest = c; }
             if (largest == null) return List.of();
             MatOfPoint2f curve = m.own(new MatOfPoint2f(largest.toArray())), approx = m.own(new MatOfPoint2f());
             Imgproc.approxPolyDP(curve, approx, Imgproc.arcLength(curve, true) * .001, true);

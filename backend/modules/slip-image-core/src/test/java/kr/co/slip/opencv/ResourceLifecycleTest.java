@@ -21,11 +21,37 @@ class ResourceLifecycleTest {
             roi = scope.own(original.submat(new Rect(10, 10, 20, 20)));
         }
         assertTrue(original.empty()); assertTrue(alias.empty()); assertTrue(roi.empty());
-        Mat failed = new Mat(100, 100, CvType.CV_8UC1);
-        assertThrows(IllegalArgumentException.class, () -> {
-            try (MatScope scope = new MatScope()) { scope.own(failed); throw new IllegalArgumentException("failure"); }
+        Mat failed = new Mat(100, 100, CvType.CV_8UC3);
+        assertThrows(CvException.class, () -> {
+            try (MatScope scope = new MatScope()) {
+                scope.findContours(scope.own(failed), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            }
         });
         assertTrue(failed.empty());
+    }
+
+    @Test void allContoursAreReleasedWhenInspectionFailsOnTheFirstContour() {
+        List<MatOfPoint> contours = new ArrayList<>();
+        java.util.concurrent.atomic.AtomicInteger inspected = new java.util.concurrent.atomic.AtomicInteger();
+        try {
+            assertThrows(IllegalStateException.class, () -> {
+                try (MatScope scope = new MatScope()) {
+                    Mat mask = scope.own(Mat.zeros(100, 100, CvType.CV_8UC1));
+                    for (int x : new int[]{10, 40, 70})
+                        Imgproc.rectangle(mask, new Point(x, 10), new Point(x + 10, 30), Scalar.all(255), -1);
+                    contours.addAll(scope.findContours(mask, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE));
+                    assertEquals(3, contours.size());
+                    assertTrue(contours.stream().noneMatch(Mat::empty));
+                    for (MatOfPoint contour : contours) {
+                        Imgproc.boundingRect(contour);
+                        inspected.incrementAndGet();
+                        throw new IllegalStateException("Inspection failed");
+                    }
+                }
+            });
+            assertEquals(1, inspected.get());
+            assertTrue(contours.stream().allMatch(Mat::empty));
+        } finally { contours.forEach(Mat::release); }
     }
 
     @Test void releasedParentDoesNotInvalidateOwnedRoiAndCloseIsIdempotent() {

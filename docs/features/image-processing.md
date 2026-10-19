@@ -83,7 +83,7 @@ Green House에서 코어를 사용·수정할 때 필요한 기술 기준입니�
 - `SlipProcessors.bounded(...)`로 생성한 인스턴스 하나를 Spring 싱글톤으로 공유합니다. `process()`도 같은 제한 실행기에 제출하고 기다리며, `processAsync()`는 Future를 반환합니다. 저수준 `new SlipProcessor()`는 제한을 우회합니다.
 - 기본은 worker 2개·대기열 4개·OpenCV 내부 스레드 1개입니다. 한도는 실행기 인스턴스별이며, 포화되면 `ProcessingRejectedException`으로 즉시 거절합니다. OpenCV 스레드 설정은 JVM 전체에 적용됩니다.
 - 비동기 loader는 worker 확보 후 파일을 읽으므로 대기열에 원본 바이트 전체를 보관하지 않을 수 있습니다. 호스트는 요청 종료 후 사라지는 업로드 임시 파일의 수명을 별도로 관리합니다.
-- Mat·ROI·커널·컨투어·이미지 인코딩 버퍼의 픽셀 참조는 단계별 scope/finally에서 명시적으로 release합니다. 호출자는 Mat을 받지 않으며 반환된 이미지 byte[]와 파일 저장 메모리를 관리합니다. Java Mat wrapper의 native header 삭제에는 finalization 동작도 남아 있습니다.
+- Mat·ROI·커널·컨투어·이미지 인코딩 버퍼의 픽셀 참조는 단계별 scope/finally에서 명시적으로 release합니다. 윤곽 검출이 반환한 목록은 순회 전에 전체를 해제 관리에 등록하며, 검출 중 부분 결과가 남거나 첫 윤곽 처리에서 예외가 발생해도 등록된 버퍼를 scope 종료 시 해제합니다. 호출자는 Mat을 받지 않으며 반환된 이미지 byte[]와 파일 저장 메모리를 관리합니다. Java Mat wrapper의 native header 삭제에는 finalization 동작도 남아 있습니다.
 - 취소·interrupt는 실행 중 JNI 연산을 즉시 멈추지 않습니다. 실제 반환까지 worker를 점유합니다. 같은 worker의 loader/callback에서 같은 실행기로 동기 재진입하거나 close하지 않습니다.
 - Bean 종료 시 close를 호출합니다. 종료 대기 한도 초과는 예외로 알리며 실행 중 native 작업이 남을 수 있습니다.
 
