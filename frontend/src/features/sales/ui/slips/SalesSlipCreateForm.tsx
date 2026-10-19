@@ -498,10 +498,11 @@ export function SalesSlipCreateForm({
                           </p>
                         </ReviewField>
                       )}
-                      {!form.recordOnly && onConnectGroups ? (
-                        <div className="w-full sm:w-auto">
+                      <div className="ml-auto flex shrink-0 items-center gap-2">
+                        {!form.recordOnly && onConnectGroups ? (
                           <SalesOrchidGroupSearchSelect
                             label="난 묶음 연결"
+                            buttonClassName="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-[#159447] bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white hover:bg-[#10783a] disabled:opacity-50"
                             initialKeyword={group.itemName}
                             disabled={inputsDisabled}
                             selectedIds={selectedGroups.map(
@@ -514,18 +515,18 @@ export function SalesSlipCreateForm({
                               )
                             }
                           />
-                        </div>
-                      ) : null}
-                      {mode === "create" && group.itemName ? (
-                        <button
-                          type="button"
-                          disabled={inputsDisabled}
-                          className="h-7 rounded-md border border-[#cfd8cc] px-3 text-xs font-semibold text-[#29422e] disabled:opacity-50"
-                          onClick={() => onAddItem(group.rows.at(-1)!.index)}
-                        >
-                          품목 분리
-                        </button>
-                      ) : null}
+                        ) : null}
+                        {mode === "create" && group.itemName ? (
+                          <button
+                            type="button"
+                            disabled={inputsDisabled}
+                            className="h-7 rounded-md border border-[#cfd8cc] px-3 text-xs font-semibold text-[#29422e] disabled:opacity-50"
+                            onClick={() => onAddItem(group.rows.at(-1)!.index)}
+                          >
+                            품목 분리
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                     <div className="space-y-4">
                       {group.rows.map(({ item, index }) => (

@@ -10,12 +10,14 @@ import { searchSalesOrchidGroups } from "../../api/salesApi";
 
 export function SalesOrchidGroupSearchSelect({
   label = "난 묶음 선택",
+  buttonClassName,
   disabled = false,
   selectedIds = [],
   initialKeyword = "",
   onSelect,
 }: {
   label?: string;
+  buttonClassName?: string;
   disabled?: boolean;
   selectedIds?: string[];
   initialKeyword?: string;
@@ -70,7 +72,10 @@ export function SalesOrchidGroupSearchSelect({
     <>
       <button
         ref={opener}
-        className="flex h-10 w-full items-center justify-center gap-2 rounded-md border border-[#cfd8cc] bg-white px-3 text-sm font-semibold text-[#29422e] shadow-sm hover:bg-[#f7faf6] disabled:opacity-60"
+        className={
+          buttonClassName ??
+          "flex h-10 w-full items-center justify-center gap-2 rounded-md border border-[#cfd8cc] bg-white px-3 text-sm font-semibold text-[#29422e] shadow-sm hover:bg-[#f7faf6] disabled:opacity-60"
+        }
         disabled={disabled}
         type="button"
         onClick={() => setOpen(true)}
