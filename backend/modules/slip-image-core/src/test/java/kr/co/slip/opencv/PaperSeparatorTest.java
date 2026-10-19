@@ -153,6 +153,36 @@ class PaperSeparatorTest {
         } finally { image.release(); }
     }
 
+    @Test void insetSheetColorBoundaryPreservesHeaderDespiteLongerPrintedRules() {
+        Mat image = new Mat(1000, 900, CvType.CV_8UC3, DESK);
+        try {
+            Imgproc.rectangle(image, new Point(60, 60), new Point(820, 850), PAPER, -1);
+            Imgproc.rectangle(image, new Point(250, 430), new Point(780, 950), new Scalar(235, 215, 200), -1);
+            Imgproc.line(image, new Point(60, 630), new Point(820, 630), Scalar.all(70), 3);
+            Imgproc.rectangle(image, new Point(350, 490), new Point(380, 520), new Scalar(0, 0, 255), -1);
+            var result = PaperSeparator.separate(image,
+                    List.of(table(1, 110, 200, 660, 200), table(2, 300, 700, 420, 200)), false);
+            assertEquals(2, result.papers().size());
+            var lower = result.papers().getLast().bounds();
+            assertEquals(430, lower.y(), 12);
+            try (MatScope scope = new MatScope()) {
+                Mat cutout = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(result.images().get("paper-02.png"))), Imgcodecs.IMREAD_UNCHANGED));
+                assertArrayEquals(new double[]{0, 0, 255, 255}, cutout.get(500 - lower.y(), 360 - lower.x()));
+            }
+        } finally { image.release(); }
+    }
+
+    @Test void brightnessOnlyShadeAboveAnInsetFooterDoesNotCreateASeparateDocument() {
+        Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
+        try {
+            Imgproc.rectangle(image, new Point(100, 70), new Point(700, 930), PAPER, -1);
+            Imgproc.rectangle(image, new Point(300, 520), new Point(650, 650), new Scalar(210, 205, 195), -1);
+            var result = PaperSeparator.separate(image,
+                    List.of(table(1, 180, 260, 430, 140), table(2, 350, 700, 250, 150)), false);
+            assertEquals(1, result.papers().size());
+        } finally { image.release(); }
+    }
+
     @Test void disconnectedPapersAreExportedIndividually() {
         Mat image = new Mat(900, 1200, CvType.CV_8UC3, DESK);
         try {

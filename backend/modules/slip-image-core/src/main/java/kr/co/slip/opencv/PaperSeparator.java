@@ -247,9 +247,12 @@ final class PaperSeparator {
                 Box above = tables.get(i).bounds(), below = tables.get(i + 1).bounds();
                 double minY = above.y() + above.height() - pixels.length(12), maxY = below.y() - pixels.length(15);
                 if (maxY <= minY || below.y() - above.y() < image.rows() * .12) continue;
-                Seam best = null;
+                // An inset lower sheet need not reach the sides of the complete stack.
+                // Prefer its broad paper-color transition over longer printed header rules.
+                Rect lowerSpan = new Rect(below.x(), bounds.y, below.width(), bounds.height);
+                Seam best = colorSeam(image, mask, lowerSpan, (int) minY, (int) maxY, pixels, true);
                 double midX = bounds.x + bounds.width / 2.;
-                for (Segment segment : segments) {
+                if (best == null) for (Segment segment : segments) {
                     double a = segment.slope(), b = segment.intercept(), midY = a * midX + b;
                     if (midY < minY || midY > maxY) continue;
                     double segmentLeft = segment.left(), segmentRight = segment.right();
@@ -283,6 +286,10 @@ final class PaperSeparator {
     }
 
     private static Seam colorSeam(Mat image, Mat mask, Rect bounds, int start, int end, PixelScale pixels) {
+        return colorSeam(image, mask, bounds, start, end, pixels, false);
+    }
+
+    private static Seam colorSeam(Mat image, Mat mask, Rect bounds, int start, int end, PixelScale pixels, boolean chromatic) {
         try (Scope m = new Scope()) {
             Mat blurred = m.mat(), lab = m.mat();
             Imgproc.GaussianBlur(image, blurred, new Size(pixels.odd(5), pixels.odd(5)), 0);
@@ -291,9 +298,13 @@ final class PaperSeparator {
             lab.get(0, 0, colors); mask.get(0, 0, selected);
             double best = 2.5;
             int bestY = -1;
-            for (int y = Math.max(pixels.length(12), start); y <= Math.min(end, image.rows() - pixels.length(13)); y++) {
-                double[] left = colorJump(colors, selected, lab.cols(), bounds, y, .03, .09, pixels);
-                double[] right = colorJump(colors, selected, lab.cols(), bounds, y, .91, .97, pixels);
+            int topMargin = chromatic ? pixels.length(24) + 1 : pixels.length(12);
+            int bottomMargin = chromatic ? topMargin + 1 : pixels.length(13);
+            for (int y = Math.max(topMargin, start); y <= Math.min(end, image.rows() - bottomMargin); y++) {
+                double[] left = colorJump(colors, selected, lab.cols(), bounds, y, .03, .09, pixels, chromatic);
+                double[] right = colorJump(colors, selected, lab.cols(), bounds, y, .91, .97, pixels, chromatic);
+                // Brightness-only shadows inside a sheet must not gain color-boundary priority.
+                if (chromatic && Math.min(Math.hypot(left[1], left[2]), Math.hypot(right[1], right[2])) < 3) continue;
                 double ln = norm(left), rn = norm(right);
                 if (ln < 2 || rn < 2) continue;
                 double cosine = (left[0] * right[0] + left[1] * right[1] + left[2] * right[2]) / (ln * rn);
@@ -308,17 +319,31 @@ final class PaperSeparator {
 
     private static double norm(double[] vector) { return Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]); }
 
-    private static double[] colorJump(byte[] lab, byte[] mask, int cols, Rect bounds, int y, double from, double to, PixelScale pixels) {
+    private static double[] colorJump(byte[] lab, byte[] mask, int cols, Rect bounds, int y, double from, double to, PixelScale pixels, boolean persistent) {
         List<double[]> samples = new ArrayList<>();
+        int margin = pixels.length(persistent ? 24 : 10);
+        int[] offsets = persistent ? new int[]{8, 16, 24} : new int[]{4, 7, 10};
         for (int i = 0; i < 9; i++) {
             int x = Math.min(cols - 1, bounds.x + (int) (bounds.width * (from + (to - from) * i / 8)));
-            if (mask[(y - pixels.length(10)) * cols + x] == 0 || mask[(y + pixels.length(10)) * cols + x] == 0) continue;
-            double[] delta = new double[3];
-            for (int offset : new int[]{pixels.length(4), pixels.length(7), pixels.length(10)}) {
+            if (mask[(y - margin) * cols + x] == 0 || mask[(y + margin) * cols + x] == 0) continue;
+            double[] delta = new double[3], previous = null;
+            boolean valid = true;
+            // A paper-color step persists away from the edge; a printed rule does not.
+            for (int distance : offsets) {
+                int offset = pixels.length(distance);
                 int above = ((y - offset) * cols + x) * 3, below = ((y + offset) * cols + x) * 3;
-                for (int c = 0; c < 3; c++) delta[c] += ((lab[below + c] & 255) - (lab[above + c] & 255)) / 3.;
+                double[] step = new double[3];
+                for (int c = 0; c < 3; c++) step[c] = (lab[below + c] & 255) - (lab[above + c] & 255);
+                double length = norm(step);
+                if (persistent && (length < 1 || previous != null && (previous[0] * step[0] + previous[1] * step[1]
+                        + previous[2] * step[2]) / (norm(previous) * length) < .65)) {
+                    valid = false;
+                    break;
+                }
+                for (int c = 0; c < 3; c++) delta[c] += step[c] / 3.;
+                previous = step;
             }
-            samples.add(delta);
+            if (valid) samples.add(delta);
         }
         if (samples.size() < 5) return new double[3];
         double[] result = new double[3];
