@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { SalesSlipSourceRegions } from "./SalesSlipSourceRegions";
 import { samePhotoRegion, type PhotoRegionDraft } from "../../lib/photoRegions";
+import { SalesSlipFloatingPhoto } from "./SalesSlipFloatingPhoto";
 import { SalesSlipPhotoViewer } from "./SalesSlipPhotoViewer";
 import { Camera, ImagePlus, LoaderCircle, X } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
@@ -50,6 +51,8 @@ export function SalesSlipPhotoRegistrationDialog({
     selectedId?: string;
   } | null>(null);
   const [rotations, setRotations] = useState<Record<string, number>>({});
+  const detailScrollRef = useRef<HTMLDivElement>(null);
+  const photoAreaRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const selected = photos.selected;
@@ -389,264 +392,277 @@ export function SalesSlipPhotoRegistrationDialog({
                 </button>
               ))}
             </nav>
-            <div className="min-h-0 min-w-0 overflow-y-auto">
-              <section
-                aria-label="선택한 전표 사진 원본"
-                className="mx-5 mt-5 rounded-md border border-[#cfe0d2] bg-white p-4"
-              >
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="min-w-0 text-sm font-bold break-all text-[#26352b]">
-                    {selected.photo.fileName}
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {!selected.parentId ? (
-                      <label className="flex items-center gap-2 text-xs text-[#526158]">
-                        회전
-                        <select
-                          aria-label="자동 지정 시 사진 회전"
-                          value={rotations[selected.id] ?? -1}
+            <div className="relative min-h-0 min-w-0">
+              <div ref={detailScrollRef} className="h-full overflow-y-auto">
+                <section
+                  aria-label="선택한 전표 사진 원본"
+                  className="mx-5 mt-5 rounded-md border border-[#cfe0d2] bg-white p-4"
+                >
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="min-w-0 text-sm font-bold break-all text-[#26352b]">
+                      {selected.photo.fileName}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {!selected.parentId ? (
+                        <label className="flex items-center gap-2 text-xs text-[#526158]">
+                          회전
+                          <select
+                            aria-label="자동 지정 시 사진 회전"
+                            value={rotations[selected.id] ?? -1}
+                            disabled={photos.busy !== null}
+                            onChange={(event) =>
+                              setRotations((current) => ({
+                                ...current,
+                                [selected.id]: Number(event.target.value),
+                              }))
+                            }
+                            className="h-8 rounded-md border border-[#cfd8cc] bg-white px-2"
+                          >
+                            <option value={-1}>자동</option>
+                            {[0, 90, 180, 270].map((degrees) => (
+                              <option key={degrees} value={degrees}>
+                                {degrees}° 시계 방향
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
+                      {!selected.parentId ? (
+                        <>
+                          <button
+                            type="button"
+                            className={buttonClass}
+                            disabled={photos.busy !== null || cannotRemove}
+                            onClick={() => {
+                              if (
+                                children.length &&
+                                !window.confirm(
+                                  "문서 영역을 다시 자동 지정하면 기존 문서와 입력 내용이 바뀝니다. 계속할까요?",
+                                )
+                              )
+                                return;
+                              void photos.prepareSelected(
+                                rotations[selected.id] ?? -1,
+                              );
+                            }}
+                          >
+                            {preparingPhotoIds.includes(selected.id) &&
+                            !regionEditor
+                              ? "자동 지정 중…"
+                              : "자동 지정"}
+                          </button>
+                          <button
+                            type="button"
+                            className={buttonClass}
+                            disabled={photos.busy !== null}
+                            onClick={() => openRegionEditor()}
+                          >
+                            {children.length ? "영역 수정" : "수동 지정"}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className={buttonClass}
                           disabled={photos.busy !== null}
-                          onChange={(event) =>
-                            setRotations((current) => ({
-                              ...current,
-                              [selected.id]: Number(event.target.value),
-                            }))
-                          }
-                          className="h-8 rounded-md border border-[#cfd8cc] bg-white px-2"
+                          onClick={() => openRegionEditor(selected.id)}
                         >
-                          <option value={-1}>자동</option>
-                          {[0, 90, 180, 270].map((degrees) => (
-                            <option key={degrees} value={degrees}>
-                              {degrees}° 시계 방향
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ) : null}
-                    {!selected.parentId ? (
-                      <>
+                          영역 수정
+                        </button>
+                      )}
+                      {selected.parentId ? (
                         <button
                           type="button"
                           className={buttonClass}
                           disabled={photos.busy !== null || cannotRemove}
-                          onClick={() => {
-                            if (
-                              children.length &&
-                              !window.confirm(
-                                "문서 영역을 다시 자동 지정하면 기존 문서와 입력 내용이 바뀝니다. 계속할까요?",
-                              )
-                            )
-                              return;
-                            void photos.prepareSelected(
-                              rotations[selected.id] ?? -1,
-                            );
-                          }}
+                          onClick={readSelected}
                         >
-                          {preparingPhotoIds.includes(selected.id) &&
-                          !regionEditor
-                            ? "자동 지정 중…"
-                            : "자동 지정"}
+                          {selected.read === "reading" ? (
+                            <LoaderCircle
+                              className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                          {selected.read === "reading"
+                            ? "자동 입력 중…"
+                            : selected.read === "ready"
+                              ? "자동 입력 재실행"
+                              : "자동 입력"}
                         </button>
-                        <button
-                          type="button"
-                          className={buttonClass}
-                          disabled={photos.busy !== null}
-                          onClick={() => openRegionEditor()}
-                        >
-                          {children.length ? "영역 수정" : "수동 지정"}
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        className={buttonClass}
-                        disabled={photos.busy !== null}
-                        onClick={() => openRegionEditor(selected.id)}
-                      >
-                        영역 수정
-                      </button>
-                    )}
-                    {selected.parentId ? (
+                      ) : null}
                       <button
                         type="button"
                         className={buttonClass}
                         disabled={photos.busy !== null || cannotRemove}
-                        onClick={readSelected}
+                        onClick={photos.removeSelected}
                       >
-                        {selected.read === "reading" ? (
-                          <LoaderCircle
-                            className="h-4 w-4 animate-spin motion-reduce:animate-none"
-                            aria-hidden="true"
-                          />
-                        ) : null}
-                        {selected.read === "reading"
-                          ? "자동 입력 중…"
-                          : selected.read === "ready"
-                            ? "자동 입력 재실행"
-                            : "자동 입력"}
+                        사진 제거
                       </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      className={buttonClass}
-                      disabled={photos.busy !== null || cannotRemove}
-                      onClick={photos.removeSelected}
-                    >
-                      사진 제거
-                    </button>
+                    </div>
                   </div>
-                </div>
-                {!selected.parentId ? (
-                  <p className="mb-3 text-sm text-[#526158]">
-                    {children.length
-                      ? "문서 영역이 지정되었습니다. 영역 수정으로 조정하거나 왼쪽 목록의 문서를 선택해 자동 입력을 진행하세요."
-                      : "자동 입력을 위해 문서 영역 지정이 필요합니다. 자동 지정 또는 수동 지정을 선택하세요."}
-                  </p>
-                ) : null}
-                <div
-                  className={`grid gap-4 ${selected.parentId ? "grid-cols-2" : "sm:grid-cols-2"}`}
-                >
-                  {(selected.parentId
-                    ? [parent, selected]
-                    : [selected, ...children]
-                  )
-                    .filter((entry) => entry != null)
-                    .map((entry) => (
-                      <figure key={entry.id} className="min-w-0">
-                        <figcaption className="mb-2 text-xs font-semibold break-all text-[#526158]">
-                          {entry.parentId ? "지정된 문서" : "원본"} ·{" "}
-                          {entry.photo.fileName}
-                        </figcaption>
-                        {!entry.parentId ? (
-                          <SalesSlipSourceRegions
-                            photo={entry.photo}
-                            regions={photos.entries
-                              .filter(
-                                (child) =>
-                                  child.parentId === entry.id && child.region,
-                              )
-                              .map((child) => ({
-                                id: child.id,
-                                region: child.region!,
-                                locked:
-                                  child.save !== "draft" ||
-                                  Boolean(child.pendingPayload),
-                              }))}
-                            onSelect={(id) => openRegionEditor(id)}
-                          />
-                        ) : (
-                          <SalesSlipPhotoViewer
-                            src={`data:${entry.photo.contentType};base64,${entry.photo.contentBase64}`}
-                            alt={
-                              entry.parentId
-                                ? "지정된 문서 사진"
-                                : "전표 사진 원본"
-                            }
-                            width={900}
-                            height={600}
-                            className="max-h-80 w-full rounded-md bg-[#f7faf6] object-contain"
-                          />
-                        )}
-                      </figure>
-                    ))}
-                </div>
-
-                {!selected.parentId && selected.error ? (
-                  <p role="alert" className="mt-3 text-sm text-[#9b341e]">
-                    {selected.error}
-                  </p>
-                ) : null}
-                <p className="mt-2 text-xs text-[#5c6a60]">
-                  사진 ID: {selected.id.slice(0, 12)}
-                </p>
-                {selected.recognition ? (
-                  <p className="mt-2 text-sm text-[#526158]" role="status">
-                    인식 신뢰도 {selected.recognition.confidence}/100 · AI 자체
-                    평가
-                    {selected.recognition.imageLongEdge
-                      ? ` · 긴 변 ${selected.recognition.imageLongEdge}px`
-                      : ""}
-                    {selected.recognition.attempts === 2
-                      ? " · 고해상도 재인식 시도"
-                      : ""}
-                  </p>
-                ) : null}
-                {selected.parentId && selected.notes.length ? (
-                  <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-[#526158]">
-                    {selected.notes.map((note, index) => (
-                      <li key={index}>{note}</li>
-                    ))}
-                  </ul>
-                ) : null}
-                {selected.pendingPayload ? (
-                  <p role="status" className="mt-3 text-sm text-[#9b4f19]">
-                    저장 응답을 확인하지 못했습니다. 같은 입력으로 다시 저장해
-                    결과를 확인하세요.
-                  </p>
-                ) : null}
-              </section>
-              {!selected.parentId ? null : selected.save === "saved" ? (
-                <div
-                  role="status"
-                  className="m-5 rounded-md border border-[#cfe0d2] bg-white p-4 text-sm text-[#10783a]"
-                >
-                  전표 #{selected.slipId} 저장 완료. 다른 사진을 선택해 계속
-                  등록하세요.
-                  {selected.error ? (
-                    <p className="mt-2 text-[#9b341e]">{selected.error}</p>
+                  {!selected.parentId ? (
+                    <p className="mb-3 text-sm text-[#526158]">
+                      {children.length
+                        ? "문서 영역이 지정되었습니다. 영역 수정으로 조정하거나 왼쪽 목록의 문서를 선택해 자동 입력을 진행하세요."
+                        : "자동 입력을 위해 문서 영역 지정이 필요합니다. 자동 지정 또는 수동 지정을 선택하세요."}
+                    </p>
                   ) : null}
-                </div>
-              ) : (
-                <SalesSlipCreateForm
+                  <div
+                    ref={photoAreaRef}
+                    className={`grid gap-4 ${selected.parentId ? "grid-cols-2" : "sm:grid-cols-2"}`}
+                  >
+                    {(selected.parentId
+                      ? [parent, selected]
+                      : [selected, ...children]
+                    )
+                      .filter((entry) => entry != null)
+                      .map((entry) => (
+                        <figure key={entry.id} className="min-w-0">
+                          <figcaption className="mb-2 text-xs font-semibold break-all text-[#526158]">
+                            {entry.parentId ? "지정된 문서" : "원본"} ·{" "}
+                            {entry.photo.fileName}
+                          </figcaption>
+                          {!entry.parentId ? (
+                            <SalesSlipSourceRegions
+                              photo={entry.photo}
+                              regions={photos.entries
+                                .filter(
+                                  (child) =>
+                                    child.parentId === entry.id && child.region,
+                                )
+                                .map((child) => ({
+                                  id: child.id,
+                                  region: child.region!,
+                                  locked:
+                                    child.save !== "draft" ||
+                                    Boolean(child.pendingPayload),
+                                }))}
+                              onSelect={(id) => openRegionEditor(id)}
+                            />
+                          ) : (
+                            <SalesSlipPhotoViewer
+                              src={`data:${entry.photo.contentType};base64,${entry.photo.contentBase64}`}
+                              alt={
+                                entry.parentId
+                                  ? "지정된 문서 사진"
+                                  : "전표 사진 원본"
+                              }
+                              width={900}
+                              height={600}
+                              className="max-h-80 w-full rounded-md bg-[#f7faf6] object-contain"
+                            />
+                          )}
+                        </figure>
+                      ))}
+                  </div>
+
+                  {!selected.parentId && selected.error ? (
+                    <p role="alert" className="mt-3 text-sm text-[#9b341e]">
+                      {selected.error}
+                    </p>
+                  ) : null}
+                  <p className="mt-2 text-xs text-[#5c6a60]">
+                    사진 ID: {selected.id.slice(0, 12)}
+                  </p>
+                  {selected.recognition ? (
+                    <p className="mt-2 text-sm text-[#526158]" role="status">
+                      인식 신뢰도 {selected.recognition.confidence}/100 · AI
+                      자체 평가
+                      {selected.recognition.imageLongEdge
+                        ? ` · 긴 변 ${selected.recognition.imageLongEdge}px`
+                        : ""}
+                      {selected.recognition.attempts === 2
+                        ? " · 고해상도 재인식 시도"
+                        : ""}
+                    </p>
+                  ) : null}
+                  {selected.parentId && selected.notes.length ? (
+                    <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-[#526158]">
+                      {selected.notes.map((note, index) => (
+                        <li key={index}>{note}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {selected.pendingPayload ? (
+                    <p role="status" className="mt-3 text-sm text-[#9b4f19]">
+                      저장 응답을 확인하지 못했습니다. 같은 입력으로 다시 저장해
+                      결과를 확인하세요.
+                    </p>
+                  ) : null}
+                </section>
+                {!selected.parentId ? null : selected.save === "saved" ? (
+                  <div
+                    role="status"
+                    className="m-5 rounded-md border border-[#cfe0d2] bg-white p-4 text-sm text-[#10783a]"
+                  >
+                    전표 #{selected.slipId} 저장 완료. 다른 사진을 선택해 계속
+                    등록하세요.
+                    {selected.error ? (
+                      <p className="mt-2 text-[#9b341e]">{selected.error}</p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <SalesSlipCreateForm
+                    key={selected.id}
+                    embedded
+                    readOnly={
+                      photos.busy !== null || Boolean(selected.pendingPayload)
+                    }
+                    errorMessage={selected.error}
+                    form={selected.form}
+                    onConfirmReview={photos.confirmReview}
+                    mode="create"
+                    saving={photos.busy !== null}
+                    totalAmount={calculateSalesTotal(selected.form.items)}
+                    submitLabel={
+                      selected.pendingPayload
+                        ? "저장 결과 다시 확인"
+                        : "확인한 전표 저장"
+                    }
+                    pendingLabel={
+                      photos.busy === "read"
+                        ? "내용 읽는 중"
+                        : photos.busy === "prepare"
+                          ? preparationText
+                          : photos.busy === "upload"
+                            ? "사진 추가 중"
+                            : "저장 중"
+                    }
+                    onConnectGroups={photos.connectGroups}
+                    selectedGroups={selectedSalesGroups(selected.form.items)}
+                    allocationIssue={salesAllocationIssue(
+                      selected.form.items,
+                      selected.form.recordOnly,
+                    )}
+                    onSelectGroups={photos.actions.selectSalesGroups}
+                    onRemoveGroup={photos.actions.removeSalesGroup}
+                    onAutomaticAllocation={
+                      photos.actions.useAutomaticAllocation
+                    }
+                    onResetAllocation={photos.actions.resetSalesAllocation}
+                    onAddItem={photos.actions.addSalesItem}
+                    onAllocationChange={photos.actions.updateAllocation}
+                    onChange={photos.actions.updateSalesForm}
+                    onRemoveItem={photos.actions.removeSalesItem}
+                    onSalesTypeChange={photos.actions.selectSalesType}
+                    onRecordingModeChange={photos.setRecordingMode}
+                    onUpdateItem={photos.actions.updateItem}
+                    onCancel={requestClose}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void photos.saveSelected();
+                    }}
+                  />
+                )}
+              </div>
+              {selected.parentId ? (
+                <SalesSlipFloatingPhoto
                   key={selected.id}
-                  embedded
-                  readOnly={
-                    photos.busy !== null || Boolean(selected.pendingPayload)
-                  }
-                  errorMessage={selected.error}
-                  form={selected.form}
-                  onConfirmReview={photos.confirmReview}
-                  mode="create"
-                  saving={photos.busy !== null}
-                  totalAmount={calculateSalesTotal(selected.form.items)}
-                  submitLabel={
-                    selected.pendingPayload
-                      ? "저장 결과 다시 확인"
-                      : "확인한 전표 저장"
-                  }
-                  pendingLabel={
-                    photos.busy === "read"
-                      ? "내용 읽는 중"
-                      : photos.busy === "prepare"
-                        ? preparationText
-                        : photos.busy === "upload"
-                          ? "사진 추가 중"
-                          : "저장 중"
-                  }
-                  onConnectGroups={photos.connectGroups}
-                  selectedGroups={selectedSalesGroups(selected.form.items)}
-                  allocationIssue={salesAllocationIssue(
-                    selected.form.items,
-                    selected.form.recordOnly,
-                  )}
-                  onSelectGroups={photos.actions.selectSalesGroups}
-                  onRemoveGroup={photos.actions.removeSalesGroup}
-                  onAutomaticAllocation={photos.actions.useAutomaticAllocation}
-                  onResetAllocation={photos.actions.resetSalesAllocation}
-                  onAddItem={photos.actions.addSalesItem}
-                  onAllocationChange={photos.actions.updateAllocation}
-                  onChange={photos.actions.updateSalesForm}
-                  onRemoveItem={photos.actions.removeSalesItem}
-                  onSalesTypeChange={photos.actions.selectSalesType}
-                  onRecordingModeChange={photos.setRecordingMode}
-                  onUpdateItem={photos.actions.updateItem}
-                  onCancel={requestClose}
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void photos.saveSelected();
-                  }}
+                  src={`data:${selected.photo.contentType};base64,${selected.photo.contentBase64}`}
+                  scrollRoot={detailScrollRef}
+                  photoArea={photoAreaRef}
                 />
-              )}
+              ) : null}
             </div>
           </div>
         ) : (
