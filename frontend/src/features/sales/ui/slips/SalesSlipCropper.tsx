@@ -83,7 +83,7 @@ export function SalesSlipCropper({
     <>
       <div
         ref={host}
-        aria-label="문서 영역 편집"
+        aria-label="전표 영역 편집"
         className="relative mx-auto max-w-full overflow-hidden rounded bg-[#f4f7f3] ring-1 ring-[#d5e1d8]"
         style={{ width: `min(100%, ${620 * ratio}px)`, aspectRatio: ratio }}
       />
@@ -108,7 +108,7 @@ function createRegionCropper(
   canvas.themeColor = "#159447";
   const image = new CropperImage();
   image.src = `data:${photo.contentType};base64,${photo.contentBase64}`;
-  image.alt = "문서 영역을 지정할 원본";
+  image.alt = "전표 영역을 선택할 원본 사진";
   const background = new CropperHandle();
   background.plain = true;
   canvas.append(image, background);

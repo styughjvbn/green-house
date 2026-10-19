@@ -10,15 +10,15 @@ export async function toPreparedSalesPhoto(
   fileName: string,
 ): Promise<SalesSlipPhotoInput> {
   if (blob.type !== "image/jpeg")
-    throw new Error("문서 사진 형식을 확인해주세요.");
+    throw new Error("전표 사진 형식을 확인해주세요.");
   if (blob.size > 8 * 1024 * 1024)
     throw new Error(
-      "문서 사진이 8MB를 초과합니다. 더 작은 사진으로 시도해주세요.",
+      "전표 사진이 8MB를 초과합니다. 더 작은 사진으로 시도해주세요.",
     );
   const contentBase64 = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(",")[1]);
-    reader.onerror = () => reject(new Error("문서 사진을 읽지 못했습니다."));
+    reader.onerror = () => reject(new Error("전표 사진을 읽지 못했습니다."));
     reader.readAsDataURL(blob);
   });
   return { fileName, contentType: "image/jpeg", contentBase64 };

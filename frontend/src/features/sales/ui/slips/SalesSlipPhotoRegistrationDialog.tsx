@@ -32,7 +32,7 @@ const SalesSlipRegionEditor = dynamic(
         role="status"
         className="fixed inset-0 z-[1051] flex items-center justify-center bg-black/30 text-white"
       >
-        영역 편집기 여는 중…
+        전표 영역 편집기 여는 중…
       </div>
     ),
   },
@@ -59,7 +59,7 @@ export function SalesSlipPhotoRegistrationDialog({
   const remaining = photos.entries.filter(
     (entry) => entry.parentId && entry.save !== "saved",
   ).length;
-  const unreadEntries = photos.entries.filter(
+  const documentsPendingExtraction = photos.entries.filter(
     (entry) =>
       entry.parentId !== null &&
       ["waiting", "failed"].includes(entry.read) &&
@@ -108,7 +108,7 @@ export function SalesSlipPhotoRegistrationDialog({
       selectedId: id ?? (selected.parentId ? selected.id : children[0]?.id),
     });
   }
-  async function applyRegions(drafts: PhotoRegionDraft[]) {
+  async function applyDocumentRegions(drafts: PhotoRegionDraft[]) {
     if (!regionOwner) return;
     const changes = regionEntries.filter(
       (entry) =>
@@ -121,12 +121,12 @@ export function SalesSlipPhotoRegistrationDialog({
     if (
       changes.length &&
       !window.confirm(
-        "변경하거나 제거한 문서의 입력 내용이 초기화됩니다. 적용할까요?",
+        "영역을 변경하거나 제거한 전표의 입력 내용이 초기화됩니다. 적용할까요?",
       )
     )
       return;
     if (
-      await photos.applyRegions(
+      await photos.applyDocumentRegions(
         regionOwner.id,
         drafts,
         Math.max(0, rotations[regionOwner.id] ?? 0),
@@ -134,14 +134,12 @@ export function SalesSlipPhotoRegistrationDialog({
     )
       setRegionEditor(null);
   }
-  const preparationMode = regionEditor ? "manual" : "automatic";
-  const preparationText =
-    preparationMode === "manual"
-      ? "문서 영역 적용 중"
-      : "문서 영역 자동 지정 중";
-  const preparingPhotoIds =
+  const regionProcessingMode = regionEditor ? "manual" : "automatic";
+  const regionProcessingLabel =
+    regionProcessingMode === "manual" ? "전표 사진 만드는 중" : "전표 찾는 중";
+  const processingPhotoIds =
     photos.busy === "prepare"
-      ? (photos.preparing?.photoIds ??
+      ? (photos.regionProcessingProgress?.photoIds ??
         (regionEditor ? [regionEditor.ownerId] : []))
       : [];
   const buttonClass =
@@ -161,7 +159,7 @@ export function SalesSlipPhotoRegistrationDialog({
     photos.cancelReading();
     onClose();
   }
-  function readSelected() {
+  function confirmAndExtractSelectedDocument() {
     if (
       selected?.recognized &&
       !window.confirm(
@@ -169,7 +167,7 @@ export function SalesSlipPhotoRegistrationDialog({
       )
     )
       return;
-    void photos.readSelected();
+    void photos.extractSelectedDocument();
   }
   return (
     <Dialog
@@ -204,8 +202,8 @@ export function SalesSlipPhotoRegistrationDialog({
               사진으로 등록
             </DialogTitle>
             <p className="mt-1 text-sm text-[#5c6a60]">
-              자동 입력을 위해 먼저 문서 영역을 지정해주세요. 문서별로 내용을
-              확인하고 전표를 저장합니다.
+              사진에서 전표를 찾은 뒤 내용을 읽어 입력합니다. 입력 내용을
+              확인하고 저장해주세요.
             </p>
           </div>
           <button
@@ -243,29 +241,33 @@ export function SalesSlipPhotoRegistrationDialog({
               className={buttonClass}
               disabled={
                 photos.busy !== null ||
-                !photos.unpreparedCount ||
+                !photos.photosWithoutDocumentRegionsCount ||
                 documents.length >= 10
               }
-              onClick={() => void photos.prepareAll(rotations)}
+              onClick={() => void photos.detectPendingPhotoRegions(rotations)}
             >
-              전체 자동 지정
+              모든 사진에서 전표 찾기
             </button>
             <button
               type="button"
               className={buttonClass}
-              disabled={photos.busy !== null || !unreadEntries.length}
+              disabled={
+                photos.busy !== null || !documentsPendingExtraction.length
+              }
               onClick={() => {
                 if (
-                  unreadEntries.some((entry) => entry.recognized) &&
+                  documentsPendingExtraction.some(
+                    (entry) => entry.recognized,
+                  ) &&
                   !window.confirm(
                     "다시 읽으면 이전에 확인한 입력 내용이 바뀝니다. 계속할까요?",
                   )
                 )
                   return;
-                void photos.readAll();
+                void photos.extractPendingDocuments();
               }}
             >
-              미처리 사진 자동 입력
+              남은 전표 읽어 입력
             </button>
             {photos.busy === "read" ? (
               <button
@@ -274,13 +276,13 @@ export function SalesSlipPhotoRegistrationDialog({
                 disabled={photos.cancelling}
                 onClick={() => void photos.cancelReading()}
               >
-                {photos.cancelling ? "중지 중…" : "읽기 중지"}
+                {photos.cancelling ? "중지 중…" : "자동 입력 중지"}
               </button>
             ) : null}
           </div>
           <p className="text-xs text-[#5c6a60]" role="status">
-            원본 {originals.length}/10장 · 문서 {documents.length}/10개 · 저장
-            완료 {documents.length - remaining}건
+            원본 사진 {originals.length}/10장 · 전표 {documents.length}/10개 ·
+            저장 완료 {documents.length - remaining}건
           </p>
           <input
             ref={fileRef}
@@ -323,8 +325,10 @@ export function SalesSlipPhotoRegistrationDialog({
           <SalesSlipPhotoProgress
             key={photos.cancelling ? "cancel" : photos.busy}
             operation={photos.cancelling ? "cancel" : photos.busy}
-            preparationMode={preparationMode}
-            preparationProgress={photos.preparing ?? undefined}
+            regionProcessingMode={regionProcessingMode}
+            regionProcessingProgress={
+              photos.regionProcessingProgress ?? undefined
+            }
             readingCount={
               photos.entries.filter((entry) => entry.read === "reading").length
             }
@@ -359,35 +363,35 @@ export function SalesSlipPhotoRegistrationDialog({
                   >
                     {entry.save === "saving" ||
                     entry.read === "reading" ||
-                    preparingPhotoIds.includes(entry.id) ? (
+                    processingPhotoIds.includes(entry.id) ? (
                       <LoaderCircle
                         className="h-3.5 w-3.5 shrink-0 animate-spin motion-reduce:animate-none"
                         aria-hidden="true"
                       />
                     ) : null}
                     {!entry.parentId
-                      ? preparingPhotoIds.includes(entry.id)
-                        ? `원본 · ${preparationText}`
+                      ? processingPhotoIds.includes(entry.id)
+                        ? `원본 · ${regionProcessingLabel}`
                         : entry.error
-                          ? "원본 · 영역 지정 실패"
+                          ? "원본 · 전표 찾기 실패"
                           : photos.entries.some(
                                 (child) => child.parentId === entry.id,
                               )
-                            ? "원본 · 영역 지정 완료"
-                            : "원본 · 영역 지정 필요"
+                            ? "원본 · 전표 영역 선택 완료"
+                            : "원본 · 전표 영역 선택 필요"
                       : entry.save === "saved"
                         ? "저장 완료"
                         : entry.save === "saving"
                           ? "저장 중"
                           : entry.pendingPayload
-                            ? "저장 응답 확인 필요"
+                            ? "저장 결과 확인 필요"
                             : entry.read === "ready"
-                              ? "검토 후 저장"
+                              ? "입력 내용 확인 필요"
                               : entry.read === "reading"
-                                ? "내용 읽는 중"
+                                ? "전표 읽어 입력 중"
                                 : entry.read === "failed"
-                                  ? "자동 입력 실패"
-                                  : "자동 입력 대기"}
+                                  ? "사진 읽기 실패"
+                                  : "사진 읽기 대기"}
                   </span>
                 </button>
               ))}
@@ -395,7 +399,7 @@ export function SalesSlipPhotoRegistrationDialog({
             <div className="relative min-h-0 min-w-0">
               <div ref={detailScrollRef} className="h-full overflow-y-auto">
                 <section
-                  aria-label="선택한 전표 사진 원본"
+                  aria-label="선택한 전표 사진"
                   className="mx-5 mt-5 rounded-md border border-[#cfe0d2] bg-white p-4"
                 >
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -407,7 +411,7 @@ export function SalesSlipPhotoRegistrationDialog({
                         <label className="flex items-center gap-2 text-xs text-[#526158]">
                           회전
                           <select
-                            aria-label="자동 지정 시 사진 회전"
+                            aria-label="전표 자동 찾기 시 사진 회전"
                             value={rotations[selected.id] ?? -1}
                             disabled={photos.busy !== null}
                             onChange={(event) =>
@@ -437,19 +441,19 @@ export function SalesSlipPhotoRegistrationDialog({
                               if (
                                 children.length &&
                                 !window.confirm(
-                                  "문서 영역을 다시 자동 지정하면 기존 문서와 입력 내용이 바뀝니다. 계속할까요?",
+                                  "전표를 다시 찾으면 기존 전표 사진과 입력 내용이 바뀝니다. 계속할까요?",
                                 )
                               )
                                 return;
-                              void photos.prepareSelected(
+                              void photos.detectSelectedPhotoRegions(
                                 rotations[selected.id] ?? -1,
                               );
                             }}
                           >
-                            {preparingPhotoIds.includes(selected.id) &&
+                            {processingPhotoIds.includes(selected.id) &&
                             !regionEditor
-                              ? "자동 지정 중…"
-                              : "자동 지정"}
+                              ? "전표 찾는 중…"
+                              : "전표 자동 찾기"}
                           </button>
                           <button
                             type="button"
@@ -457,7 +461,9 @@ export function SalesSlipPhotoRegistrationDialog({
                             disabled={photos.busy !== null}
                             onClick={() => openRegionEditor()}
                           >
-                            {children.length ? "영역 수정" : "수동 지정"}
+                            {children.length
+                              ? "전표 영역 수정"
+                              : "직접 영역 선택"}
                           </button>
                         </>
                       ) : (
@@ -467,7 +473,7 @@ export function SalesSlipPhotoRegistrationDialog({
                           disabled={photos.busy !== null}
                           onClick={() => openRegionEditor(selected.id)}
                         >
-                          영역 수정
+                          전표 영역 수정
                         </button>
                       )}
                       {selected.parentId ? (
@@ -475,7 +481,7 @@ export function SalesSlipPhotoRegistrationDialog({
                           type="button"
                           className={buttonClass}
                           disabled={photos.busy !== null || cannotRemove}
-                          onClick={readSelected}
+                          onClick={confirmAndExtractSelectedDocument}
                         >
                           {selected.read === "reading" ? (
                             <LoaderCircle
@@ -484,10 +490,10 @@ export function SalesSlipPhotoRegistrationDialog({
                             />
                           ) : null}
                           {selected.read === "reading"
-                            ? "자동 입력 중…"
+                            ? "전표 읽어 입력 중…"
                             : selected.read === "ready"
-                              ? "자동 입력 재실행"
-                              : "자동 입력"}
+                              ? "다시 읽어 입력"
+                              : "사진 읽어 입력"}
                         </button>
                       ) : null}
                       <button
@@ -503,8 +509,8 @@ export function SalesSlipPhotoRegistrationDialog({
                   {!selected.parentId ? (
                     <p className="mb-3 text-sm text-[#526158]">
                       {children.length
-                        ? "문서 영역이 지정되었습니다. 영역 수정으로 조정하거나 왼쪽 목록의 문서를 선택해 자동 입력을 진행하세요."
-                        : "자동 입력을 위해 문서 영역 지정이 필요합니다. 자동 지정 또는 수동 지정을 선택하세요."}
+                        ? "전표 영역을 선택했습니다. 왼쪽 목록에서 잘라낸 전표를 선택하고 사진 읽어 입력을 누르세요. 영역이 맞지 않으면 전표 영역 수정으로 조정하세요."
+                        : "먼저 사진에서 전표 영역을 선택해주세요. 전표 자동 찾기 또는 직접 영역 선택을 이용하세요."}
                     </p>
                   ) : null}
                   <div
@@ -519,7 +525,7 @@ export function SalesSlipPhotoRegistrationDialog({
                       .map((entry) => (
                         <figure key={entry.id} className="min-w-0">
                           <figcaption className="mb-2 text-xs font-semibold break-all text-[#526158]">
-                            {entry.parentId ? "지정된 문서" : "원본"} ·{" "}
+                            {entry.parentId ? "잘라낸 전표" : "원본"} ·{" "}
                             {entry.photo.fileName}
                           </figcaption>
                           {!entry.parentId ? (
@@ -544,7 +550,7 @@ export function SalesSlipPhotoRegistrationDialog({
                               src={`data:${entry.photo.contentType};base64,${entry.photo.contentBase64}`}
                               alt={
                                 entry.parentId
-                                  ? "지정된 문서 사진"
+                                  ? "잘라낸 전표 사진"
                                   : "전표 사진 원본"
                               }
                               width={900}
@@ -585,8 +591,8 @@ export function SalesSlipPhotoRegistrationDialog({
                   ) : null}
                   {selected.pendingPayload ? (
                     <p role="status" className="mt-3 text-sm text-[#9b4f19]">
-                      저장 응답을 확인하지 못했습니다. 같은 입력으로 다시 저장해
-                      결과를 확인하세요.
+                      저장 여부를 확인하지 못했습니다. 다시 저장을 눌러 결과를
+                      확인하세요.
                     </p>
                   ) : null}
                 </section>
@@ -595,7 +601,7 @@ export function SalesSlipPhotoRegistrationDialog({
                     role="status"
                     className="m-5 rounded-md border border-[#cfe0d2] bg-white p-4 text-sm text-[#10783a]"
                   >
-                    전표 #{selected.slipId} 저장 완료. 다른 사진을 선택해 계속
+                    전표 #{selected.slipId} 저장 완료. 다른 전표를 선택해 계속
                     등록하세요.
                     {selected.error ? (
                       <p className="mt-2 text-[#9b341e]">{selected.error}</p>
@@ -617,13 +623,13 @@ export function SalesSlipPhotoRegistrationDialog({
                     submitLabel={
                       selected.pendingPayload
                         ? "저장 결과 다시 확인"
-                        : "확인한 전표 저장"
+                        : "전표 저장"
                     }
                     pendingLabel={
                       photos.busy === "read"
-                        ? "내용 읽는 중"
+                        ? "전표 읽어 입력 중"
                         : photos.busy === "prepare"
-                          ? preparationText
+                          ? regionProcessingLabel
                           : photos.busy === "upload"
                             ? "사진 추가 중"
                             : "저장 중"
@@ -689,7 +695,7 @@ export function SalesSlipPhotoRegistrationDialog({
             }
             busy={photos.busy !== null}
             error={regionOwner.error}
-            onApply={applyRegions}
+            onApply={applyDocumentRegions}
             onClose={() => setRegionEditor(null)}
           />
         ) : null}

@@ -61,11 +61,11 @@ export function SalesSlipRegionEditor({
         <header className="flex items-start justify-between gap-4 border-b border-[#dbe8dc] p-4">
           <div>
             <DialogTitle className="text-lg font-bold">
-              {regions.length ? "문서 영역 수정" : "문서 영역 수동 지정"}
+              {regions.length ? "전표 영역 수정" : "직접 영역 선택"}
             </DialogTitle>
             <DialogDescription className="mt-1 text-sm text-[#526158]">
-              자동 입력할 문서가 들어오도록 사각형을 그리세요. 사각형 안쪽은
-              이동, 모서리는 크기 조절입니다.
+              전표 전체가 들어오도록 사각형을 그리세요. 사각형 안쪽은 이동,
+              모서리는 크기 조절입니다.
             </DialogDescription>
           </div>
           <button
@@ -95,7 +95,7 @@ export function SalesSlipRegionEditor({
               disabled={busy || !drafts.length}
               onClick={() => setDrawing(false)}
             >
-              영역 수정
+              전표 영역 수정
             </button>
             <button
               type="button"
@@ -113,7 +113,7 @@ export function SalesSlipRegionEditor({
             <span className="text-xs text-[#526158]">
               {drafts.length}/{maxRegions}개 ·{" "}
               {drawing
-                ? "빈 곳을 드래그해 새 영역 지정"
+                ? "빈 곳을 드래그해 전표 영역 선택"
                 : "사각형을 선택해 수정"}
             </span>
           </div>
@@ -217,10 +217,10 @@ export function SalesSlipRegionEditor({
             onClick={() => void onApply(drafts)}
           >
             {busy
-              ? "영역 적용 중…"
+              ? "전표 사진 만드는 중…"
               : regions.length
                 ? "수정 적용"
-                : "지정 완료"}
+                : "선택한 영역 적용"}
           </button>
         </footer>
       </DialogContent>

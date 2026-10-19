@@ -48,7 +48,7 @@ export function photoRegionPixels(
   height: number,
 ) {
   if (!parsePhotoRegion(region))
-    throw new Error("전표 영역을 원본 사진 안에 지정해주세요.");
+    throw new Error("원본 사진에서 전표 영역을 선택해주세요.");
   const x = Math.max(0, Math.floor(region.x * width)),
     y = Math.max(0, Math.floor(region.y * height));
   const right = Math.min(
@@ -82,7 +82,7 @@ export async function cropSalesPhotoRegions(
       canvas.width = turns % 2 ? crop.height : crop.width;
       canvas.height = turns % 2 ? crop.width : crop.height;
       const context = canvas.getContext("2d");
-      if (!context) throw new Error("문서 사진을 만들지 못했습니다.");
+      if (!context) throw new Error("전표 사진을 만들지 못했습니다.");
       context.fillStyle = "#ffffff";
       context.fillRect(0, 0, canvas.width, canvas.height);
       if (turns === 1) context.translate(crop.height, 0);
@@ -106,19 +106,19 @@ export async function cropSalesPhotoRegions(
             result
               ? resolve(result)
               : reject(
-                  new Error("지정한 영역으로 문서 사진을 만들지 못했습니다."),
+                  new Error("선택한 영역으로 전표 사진을 만들지 못했습니다."),
                 ),
           "image/jpeg",
           0.92,
         ),
       );
       if (blob.size > 8 * 1024 * 1024)
-        throw new Error("문서 사진이 8MB를 초과합니다. 영역을 줄여주세요.");
+        throw new Error("전표 사진이 8MB를 초과합니다. 영역을 줄여주세요.");
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result).split(",")[1]);
         reader.onerror = () =>
-          reject(new Error("문서 사진을 읽지 못했습니다."));
+          reject(new Error("전표 사진을 읽지 못했습니다."));
         reader.readAsDataURL(blob);
       });
       results.push({

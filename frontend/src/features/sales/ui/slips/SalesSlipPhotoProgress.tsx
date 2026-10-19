@@ -6,13 +6,13 @@ import { LoaderCircle } from "lucide-react";
 export function SalesSlipPhotoProgress({
   operation,
   readingCount,
-  preparationMode = "automatic",
-  preparationProgress,
+  regionProcessingMode = "automatic",
+  regionProcessingProgress,
 }: {
   operation: "upload" | "prepare" | "read" | "save" | "cancel";
   readingCount: number;
-  preparationMode?: "automatic" | "manual";
-  preparationProgress?: {
+  regionProcessingMode?: "automatic" | "manual";
+  regionProcessingProgress?: {
     completed: number;
     total: number;
     photoIds: string[];
@@ -28,27 +28,27 @@ export function SalesSlipPhotoProgress({
   }, []);
   const title =
     operation === "prepare"
-      ? preparationMode === "manual"
-        ? "문서 영역 적용 중"
-        : `문서 영역 자동 지정 중${preparationProgress && preparationProgress.total > 1 ? ` (${preparationProgress.completed}/${preparationProgress.total} 완료 · ${preparationProgress.photoIds.length}장 처리 중)` : ""}`
+      ? regionProcessingMode === "manual"
+        ? "전표 사진 만드는 중"
+        : `전표 찾는 중${regionProcessingProgress && regionProcessingProgress.total > 1 ? ` (${regionProcessingProgress.completed}/${regionProcessingProgress.total} 완료 · ${regionProcessingProgress.photoIds.length}장 처리 중)` : ""}`
       : operation === "cancel"
         ? "자동 입력 중지 중"
         : operation === "read"
-          ? `사진 ${readingCount}장 자동 입력 중`
+          ? `전표 ${readingCount}장 읽어 입력 중`
           : operation === "upload"
             ? "사진 준비 중"
             : "전표 저장 중";
   const description =
     operation === "prepare"
-      ? preparationMode === "manual"
-        ? "지정한 영역으로 문서 사진을 만들고 있습니다."
-        : "사진에서 자동 입력에 사용할 문서 영역을 찾고 있습니다."
+      ? regionProcessingMode === "manual"
+        ? "선택한 영역을 잘라 전표 사진을 만들고 있습니다."
+        : "사진에서 전표를 찾고 있습니다. 완료되면 전표 내용을 읽어 입력할 수 있습니다."
       : operation === "cancel"
         ? "처리 종료를 확인하고 있습니다. 완료되면 다시 요청할 수 있습니다."
         : operation === "read"
           ? "사진을 분석해 입력값을 가져오고 있습니다. 여러 장은 시간이 더 걸릴 수 있습니다."
           : operation === "upload"
-            ? "선택한 사진을 확인하고 등록 대화를 준비하고 있습니다."
+            ? "선택한 사진을 불러오고 있습니다."
             : "저장 결과를 확인하고 있습니다. 잠시 기다려주세요.";
   return (
     <div className="flex shrink-0 items-center gap-3 border-b border-[#cfe0d2] bg-[#eaf6ed] px-4 py-3 text-[#234b31]">

@@ -137,7 +137,7 @@ test("multiple crops decode the source once, encode sequentially and release res
         rotationDegrees: 0,
       },
     ]),
-    /문서 사진을 만들지 못했습니다/,
+    /전표 사진을 만들지 못했습니다/,
   );
   assert.equal(closed, 2);
   assert.deepEqual([canvas.width, canvas.height], [0, 0]);

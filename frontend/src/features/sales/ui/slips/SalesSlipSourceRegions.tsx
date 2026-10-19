@@ -32,7 +32,7 @@ export function SalesSlipSourceRegions({
       <svg
         viewBox="0 0 1 1"
         preserveAspectRatio="none"
-        aria-label="원본의 지정된 문서 영역"
+        aria-label="원본의 전표 영역"
         className="pointer-events-none absolute inset-0 h-full w-full"
       >
         {regions.map((item, index) => (

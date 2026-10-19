@@ -81,13 +81,13 @@ export function useSalesSlipPhotoRegistration(
   onSaved: (slip: SalesSlip) => Promise<void>,
 ) {
   const { businessDate } = useRuntimeContext();
-  const preparationConcurrency = useImagePreparationConcurrency();
+  const documentDetectionConcurrency = useImagePreparationConcurrency();
   const [entries, setEntries] = useState<PhotoEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<
     "upload" | "prepare" | "read" | "save" | null
   >(null);
-  const [preparing, setPreparing] = useState<{
+  const [regionProcessingProgress, setRegionProcessingProgress] = useState<{
     photoIds: string[];
     completed: number;
     total: number;
@@ -119,7 +119,7 @@ export function useSalesSlipPhotoRegistration(
   const selected =
     entries.find((entry) => entry.id === selectedId) ?? entries[0] ?? null;
 
-  const unpreparedEntries = entries.filter(
+  const photosWithoutDocumentRegions = entries.filter(
     (entry) =>
       !entry.parentId && !entries.some((child) => child.parentId === entry.id),
   );
@@ -193,7 +193,7 @@ export function useSalesSlipPhotoRegistration(
     };
   }
 
-  const preparation = useMutation({
+  const documentDetection = useMutation({
     retry: false,
     mutationFn: async ({
       entry,
@@ -213,24 +213,22 @@ export function useSalesSlipPhotoRegistration(
       );
       try {
         if (!preview.id)
-          throw new Error("문서 영역 자동 지정 결과를 확인하지 못했습니다.");
+          throw new Error("전표 찾기 결과를 확인하지 못했습니다.");
         const documents = (preview.images ?? []).filter(
           (image) => image.kind === "DOCUMENT_COMPACTED",
         );
         if (!documents.length)
           throw new Error(
-            "전표 영역을 자동으로 찾지 못했습니다. 사진 방향과 문서가 잘리지 않았는지 확인해주세요.",
+            "전표를 자동으로 찾지 못했습니다. 사진 방향과 전표가 잘리지 않았는지 확인해주세요.",
           );
         reserveDocuments(documents.length);
         const downloads = await Promise.allSettled(
           documents.map(async (image, index) => {
             if (!image.id)
-              throw new Error("지정된 문서 사진을 찾지 못했습니다.");
+              throw new Error("잘라낸 전표 사진을 찾지 못했습니다.");
             const region = parsePhotoRegion(image.sourceRegion);
             if (!region)
-              throw new Error(
-                "자동 지정한 영역의 원본 좌표를 확인하지 못했습니다.",
-              );
+              throw new Error("찾은 전표의 위치를 확인하지 못했습니다.");
             const blob = await getSalesSlipPreparedImage(
               preview.id!,
               image.id,
@@ -260,7 +258,7 @@ export function useSalesSlipPhotoRegistration(
     },
   });
 
-  async function prepareEntries(
+  async function detectDocumentRegions(
     targets: PhotoEntry[],
     rotations: Record<string, number>,
   ) {
@@ -287,16 +285,20 @@ export function useSalesSlipPhotoRegistration(
       MAX_PHOTOS,
       entries.filter((entry) => entry.parentId).length,
     );
-    setPreparing({ photoIds: [], completed: 0, total: targets.length });
+    setRegionProcessingProgress({
+      photoIds: [],
+      completed: 0,
+      total: targets.length,
+    });
     const failures: string[] = [];
     try {
       await runConcurrentPhotoTasks(
         targets,
-        preparationConcurrency,
+        documentDetectionConcurrency,
         controller.signal,
         async (entry) => {
           if (!mounted.current || controller.signal.aborted) return;
-          setPreparing((current) =>
+          setRegionProcessingProgress((current) =>
             current
               ? { ...current, photoIds: [...current.photoIds, entry.id] }
               : current,
@@ -308,7 +310,7 @@ export function useSalesSlipPhotoRegistration(
           let releaseReservation: (() => void) | undefined;
           let committed = false;
           try {
-            const result = await preparation.mutateAsync({
+            const result = await documentDetection.mutateAsync({
               entry,
               signal: controller.signal,
               rotationDegrees: rotations[entry.id] ?? -1,
@@ -352,7 +354,7 @@ export function useSalesSlipPhotoRegistration(
           } finally {
             if (!committed) releaseReservation?.();
             if (mounted.current)
-              setPreparing((current) =>
+              setRegionProcessingProgress((current) =>
                 current
                   ? {
                       ...current,
@@ -369,24 +371,24 @@ export function useSalesSlipPhotoRegistration(
       if (mounted.current && targets.length > 1 && failures.length)
         setUploadError(failures.join("\n"));
     } finally {
-      preparation.reset();
+      documentDetection.reset();
       activeRequest.current = null;
       running.current = false;
       if (mounted.current) {
-        setPreparing(null);
+        setRegionProcessingProgress(null);
         setBusy(null);
       }
     }
   }
 
-  function prepareSelected(rotationDegrees = -1) {
-    return prepareEntries(
+  function detectSelectedPhotoRegions(rotationDegrees = -1) {
+    return detectDocumentRegions(
       selected ? [selected] : [],
       selected ? { [selected.id]: rotationDegrees } : {},
     );
   }
 
-  async function applyRegions(
+  async function applyDocumentRegions(
     ownerId: string,
     drafts: PhotoRegionDraft[],
     rotationDegrees = 0,
@@ -404,7 +406,7 @@ export function useSalesSlipPhotoRegistration(
       MAX_PHOTOS
     ) {
       patch(ownerId, {
-        error: "지정할 문서는 최대 10개까지 등록할 수 있습니다.",
+        error: "잘라낸 전표는 최대 10개까지 등록할 수 있습니다.",
       });
       return false;
     }
@@ -413,7 +415,7 @@ export function useSalesSlipPhotoRegistration(
       drafts.some((draft) => !parsePhotoRegion(draft.region)) ||
       new Set(drafts.map((d) => d.id)).size !== drafts.length
     ) {
-      patch(ownerId, { error: "원본 사진 안에 전표 영역을 지정해주세요." });
+      patch(ownerId, { error: "원본 사진에서 전표 영역을 선택해주세요." });
       return false;
     }
     const changed = previous.filter(
@@ -426,7 +428,7 @@ export function useSalesSlipPhotoRegistration(
       changed.some((entry) => entry.save !== "draft" || entry.pendingPayload)
     ) {
       patch(ownerId, {
-        error: "저장 완료 또는 저장 결과 확인 중인 문서는 수정할 수 없습니다.",
+        error: "저장 완료 또는 저장 결과 확인 중인 전표는 수정할 수 없습니다.",
       });
       return false;
     }
@@ -582,7 +584,7 @@ export function useSalesSlipPhotoRegistration(
     return run.cancellation;
   }
 
-  async function readEntries(targets: PhotoEntry[]) {
+  async function extractDocumentValues(targets: PhotoEntry[]) {
     if (
       running.current ||
       !targets.length ||
@@ -849,8 +851,8 @@ export function useSalesSlipPhotoRegistration(
     selectedId: selected?.id,
     setSelectedId,
     busy,
-    preparing,
-    unpreparedCount: unpreparedEntries.length,
+    regionProcessingProgress,
+    photosWithoutDocumentRegionsCount: photosWithoutDocumentRegions.length,
     cancelling,
     uploadError,
     actions,
@@ -863,20 +865,20 @@ export function useSalesSlipPhotoRegistration(
     setRecordingMode,
     connectGroups,
     addFiles,
-    prepareSelected,
-    prepareAll: (rotations: Record<string, number>) =>
-      prepareEntries(unpreparedEntries, rotations),
-    applyRegions,
+    detectSelectedPhotoRegions,
+    detectPendingPhotoRegions: (rotations: Record<string, number>) =>
+      detectDocumentRegions(photosWithoutDocumentRegions, rotations),
+    applyDocumentRegions,
     saveSelected,
     removeSelected,
-    readSelected: () =>
+    extractSelectedDocument: () =>
       selected?.parentId &&
       selected.save === "draft" &&
       !selected.pendingPayload
-        ? readEntries([selected])
+        ? extractDocumentValues([selected])
         : Promise.resolve(),
-    readAll: () =>
-      readEntries(
+    extractPendingDocuments: () =>
+      extractDocumentValues(
         entries.filter(
           (entry) =>
             entry.parentId !== null &&

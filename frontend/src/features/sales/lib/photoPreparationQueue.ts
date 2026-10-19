@@ -1,5 +1,5 @@
 export const PHOTO_DOCUMENT_LIMIT_MESSAGE =
-  "지정할 문서는 최대 10개까지 등록할 수 있습니다. 기존 문서를 제거한 뒤 다시 시도해주세요.";
+  "잘라낸 전표는 최대 10개까지 등록할 수 있습니다. 기존 전표 사진을 제거한 뒤 다시 시도해주세요.";
 
 export function createPhotoSlotBudget(maximum: number, existing: number) {
   let used = existing;

@@ -215,7 +215,7 @@ export function SalesSlipFloatingPhoto({
     >
       <SalesSlipPhotoViewer
         src={src}
-        alt="지정된 문서 사진 미리보기"
+        alt="잘라낸 전표 미리보기"
         width={600}
         height={800}
         className="h-44 w-full rounded bg-[#f7faf6] object-contain"

@@ -786,7 +786,7 @@ export function prepareSalesSlipPhoto(
   >(
     "/sales-slips/image-previews",
     { method: "POST", body, signal },
-    "문서 영역 자동 지정을 완료하지 못했습니다.",
+    "전표를 자동으로 찾지 못했습니다.",
   );
 }
 
