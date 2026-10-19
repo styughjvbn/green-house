@@ -95,7 +95,7 @@ public final class SlipProcessor implements SlipImageProcessor {
                     Imgproc.dilate(vm, tolerantVertical, tableScope.kernel(7, 1));
                     List<Integer> ys = projections(tolerantHorizontal, true, .50);
                     List<Integer> xs = projections(tolerantVertical, false, .30);
-                    if (ys.size() < 3 || xs.size() < 2) continue;
+                    if (ys.size() < 3 || xs.size() < 5) continue;
                     tableIndex++;
                     // Geometry only: paper separation must finish before any row decisions.
                     tables.add(new Table(tableIndex, new Box(region.x, region.y, region.width, region.height),

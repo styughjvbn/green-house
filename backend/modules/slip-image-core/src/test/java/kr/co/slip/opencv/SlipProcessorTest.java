@@ -28,6 +28,22 @@ class SlipProcessorTest {
         } finally { image.release(); }
     }
 
+    @ParameterizedTest @ValueSource(ints = {4, 5})
+    void tableRequiresAtLeastFiveVerticalBoundaries(int boundaries) {
+        Mat image = new Mat(1000, 800, CvType.CV_8UC3, Scalar.all(245));
+        try {
+            for (int y = 200; y <= 800; y += 60)
+                Imgproc.line(image, new Point(100, y), new Point(700, y), Scalar.all(0), 2);
+            for (int i = 0; i < boundaries; i++) {
+                double x = 100 + i * 600. / (boundaries - 1);
+                Imgproc.line(image, new Point(x, 200), new Point(x, 800), Scalar.all(0), 2);
+            }
+            var result = processor.process(encode(image), ProcessingOptions.defaults()
+                    .withRotation(0).withOutputMode(kr.co.slip.api.OutputMode.PRODUCTION));
+            assertEquals(boundaries >= 5 ? 1 : 0, result.report().tables().size());
+        } finally { image.release(); }
+    }
+
     @Test void threeDarkTableSidesDoNotJustifyCuttingOffAContinuousPaperHeader() {
         Mat image = new Mat(1200, 900, CvType.CV_8UC3, Scalar.all(235));
         try {
