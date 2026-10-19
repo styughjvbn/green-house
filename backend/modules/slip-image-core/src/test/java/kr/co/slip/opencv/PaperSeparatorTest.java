@@ -114,7 +114,7 @@ class PaperSeparatorTest {
         } finally { image.release(); polygon.release(); }
     }
 
-    @Test void overlappingPapersAreSplitAtObservedEdge() {
+    @Test void overlappingPapersAreSplitByHeaderAllowance() {
         Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
         try {
             Imgproc.rectangle(image, new Point(100, 70), new Point(700, 830), PAPER, -1);
@@ -122,23 +122,23 @@ class PaperSeparatorTest {
             Imgproc.line(image, new Point(120, 430), new Point(720, 430), new Scalar(150, 155, 150), 3);
             var result = PaperSeparator.separate(image, List.of(table(1, 180, 260, 430, 140), table(2, 200, 630, 430, 240)), false);
             assertEquals(2, result.papers().size());
-            assertEquals("VISIBLE_EDGE_SPLIT", result.papers().getFirst().method());
+            assertEquals("TABLE_SPACING_SPLIT", result.papers().getFirst().method());
             assertEquals(List.of(1), result.papers().getFirst().tableIndices());
             assertEquals(List.of(2), result.papers().getLast().tableIndices());
             var first = result.papers().getFirst().bounds();
-            assertEquals(430, first.y() + first.height(), 12);
+            assertEquals(490, first.y() + first.height(), 2);
         } finally { image.release(); }
     }
 
     @ParameterizedTest @CsvSource({"200,430", "200,230", "300,350", "400,230"})
-    void twoTablesWithoutObservedSeamAreNotArbitrarilySplit(int lowerLeft, int lowerWidth) {
+    void sufficientTableSpacingSplitsWithoutAnObservedEdge(int lowerLeft, int lowerWidth) {
         Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
         try {
             Imgproc.rectangle(image, new Point(100, 70), new Point(700, 930), PAPER, -1);
             var result = PaperSeparator.separate(image, List.of(table(1, 180, 260, 430, 140), table(2, lowerLeft, 630, lowerWidth, 240)), false);
-            assertEquals(1, result.papers().size());
-            assertEquals("CONNECTED_PAPER_REGION", result.papers().getFirst().method());
-            assertTrue(result.warnings().stream().anyMatch(w -> w.contains("하나로 유지")));
+            assertEquals(2, result.papers().size());
+            assertEquals("TABLE_SPACING_SPLIT", result.papers().getFirst().method());
+            assertEquals(490, result.papers().getLast().bounds().y(), 2);
         } finally { image.release(); }
     }
 
@@ -149,37 +149,69 @@ class PaperSeparatorTest {
             Imgproc.rectangle(image, new Point(120, 430), new Point(720, 930), new Scalar(211, 211, 211), -1);
             var result = PaperSeparator.separate(image, List.of(table(1, 180, 260, 430, 140), table(2, 200, 630, 430, 240)), false);
             assertEquals(2, result.papers().size());
-            assertEquals("VISIBLE_EDGE_SPLIT", result.papers().getFirst().method());
+            assertEquals("TABLE_SPACING_SPLIT", result.papers().getFirst().method());
         } finally { image.release(); }
     }
 
-    @Test void insetSheetColorBoundaryPreservesHeaderDespiteLongerPrintedRules() {
+    @Test void headerAllowanceIsIndependentOfPrintedRulesAndPaperColor() {
         Mat image = new Mat(1000, 900, CvType.CV_8UC3, DESK);
         try {
             Imgproc.rectangle(image, new Point(60, 60), new Point(820, 850), PAPER, -1);
             Imgproc.rectangle(image, new Point(250, 430), new Point(780, 950), new Scalar(235, 215, 200), -1);
             Imgproc.line(image, new Point(60, 630), new Point(820, 630), Scalar.all(70), 3);
-            Imgproc.rectangle(image, new Point(350, 490), new Point(380, 520), new Scalar(0, 0, 255), -1);
+            Imgproc.rectangle(image, new Point(350, 590), new Point(380, 620), new Scalar(0, 0, 255), -1);
             var result = PaperSeparator.separate(image,
                     List.of(table(1, 110, 200, 660, 200), table(2, 300, 700, 420, 200)), false);
             assertEquals(2, result.papers().size());
             var lower = result.papers().getLast().bounds();
-            assertEquals(430, lower.y(), 12);
+            assertEquals(560, lower.y(), 2);
             try (MatScope scope = new MatScope()) {
                 Mat cutout = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(result.images().get("paper-02.png"))), Imgcodecs.IMREAD_UNCHANGED));
-                assertArrayEquals(new double[]{0, 0, 255, 255}, cutout.get(500 - lower.y(), 360 - lower.x()));
+                assertArrayEquals(new double[]{0, 0, 255, 255}, cutout.get(600 - lower.y(), 360 - lower.x()));
             }
         } finally { image.release(); }
     }
 
-    @Test void brightnessOnlyShadeAboveAnInsetFooterDoesNotCreateASeparateDocument() {
+    @Test void tableSpacingDecidesSeparationIndependentlyOfShadows() {
         Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
         try {
             Imgproc.rectangle(image, new Point(100, 70), new Point(700, 930), PAPER, -1);
             Imgproc.rectangle(image, new Point(300, 520), new Point(650, 650), new Scalar(210, 205, 195), -1);
             var result = PaperSeparator.separate(image,
                     List.of(table(1, 180, 260, 430, 140), table(2, 350, 700, 250, 150)), false);
-            assertEquals(1, result.papers().size());
+            assertEquals(2, result.papers().size());
+        } finally { image.release(); }
+    }
+
+    @Test void visibleEdgeCannotSplitTablesCloserThanConfiguredRowMultiplier() {
+        Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
+        try {
+            Imgproc.rectangle(image, new Point(100, 70), new Point(700, 830), PAPER, -1);
+            Imgproc.rectangle(image, new Point(120, 430), new Point(720, 930), PAPER, -1);
+            Imgproc.line(image, new Point(120, 430), new Point(720, 430), Scalar.all(50), 3);
+            var tables = List.of(table(1, 180, 260, 430, 140), table(2, 200, 500, 430, 240));
+            var defaults = PaperSeparator.separate(image, tables, false);
+            assertEquals(1, defaults.papers().size());
+            assertFalse(defaults.warnings().stream().anyMatch(w -> w.contains("하나로 유지")));
+            var configured = PaperSeparator.separate(image, tables, false, PixelScale.IDENTITY,
+                    kr.co.slip.api.OutputMode.ALL, null, 5);
+            assertEquals(2, configured.papers().size());
+        } finally { image.release(); }
+    }
+
+    @Test void headerAllowanceIsConfigurableAndClampedBelowTheUpperTable() {
+        Mat image = new Mat(1000, 800, CvType.CV_8UC3, DESK);
+        try {
+            Imgproc.rectangle(image, new Point(100, 70), new Point(700, 930), PAPER, -1);
+            var tables = List.of(table(1, 180, 260, 430, 140), table(2, 200, 630, 430, 240));
+            var shortHeader = PaperSeparator.separate(image, tables, false, PixelScale.IDENTITY,
+                    kr.co.slip.api.OutputMode.ALL, null, 5.5, 5);
+            assertEquals(530, shortHeader.papers().getLast().bounds().y());
+            var tallHeader = PaperSeparator.separate(image, tables, false, PixelScale.IDENTITY,
+                    kr.co.slip.api.OutputMode.ALL, null, 5.5, 20);
+            assertEquals(412, tallHeader.papers().getLast().bounds().y());
+            assertEquals(List.of(1), tallHeader.papers().getFirst().tableIndices());
+            assertEquals(List.of(2), tallHeader.papers().getLast().tableIndices());
         } finally { image.release(); }
     }
 
@@ -209,7 +241,7 @@ class PaperSeparatorTest {
             var result = PaperSeparator.separate(image,
                     List.of(table(1, 180, 260, 430, 140), table(2, lowerLeft, 630, lowerWidth, 140)), false);
             assertEquals(2, result.papers().size());
-            assertEquals("VISIBLE_EDGE_SPLIT", result.papers().getFirst().method());
+            assertEquals("TABLE_SPACING_SPLIT", result.papers().getFirst().method());
             assertEquals(List.of(1), result.papers().getFirst().tableIndices());
             assertEquals(List.of(2), result.papers().getLast().tableIndices());
         } finally { image.release(); }
@@ -248,7 +280,7 @@ class PaperSeparatorTest {
         } finally { image.release(); }
     }
 
-    @Test void differentSheetWidthsDoNotCreateADeskTriangleInTheUpperCutout() {
+    @Test void flatSplitPreservesBothTableAssignmentsWhenWidthsDiffer() {
         Mat image = new Mat(1000, 850, CvType.CV_8UC3, DESK);
         try {
             Imgproc.rectangle(image, new Point(150, 60), new Point(600, 650), PAPER, -1);
@@ -257,8 +289,9 @@ class PaperSeparatorTest {
             var result = PaperSeparator.separate(image, List.of(table(1, 200, 180, 350, 220), table(2, 200, 630, 450, 240)), false);
             assertEquals(2, result.papers().size());
             var upper = result.papers().getFirst().bounds();
-            assertTrue(upper.x() >= 135, "Upper sheet should not expand to the lower sheet's left edge");
-            assertTrue(upper.x() + upper.width() <= 615, "Upper sheet should not expand to the lower sheet's right edge");
+            assertEquals(490, upper.y() + upper.height(), 2);
+            assertEquals(List.of(1), result.papers().getFirst().tableIndices());
+            assertEquals(List.of(2), result.papers().getLast().tableIndices());
         } finally { image.release(); }
     }
 
@@ -294,6 +327,8 @@ class PaperSeparatorTest {
     }
 
     private static Table table(int index, int x, int y, int width, int height) {
-        return new Table(index, new Box(x, y, width, height), List.of(), List.of(), List.of(), 0);
+        return new Table(index, new Box(x, y, width, height),
+                java.util.stream.IntStream.rangeClosed(0, height / 20).map(i -> y + i * 20).boxed().toList(),
+                List.of(), List.of(), 0);
     }
 }

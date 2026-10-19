@@ -24,7 +24,7 @@ class DocumentImagePreparationServiceTest {
   private DocumentImagePreparationService service() {
     when(clock.instant()).thenReturn(now);
     when(processor.process(any(), any())).thenReturn(result());
-    return new DocumentImagePreparationService(processor, clock, 2200);
+    return new DocumentImagePreparationService(processor, clock, 2200, 5.5, 7);
   }
 
   @Test
@@ -49,9 +49,25 @@ class DocumentImagePreparationServiceTest {
                     options.outputMode() == OutputMode.PRODUCTION
                         && options.rotationDegrees() == 90
                         && options.maxDimension() == 2200
-                        && options.minimumInkRatio() == .025));
+                        && options.minimumInkRatio() == .025
+                        && options.documentSeparationRowMultiplier() == 5.5));
     assertThat(service.image("owner", preview.id(), preview.images().getFirst().id()))
         .containsExactly(1, 2);
+  }
+
+  @Test
+  void forwardsConfiguredDocumentSeparationMultiplier() throws Exception {
+    when(clock.instant()).thenReturn(now);
+    when(processor.process(any(), any())).thenReturn(result());
+    var service = new DocumentImagePreparationService(processor, clock, 2048, 6.25, 8);
+    service.prepare("owner", "image/png", png(), 0, .015);
+    verify(processor)
+        .process(
+            any(),
+            argThat(
+                options ->
+                    options.documentSeparationRowMultiplier() == 6.25
+                        && options.documentHeaderRowMultiplier() == 8));
   }
 
   @Test
@@ -186,7 +202,7 @@ class DocumentImagePreparationServiceTest {
     try (var nativeProcessor = configuration.slipImageProcessor(1, 0, 1)) {
       var service =
           new DocumentImagePreparationService(
-              nativeProcessor, Clock.fixed(now, ZoneOffset.UTC), 2200);
+              nativeProcessor, Clock.fixed(now, ZoneOffset.UTC), 2200, 5.5, 7);
       var preview = service.prepare("o", "image/png", png(), 0, .015);
       assertThat(preview.images()).isNotEmpty();
       for (var image : preview.images()) {

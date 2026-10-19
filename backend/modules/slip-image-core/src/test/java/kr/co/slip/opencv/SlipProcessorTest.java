@@ -181,7 +181,9 @@ class SlipProcessorTest {
             Imgproc.putText(image, "UPPER", new Point(350, 450), Imgproc.FONT_HERSHEY_SIMPLEX, 1, Scalar.all(0), 2);
             Imgproc.putText(image, "LOWER START", new Point(450, 1310), Imgproc.FONT_HERSHEY_SIMPLEX, 1, Scalar.all(0), 2);
             Imgproc.putText(image, "LOWER", new Point(390, 1500), Imgproc.FONT_HERSHEY_SIMPLEX, 1, Scalar.all(0), 2);
-            var result = processor.process(encode(image), new ProcessingOptions(2200, 2, .00035, 0));
+            // This cutoff fixture has a tight three-row gap; exercise the configurable multiplier.
+            var result = processor.process(encode(image), new ProcessingOptions(2200, 2, .00035, 0)
+                    .withDocumentSeparationRowMultiplier(2.5));
             assertEquals(2, result.report().papers().size());
             var upper = result.report().papers().getFirst();
             var lower = result.report().papers().getLast();

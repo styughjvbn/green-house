@@ -2,6 +2,7 @@ package kr.co.slip.opencv;
 
 import kr.co.slip.api.ProcessingResult;
 import kr.co.slip.api.OutputMode;
+import kr.co.slip.api.ProcessingOptions;
 
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -19,10 +20,7 @@ final class PaperSeparator {
             return Math.sqrt(result);
         }
     }
-    private record Seam(double slope, double intercept, double support) {
-        double y(double x) { return slope * x + intercept; }
-    }
-    private record Segment(double slope, double intercept, double left, double right) {}
+    private record Seam(int position) {}
     private static final class Scope extends MatScope {
         Mat kernel(int n) { return own(Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(n, n))); }
     }
@@ -41,6 +39,19 @@ final class PaperSeparator {
 
     static Result separate(Mat image, List<Table> tables, boolean knownDocumentQuad, PixelScale pixels, OutputMode mode,
                            java.util.function.BiConsumer<Integer, Mat> cutoutConsumer) {
+        return separate(image, tables, knownDocumentQuad, pixels, mode, cutoutConsumer,
+                ProcessingOptions.defaults().documentSeparationRowMultiplier());
+    }
+
+    static Result separate(Mat image, List<Table> tables, boolean knownDocumentQuad, PixelScale pixels, OutputMode mode,
+                           java.util.function.BiConsumer<Integer, Mat> cutoutConsumer, double rowMultiplier) {
+        return separate(image, tables, knownDocumentQuad, pixels, mode, cutoutConsumer,
+                rowMultiplier, ProcessingOptions.defaults().documentHeaderRowMultiplier());
+    }
+
+    static Result separate(Mat image, List<Table> tables, boolean knownDocumentQuad, PixelScale pixels, OutputMode mode,
+                           java.util.function.BiConsumer<Integer, Mat> cutoutConsumer, double rowMultiplier,
+                           double headerMultiplier) {
         NativeOpenCv.load();
         try (Scope m = new Scope()) {
             Mat mask = knownDocumentQuad ? m.own(new Mat(image.size(), CvType.CV_8UC1, Scalar.all(255)))
@@ -60,7 +71,6 @@ final class PaperSeparator {
                         && bounds.height >= image.rows() * .08) candidates.add(contour);
             }
             candidates.sort(Comparator.comparingInt(c -> Imgproc.boundingRect(c).y));
-            int unresolved = 0;
             for (MatOfPoint contour : candidates) {
                 try (Scope componentScope = new Scope()) {
                     Mat component = componentScope.own(Mat.zeros(image.size(), CvType.CV_8UC1));
@@ -68,8 +78,7 @@ final class PaperSeparator {
                     Rect bounds = Imgproc.boundingRect(contour);
                     List<Table> supported = tables.stream().filter(t -> inside(component, t.bounds())).sorted(
                             Comparator.comparingInt(t -> t.bounds().y())).toList();
-                    List<Seam> seams = knownDocumentQuad ? List.of() : seams(image, component, bounds, supported, pixels);
-                    if (supported.size() >= 2 && seams.isEmpty()) unresolved++;
+                    List<Seam> seams = knownDocumentQuad ? List.of() : seams(supported, pixels, rowMultiplier, headerMultiplier);
                     for (int layer = 0; layer <= seams.size(); layer++) {
                         try (Scope layerScope = new Scope()) {
                             Mat regionMask = band(component, seams, layer, layerScope);
@@ -95,21 +104,20 @@ final class PaperSeparator {
                                         Imgproc.FONT_HERSHEY_SIMPLEX, .9, new Scalar(220, 40, 200), 2);
                             }
                             papers.add(new Paper(index, new Box(crop.x, crop.y, crop.width, crop.height), outline,
-                                    knownDocumentQuad ? "DOCUMENT_QUAD" : seams.isEmpty() ? "CONNECTED_PAPER_REGION" : "VISIBLE_EDGE_SPLIT",
+                                    knownDocumentQuad ? "DOCUMENT_QUAD" : seams.isEmpty() ? "CONNECTED_PAPER_REGION" : "TABLE_SPACING_SPLIT",
                                     !knownDocumentQuad, paperTables.stream().map(Table::index).toList()));
 
                         }
                     }
-                    if (overlay != null) for (Seam seam : seams) Imgproc.line(overlay, new Point(bounds.x, seam.y(bounds.x)),
-                            new Point(bounds.x + bounds.width - 1, seam.y(bounds.x + bounds.width - 1)), new Scalar(255, 180, 0), 3);
+                    if (overlay != null) for (Seam seam : seams) Imgproc.line(overlay, new Point(bounds.x, seam.position()),
+                            new Point(bounds.x + bounds.width - 1, seam.position()), new Scalar(255, 180, 0), 3);
 
                 }
             }
             if (overlay != null) images.put("06-paper-contours.png", png(overlay));
             if (usedMask != null) images.put("07-paper-mask.png", png(usedMask));
             if (papers.isEmpty()) warnings.add("종이와 배경을 안정적으로 분리하지 못했습니다. 종이 이미지를 임의로 잘라내지 않았습니다.");
-            else if (!knownDocumentQuad) warnings.add("종이 분리는 색상·외곽의 볼록 포락선·겹침 경계에 대한 추정입니다. 가려진 내용을 복원하지 않으며 작은 가림 물체나 배경이 포함될 수 있어 분리 문서 이미지를 검토하세요.");
-            if (unresolved > 0) warnings.add("여러 표가 있지만 종이 사이 경계가 불확실한 영역 " + unresolved + "개는 하나로 유지했습니다. 표 개수는 종이 개수와 같지 않을 수 있습니다.");
+            else if (!knownDocumentQuad) warnings.add("종이 분리는 색상·외곽의 볼록 포락선·표 간격에 대한 추정입니다. 가려진 내용을 복원하지 않으며 작은 가림 물체나 배경이 포함될 수 있어 분리 문서 이미지를 검토하세요.");
             return new Result(List.copyOf(papers), Collections.unmodifiableMap(images), List.copyOf(warnings));
         }
     }
@@ -217,142 +225,20 @@ final class PaperSeparator {
         return new ColorModel(center, sigma);
     }
 
-    private static List<Seam> seams(Mat image, Mat mask, Rect bounds, List<Table> tables, PixelScale pixels) {
-        try (Scope m = new Scope()) {
-            if (tables.size() < 2) return List.of();
-            Mat gray = m.mat(), blur = m.mat(), edges = m.mat(), lines = m.mat();
-            Imgproc.cvtColor(image, gray, Imgproc.COLOR_BGR2GRAY);
-            Imgproc.GaussianBlur(gray, blur, new Size(pixels.odd(5), pixels.odd(5)), 0);
-            Imgproc.Canny(blur, edges, 8, 28);
-            Mat smoothColor = m.mat(), lab = m.mat();
-            Imgproc.GaussianBlur(image, smoothColor, new Size(pixels.odd(5), pixels.odd(5)), 0);
-            Imgproc.cvtColor(smoothColor, lab, Imgproc.COLOR_BGR2Lab);
-            for (int c = 1; c <= 2; c++) {
-                Mat channel = m.mat(), colorEdges = m.mat();
-                Core.extractChannel(lab, channel, c);
-                Imgproc.Canny(channel, colorEdges, 3, 10);
-                Core.bitwise_or(edges, colorEdges, edges);
-            }
-            Imgproc.HoughLinesP(edges, lines, 1, Math.PI / 1800, pixels.length(60), bounds.width * .30, pixels.length(35));
-            List<Segment> segments = new ArrayList<>();
-            for (int j = 0; j < lines.rows(); j++) {
-                double[] p = lines.get(j, 0);
-                double dx = p[2] - p[0], dy = p[3] - p[1];
-                if (Math.abs(dx) < 1 || Math.abs(dy / dx) > .10) continue;
-                segments.add(new Segment(dy / dx, p[1] - dy / dx * p[0], Math.min(p[0], p[2]), Math.max(p[0], p[2])));
-            }
-            byte[] maskRow = new byte[mask.cols()];
-            List<Seam> result = new ArrayList<>();
-            for (int i = 0; i < tables.size() - 1; i++) {
-                Box above = tables.get(i).bounds(), below = tables.get(i + 1).bounds();
-                double minY = above.y() + above.height() - pixels.length(12), maxY = below.y() - pixels.length(15);
-                if (maxY <= minY || below.y() - above.y() < image.rows() * .12) continue;
-                // An inset lower sheet need not reach the sides of the complete stack.
-                // Prefer its broad paper-color transition over longer printed header rules.
-                Rect lowerSpan = new Rect(below.x(), bounds.y, below.width(), bounds.height);
-                Seam best = colorSeam(image, mask, lowerSpan, (int) minY, (int) maxY, pixels, true);
-                double midX = bounds.x + bounds.width / 2.;
-                if (best == null) for (Segment segment : segments) {
-                    double a = segment.slope(), b = segment.intercept(), midY = a * midX + b;
-                    if (midY < minY || midY > maxY) continue;
-                    double segmentLeft = segment.left(), segmentRight = segment.right();
-                    // Weak/curved paper edges often arrive as several collinear Hough fragments.
-                    for (Segment other : segments) if (Math.abs(other.slope() - a) < .015
-                            && Math.abs(other.slope() * midX + other.intercept() - midY) < pixels.length(7)) {
-                        segmentLeft = Math.min(segmentLeft, other.left()); segmentRight = Math.max(segmentRight, other.right());
-                    }
-                    double dx = segmentRight - segmentLeft;
-                    if (dx < bounds.width * .72) continue;
-                    int row = (int) Math.round(midY);
-                    int left = -1, right = -1;
-                    if (row < 0 || row >= mask.rows()) continue;
-                    mask.get(row, 0, maskRow);
-                    for (int x = bounds.x; x < bounds.x + bounds.width; x++) if (maskRow[x] != 0) {
-                        if (left < 0) left = x; right = x;
-                    }
-                    if (left < 0) continue;
-                    double span = right - left + 1;
-                    if (segmentLeft > left + span * .13 || segmentRight < right - span * .13) continue;
-                    double support = Math.abs(dx) / span;
-                    if (best == null || support > best.support()) best = new Seam(a, b, support);
-                }
-                if (best == null) best = colorSeam(image, mask, bounds, (int) minY, (int) maxY, pixels);
-                if (best != null && (result.isEmpty() || best.y(bounds.x + bounds.width / 2.) - result.getLast().y(bounds.x + bounds.width / 2.) > pixels.length(40)))
-                    result.add(best);
-            }
-            return List.copyOf(result);
-
+    private static List<Seam> seams(List<Table> tables, PixelScale pixels,
+                                    double rowMultiplier, double headerMultiplier) {
+        List<Seam> result = new ArrayList<>();
+        for (int i = 0; i + 1 < tables.size(); i++) {
+            Table above = tables.get(i), below = tables.get(i + 1);
+            if (!TableSpacing.separate(above, below, rowMultiplier)) continue;
+            int proposed = (int) Math.round(below.bounds().y()
+                    - TableSpacing.averageRowHeight(above, below) * headerMultiplier);
+            // Preserve the upper table and its last grid line even when the requested header is taller than the gap.
+            int minimum = above.bounds().y() + above.bounds().height() + pixels.length(12);
+            int cut = Math.min(below.bounds().y() - 1, Math.max(minimum, proposed));
+            result.add(new Seam(cut));
         }
-    }
-
-    private static Seam colorSeam(Mat image, Mat mask, Rect bounds, int start, int end, PixelScale pixels) {
-        return colorSeam(image, mask, bounds, start, end, pixels, false);
-    }
-
-    private static Seam colorSeam(Mat image, Mat mask, Rect bounds, int start, int end, PixelScale pixels, boolean chromatic) {
-        try (Scope m = new Scope()) {
-            Mat blurred = m.mat(), lab = m.mat();
-            Imgproc.GaussianBlur(image, blurred, new Size(pixels.odd(5), pixels.odd(5)), 0);
-            Imgproc.cvtColor(blurred, lab, Imgproc.COLOR_BGR2Lab);
-            byte[] colors = new byte[(int) (lab.total() * 3)], selected = new byte[(int) mask.total()];
-            lab.get(0, 0, colors); mask.get(0, 0, selected);
-            double best = 2.5;
-            int bestY = -1;
-            int topMargin = chromatic ? pixels.length(24) + 1 : pixels.length(12);
-            int bottomMargin = chromatic ? topMargin + 1 : pixels.length(13);
-            for (int y = Math.max(topMargin, start); y <= Math.min(end, image.rows() - bottomMargin); y++) {
-                double[] left = colorJump(colors, selected, lab.cols(), bounds, y, .03, .09, pixels, chromatic);
-                double[] right = colorJump(colors, selected, lab.cols(), bounds, y, .91, .97, pixels, chromatic);
-                // Brightness-only shadows inside a sheet must not gain color-boundary priority.
-                if (chromatic && Math.min(Math.hypot(left[1], left[2]), Math.hypot(right[1], right[2])) < 3) continue;
-                double ln = norm(left), rn = norm(right);
-                if (ln < 2 || rn < 2) continue;
-                double cosine = (left[0] * right[0] + left[1] * right[1] + left[2] * right[2]) / (ln * rn);
-                if (cosine < .65) continue;
-                double score = Math.min(ln, rn) * cosine;
-                if (score > best) { best = score; bestY = y; }
-            }
-            return bestY < 0 ? null : new Seam(0, bestY, best);
-
-        }
-    }
-
-    private static double norm(double[] vector) { return Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]); }
-
-    private static double[] colorJump(byte[] lab, byte[] mask, int cols, Rect bounds, int y, double from, double to, PixelScale pixels, boolean persistent) {
-        List<double[]> samples = new ArrayList<>();
-        int margin = pixels.length(persistent ? 24 : 10);
-        int[] offsets = persistent ? new int[]{8, 16, 24} : new int[]{4, 7, 10};
-        for (int i = 0; i < 9; i++) {
-            int x = Math.min(cols - 1, bounds.x + (int) (bounds.width * (from + (to - from) * i / 8)));
-            if (mask[(y - margin) * cols + x] == 0 || mask[(y + margin) * cols + x] == 0) continue;
-            double[] delta = new double[3], previous = null;
-            boolean valid = true;
-            // A paper-color step persists away from the edge; a printed rule does not.
-            for (int distance : offsets) {
-                int offset = pixels.length(distance);
-                int above = ((y - offset) * cols + x) * 3, below = ((y + offset) * cols + x) * 3;
-                double[] step = new double[3];
-                for (int c = 0; c < 3; c++) step[c] = (lab[below + c] & 255) - (lab[above + c] & 255);
-                double length = norm(step);
-                if (persistent && (length < 1 || previous != null && (previous[0] * step[0] + previous[1] * step[1]
-                        + previous[2] * step[2]) / (norm(previous) * length) < .65)) {
-                    valid = false;
-                    break;
-                }
-                for (int c = 0; c < 3; c++) delta[c] += step[c] / 3.;
-                previous = step;
-            }
-            if (valid) samples.add(delta);
-        }
-        if (samples.size() < 5) return new double[3];
-        double[] result = new double[3];
-        for (int channel = 0; channel < 3; channel++) {
-            int c = channel;
-            double[] values = samples.stream().mapToDouble(p -> p[c]).sorted().toArray();
-            result[c] = values[values.length / 2];
-        }
-        return result;
+        return List.copyOf(result);
     }
 
     private static Mat band(Mat component, List<Seam> seams, int index, Scope m) {
@@ -360,8 +246,8 @@ final class PaperSeparator {
         byte[] row = new byte[component.cols()];
         for (int y = 0; y < component.rows(); y++) {
             component.get(y, 0, row);
-            for (int x = 0; x < row.length; x++) if ((index > 0 && y < seams.get(index - 1).y(x))
-                    || (index < seams.size() && y >= seams.get(index).y(x))) row[x] = 0;
+            for (int x = 0; x < row.length; x++) if ((index > 0 && y < seams.get(index - 1).position())
+                    || (index < seams.size() && y >= seams.get(index).position())) row[x] = 0;
             result.put(y, 0, row);
         }
         return result;

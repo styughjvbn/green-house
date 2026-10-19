@@ -26,12 +26,18 @@ public class DocumentImagePreparationService {
   public DocumentImagePreparationService(
       SlipImageProcessor processor,
       Clock clock,
-      @Value("${sales.document.image.max-dimension:2048}") int maxDimension) {
+      @Value("${sales.document.image.max-dimension:2048}") int maxDimension,
+      @Value("${sales.document.image.document-separation-row-multiplier:5.5}")
+          double documentSeparationRowMultiplier,
+      @Value("${sales.document.image.document-header-row-multiplier:7}")
+          double documentHeaderRowMultiplier) {
     this.processor = processor;
     this.clock = clock;
     this.options =
         ProcessingOptions.defaults()
             .withMaxDimension(maxDimension)
+            .withDocumentSeparationRowMultiplier(documentSeparationRowMultiplier)
+            .withDocumentHeaderRowMultiplier(documentHeaderRowMultiplier)
             .withOutputMode(OutputMode.PRODUCTION);
   }
 

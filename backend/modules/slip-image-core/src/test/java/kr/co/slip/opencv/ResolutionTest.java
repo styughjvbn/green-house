@@ -83,12 +83,15 @@ class ResolutionTest {
             var result = PaperSeparator.separate(image, tables, false, new PixelScale(factor));
             assertEquals(2, result.papers().size());
             Box upper = result.papers().getFirst().bounds();
-            assertEquals(946 * factor, upper.y() + upper.height(), 15 * factor + 2);
+            assertEquals(1078 * factor, upper.y() + upper.height(), 15 * factor + 2);
         } finally { reference.release(); image.release(); }
     }
 
     private static Table table(int index, int x, int y, int width, int height, double factor) {
         return new Table(index, new Box((int) (x * factor), (int) (y * factor),
-                (int) (width * factor), (int) (height * factor)), List.of(), List.of(), List.of(), 0);
+                (int) (width * factor), (int) (height * factor)),
+                java.util.stream.IntStream.rangeClosed(0, height / 44)
+                        .map(i -> (int) ((y + i * 44) * factor)).boxed().toList(),
+                List.of(), List.of(), 0);
     }
 }

@@ -107,7 +107,7 @@ public final class SlipProcessor implements SlipImageProcessor {
             if (tables.isEmpty()) warnings.add("안정적인 표 격자를 찾지 못해 빈 행을 제거하지 않았습니다.");
             Map<Integer, Mat> cutouts = new HashMap<>();
             PaperSeparator.Result separated = PaperSeparator.separate(work, tables, !correction.corners().isEmpty(), m.scale, options.outputMode(),
-                    (index, cutout) -> cutouts.put(index, m.own(cutout.clone())));
+                    (index, cutout) -> cutouts.put(index, m.own(cutout.clone())), options.documentSeparationRowMultiplier(), options.documentHeaderRowMultiplier());
             images.putAll(separated.images());
             warnings.addAll(separated.warnings());
             tables = analyzeDocuments(binary, grid, tables, separated, cutouts, options, images, warnings, m);
