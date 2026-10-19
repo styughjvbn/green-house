@@ -65,7 +65,7 @@ async function redirectToLogin() {
 }
 
 export async function handleAuthExpired(response: Response) {
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     await redirectToLogin();
   }
 }
