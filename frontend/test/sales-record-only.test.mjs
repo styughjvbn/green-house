@@ -41,7 +41,7 @@ test("completed records preserve facts entered after selecting the registration 
     assert.equal(payload.initialReceipt, null);
     assert.equal(payload.items[0].quantity, 150);
     assert.equal(payload.items[0].boxes, 3);
-    assert.equal(payload.items[0].unit, "분");
+    assert.equal(payload.items[0].unit, 10);
     assert.equal(payload.items[0].unitPrice, salesType === "DIRECT" ? 1000 : 0);
     assert.deepEqual(payload.items[0].allocations, []);
     assert.equal(resetSalesSlipFormAfterSave(form).recordOnly, false);
