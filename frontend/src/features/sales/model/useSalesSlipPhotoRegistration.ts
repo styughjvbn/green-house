@@ -4,7 +4,14 @@ import type { SalesSlip, SalesOrchidGroupOption } from "@/entities/farm/types";
 import { ApiError } from "@/shared/api/error";
 import { createUuid } from "@/shared/lib/id";
 import { createPendingCreationRequestKey } from "@/shared/lib/pendingCreationRequestKey";
-import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
+import {
+  useRuntimeContext,
+  useImagePreparationConcurrency,
+} from "@/shared/runtime/RuntimeContext";
+import {
+  createPhotoSlotBudget,
+  runConcurrentPhotoTasks,
+} from "../lib/photoPreparationQueue";
 import {
   createSalesSlip,
   openSalesSlipPhotoSession,
@@ -74,11 +81,17 @@ export function useSalesSlipPhotoRegistration(
   onSaved: (slip: SalesSlip) => Promise<void>,
 ) {
   const { businessDate } = useRuntimeContext();
+  const preparationConcurrency = useImagePreparationConcurrency();
   const [entries, setEntries] = useState<PhotoEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<
     "upload" | "prepare" | "read" | "save" | null
   >(null);
+  const [preparing, setPreparing] = useState<{
+    photoIds: string[];
+    completed: number;
+    total: number;
+  } | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const activeRead = useRef<{
     requestId: string;
@@ -105,6 +118,11 @@ export function useSalesSlipPhotoRegistration(
   }, []);
   const selected =
     entries.find((entry) => entry.id === selectedId) ?? entries[0] ?? null;
+
+  const unpreparedEntries = entries.filter(
+    (entry) =>
+      !entry.parentId && !entries.some((child) => child.parentId === entry.id),
+  );
 
   async function ensureSession(signal?: AbortSignal) {
     if (sessionId.current) return sessionId.current;
@@ -176,14 +194,17 @@ export function useSalesSlipPhotoRegistration(
   }
 
   const preparation = useMutation({
+    retry: false,
     mutationFn: async ({
       entry,
       signal,
       rotationDegrees,
+      reserveDocuments,
     }: {
       entry: PhotoEntry;
       signal: AbortSignal;
       rotationDegrees: number;
+      reserveDocuments: (count: number) => void;
     }) => {
       const preview = await prepareSalesSlipPhoto(
         entry.photo,
@@ -200,16 +221,8 @@ export function useSalesSlipPhotoRegistration(
           throw new Error(
             "전표 영역을 자동으로 찾지 못했습니다. 사진 방향과 문서가 잘리지 않았는지 확인해주세요.",
           );
-        if (
-          entries.filter((item) => item.parentId && item.parentId !== entry.id)
-            .length +
-            documents.length >
-          MAX_PHOTOS
-        )
-          throw new Error(
-            "지정할 문서는 최대 10개까지 등록할 수 있습니다. 기존 문서를 제거한 뒤 다시 시도해주세요.",
-          );
-        const photos = await Promise.all(
+        reserveDocuments(documents.length);
+        const downloads = await Promise.allSettled(
           documents.map(async (image, index) => {
             if (!image.id)
               throw new Error("지정된 문서 사진을 찾지 못했습니다.");
@@ -232,17 +245,13 @@ export function useSalesSlipPhotoRegistration(
             };
           }),
         );
+        const photos = downloads.map((download) => {
+          if (download.status === "rejected") throw download.reason;
+          return download.value;
+        });
         return {
           photos,
           rotationDegrees: preview.clockwiseDegrees ?? 0,
-          warnings: [
-            ...(preview.warnings ?? []),
-            ...(documents.length < (preview.documentCount ?? 0)
-              ? [
-                  "일부 문서는 영역을 자동으로 찾지 못했습니다. 원본에서 직접 영역을 지정해주세요.",
-                ]
-              : []),
-          ],
         };
       } finally {
         if (preview.id)
@@ -251,69 +260,130 @@ export function useSalesSlipPhotoRegistration(
     },
   });
 
-  async function prepareSelected(rotationDegrees = -1) {
+  async function prepareEntries(
+    targets: PhotoEntry[],
+    rotations: Record<string, number>,
+  ) {
     if (
-      !selected ||
-      selected.parentId ||
       running.current ||
-      entries.some(
-        (item) =>
-          item.parentId === selected.id &&
-          (item.save !== "draft" || item.pendingPayload),
+      !targets.length ||
+      targets.some(
+        (entry) =>
+          entry.parentId ||
+          entries.some(
+            (child) =>
+              child.parentId === entry.id &&
+              (child.save !== "draft" || child.pendingPayload),
+          ),
       )
     )
       return;
     running.current = true;
     setBusy("prepare");
-    patch(selected.id, { error: null });
+    setUploadError(null);
     const controller = new AbortController();
     activeRequest.current = controller;
+    const reserveSlots = createPhotoSlotBudget(
+      MAX_PHOTOS,
+      entries.filter((entry) => entry.parentId).length,
+    );
+    setPreparing({ photoIds: [], completed: 0, total: targets.length });
+    const failures: string[] = [];
     try {
-      const result = await preparation.mutateAsync({
-        entry: selected,
-        signal: controller.signal,
-        rotationDegrees,
-      });
-      if (!mounted.current || controller.signal.aborted) return;
-      const children = result.photos.map(({ photo, region }) =>
-        createEntry(
-          createUuid(),
-          photo,
-          selected.id,
-          region,
-          result.rotationDegrees,
-        ),
+      await runConcurrentPhotoTasks(
+        targets,
+        preparationConcurrency,
+        controller.signal,
+        async (entry) => {
+          if (!mounted.current || controller.signal.aborted) return;
+          setPreparing((current) =>
+            current
+              ? { ...current, photoIds: [...current.photoIds, entry.id] }
+              : current,
+          );
+          patch(entry.id, { error: null });
+          const previous = entries.filter(
+            (child) => child.parentId === entry.id,
+          );
+          let releaseReservation: (() => void) | undefined;
+          let committed = false;
+          try {
+            const result = await preparation.mutateAsync({
+              entry,
+              signal: controller.signal,
+              rotationDegrees: rotations[entry.id] ?? -1,
+              reserveDocuments: (count) => {
+                releaseReservation = reserveSlots(count, previous.length);
+              },
+            });
+            if (!mounted.current || controller.signal.aborted) return;
+            const children = result.photos.map(({ photo, region }) =>
+              createEntry(
+                createUuid(),
+                photo,
+                entry.id,
+                region,
+                result.rotationDegrees,
+              ),
+            );
+            for (const child of previous)
+              if (sessionId.current)
+                await removeSalesSlipSessionPhoto(sessionId.current, child.id);
+            if (!mounted.current || controller.signal.aborted) return;
+            setEntries((current) => {
+              const remaining = current.filter(
+                (item) => item.parentId !== entry.id,
+              );
+              const position = remaining.findIndex(
+                (item) => item.id === entry.id,
+              );
+              if (position < 0) return current;
+              return [
+                ...remaining.slice(0, position + 1),
+                ...children,
+                ...remaining.slice(position + 1),
+              ];
+            });
+            committed = true;
+          } catch (error) {
+            if (!mounted.current || controller.signal.aborted) return;
+            patch(entry.id, { error: message(error) });
+            failures.push(`${entry.photo.fileName}: ${message(error)}`);
+          } finally {
+            if (!committed) releaseReservation?.();
+            if (mounted.current)
+              setPreparing((current) =>
+                current
+                  ? {
+                      ...current,
+                      photoIds: current.photoIds.filter(
+                        (id) => id !== entry.id,
+                      ),
+                      completed: current.completed + 1,
+                    }
+                  : current,
+              );
+          }
+        },
       );
-      for (const child of entries.filter(
-        (item) => item.parentId === selected.id,
-      ))
-        if (sessionId.current)
-          await removeSalesSlipSessionPhoto(sessionId.current, child.id);
-      if (!mounted.current) return;
-      setEntries((current) => {
-        const remaining = current.filter(
-          (item) => item.parentId !== selected.id,
-        );
-        const position = remaining.findIndex(
-          (entry) => entry.id === selected.id,
-        );
-        if (position < 0) return current;
-        return [
-          ...remaining.slice(0, position + 1),
-          ...children,
-          ...remaining.slice(position + 1),
-        ];
-      });
-      patch(selected.id, { notes: result.warnings });
-    } catch (error) {
-      if (mounted.current && !controller.signal.aborted)
-        patch(selected.id, { error: message(error) });
+      if (mounted.current && targets.length > 1 && failures.length)
+        setUploadError(failures.join("\n"));
     } finally {
       preparation.reset();
       activeRequest.current = null;
       running.current = false;
-      if (mounted.current) setBusy(null);
+      if (mounted.current) {
+        setPreparing(null);
+        setBusy(null);
+      }
     }
+  }
+
+  function prepareSelected(rotationDegrees = -1) {
+    return prepareEntries(
+      selected ? [selected] : [],
+      selected ? { [selected.id]: rotationDegrees } : {},
+    );
   }
 
   async function applyRegions(
@@ -779,6 +849,8 @@ export function useSalesSlipPhotoRegistration(
     selectedId: selected?.id,
     setSelectedId,
     busy,
+    preparing,
+    unpreparedCount: unpreparedEntries.length,
     cancelling,
     uploadError,
     actions,
@@ -792,6 +864,8 @@ export function useSalesSlipPhotoRegistration(
     connectGroups,
     addFiles,
     prepareSelected,
+    prepareAll: (rotations: Record<string, number>) =>
+      prepareEntries(unpreparedEntries, rotations),
     applyRegions,
     saveSelected,
     removeSelected,

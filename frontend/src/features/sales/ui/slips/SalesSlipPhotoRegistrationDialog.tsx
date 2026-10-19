@@ -136,8 +136,11 @@ export function SalesSlipPhotoRegistrationDialog({
     preparationMode === "manual"
       ? "문서 영역 적용 중"
       : "문서 영역 자동 지정 중";
-  const preparingPhotoId =
-    photos.busy === "prepare" ? (regionEditor?.ownerId ?? selected?.id) : null;
+  const preparingPhotoIds =
+    photos.busy === "prepare"
+      ? (photos.preparing?.photoIds ??
+        (regionEditor ? [regionEditor.ownerId] : []))
+      : [];
   const buttonClass =
     "inline-flex h-8 items-center justify-center gap-2 rounded-md border border-[#cfd8cc] bg-white px-3 text-sm font-semibold text-[#29422e] hover:bg-[#f7faf6] focus-visible:outline-2 focus-visible:outline-[#159447] disabled:opacity-60";
 
@@ -235,6 +238,18 @@ export function SalesSlipPhotoRegistrationDialog({
             <button
               type="button"
               className={buttonClass}
+              disabled={
+                photos.busy !== null ||
+                !photos.unpreparedCount ||
+                documents.length >= 10
+              }
+              onClick={() => void photos.prepareAll(rotations)}
+            >
+              전체 자동 지정
+            </button>
+            <button
+              type="button"
+              className={buttonClass}
               disabled={photos.busy !== null || !unreadEntries.length}
               onClick={() => {
                 if (
@@ -306,6 +321,7 @@ export function SalesSlipPhotoRegistrationDialog({
             key={photos.cancelling ? "cancel" : photos.busy}
             operation={photos.cancelling ? "cancel" : photos.busy}
             preparationMode={preparationMode}
+            preparationProgress={photos.preparing ?? undefined}
             readingCount={
               photos.entries.filter((entry) => entry.read === "reading").length
             }
@@ -340,20 +356,22 @@ export function SalesSlipPhotoRegistrationDialog({
                   >
                     {entry.save === "saving" ||
                     entry.read === "reading" ||
-                    entry.id === preparingPhotoId ? (
+                    preparingPhotoIds.includes(entry.id) ? (
                       <LoaderCircle
                         className="h-3.5 w-3.5 shrink-0 animate-spin motion-reduce:animate-none"
                         aria-hidden="true"
                       />
                     ) : null}
                     {!entry.parentId
-                      ? entry.id === preparingPhotoId
+                      ? preparingPhotoIds.includes(entry.id)
                         ? `원본 · ${preparationText}`
-                        : photos.entries.some(
-                              (child) => child.parentId === entry.id,
-                            )
-                          ? "원본 · 영역 지정 완료"
-                          : "원본 · 영역 지정 필요"
+                        : entry.error
+                          ? "원본 · 영역 지정 실패"
+                          : photos.entries.some(
+                                (child) => child.parentId === entry.id,
+                              )
+                            ? "원본 · 영역 지정 완료"
+                            : "원본 · 영역 지정 필요"
                       : entry.save === "saved"
                         ? "저장 완료"
                         : entry.save === "saving"
@@ -424,7 +442,8 @@ export function SalesSlipPhotoRegistrationDialog({
                             );
                           }}
                         >
-                          {photos.busy === "prepare" && !regionEditor
+                          {preparingPhotoIds.includes(selected.id) &&
+                          !regionEditor
                             ? "자동 지정 중…"
                             : "자동 지정"}
                         </button>
@@ -552,7 +571,7 @@ export function SalesSlipPhotoRegistrationDialog({
                       : ""}
                   </p>
                 ) : null}
-                {selected.notes.length ? (
+                {selected.parentId && selected.notes.length ? (
                   <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-[#526158]">
                     {selected.notes.map((note, index) => (
                       <li key={index}>{note}</li>

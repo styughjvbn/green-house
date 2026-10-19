@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 public class SlipImageConfiguration {
   @Bean(destroyMethod = "close")
   public ManagedSlipImageProcessor slipImageProcessor(
-      @Value("${sales.document.image.workers:2}") int workers,
+      @Value("${sales.document.image.workers:3}") int workers,
       @Value("${sales.document.image.queue-capacity:4}") int queueCapacity,
       @Value("${sales.document.image.opencv-threads:1}") int openCvThreads) {
     return SlipProcessors.bounded(

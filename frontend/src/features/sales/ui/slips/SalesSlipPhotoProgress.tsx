@@ -7,10 +7,16 @@ export function SalesSlipPhotoProgress({
   operation,
   readingCount,
   preparationMode = "automatic",
+  preparationProgress,
 }: {
   operation: "upload" | "prepare" | "read" | "save" | "cancel";
   readingCount: number;
   preparationMode?: "automatic" | "manual";
+  preparationProgress?: {
+    completed: number;
+    total: number;
+    photoIds: string[];
+  };
 }) {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
@@ -24,7 +30,7 @@ export function SalesSlipPhotoProgress({
     operation === "prepare"
       ? preparationMode === "manual"
         ? "문서 영역 적용 중"
-        : "문서 영역 자동 지정 중"
+        : `문서 영역 자동 지정 중${preparationProgress && preparationProgress.total > 1 ? ` (${preparationProgress.completed}/${preparationProgress.total} 완료 · ${preparationProgress.photoIds.length}장 처리 중)` : ""}`
       : operation === "cancel"
         ? "자동 입력 중지 중"
         : operation === "read"
