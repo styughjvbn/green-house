@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Suspense } from "react";
 import { Geist } from "next/font/google";
 import { DEFAULT_FONT_SCALE, FontScaleInitializer } from "@/features/settings";
@@ -52,6 +53,15 @@ export default async function RootLayout({
         } as React.CSSProperties
       }
     >
+      <head>
+        {process.env.NODE_ENV === "development" && (
+          <Script
+            src="//unpkg.com/react-grab/dist/index.global.js"
+            crossOrigin="anonymous"
+            strategy="beforeInteractive"
+          />
+        )}
+      </head>
       <body className="min-h-full bg-[#f7f8f6] text-[#1f2a24]">
         <FontScaleInitializer />
         <PwaRuntime />
