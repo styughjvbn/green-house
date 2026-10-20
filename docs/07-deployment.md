@@ -117,6 +117,13 @@ API_BASE_URL
 NEXT_PUBLIC_API_BASE_URL
 ```
 
+로컬 개발의 브라우저 API 주소는 `NEXT_PUBLIC_API_BASE_URL=/api`로 설정하고,
+Next.js 서버 조회와 API 프록시 대상은 `BACKEND_API_URL=http://localhost:8080/api`로
+설정한다. 두 값은 `frontend/.env` 또는 `.env.local`에 함께 둔다. LAN의 다른 PC에서
+접속할 때 브라우저 API 주소에 `localhost`를 쓰면 접속한 PC로 요청하며, 백엔드와
+화면의 호스트가 달라 세션 쿠키도 공유되지 않는다. 환경변수 변경 후 개발 서버를
+재시작한다.
+
 `APP_ENV`는 실행 환경을 `dev` 또는 `prod`로 명시한다. 로컬 `dev-start.sh`는 `dev`를
 강제하고 Kubernetes와 프론트 Docker 이미지는 `prod`를 명시한다. 값이 없는 프론트는
 Next.js의 `NODE_ENV=development`일 때만 `dev`로 보정하며 그 외에는 `prod`로 처리한다.
