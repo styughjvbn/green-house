@@ -44,3 +44,7 @@ scripts/seed_tools/raw/*.zip
 scripts/seed_tools/generated-private/
 
 .dev-pids/
+
+# Local immutable sales attachments
+/backend/data/slip-photos/
+/data/slip-photos/

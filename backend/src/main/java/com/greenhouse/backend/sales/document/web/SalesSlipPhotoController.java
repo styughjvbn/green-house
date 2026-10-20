@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.document.web;
 
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.api.ErrorResponse;
 import com.greenhouse.backend.sales.document.application.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +23,18 @@ public class SalesSlipPhotoController {
 
   @Operation(description = "인증된 전표 사진 조회. JPEG/PNG/WebP 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다.")
   @GetMapping("/{id}/source-photo")
+  @io.swagger.v3.oas.annotations.responses.ApiResponse(
+      responseCode = "200",
+      description = "저장된 사진",
+      useReturnTypeSchema = true)
+  @io.swagger.v3.oas.annotations.responses.ApiResponse(
+      responseCode = "503",
+      description = "SALES_PHOTO_STORAGE_UNAVAILABLE: 사진 저장소 오류 또는 파일 무결성 검증 실패",
+      content =
+          @io.swagger.v3.oas.annotations.media.Content(
+              schema =
+                  @io.swagger.v3.oas.annotations.media.Schema(
+                      implementation = ErrorResponse.class)))
   public ApiResponse<SalesSlipPhotoService.PhotoContent> getPhoto(@PathVariable Long id) {
     return ApiResponse.ok(photos.content(id));
   }

@@ -3,7 +3,6 @@ package com.greenhouse.backend.sales.document.domain;
 import com.greenhouse.backend.common.image.UploadImage;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.Base64;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -23,19 +22,40 @@ public class SalesSlipPhoto {
   @Column(nullable = false, length = 32)
   private String contentType;
 
-  @Column(nullable = false, columnDefinition = "bytea")
-  private byte[] content;
+  @Column(nullable = false, length = 512, unique = true)
+  private String storageKey;
+
+  @Column(nullable = false)
+  private Long byteSize;
+
+  @Column(nullable = false, length = 64)
+  private String sha256;
 
   @Column(nullable = false)
   private LocalDateTime createdAt;
 
   public SalesSlipPhoto(
-      Long slipId, String fileName, String contentType, byte[] content, LocalDateTime now) {
+      Long slipId,
+      String fileName,
+      String contentType,
+      String storageKey,
+      long byteSize,
+      String sha256,
+      LocalDateTime now) {
     this.salesSlipId = slipId;
     this.fileName = fileName;
     this.contentType = contentType;
-    this.content = Arrays.copyOf(content, content.length);
     this.createdAt = now;
+    if (storageKey == null
+        || storageKey.isBlank()
+        || storageKey.length() > 512
+        || byteSize < 1
+        || byteSize > MAX_BYTES
+        || sha256 == null
+        || !sha256.matches("[0-9a-f]{64}")) throw new IllegalArgumentException("잘못된 사진 저장 정보입니다.");
+    this.storageKey = storageKey;
+    this.byteSize = byteSize;
+    this.sha256 = sha256;
   }
 
   public static byte[] validate(String fileName, String contentType, String contentBase64) {

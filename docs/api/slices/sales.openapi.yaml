@@ -124,6 +124,12 @@ paths:
               $ref: '#/components/schemas/SalesSlipCreateRequest'
         required: true
       responses:
+        '503':
+          description: 'SALES_PHOTO_STORAGE_UNAVAILABLE: 사진 저장소 오류. 같은 생성 키와 입력으로 재시도합니다.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '201':
           description: Created
           content:
@@ -473,11 +479,17 @@ paths:
           format: int64
       responses:
         '200':
-          description: OK
+          description: 저장된 사진
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePhotoContent'
+        '503':
+          description: 'SALES_PHOTO_STORAGE_UNAVAILABLE: 사진 저장소 오류 또는 파일 무결성 검증 실패'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/sales-slips/{id}/source-photo/info:
     get:
       tags:

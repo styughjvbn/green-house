@@ -193,3 +193,11 @@ tasks.register<Test>("domainDiagnosis") {
 	testLogging.showStandardStreams = true
 	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")
 }
+
+tasks.register<JavaExec>("salesPhotoStorage") {
+    group = "maintenance"
+    description = "Verifies immutable sales photos and inspects unused files; no HTTP server is started."
+    dependsOn(tasks.named("classes"))
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.greenhouse.backend.sales.document.application.SalesPhotoStorageCli")
+}

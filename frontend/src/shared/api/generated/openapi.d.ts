@@ -6972,6 +6972,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
                 };
             };
+            /** @description SALES_PHOTO_STORAGE_UNAVAILABLE: 사진 저장소 오류. 같은 생성 키와 입력으로 재시도합니다. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     confirmPayment: {
@@ -9019,13 +9028,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 저장된 사진 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponsePhotoContent"];
+                };
+            };
+            /** @description SALES_PHOTO_STORAGE_UNAVAILABLE: 사진 저장소 오류 또는 파일 무결성 검증 실패 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
