@@ -87,7 +87,7 @@ paths:
     post:
       tags:
       - ai-slip-controller
-      description: 전표 사진을 읽고 조회 도구로 거래처·품종 후보를 찾습니다. 전표·재고를 저장하지 않습니다. JPEG/PNG 최대 8MB.
+      description: 전표 사진을 읽고 조회 도구로 거래처·품종 후보를 찾습니다. 전표·재고를 저장하지 않습니다. JPEG/PNG/WebP 최대 8MB.
       operationId: extract_1
       requestBody:
         content:

@@ -123,6 +123,8 @@ test("resizing fits either orientation, preserves small originals and never enla
       Buffer.from(small.photo.contentBase64, "base64"),
     ).metadata();
     assert.equal(metadata.width! / metadata.height!, w / h);
+    assert.equal(metadata.format, "webp");
+    assert.equal(small.photo.contentType, "image/webp");
     assert.equal(original.contentBase64, before);
   }
   const original = await photo("small", 800, 600);
@@ -152,6 +154,30 @@ test("resizing fits either orientation, preserves small originals and never enla
   assert.equal(metadata.width, 1024);
   assert.equal(metadata.height, 512);
   assert.equal(metadata.orientation, undefined);
+});
+
+test("WebP inputs are preserved when small and resized as WebP when large", async () => {
+  for (const width of [800, 3000]) {
+    const bytes = await sharp({
+      create: { width, height: 600, channels: 3, background: "white" },
+    })
+      .webp({ quality: 92 })
+      .toBuffer();
+    const input = {
+      photoId: "webp",
+      contentType: "image/webp",
+      contentBase64: bytes.toString("base64"),
+    };
+    const output = await resizePhoto(input, 1024);
+    const metadata = await sharp(
+      Buffer.from(output.photo.contentBase64, "base64"),
+    ).metadata();
+    assert.equal(output.photo.contentType, "image/webp");
+    assert.equal(metadata.format, "webp");
+    assert.equal(metadata.width, Math.min(width, 1024));
+    if (width <= 1024)
+      assert.equal(output.photo.contentBase64, input.contentBase64);
+  }
 });
 
 test("batch retries only low-confidence larger originals and shares session, deadline and tool budget", async () => {

@@ -1,15 +1,15 @@
 import type { SalesSlipPhotoInput } from "../api/types";
 
 export function preparedPhotoName(originalName: string, index: number) {
-  return `${originalName.replace(/\.[^.]+$/, "").slice(0, 245)}_${String(index).padStart(2, "0")}.jpg`;
+  return `${originalName.replace(/\.[^.]+$/, "").slice(0, 240)}_${String(index).padStart(2, "0")}.webp`;
 }
 
-/** Attach the server JPEG without decoding or recompressing it. */
+/** Attach the server WebP without decoding or recompressing it. */
 export async function toPreparedSalesPhoto(
   blob: Blob,
   fileName: string,
 ): Promise<SalesSlipPhotoInput> {
-  if (blob.type !== "image/jpeg")
+  if (blob.type !== "image/webp")
     throw new Error("전표 사진 형식을 확인해주세요.");
   if (blob.size > 8 * 1024 * 1024)
     throw new Error(
@@ -21,5 +21,5 @@ export async function toPreparedSalesPhoto(
     reader.onerror = () => reject(new Error("전표 사진을 읽지 못했습니다."));
     reader.readAsDataURL(blob);
   });
-  return { fileName, contentType: "image/jpeg", contentBase64 };
+  return { fileName, contentType: "image/webp", contentBase64 };
 }

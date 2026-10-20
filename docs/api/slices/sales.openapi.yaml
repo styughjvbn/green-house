@@ -462,7 +462,7 @@ paths:
     get:
       tags:
       - sales-controller
-      description: 인증된 전표 사진 조회. JPEG/PNG 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다.
+      description: 인증된 전표 사진 조회. JPEG/PNG/WebP 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다.
       operationId: getPhoto
       parameters:
       - name: id
@@ -689,7 +689,7 @@ paths:
         '200':
           description: OK
           content:
-            image/jpeg:
+            image/webp:
               schema:
                 type: string
                 format: byte

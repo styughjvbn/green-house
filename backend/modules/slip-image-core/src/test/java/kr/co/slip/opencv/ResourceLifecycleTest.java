@@ -63,7 +63,7 @@ class ResourceLifecycleTest {
         scope.close(); scope.close(); assertTrue(roi.empty());
     }
 
-    @Test void modesSkipDiagnosticsWithoutChangingAnalysisAndReturnProductionJpegs() {
+    @Test void modesSkipDiagnosticsWithoutChangingAnalysisAndReturnProductionWebps() {
         byte[] image = fixture();
         SlipProcessor engine = new SlipProcessor();
         ProcessingOptions base = ProcessingOptions.defaults().withRotation(0);
@@ -71,14 +71,14 @@ class ResourceLifecycleTest {
         var production = engine.process(image, base.withOutputMode(OutputMode.PRODUCTION));
         var review = engine.process(image, base.withOutputMode(OutputMode.REVIEW));
         assertEquals(all.report(), production.report()); assertEquals(all.report(), review.report());
-        assertTrue(production.images().containsKey("paper-01.jpg"));
-        assertTrue(production.images().containsKey("paper-01-compacted.jpg"));
-        assertTrue(production.images().containsKey("table-01-compacted.jpg"));
+        assertTrue(production.images().containsKey("paper-01.webp"));
+        assertTrue(production.images().containsKey("paper-01-compacted.webp"));
+        assertTrue(production.images().containsKey("table-01-compacted.webp"));
         for (String key : production.images().keySet()) {
-            assertTrue(key.endsWith(".jpg"));
+            assertTrue(key.endsWith(".webp"));
             try (MatScope scope = new MatScope()) {
                 Mat decoded = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(production.images().get(key))), Imgcodecs.IMREAD_UNCHANGED));
-                Mat diagnostic = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(all.images().get(key.replace(".jpg", ".png")))), Imgcodecs.IMREAD_UNCHANGED));
+                Mat diagnostic = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(all.images().get(key.replace(".webp", ".png")))), Imgcodecs.IMREAD_UNCHANGED));
                 assertFalse(decoded.empty());
                 assertEquals(3, decoded.channels());
                 assertEquals(diagnostic.size(), decoded.size());

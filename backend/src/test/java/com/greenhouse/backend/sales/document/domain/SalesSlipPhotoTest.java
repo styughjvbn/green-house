@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
+import java.util.List;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +26,19 @@ class SalesSlipPhotoTest {
                     "image/png",
                     Base64.getEncoder().encodeToString("not an image".getBytes())))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void acceptsLossyAndLosslessWebpAndRejectsMimeSpoofing() {
+    for (String base64 :
+        List.of(
+            "UklGRkIAAABXRUJQVlA4IDYAAAAwAgCdASoCAAIAAIAOJaACdLoB+AH4AARoAAD+++F7/774Zb3b/0Jf/ue7+7Av7nu/+5nAAAA=",
+            "UklGRhwAAABXRUJQVlA4TA8AAAAvAUAAAAcQ/Y/+ByKi/wEA")) {
+      assertThat(SalesSlipPhoto.validate("slip.webp", "image/webp", base64))
+          .isEqualTo(Base64.getDecoder().decode(base64));
+      assertThatThrownBy(() -> SalesSlipPhoto.validate("slip.png", "image/png", base64))
+          .isInstanceOf(IllegalArgumentException.class);
+    }
   }
 
   @Test

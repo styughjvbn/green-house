@@ -13,10 +13,10 @@ class ImageEncodingTest {
         try (MatScope scope = new MatScope()) {
             Mat original = scope.own(new Mat(80, 120, CvType.CV_8UC4, new Scalar(0, 0, 0, 0)));
             scope.own(scope.own(original.submat(new Rect(40, 0, 80, 80))).setTo(new Scalar(30, 90, 150, 255)));
-            byte[] jpeg = ImageEncoding.encode(original, OutputMode.PRODUCTION);
-            assertEquals(0xff, jpeg[0] & 255);
-            assertEquals(0xd8, jpeg[1] & 255);
-            Mat decoded = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(jpeg)), Imgcodecs.IMREAD_UNCHANGED));
+            byte[] webp = ImageEncoding.encode(original, OutputMode.PRODUCTION);
+            assertEquals("RIFF", new String(webp, 0, 4, java.nio.charset.StandardCharsets.US_ASCII));
+            assertEquals("WEBP", new String(webp, 8, 4, java.nio.charset.StandardCharsets.US_ASCII));
+            Mat decoded = scope.own(Imgcodecs.imdecode(scope.own(new MatOfByte(webp)), Imgcodecs.IMREAD_UNCHANGED));
             assertEquals(3, decoded.channels());
             for (double value : decoded.get(20, 20)) assertTrue(value >= 250);
             assertArrayEquals(new double[]{30, 90, 150}, decoded.get(20, 80), 3);

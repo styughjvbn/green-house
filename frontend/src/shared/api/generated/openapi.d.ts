@@ -1130,7 +1130,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 전표 사진을 읽고 조회 도구로 거래처·품종 후보를 찾습니다. 전표·재고를 저장하지 않습니다. JPEG/PNG 최대 8MB. */
+        /** @description 전표 사진을 읽고 조회 도구로 거래처·품종 후보를 찾습니다. 전표·재고를 저장하지 않습니다. JPEG/PNG/WebP 최대 8MB. */
         post: operations["extract_1"];
         delete?: never;
         options?: never;
@@ -1595,7 +1595,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 인증된 전표 사진 조회. JPEG/PNG 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다. */
+        /** @description 인증된 전표 사진 조회. JPEG/PNG/WebP 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다. */
         get: operations["getPhoto"];
         put?: never;
         post?: never;
@@ -9183,7 +9183,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "image/jpeg": string;
+                    "image/webp": string;
                 };
             };
         };

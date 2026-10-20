@@ -100,18 +100,7 @@ export async function cropSalesPhotoRegions(
         crop.width,
         crop.height,
       );
-      const blob = await new Promise<Blob>((resolve, reject) =>
-        canvas.toBlob(
-          (result) =>
-            result
-              ? resolve(result)
-              : reject(
-                  new Error("선택한 영역으로 전표 사진을 만들지 못했습니다."),
-                ),
-          "image/jpeg",
-          0.92,
-        ),
-      );
+      const blob = await canvasToWebp(canvas);
       if (blob.size > 8 * 1024 * 1024)
         throw new Error("전표 사진이 8MB를 초과합니다. 영역을 줄여주세요.");
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -123,7 +112,7 @@ export async function cropSalesPhotoRegions(
       });
       results.push({
         fileName,
-        contentType: "image/jpeg",
+        contentType: "image/webp",
         contentBase64: base64,
       });
     }
@@ -133,4 +122,27 @@ export async function cropSalesPhotoRegions(
     canvas.height = 0;
     bitmap.close();
   }
+}
+
+/** Prefer the browser encoder; Safari may return PNG for an unsupported MIME type. */
+async function canvasToWebp(canvas: HTMLCanvasElement): Promise<Blob> {
+  const blob = await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob(
+      (result) =>
+        result
+          ? resolve(result)
+          : reject(new Error("선택한 영역으로 전표 사진을 만들지 못했습니다.")),
+      "image/webp",
+      0.92,
+    ),
+  );
+  if (blob.type === "image/webp") return blob;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("전표 사진을 만들지 못했습니다.");
+  const { default: encode } = await import("@jsquash/webp/encode.js");
+  const encoded = await encode(
+    context.getImageData(0, 0, canvas.width, canvas.height),
+    { quality: 92, method: 3 },
+  );
+  return new Blob([encoded], { type: "image/webp" });
 }

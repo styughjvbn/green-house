@@ -5,20 +5,20 @@ import {
   toPreparedSalesPhoto,
 } from "../src/features/sales/lib/preparedSalesPhoto.ts";
 
-test("prepared documents retain their source name with a bounded numbered JPEG suffix", () => {
+test("prepared documents retain their source name with a bounded numbered WebP suffix", () => {
   assert.equal(
     preparedPhotoName("20260816_091644.jpg", 1),
-    "20260816_091644_01.jpg",
+    "20260816_091644_01.webp",
   );
   assert.equal(
     preparedPhotoName("receipt.scan.PNG", 12),
-    "receipt.scan_12.jpg",
+    "receipt.scan_12.webp",
   );
-  assert.equal(preparedPhotoName("receipt", 2), "receipt_02.jpg");
-  assert.ok(preparedPhotoName("x".repeat(255) + ".jpg", 1).length <= 255);
+  assert.equal(preparedPhotoName("receipt", 2), "receipt_02.webp");
+  assert.ok(preparedPhotoName("x".repeat(255) + ".webp", 1).length <= 255);
 });
 
-test("prepared documents preserve server JPEG bytes without image conversion", async (context) => {
+test("prepared documents preserve server WebP bytes without image conversion", async (context) => {
   const previousReader = globalThis.FileReader;
   context.after(() => {
     if (previousReader === undefined) delete globalThis.FileReader;
@@ -30,27 +30,27 @@ test("prepared documents preserve server JPEG bytes without image conversion", a
       this.onload();
     }
   };
-  const bytes = Buffer.from([0xff, 0xd8, 1, 2, 0xff, 0xd9]);
+  const bytes = Buffer.from("RIFFtestWEBPbytes");
   const photo = await toPreparedSalesPhoto(
-    new Blob([bytes], { type: "image/jpeg" }),
-    "document_01.jpg",
+    new Blob([bytes], { type: "image/webp" }),
+    "document_01.webp",
   );
   assert.deepEqual(photo, {
-    fileName: "document_01.jpg",
-    contentType: "image/jpeg",
+    fileName: "document_01.webp",
+    contentType: "image/webp",
     contentBase64: bytes.toString("base64"),
   });
 });
 
-test("prepared documents reject non-JPEG and oversized responses", async () => {
+test("prepared documents reject non-WebP and oversized responses", async () => {
   await assert.rejects(
-    toPreparedSalesPhoto(new Blob(["png"], { type: "image/png" }), "a.jpg"),
+    toPreparedSalesPhoto(new Blob(["png"], { type: "image/png" }), "a.webp"),
     /형식/,
   );
   await assert.rejects(
     toPreparedSalesPhoto(
-      new Blob([new Uint8Array(8 * 1024 * 1024 + 1)], { type: "image/jpeg" }),
-      "a.jpg",
+      new Blob([new Uint8Array(8 * 1024 * 1024 + 1)], { type: "image/webp" }),
+      "a.webp",
     ),
     /8MB/,
   );

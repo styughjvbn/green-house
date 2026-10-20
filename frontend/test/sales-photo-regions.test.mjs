@@ -70,13 +70,13 @@ test("multiple crops decode the source once, encode sequentially and release res
       },
     }),
     toBlob(callback, type) {
-      assert.equal(type, "image/jpeg");
+      assert.equal(type, "image/webp");
       sizes.push([canvas.width, canvas.height]);
       encoding++;
       maxEncoding = Math.max(maxEncoding, encoding);
       queueMicrotask(() => {
         encoding--;
-        callback(new Blob(["jpeg"]));
+        callback(new Blob(["webp"], { type: "image/webp" }));
       });
     },
   };
@@ -88,7 +88,7 @@ test("multiple crops decode the source once, encode sequentially and release res
   };
   globalThis.FileReader = class {
     readAsDataURL() {
-      this.result = "data:image/jpeg;base64,anBlZw==";
+      this.result = "data:image/webp;base64,d2VicA==";
       this.onload();
     }
   };
@@ -101,19 +101,19 @@ test("multiple crops decode the source once, encode sequentially and release res
   assert.equal(decoded, 0);
   const result = await cropSalesPhotoRegions(photo, [
     {
-      fileName: "original_01.jpg",
+      fileName: "original_01.webp",
       region: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
       rotationDegrees: 0,
     },
     {
-      fileName: "original_02.jpg",
+      fileName: "original_02.webp",
       region: { x: 0, y: 0, width: 0.5, height: 0.25 },
       rotationDegrees: 90,
     },
   ]);
   assert.deepEqual(
     result.map((r) => r.fileName),
-    ["original_01.jpg", "original_02.jpg"],
+    ["original_01.webp", "original_02.webp"],
   );
   assert.deepEqual(sizes, [
     [1200, 1200],

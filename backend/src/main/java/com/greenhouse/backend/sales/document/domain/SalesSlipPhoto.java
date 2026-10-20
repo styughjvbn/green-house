@@ -44,7 +44,7 @@ public class SalesSlipPhoto {
         || fileName.length() > 255
         || contentBase64 == null
         || contentBase64.length() > 11184812) {
-      throw new IllegalArgumentException("전표 사진은 JPEG 또는 PNG, 최대 8MB까지 첨부할 수 있습니다.");
+      throw new IllegalArgumentException("전표 사진은 JPEG, PNG 또는 WebP, 최대 8MB까지 첨부할 수 있습니다.");
     }
     byte[] bytes;
     try {

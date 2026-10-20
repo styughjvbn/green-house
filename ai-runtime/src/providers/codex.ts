@@ -47,7 +47,7 @@ export function codexProvider(
         for (const [index, photo] of inputPhotos(input).entries()) {
           const image = join(
             directory,
-            `${index}.${photo.contentType === "image/png" ? "png" : "jpg"}`,
+            `${index}.${photo.contentType === "image/webp" ? "webp" : photo.contentType === "image/png" ? "png" : "jpg"}`,
           );
           await writeFile(image, Buffer.from(photo.contentBase64, "base64"), {
             mode: 0o600,

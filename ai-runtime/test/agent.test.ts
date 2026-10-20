@@ -120,7 +120,11 @@ test("runtime rejects unauthenticated and concurrent calls and releases its exec
         Authorization: `Bearer ${secret}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        ...input,
+        contentType: "image/webp",
+        contentBase64: "UklGRhwAAABXRUJQVlA4TA8AAAAvAUAAAAcQ/Y/+ByKi/wEA",
+      }),
     });
   try {
     assert.equal(
@@ -171,6 +175,7 @@ test("runtime cancels timed out runs and rejects malformed structured output", a
 test("Codex adapter receives only scoped tools and cleans its temporary image", async () => {
   const { codexProvider } = await import("../src/providers/codex.js");
   const { readFile, access } = await import("node:fs/promises");
+  const webpBase64 = "UklGRhwAAABXRUJQVlA4TA8AAAAvAUAAAAcQ/Y/+ByKi/wEA";
   let imagePath = "";
   const provider = codexProvider(
     "test-model",
@@ -204,9 +209,10 @@ test("Codex adapter receives only scoped tools and cleans its temporary image", 
           return {
             async runStreamed(parts: unknown, turnOptions: unknown) {
               imagePath = (parts as { path?: string }[])[1].path!;
+              assert.ok(imagePath.endsWith(".webp"));
               assert.deepEqual(
                 await readFile(imagePath),
-                Buffer.from(imageBase64, "base64"),
+                Buffer.from(webpBase64, "base64"),
               );
               assert.ok(
                 (turnOptions as { outputSchema: unknown }).outputSchema,
@@ -231,11 +237,14 @@ test("Codex adapter receives only scoped tools and cleans its temporary image", 
     },
   );
   assert.deepEqual(
-    await provider.run(input, {
-      signal: new AbortController().signal,
-      maxToolCalls: 2,
-      callTool: async () => [],
-    }),
+    await provider.run(
+      { ...input, contentType: "image/webp", contentBase64: webpBase64 },
+      {
+        signal: new AbortController().signal,
+        maxToolCalls: 2,
+        callTool: async () => [],
+      },
+    ),
     result,
   );
   await assert.rejects(access(imagePath));

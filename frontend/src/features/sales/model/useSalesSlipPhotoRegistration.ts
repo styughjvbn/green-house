@@ -439,7 +439,7 @@ export function useSalesSlipPhotoRegistration(
       let suffix = Math.max(
         0,
         ...previous.map((entry) =>
-          Number(entry.photo.fileName.match(/_(\d+)\.jpg$/)?.[1] ?? 0),
+          Number(entry.photo.fileName.match(/_(\d+)\.(?:webp|jpg)$/)?.[1] ?? 0),
         ),
       );
       const plan = drafts.map((draft) => {

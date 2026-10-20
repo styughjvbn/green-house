@@ -28,7 +28,7 @@ export async function resizePhoto(
     });
     const metadata = await image.metadata();
     if (
-      !["jpeg", "png"].includes(metadata.format ?? "") ||
+      !["jpeg", "png", "webp"].includes(metadata.format ?? "") ||
       !metadata.width ||
       !metadata.height
     )
@@ -48,12 +48,12 @@ export async function resizePhoto(
         withoutEnlargement: true,
       })
       .flatten({ background: "#ffffff" })
-      .jpeg({ quality: 90, chromaSubsampling: "4:4:4" })
+      .webp({ quality: 90, effort: 3 })
       .toBuffer({ resolveWithObject: true });
     return {
       photo: {
         ...photo,
-        contentType: "image/jpeg",
+        contentType: "image/webp",
         contentBase64: data.toString("base64"),
       },
       longEdge: Math.max(info.width, info.height),

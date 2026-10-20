@@ -21,7 +21,8 @@ public class SlipExtractionController {
   private final SlipExtractionService service;
 
   @org.springframework.security.access.prepost.PreAuthorize("!hasRole('DEMO')")
-  @Operation(description = "전표 사진을 읽고 조회 도구로 거래처·품종 후보를 찾습니다. 전표·재고를 저장하지 않습니다. JPEG/PNG 최대 8MB.")
+  @Operation(
+      description = "전표 사진을 읽고 조회 도구로 거래처·품종 후보를 찾습니다. 전표·재고를 저장하지 않습니다. JPEG/PNG/WebP 최대 8MB.")
   @PostMapping(value = "/extract", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ApiResponse<SlipExtractionResult> extract(
       @RequestPart("image") MultipartFile image, Principal principal) throws IOException {

@@ -20,7 +20,7 @@ public class SalesSlipPhotoController {
     return ApiResponse.ok(photos.info(id));
   }
 
-  @Operation(description = "인증된 전표 사진 조회. JPEG/PNG 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다.")
+  @Operation(description = "인증된 전표 사진 조회. JPEG/PNG/WebP 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다.")
   @GetMapping("/{id}/source-photo")
   public ApiResponse<SalesSlipPhotoService.PhotoContent> getPhoto(@PathVariable Long id) {
     return ApiResponse.ok(photos.content(id));
