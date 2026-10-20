@@ -5,6 +5,7 @@ resources:
   - configmap.yaml
   - secret.yaml
   - postgres-host-service.yaml
+  - sales-photos-pvc.yaml
   - backend-deployment.yaml
   - backend-service.yaml
   - frontend-deployment.yaml

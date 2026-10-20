@@ -106,7 +106,7 @@ DEMO_MAX_REQUEST_BYTES
 
 수탁증에 거래처명이 없을 때 자동 연결할 활성 경매장의 ID를 Spring의 `AI_DEFAULT_AUCTION_PARTNER_ID`로 설정한다. 기본값 `0`은 자동 연결 비활성이다. 이름 변경에는 영향받지 않으며 ID가 없거나 비활성·경매장 이외 유형이면 직접 선택 대상으로 남긴다. 환경변수 변경 후 백엔드를 재시작한다.
 
-전표 사진 인식은 별도 Node.js 22 이상 프로세스 `ai-runtime`을 운영하며 `AI_PROVIDER=codex|openai`로 실행기를 선택한다. Spring의 `AI_RUNTIME_URL`과 양쪽 프로세스의 동일한 `AI_RUNTIME_SECRET`(무작위 32자 이상), Node의 `AI_TOOLS_URL`을 설정한다. Codex는 전용 실행 계정·`AI_CODEX_HOME` 로그인 캐시를 사용하고, OpenAI API는 Node의 `OPENAI_API_KEY`를 사용한다. 실행·설정·인증·테스트는 [`ai-runtime/README.md`](../ai-runtime/README.md)를 따른다. 개발 시 `ai-runtime`에서 `npm run dev`로 루트 `.env` 로딩·소스 재빌드·자동 재시작과 단계별 진단 로그를 사용한다. 운영 모드에서도 시작 주소·실패 코드·실행 요약을 기록하며 사진·검색어·인증값과 모델 원문 응답은 로그에 남기지 않는다. 런타임을 외부에 공개하지 않고 도구 API는 실행 중에만 유효한 토큰으로 보호한다. 추출은 동시에 1건이고 실행 시간·도구 호출 한도를 제한한다. AI 입력은 1024px 우선·최대 2048px 1회 재시도로 제한하며 Runtime의 `AI_MIN_CONFIDENCE`(기본 80)로 자체 신뢰도 재시도 기준을 설정한다. 두 인식은 요청 시간·도구 한도를 공유한다. Runtime 의존성에 이미지 처리를 위한 `sharp`가 포함되므로 변경 후 `npm ci`를 실행한다. 10장 일괄 추출 시간과 조회 횟수에 맞춰 양쪽 `AI_TIMEOUT_SECONDS`·`AI_MAX_TOOL_CALLS`를 동일하게 조정한다. 등록 대화는 메모리에만 유지하므로 Spring 또는 Runtime 재시작 시 사진 등록 창을 다시 연다. Next 프록시의 요청 크기는 82MB, 대기 시간은 Runtime 최대 600초와 Spring 여유 시간을 수용하는 610초로 맞추며 외부 프록시도 같은 업로드 크기를 허용해야 한다. 데모 역할은 외부 AI 추출을 호출할 수 없다. 사진은 DB 백업에 포함되며 신규 V42는 첨부 사진 테이블만 추가한다. 사진 저장 요청은 Base64 인코딩으로 최대 약 11MB이므로 프록시 요청 크기 제한을 확인한다. 추출 multipart는 사진별 최대 8MB, 최대 10장·전체 요청 82MB이며 데모의 별도 요청 제한은 유지한다.
+전표 사진 인식은 별도 Node.js 22 이상 프로세스 `ai-runtime`을 운영하며 `AI_PROVIDER=codex|openai`로 실행기를 선택한다. Spring의 `AI_RUNTIME_URL`과 양쪽 프로세스의 동일한 `AI_RUNTIME_SECRET`(무작위 32자 이상), Node의 `AI_TOOLS_URL`을 설정한다. Codex는 전용 실행 계정·`AI_CODEX_HOME` 로그인 캐시를 사용하고, OpenAI API는 Node의 `OPENAI_API_KEY`를 사용한다. 실행·설정·인증·테스트는 [`ai-runtime/README.md`](../ai-runtime/README.md)를 따른다. 개발 시 `ai-runtime`에서 `npm run dev`로 루트 `.env` 로딩·소스 재빌드·자동 재시작과 단계별 진단 로그를 사용한다. 운영 모드에서도 시작 주소·실패 코드·실행 요약을 기록하며 사진·검색어·인증값과 모델 원문 응답은 로그에 남기지 않는다. 런타임을 외부에 공개하지 않고 도구 API는 실행 중에만 유효한 토큰으로 보호한다. 추출은 동시에 1건이고 실행 시간·도구 호출 한도를 제한한다. AI 입력은 1024px 우선·최대 2048px 1회 재시도로 제한하며 Runtime의 `AI_MIN_CONFIDENCE`(기본 80)로 자체 신뢰도 재시도 기준을 설정한다. 두 인식은 요청 시간·도구 한도를 공유한다. Runtime 의존성에 이미지 처리를 위한 `sharp`가 포함되므로 변경 후 `npm ci`를 실행한다. 10장 일괄 추출 시간과 조회 횟수에 맞춰 양쪽 `AI_TIMEOUT_SECONDS`·`AI_MAX_TOOL_CALLS`를 동일하게 조정한다. 등록 대화는 메모리에만 유지하므로 Spring 또는 Runtime 재시작 시 사진 등록 창을 다시 연다. Next 프록시의 요청 크기는 82MB, 대기 시간은 Runtime 최대 600초와 Spring 여유 시간을 수용하는 610초로 맞추며 외부 프록시도 같은 업로드 크기를 허용해야 한다. 데모 역할은 외부 AI 추출을 호출할 수 없다. 첨부 파일은 별도 영구 저장소·백업에 포함한다. 사진 저장 요청은 Base64 인코딩으로 최대 약 11MB이므로 프록시 요청 크기 제한을 확인한다. 추출 multipart는 사진별 최대 8MB, 최대 10장·전체 요청 82MB이며 데모의 별도 요청 제한은 유지한다.
 
 ### Frontend
 
@@ -197,7 +197,38 @@ ghcr.io/<owner>/<repo>-frontend
 
 ## 5. 백업
 
-PostgreSQL 백업 예시:
+전표 사진은 `SALES_PHOTO_STORAGE_TYPE=local`과 `SALES_PHOTO_STORAGE_ROOT`로 설정한다. 상대 경로는 백엔드 작업 디렉터리 기준이며 기본은 `./data/slip-photos`다. 컨테이너/Kubernetes는 `/var/lib/greenhouse/slip-photos`를 영구 볼륨으로 마운트한다. 기본 매니페스트는 10Gi RWO PVC를 사용하며 앱 UID/GID는 10001이다. 사진은 HTTP 정적 경로로 공개하지 않고 기존 인증 API로만 조회한다. 저장소는 원자적 rename과 파일·디렉터리 fsync를 지원해야 한다.
+
+전표 사진 테이블은 미배포 V42부터 파일 참조·크기·해시만 보관하며 바이너리 컬럼이나 DB 사진 이관 기능을 제공하지 않는다. 이전 V42 초안을 적용한 개발 DB는 별도 재구성이 필요하며 자동 `repair`나 데이터 초기화를 수행하지 않는다. CLI는 Flyway를 실행하지 않고 이미 갱신된 스키마를 검증한다. 다음 명령은 환경변수를 로드한 별도 터미널에서 실행한다.
+
+```bash
+cd backend
+./gradlew salesPhotoStorage --args='--photo-storage.command=verify'
+./gradlew salesPhotoStorage --args='--photo-storage.command=orphans'
+```
+
+`verify`는 DB가 참조하는 모든 사진의 크기·해시를 검사하고 성공한 사진 수를 출력한다. 사진 파일은 DB 백업에 포함되지 않으므로 아래 사진 디렉터리 백업을 함께 유지한다.
+
+`orphans`는 DB에서 참조하지 않는 24시간 이상 된 파일 수만 출력한다. 실제 정리는 모든 writer를 중지하고 진행 중 요청·백업이 없는 상태에서만 다음 명령으로 수행한다. 이 정리를 과거 백업의 사진 디렉터리에 적용하지 않는다. 정리 대상은 발행된 object key이며, 강제 종료로 남은 `.upload-*.tmp`는 포함하지 않는다. 임시 파일 정리는 writer를 중지한 상태에서 저장 경로 내 해당 패턴·24시간 경과 여부를 별도로 확인한다.
+
+```bash
+./gradlew salesPhotoStorage --args='--photo-storage.command=cleanup --photo-storage.writers-stopped=true --spring.jpa.hibernate.ddl-auto=validate'
+```
+
+DB와 사진의 분리 백업은 프로젝트 루트에서 실행한다. `pg_dump`, `rsync`, DB와 같은 버전 이상인 PostgreSQL client가 필요하다. libpq `PGSERVICE` 또는 `PGHOST`·`PGPORT`·`PGDATABASE`·`PGUSER`·`PGPASSWORD`를 사용하며 JDBC 주소를 직접 전달하지 않는다.
+
+```bash
+SALES_PHOTO_STORAGE_ROOT=/absolute/photo/root PGSERVICE=greenhouse \
+  ./scripts/backup-with-photos.sh /backup/greenhouse
+```
+
+일관된 DB dump를 만든 뒤 불변 사진 파일을 checksum 비교로 복사한다. 기존 사진은 재전송하지 않고 신규·불일치 파일만 복사한다. 불일치로 교체하는 기존 백업 파일은 `replaced/<백업 ID>/`에 보존한다. 파일 복사가 성공한 뒤에만 `.dump`를 완성본으로 공개한다. DB snapshot 후 추가된 사진이 백업에 더 포함되는 것은 허용하지만 참조 파일 누락은 허용하지 않는다. DB dump는 기존 7일·월별 정책으로 보관할 수 있으나 공유 `photos/`는 오래된 dump에서도 참조하므로 날짜만 보고 삭제하거나 `rsync --delete`하지 않는다. 실제 백업 대상은 별도 디스크/호스트에 둔다.
+
+복원은 backend/writer를 중지한 상태에서 같은 백업 저장소의 원하는 `database/*.dump`를 `pg_restore`로 복원하고, 공유 `photos/` 전체를 설정된 사진 저장 경로로 복원한다. UID/GID·읽기 권한을 복구한 뒤 `verify`로 파일 크기·해시를 확인하고 백엔드를 시작한다. DB만 복원하고 파일을 누락하면 사진 조회는 503으로 실패한다. 컨테이너/PVC만 생성하는 것은 백업이 아니다.
+
+S3 전환은 같은 불변 object key로 모든 파일을 복사하고 크기·해시를 검증한 뒤 `SalesPhotoStorage` 구현체를 교체한다. S3 adapter는 파일 URL을 DB에 저장하지 않으며 file I/O와 동일하게 DB 트랜잭션 밖에서 실행한다. 현재는 local adapter만 제공하며 `type=s3`만 설정해서는 동작하지 않는다. 전환 검증·rollback이 끝날 때까지 원래 저장소를 보존한다.
+
+DB만 백업하는 참고 명령이다. 전표 사진을 포함한 완전한 백업에는 위 분리 백업 스크립트를 사용한다:
 
 ```bash
 pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
@@ -689,4 +720,4 @@ Java 포맷 기준은 Spotless의 Google Java Format이다. `backend`에서 `./g
 
 연결된 결과의 누적 낙찰액을 공통 총액 projection에 합산하되 실제 받을 금액·수납·품목 단가와 혼동하지 않는다. 수량·lot 연결·거래처 오류는 V40 전체를 rollback하며, schema 확장이나 부분 전표를 남기지 않는다. 동일 Flyway 이력의 재실행은 이관을 반복하지 않는다. 데이터 대사와 재고·원장 불변 검증은 위 운영 미적용 마이그레이션 통합 절차를 따른다.
 
-전표 이미지 전처리 미리보기는 Spring 프로세스의 OpenCV를 사용한다. `SALES_DOCUMENT_IMAGE_WORKERS=3`을 Spring과 Next.js 서버에 동일하게 export하면 서버 워커 수와 `모든 사진에서 전표 찾기`의 프론트 동시 요청 수에 함께 적용된다. 양의 정수만 사용하며 `1`은 순차 처리다. Next.js는 빌드 시 고정하는 `NEXT_PUBLIC_*` 대신 서버 런타임에서 값을 읽어 전달한다. 값을 바꾸면 두 프로세스를 재시작하고 사진 등록 화면을 다시 열며, 프론트 재빌드는 필요하지 않다. Java 21·지원 OS/CPU 네이티브 라이브러리와 쓰기·네이티브 로딩이 가능한 임시 디렉터리가 필요하다. 기본 실행 제한은 `sales.document.image.workers=3`, `queue-capacity=4`, `opencv-threads=1`, 긴 변 최대 `max-dimension=2048`이다. 실행기 종료 대기는 30초이며 JNI 처리 중 창을 닫아도 네이티브 연산이 즉시 중지되지는 않는다. 임시 JPEG 보관은 프로세스당 최대 16건·합계 64MiB이고 native 메모리는 JVM heap 제한에 포함되지 않는다. 원본 업로드의 JPEG/PNG·8MiB·2,500만 화소 제한은 유지한다.
+전표 이미지 전처리 미리보기는 Spring 프로세스의 OpenCV를 사용한다. `SALES_DOCUMENT_IMAGE_WORKERS=3`을 Spring과 Next.js 서버에 동일하게 export하면 서버 워커 수와 `모든 사진에서 전표 찾기`의 프론트 동시 요청 수에 함께 적용된다. 양의 정수만 사용하며 `1`은 순차 처리다. Next.js는 빌드 시 고정하는 `NEXT_PUBLIC_*` 대신 서버 런타임에서 값을 읽어 전달한다. 값을 바꾸면 두 프로세스를 재시작하고 사진 등록 화면을 다시 열며, 프론트 재빌드는 필요하지 않다. Java 21·지원 OS/CPU 네이티브 라이브러리와 쓰기·네이티브 로딩이 가능한 임시 디렉터리가 필요하다. 기본 실행 제한은 `sales.document.image.workers=3`, `queue-capacity=4`, `opencv-threads=1`, 긴 변 최대 `max-dimension=2048`이다. 실행기 종료 대기는 30초이며 JNI 처리 중 창을 닫아도 네이티브 연산이 즉시 중지되지는 않는다. 임시 WebP 보관은 프로세스당 최대 16건·합계 64MiB이고 native 메모리는 JVM heap 제한에 포함되지 않는다. 원본 업로드의 JPEG/PNG·8MiB·2,500만 화소 제한은 유지한다.
