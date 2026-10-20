@@ -235,11 +235,11 @@ export function SalesSlipPhotoRegistrationDialog({
         onCloseAutoFocus={(event) => event.preventDefault()}
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[#dbe8dc] bg-white px-5 py-3">
-          <div>
+          <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
             <DialogTitle className="text-xl font-semibold text-[#17251b]">
               사진으로 등록
             </DialogTitle>
-            <p className="mt-1 text-sm text-[#5c6a60]">
+            <p className="text-sm text-[#5c6a60]">
               자동 입력을 누르면 전표 찾기부터 내용 입력까지 진행합니다. 입력
               내용을 확인하고 저장해주세요.
             </p>
