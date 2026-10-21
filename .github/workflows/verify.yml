@@ -24,6 +24,8 @@ jobs:
           cache: npm
           cache-dependency-path: ai-runtime/package-lock.json
       - run: npm ci
+      - name: Test shared development environment loading
+        run: node --test ../scripts/test-dev-environment.mjs
       - run: npm run check
       - run: npm test
 

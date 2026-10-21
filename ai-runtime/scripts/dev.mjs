@@ -1,9 +1,9 @@
-import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { developmentEnvironment } from "../../scripts/dev-environment.mjs";
 
 process.chdir(fileURLToPath(new URL("..", import.meta.url)));
-if (existsSync("../.env")) process.loadEnvFile("../.env");
+Object.assign(process.env, developmentEnvironment());
 process.env.NODE_ENV = "development";
 const compiler = fileURLToPath(
   new URL("../node_modules/typescript/bin/tsc", import.meta.url),

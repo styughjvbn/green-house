@@ -6,28 +6,24 @@
 
 - Docker / Docker Compose
 - JDK 21
-- Node.js / npm
+- Node.js 22 이상 / npm
 
-실행 흐름:
+개발 설정은 루트 `.env` 한 곳에 둔다. 최초 실행 시에만 `.env.example`을 복사하고 필요한 값·비밀값을 지정한다.
 
 ```bash
-# DB 실행
-docker compose up -d db
-
-# backend 실행
-cd backend
-APP_ENV=dev ./gradlew bootRun
-
-# frontend 실행
-cd frontend
-npm install
-npm run dev
+test -e .env || cp .env.example .env
+./scripts/dev-start.sh
+# 다른 기기에서도 접속할 때
+./scripts/dev-start.sh --lan
 ```
 
-Linux/macOS에서는 개발 서버를 한 번에 실행할 수 있다.
+개발 스크립트, frontend와 AI runtime의 `npm run dev`는 공통 로더로 루트 `.env`를 읽는다. 이미 export된 셸 환경변수가 `.env`보다 우선하며, 둘 다 없으면 각 프로세스의 코드 기본값을 사용한다. `.env`를 셸 코드로 source하거나 내용을 로그로 출력하지 않는다. `APP_ENV=dev`는 개발 스크립트가 강제한다. `--lan`은 PC의 현재 IPv4 주소에 대한 프론트 Origin을 허용 목록에 추가한다. 이미 실행 중인 서버에는 바뀐 환경이 적용되지 않으므로 설정 변경 후 해당 프로세스를 재시작한다.
+
+백엔드·프론트를 별도 터미널에서 직접 실행할 때도 같은 로더를 사용한다. 아래 명령은 프로젝트 루트 기준이며, AI runtime은 기존처럼 `ai-runtime`에서 `npm run dev`로 시작한다.
 
 ```bash
-./scripts/dev-start.sh
+APP_ENV=dev node scripts/dev-environment.mjs bash -c 'cd backend && exec ./gradlew bootRun'
+npm --prefix frontend run dev
 ```
 
 백엔드 코드를 변경한 뒤 실행 중인 프론트엔드와 DB는 유지하고 백엔드만 다시
@@ -49,31 +45,19 @@ Linux/macOS에서는 개발 서버를 한 번에 실행할 수 있다.
 
 ## 2. 환경 변수
 
-### Backend
+전체 설정의 이름·기본값·사용 프로세스·비밀값 여부는 [루트 `.env.example`](../.env.example)을 기준으로 한다. 기본값과 같은 값은 환경별 설정에 반복해서 넣지 않는다. 사용하지 않는 `WORK_OPERATION_V2_ENABLED`는 제거했다. `API_BASE_URL`, `FRONTEND_ORIGIN`, `FRONTEND_ORIGINS`는 이전 별칭이며 신규 설정은 `BACKEND_API_URL`, `FRONTEND_ORIGIN_PATTERNS`를 사용한다.
 
-```text
-APP_ENV
-DATABASE_URL
-DATABASE_USERNAME
-DATABASE_PASSWORD
-SPRING_PROFILES_ACTIVE
-JPA_DDL_AUTO
-SERVER_PORT
-FRONTEND_ORIGIN_PATTERNS
-AUTH_ENABLED
-SESSION_TIMEOUT
-SESSION_COOKIE_MAX_AGE
-DB_POOL_MAX_SIZE
-DB_POOL_MIN_IDLE
-DB_POOL_CONNECTION_TIMEOUT
-HIBERNATE_JDBC_BATCH_SIZE
-POSTGRES_REWRITE_BATCHED_INSERTS
-FLYWAY_URL
-FLYWAY_USERNAME
-FLYWAY_PASSWORD
-ORCHID_LEDGER_WRITER_VERSION
-ORCHID_LEDGER_STARTUP_GUARD_ENABLED
-```
+| 위치 | 역할 |
+| --- | --- |
+| 루트 `.env.example` | 전체 애플리케이션 설정 목록과 개발 예시 |
+| 루트 `.env` | 개발 환경에서 변경할 값·개발 비밀값, Git 제외 |
+| `k8s/base/configmap.yaml` | 운영의 일반 설정과 코드 기본값에서 달라지는 값 |
+| `k8s/base/secret.yaml` | 운영 비밀값의 템플릿, 실제 값은 배포 환경에서 관리 |
+| `k8s/overlays/demo/*` | 데모 환경에서만 바뀌는 값 |
+
+Deployment는 ConfigMap·Secret과 볼륨을 연결한다. 사진 저장 경로도 ConfigMap이 소유한다. 운영 컨테이너는 루트 `.env`를 읽지 않으며 Kubernetes가 환경변수를 주입한다. ConfigMap·Secret 변경 후 기존 Pod를 재생성해야 적용된다. 실제 클러스터 설정은 저장소 템플릿과 별도로 확인한다.
+
+### Backend
 
 운영에서 `JPA_DDL_AUTO`는 `validate`로 두고 스키마 변경은 Flyway 마이그레이션으로만 적용한다.
 
@@ -84,45 +68,17 @@ ORCHID_LEDGER_STARTUP_GUARD_ENABLED
 최소 버전 이상인 `ORCHID_LEDGER_WRITER_VERSION`을 설정한다. 조건을 만족하지 못한
 인스턴스는 startup guard에서 기동이 거부된다. guard 비활성화는 읽기 전용 대사 명령 내부에서만 사용한다. Legacy 모드는 제거됐으며 기본 writer version은 `2.0.0`이다. 원장 없는 기존 난 묶음이나 PREPARING coverage가 있으면 현재 release로 업무 서버를 시작하지 않고 ACTIVE 원장이 포함된 백업과 복원 절차를 확인한다.
 
-인증을 적용하는 경우 다음 값을 별도로 관리한다.
-
-```text
-ADMIN_USERNAME
-ADMIN_PASSWORD
-WORKER_USERNAME
-WORKER_PASSWORD
-```
-
-데모 배포에서는 다음 제한 값을 함께 관리한다.
-
-```text
-DEMO_MODE
-DEMO_USERNAME
-DEMO_REQUEST_LIMIT_PER_MINUTE
-DEMO_MUTATION_LIMIT_PER_MINUTE
-DEMO_MUTATION_LIMIT_PER_DAY
-DEMO_MAX_REQUEST_BYTES
-```
+운영 로그인 계정은 Secret에서 관리한다. 데모의 인증·요청 한도는 demo overlay에서만 지정한다. Flyway 접속 설정은 별도 DDL 계정이 필요한 경우에만 지정하고, 생략하면 `DATABASE_*`를 재사용한다.
 
 수탁증에 거래처명이 없을 때 자동 연결할 활성 경매장의 ID를 Spring의 `AI_DEFAULT_AUCTION_PARTNER_ID`로 설정한다. 기본값 `0`은 자동 연결 비활성이다. 이름 변경에는 영향받지 않으며 ID가 없거나 비활성·경매장 이외 유형이면 직접 선택 대상으로 남긴다. 환경변수 변경 후 백엔드를 재시작한다.
 
 전표 사진 인식은 별도 Node.js 22 이상 프로세스 `ai-runtime`을 운영하며 `AI_PROVIDER=codex|openai`로 실행기를 선택한다. Spring의 `AI_RUNTIME_URL`과 양쪽 프로세스의 동일한 `AI_RUNTIME_SECRET`(무작위 32자 이상), Node의 `AI_TOOLS_URL`을 설정한다. Codex는 전용 실행 계정·`AI_CODEX_HOME` 로그인 캐시를 사용하고, OpenAI API는 Node의 `OPENAI_API_KEY`를 사용한다. 실행·설정·인증·테스트는 [`ai-runtime/README.md`](../ai-runtime/README.md)를 따른다. 개발 시 `ai-runtime`에서 `npm run dev`로 루트 `.env` 로딩·소스 재빌드·자동 재시작과 단계별 진단 로그를 사용한다. 운영 모드에서도 시작 주소·실패 코드·실행 요약을 기록하며 사진·검색어·인증값과 모델 원문 응답은 로그에 남기지 않는다. 런타임을 외부에 공개하지 않고 도구 API는 실행 중에만 유효한 토큰으로 보호한다. 추출은 동시에 1건이고 실행 시간·도구 호출 한도를 제한한다. AI 입력은 1024px 우선·최대 2048px 1회 재시도로 제한하며 Runtime의 `AI_MIN_CONFIDENCE`(기본 80)로 자체 신뢰도 재시도 기준을 설정한다. 두 인식은 요청 시간·도구 한도를 공유한다. Runtime 의존성에 이미지 처리를 위한 `sharp`가 포함되므로 변경 후 `npm ci`를 실행한다. 10장 일괄 추출 시간과 조회 횟수에 맞춰 양쪽 `AI_TIMEOUT_SECONDS`·`AI_MAX_TOOL_CALLS`를 동일하게 조정한다. 등록 대화는 메모리에만 유지하므로 Spring 또는 Runtime 재시작 시 사진 등록 창을 다시 연다. Next 프록시의 요청 크기는 82MB, 대기 시간은 Runtime 최대 600초와 Spring 여유 시간을 수용하는 610초로 맞추며 외부 프록시도 같은 업로드 크기를 허용해야 한다. 데모 역할은 외부 AI 추출을 호출할 수 없다. 첨부 파일은 별도 영구 저장소·백업에 포함한다. 사진 저장 요청은 Base64 인코딩으로 최대 약 11MB이므로 프록시 요청 크기 제한을 확인한다. 추출 multipart는 사진별 최대 8MB, 최대 10장·전체 요청 82MB이며 데모의 별도 요청 제한은 유지한다.
 
+운영 AI 설정은 아직 배치 주소가 확정되지 않아 기본 매니페스트에 추가하지 않는다. 배포 시 backend ConfigMap에는 런타임 주소·기본 거래처 ID 등 backend용 설정을, Secret에는 공유 인증키를 지정한다. 별도 AI runtime에는 같은 인증키와 실행기·도구 API 주소·전용 인증 경로를 지정한다. `[R]` 전용 설정과 OpenAI API 키를 backend/frontend 공용 ConfigMap·Secret에 일괄 복사하지 않는다.
+
 ### Frontend
 
-```text
-APP_ENV
-BACKEND_API_URL
-API_BASE_URL
-NEXT_PUBLIC_API_BASE_URL
-```
-
-로컬 개발의 브라우저 API 주소는 `NEXT_PUBLIC_API_BASE_URL=/api`로 설정하고,
-Next.js 서버 조회와 API 프록시 대상은 `BACKEND_API_URL=http://localhost:8080/api`로
-설정한다. 두 값은 `frontend/.env` 또는 `.env.local`에 함께 둔다. LAN의 다른 PC에서
-접속할 때 브라우저 API 주소에 `localhost`를 쓰면 접속한 PC로 요청하며, 백엔드와
-화면의 호스트가 달라 세션 쿠키도 공유되지 않는다. 환경변수 변경 후 개발 서버를
-재시작한다.
+브라우저 API 주소는 `/api`로 유지하고 Next.js 서버 조회·프록시 대상은 `BACKEND_API_URL`로 지정한다. 개발은 루트 `.env`와 개발 로더를 사용하며 `frontend/.env*`에 같은 설정을 중복하지 않는다. LAN의 다른 PC에서 접속할 때 브라우저 API 주소에 `localhost`를 쓰면 접속한 PC로 요청하므로 상대 주소를 유지한다. 설정 변경 후 프론트 프로세스를 재시작한다.
 
 `APP_ENV`는 실행 환경을 `dev` 또는 `prod`로 명시한다. 로컬 `dev-start.sh`는 `dev`를
 강제하고 Kubernetes와 프론트 Docker 이미지는 `prod`를 명시한다. 값이 없는 프론트는

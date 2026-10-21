@@ -27,19 +27,7 @@ npm run build
 node --env-file=../.env dist/server.js
 ```
 
-| 환경변수 | 기본값 / 용도 |
-| --- | --- |
-| `AI_PROVIDER` | `codex`; `openai`로 변경 가능 |
-| `AI_RUNTIME_SECRET` | 필수. 32자 이상의 무작위 비밀값. Spring과 동일한 값 |
-| `AI_TOOLS_URL` | `http://127.0.0.1:8080`; Spring 내부 도구 API 주소 |
-| `AI_HOST` / `AI_PORT` | `127.0.0.1` / `8091` |
-| `AI_TIMEOUT_SECONDS` | `120`; 전체 실행 제한, Spring과 동일하게 설정 |
-| `AI_MIN_CONFIDENCE` | `80`; 원문 인식 신뢰도(0~100)가 이 값 미만이면 원본에서 최대 2048px로 한 번 재인식 |
-| `AI_MAX_TOOL_CALLS` | `20`; Spring과 동일하게 설정, 최대 100 |
-| `AI_CODEX_HOME` | Codex 전용 계정의 별도 인증·설정 디렉터리. Codex 사용 시 필수 |
-| `AI_CODEX_MODEL` | 비어 있으면 해당 Codex 계정의 기본 모델 |
-| `OPENAI_API_KEY` | OpenAI API 실행기에서만 사용 |
-| `AI_OPENAI_MODEL` | `gpt-4.1-mini` |
+전체 환경변수·기본값·사용 프로세스 구분은 [루트 `.env.example`](../.env.example)을 기준으로 한다. `[B+R]` 공유 인증키·시간·도구 한도는 Spring과 동일하게 설정하고, `[R]` 실행기 설정·전용 인증 경로는 AI runtime에만 전달한다. 개발 환경 로딩은 `scripts/dev-environment.mjs`를 함께 사용한다.
 
 Codex는 위 SDK와 함께 설치된 CLI를 사용한다. 전용 OS 계정에서 전용 `CODEX_HOME`으로 로그인하고 파일 기반 인증을 구성한다. 개발자의 Codex 디렉터리나 프로젝트 디렉터리를 공유하지 않는다. 기기 인증이 계정에서 허용된 경우 SDK에 포함된 CLI로 로그인할 수 있다.
 

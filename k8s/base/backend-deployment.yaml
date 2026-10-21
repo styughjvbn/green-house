@@ -39,9 +39,6 @@ spec:
           volumeMounts:
             - name: sales-photos
               mountPath: /var/lib/greenhouse/slip-photos
-          env:
-            - name: SALES_PHOTO_STORAGE_ROOT
-              value: /var/lib/greenhouse/slip-photos
           envFrom:
             - configMapRef:
                 name: green-house-config
