@@ -65,7 +65,7 @@ async function redirectToLogin() {
 }
 
 export async function handleAuthExpired(response: Response) {
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     await redirectToLogin();
   }
 }
@@ -82,6 +82,46 @@ export async function requestApi<T>(
   init: RequestInit = {},
   fallbackMessage = "요청을 처리하지 못했습니다.",
 ): Promise<T> {
+  const response = await requestApiResponse(path, init, fallbackMessage);
+  const payload = (await response
+    .json()
+    .catch(() => null)) as ApiResponse<T> | null;
+  return payload?.data as T;
+}
+
+export async function requestApiBlob(
+  path: string,
+  init: RequestInit = {},
+  fallbackMessage = "요청을 처리하지 못했습니다.",
+): Promise<Blob> {
+  return (await requestApiResponse(path, init, fallbackMessage)).blob();
+}
+
+/** SSE uses the same credentials, client identity and HTTP error handling as ordinary API calls. */
+export async function requestApiEventStream(path: string, signal: AbortSignal) {
+  const response = await requestApiResponse(
+    path,
+    {
+      signal,
+      headers: { Accept: "text/event-stream" },
+    },
+    "진행 상태를 연결하지 못했습니다.",
+  );
+  if (
+    !response.body ||
+    !response.headers.get("content-type")?.includes("text/event-stream")
+  ) {
+    await response.body?.cancel();
+    throw new Error("진행 상태 응답 형식을 확인하지 못했습니다.");
+  }
+  return response.body;
+}
+
+async function requestApiResponse(
+  path: string,
+  init: RequestInit,
+  fallbackMessage: string,
+): Promise<Response> {
   const headers = new Headers(await buildRequestHeaders());
   new Headers(init.headers).forEach((value, key) => headers.set(key, value));
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -91,14 +131,11 @@ export async function requestApi<T>(
     headers,
   });
   await handleAuthExpired(response);
-  const payload = (await response.json().catch(() => null)) as
-    | ApiResponse<T>
-    | ApiErrorResponse
-    | null;
-
   if (!response.ok) {
+    const payload = (await response
+      .json()
+      .catch(() => null)) as ApiErrorResponse | null;
     throw createApiError(response.status, payload, fallbackMessage);
   }
-
-  return (payload as ApiResponse<T> | null)?.data as T;
+  return response;
 }

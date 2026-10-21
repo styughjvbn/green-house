@@ -18,6 +18,15 @@ spec:
         app.kubernetes.io/name: green-house
         app.kubernetes.io/component: backend
     spec:
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
+      volumes:
+        - name: sales-photos
+          persistentVolumeClaim:
+            claimName: green-house-sales-photos
       imagePullSecrets:
         - name: ghcr-secret
       containers:
@@ -27,11 +36,20 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+          volumeMounts:
+            - name: sales-photos
+              mountPath: /var/lib/greenhouse/slip-photos
           envFrom:
             - configMapRef:
                 name: green-house-config
             - secretRef:
                 name: green-house-secret
+          env:
+            - name: AI_RUNTIME_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: green-house-ai-secret
+                  key: AI_RUNTIME_SECRET
           readinessProbe:
             httpGet:
               path: /actuator/health

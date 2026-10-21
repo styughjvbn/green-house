@@ -132,7 +132,7 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
     Variety nextVariety =
         varietyRepository.save(
             new Variety(
-                "MUTATION-NEXT", "Cattleya", "Mutation Next", null, "4치", true, true, null, null));
+                "MUTATION-NEXT", "Cattleya", "Mutation Next", null, "4치", true, null, null));
     UUID cutoverKey = UUID.randomUUID();
     LocalDate businessDate = LocalDate.of(2026, 8, 20);
     long mutationCountBefore = mutationRepository.count();
@@ -450,7 +450,6 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
                 "Mutation Test",
                 null,
                 "3.5치",
-                true,
                 true,
                 null,
                 null));

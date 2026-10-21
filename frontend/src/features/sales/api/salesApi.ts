@@ -1,9 +1,15 @@
-﻿import type {
+import { readServerSentEvents } from "@/shared/api/serverSentEvents";
+import type {
   DirectSaleChangeState,
   DirectReturnArrivalState,
 } from "./directChangeTypes";
 import type { DirectChangePendingRequest } from "../lib/directChangeRequests";
-import { fetchApi, requestApi } from "@/shared/api/client";
+import {
+  fetchApi,
+  requestApi,
+  requestApiBlob,
+  requestApiEventStream,
+} from "@/shared/api/client";
 import type {
   BusinessPartner,
   BusinessPartnerOption,
@@ -662,5 +668,172 @@ export function getDirectReturnArrivals(
   return fetchApi<DirectReturnArrivalState>(
     `/sales-slips/${id}/direct-changes/return-arrivals?page=${page}&size=10`,
     { signal },
+  );
+}
+
+export function readSalesSlipPhoto(
+  photo: import("./types").SalesSlipPhotoInput,
+  signal?: AbortSignal,
+) {
+  const bytes = Uint8Array.from(atob(photo.contentBase64), (char) =>
+    char.charCodeAt(0),
+  );
+  const body = new FormData();
+  body.append(
+    "image",
+    new Blob([bytes], { type: photo.contentType }),
+    photo.fileName,
+  );
+  return requestApi<import("./types").SalesSlipPhotoExtraction>(
+    "/ai/slips/extract",
+    { method: "POST", body, signal },
+  );
+}
+export function openSalesSlipPhotoSession(signal?: AbortSignal) {
+  return requestApi<
+    import("@/shared/api/generated/openapi").components["schemas"]["AiSlipSession"]
+  >("/ai/slips/sessions", { method: "POST", signal });
+}
+export function closeSalesSlipPhotoSession(sessionId: string) {
+  return requestApi<void>(
+    `/ai/slips/sessions/${encodeURIComponent(sessionId)}`,
+    { method: "DELETE" },
+  );
+}
+export function removeSalesSlipSessionPhoto(
+  sessionId: string,
+  photoId: string,
+) {
+  return requestApi<void>(
+    `/ai/slips/sessions/${encodeURIComponent(sessionId)}/photos/${encodeURIComponent(photoId)}`,
+    { method: "DELETE" },
+  );
+}
+export function cancelSalesSlipPhotoReading(
+  sessionId: string,
+  requestId: string,
+) {
+  return requestApi<void>(
+    `/ai/slips/sessions/${encodeURIComponent(sessionId)}/requests/${encodeURIComponent(requestId)}/cancel`,
+    { method: "POST" },
+  );
+}
+export async function streamSalesSlipReadingProgress(
+  sessionId: string,
+  requestId: string,
+  signal: AbortSignal,
+  onProgress: (progress: import("./types").SalesSlipReadingProgress) => void,
+) {
+  const body = await requestApiEventStream(
+    `/ai/slips/sessions/${encodeURIComponent(sessionId)}/requests/${encodeURIComponent(requestId)}/events`,
+    signal,
+  );
+  for await (const event of readServerSentEvents(body)) {
+    if (event.event !== "progress") continue;
+    const progress = JSON.parse(
+      event.data,
+    ) as import("./types").SalesSlipReadingProgress;
+    if (progress.requestId !== requestId) continue;
+    onProgress(progress);
+    if (progress.stage === "DONE") return;
+  }
+  if (!signal.aborted) throw new Error("진행 상태 연결이 끊어졌습니다.");
+}
+export function readSalesSlipPhotos(
+  sessionId: string,
+  photos: {
+    photoId: string;
+    photo: import("./types").SalesSlipPhotoInput;
+    documentForm: import("./types").SalesSlipDocumentForm;
+  }[],
+  signal?: AbortSignal,
+  requestId?: string,
+) {
+  const body = new FormData();
+  body.append(
+    "metadata",
+    new Blob(
+      [
+        JSON.stringify({
+          photos: photos.map((p) => ({
+            photoId: p.photoId,
+            documentForm: p.documentForm,
+          })),
+        }),
+      ],
+      { type: "application/json" },
+    ),
+  );
+  for (const entry of photos) {
+    const bytes = Uint8Array.from(atob(entry.photo.contentBase64), (char) =>
+      char.charCodeAt(0),
+    );
+    body.append(
+      "photos",
+      new Blob([bytes], { type: entry.photo.contentType }),
+      entry.photo.fileName,
+    );
+  }
+  return requestApi<
+    import("@/shared/api/generated/openapi").components["schemas"]["SlipConversationResult"]
+  >(`/ai/slips/sessions/${encodeURIComponent(sessionId)}/extract`, {
+    method: "POST",
+    body,
+    signal,
+    headers: requestId ? { "X-AI-Request-Id": requestId } : undefined,
+  });
+}
+export function getSalesSlipPhotoInfo(id: number) {
+  return fetchApi<import("./types").SalesSlipPhotoInfo | null>(
+    `/sales-slips/${id}/source-photo/info`,
+  );
+}
+export function getSalesSlipPhoto(id: number, signal?: AbortSignal) {
+  return fetchApi<import("./types").SalesSlipPhotoContent>(
+    `/sales-slips/${id}/source-photo`,
+    { signal },
+  );
+}
+
+export function prepareSalesSlipPhoto(
+  photo: import("./types").SalesSlipPhotoInput,
+  rotationDegrees: number,
+  signal?: AbortSignal,
+) {
+  const bytes = Uint8Array.from(atob(photo.contentBase64), (char) =>
+    char.charCodeAt(0),
+  );
+  const body = new FormData();
+  body.append(
+    "image",
+    new Blob([bytes], { type: photo.contentType }),
+    photo.fileName,
+  );
+  body.append("rotationDegrees", String(rotationDegrees));
+  return requestApi<
+    import("@/shared/api/generated/openapi").components["schemas"]["SalesSlipImagePreview"]
+  >(
+    "/sales-slips/image-previews",
+    { method: "POST", body, signal },
+    "전표를 자동으로 찾지 못했습니다.",
+  );
+}
+
+export function getSalesSlipPreparedImage(
+  previewId: string,
+  imageId: string,
+  signal?: AbortSignal,
+) {
+  return requestApiBlob(
+    `/sales-slips/image-previews/${encodeURIComponent(previewId)}/images/${encodeURIComponent(imageId)}`,
+    { signal },
+    "문서 사진을 가져오지 못했습니다.",
+  );
+}
+
+export function removeSalesSlipImagePreview(id: string) {
+  return requestApi<void>(
+    `/sales-slips/image-previews/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
   );
 }

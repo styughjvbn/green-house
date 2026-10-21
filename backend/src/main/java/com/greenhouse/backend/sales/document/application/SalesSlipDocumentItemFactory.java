@@ -36,6 +36,7 @@ final class SalesSlipDocumentItemFactory {
                     SalesSlipDocumentAllocationFactory.from(
                         allocation, states.get(allocation.getOrchidGroupId())))
             .toList(),
-        auctionLot);
+        auctionLot,
+        item.getVarietyId());
   }
 }

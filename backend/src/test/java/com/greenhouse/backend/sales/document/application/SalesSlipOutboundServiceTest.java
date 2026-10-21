@@ -45,7 +45,7 @@ class SalesSlipOutboundServiceTest {
     when(salesSlip.getPartnerId()).thenReturn(4L);
     var date = LocalDate.of(2026, 8, 12);
     when(salesSlip.getSaleDate()).thenReturn(date);
-    var first = new SalesSlipItem(null, " 호접란 ", " 팔레놉시스 ", " 특품 ", 12, 0, null, "분", 2);
+    var first = new SalesSlipItem(null, " 호접란 ", " 팔레놉시스 ", " 특품 ", 12, 0, null, 10, 2);
     var second = new SalesSlipItem(null, " 호접란 ", null, " ", 3, 0, null);
     ReflectionTestUtils.setField(first, "id", 9L);
     ReflectionTestUtils.setField(second, "id", 3L);

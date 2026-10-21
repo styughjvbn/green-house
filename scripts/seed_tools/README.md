@@ -93,7 +93,6 @@ scripts/seed_tools/generated-private/
   "alias": null,
   "defaultPotSize": "3.5치",
   "description": "난 묶음 입력 중 수동 추가",
-  "saleEnabled": true,
   "active": true,
   "memo": null,
   "reviewRequired": false,

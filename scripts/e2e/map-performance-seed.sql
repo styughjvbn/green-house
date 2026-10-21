@@ -14,7 +14,6 @@ INSERT INTO varieties (
     genus,
     name,
     default_pot_size,
-    sale_enabled,
     is_active
 ) VALUES (
     TIMESTAMP '2026-01-01 00:00:00',
@@ -23,7 +22,6 @@ INSERT INTO varieties (
     '팔레놉시스',
     '맵 성능 기준 난',
     '3.5치',
-    TRUE,
     TRUE
 );
 

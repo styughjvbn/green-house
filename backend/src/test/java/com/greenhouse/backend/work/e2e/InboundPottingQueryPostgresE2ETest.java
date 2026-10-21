@@ -115,15 +115,7 @@ class InboundPottingQueryPostgresE2ETest extends WorkE2ETestBase {
           varieties
               .saveAndFlush(
                   new Variety(
-                      "QUERY-POTTING-B",
-                      "팔레놉시스",
-                      "두 번째 포트 품종",
-                      null,
-                      "3.5치",
-                      true,
-                      true,
-                      null,
-                      null))
+                      "QUERY-POTTING-B", "팔레놉시스", "두 번째 포트 품종", null, "3.5치", true, null, null))
               .getId();
       for (int i = 1; i < size; i += 2)
         jdbc.update("update inbound_records set variety_id = ? where id = ?", variety, ids.get(i));

@@ -277,10 +277,18 @@ function StandardSalesSlipPrintSheet({
                 <td className="px-2 py-2">{item.spec ?? "-"}</td>
                 <td className="px-2 py-2 text-right">
                   {item.quantity.toLocaleString()}
-                  {item.unit ? ` ${item.unit}` : ""}
-                  {item.boxes != null ? (
+                  {item.unit != null || item.boxes != null ? (
                     <span className="block text-xs text-[#5b675e]">
-                      {item.boxes.toLocaleString()}상자
+                      {[
+                        item.unit != null
+                          ? `단위 ${item.unit.toLocaleString()}`
+                          : null,
+                        item.boxes != null
+                          ? `${item.boxes.toLocaleString()}상자`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   ) : null}
                 </td>

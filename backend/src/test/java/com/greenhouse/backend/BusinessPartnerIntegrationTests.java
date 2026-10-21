@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.greenhouse.backend.sales.api.partner.BusinessPartnerQueryApi;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.partner.application.BusinessPartnerService;
 import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
@@ -29,7 +30,85 @@ class BusinessPartnerIntegrationTests extends AbstractBackendIntegrationTest {
 
   @Autowired BusinessPartnerService partnerService;
 
+  @Autowired BusinessPartnerQueryApi partnerQueryApi;
+
   @Autowired EntityManager entityManager;
+
+  @Test
+  void aiCandidatesIgnoreWhitespaceAndPreferOriginalSpellingAtEqualRelevance() {
+    var spaced = optionPartner("대구 싱싱", PartnerType.WHOLESALE, true);
+    var compact = optionPartner("대구싱싱", PartnerType.RETAIL, true);
+    var partial = optionPartner("대구 싱싱농원", PartnerType.WHOLESALE, true);
+    optionPartner("대구싱싱", PartnerType.WHOLESALE, false);
+    var ownerOnly = optionPartner("이름 무관 거래처", PartnerType.WHOLESALE, true);
+    ReflectionTestUtils.setField(ownerOnly, "ownerName", "대구싱싱");
+
+    assertThat(partnerQueryApi.searchOptions("대구 싱싱", null, 10))
+        .extracting(BusinessPartnerQueryApi.Option::id)
+        .containsExactly(spaced.getId(), compact.getId(), partial.getId());
+    assertThat(partnerQueryApi.searchOptions("대구싱싱", null, 10))
+        .extracting(BusinessPartnerQueryApi.Option::id)
+        .containsExactly(compact.getId(), spaced.getId(), partial.getId());
+    assertThat(partnerQueryApi.searchOptions("싱 싱", null, 10))
+        .extracting(BusinessPartnerQueryApi.Option::id)
+        .containsExactly(spaced.getId(), partial.getId(), compact.getId());
+    assertThat(partnerQueryApi.searchOptions("대구싱싱", null, 1)).hasSize(1);
+    // The management list keeps its existing literal-space search behavior.
+    assertThat(partnerService.getOptions("대구싱싱", true, false, 0, 10).content())
+        .extracting(row -> row.id())
+        .doesNotContain(spaced.getId());
+  }
+
+  @Test
+  void aiCandidatesAllowShortFragmentsAndFilterActivePartnerTypesBeforeLimiting() {
+    var wholesale = optionPartner("대구 싱싱", PartnerType.WHOLESALE, true);
+    var auction = optionPartner("대구 싱싱", PartnerType.AUCTION_HOUSE, true);
+    optionPartner("대구 싱싱", PartnerType.AUCTION_HOUSE, false);
+    assertThat(partnerQueryApi.searchOptions("대", null, 10))
+        .extracting(BusinessPartnerQueryApi.Option::id)
+        .contains(wholesale.getId(), auction.getId());
+    assertThat(partnerQueryApi.searchOptions("대구싱싱", true, 1))
+        .extracting(BusinessPartnerQueryApi.Option::id)
+        .containsExactly(auction.getId());
+    assertThat(partnerQueryApi.searchOptions("대구싱싱", false, 1))
+        .extracting(BusinessPartnerQueryApi.Option::id)
+        .containsExactly(wholesale.getId());
+    var mixed = optionPartner("공\t백\u00a0거\u3000래\n처", PartnerType.WHOLESALE, true);
+    assertThat(partnerQueryApi.searchOptions("공 백거\r래처", null, 10))
+        .extracting(BusinessPartnerQueryApi.Option::id)
+        .containsExactly(mixed.getId());
+    assertThat(partnerQueryApi.searchOptions("\u00a0\u3000\t", null, 10)).isEmpty();
+    assertThat(partnerQueryApi.searchOptions("대구상상", null, 1)).isEmpty();
+    assertThat(partnerQueryApi.searchOptions("대 구 상상", true, 10))
+        .extracting(BusinessPartnerQueryApi.Option::id)
+        .containsExactly(auction.getId());
+    assertThat(partnerQueryApi.searchOptions("대구상상", false, 10))
+        .extracting(BusinessPartnerQueryApi.Option::id)
+        .containsExactly(wholesale.getId());
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {2, 50})
+  void uniquePrefixSearchUsesTwoQueriesRegardlessOfPrefixLengthOrCandidateCount(int size) {
+    var unique = optionPartner("유일가거래처", PartnerType.WHOLESALE, true);
+    for (int i = 0; i < size; i++) optionPartner("유일나거래처" + i, PartnerType.WHOLESALE, true);
+    entityManager.flush();
+    entityManager.clear();
+    var statistics =
+        entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+    boolean wasEnabled = statistics.isStatisticsEnabled();
+    statistics.setStatisticsEnabled(true);
+    statistics.clear();
+    try {
+      assertThat(partnerQueryApi.searchOptions("유일가" + "오독".repeat(size), null, 10))
+          .extracting(BusinessPartnerQueryApi.Option::id)
+          .containsExactly(unique.getId());
+      assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
+      assertThat(statistics.getEntityLoadCount()).isEqualTo(1);
+    } finally {
+      statistics.setStatisticsEnabled(wasEnabled);
+    }
+  }
 
   @Test
   void filtersOptionsBeforePagingAndKeepsStableOrderForDuplicateNames() throws Exception {

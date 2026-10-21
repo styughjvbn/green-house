@@ -58,8 +58,8 @@ class SanitizationPostgresTest(unittest.TestCase):
     def test_latest_schema_and_complete_history_sanitization(self) -> None:
         with self.driver.connect(self.url) as connection:
             connection.execute("""
-                INSERT INTO varieties (id, code, genus, name, sale_enabled, is_active, created_at, updated_at)
-                VALUES (9001, 'VAR-DEMO-TEST', '개인속이름', '개인품종이름', true, true, now(), now());
+                INSERT INTO varieties (id, code, genus, name, is_active, created_at, updated_at)
+                VALUES (9001, 'VAR-DEMO-TEST', '개인속이름', '개인품종이름', true, now(), now());
                 INSERT INTO inbound_records (id, variety_id, inbound_date, inbound_type, status,
                     estimated_quantity, worker, memo, created_at, updated_at)
                 VALUES (9001, 9001, '2026-09-02', 'BOTTLE', 'POTTING_PENDING', 200,

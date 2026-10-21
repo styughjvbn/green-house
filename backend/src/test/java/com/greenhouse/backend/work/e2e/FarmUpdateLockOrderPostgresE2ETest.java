@@ -331,7 +331,6 @@ class FarmUpdateLockOrderPostgresE2ETest extends WorkE2ETestBase {
                                 null,
                                 "3.5치",
                                 true,
-                                true,
                                 null,
                                 null))
                         .getId();

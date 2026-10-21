@@ -2,13 +2,17 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,11 +31,46 @@ import org.springframework.test.web.servlet.MvcResult;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestPropertySource(properties = "app.auth.enabled=true")
+@TestPropertySource(
+    properties = {
+      "app.auth.enabled=true",
+      "app.cors.frontend-origin-patterns=http://localhost:*,http://192.168.0.*:*"
+    })
 @Import(AuthIntegrationTests.FixedClockConfig.class)
 class AuthIntegrationTests {
 
   @Autowired MockMvc mockMvc;
+
+  @Test
+  void partnerUpdatePutPassesCorsForLocalAndLanOriginsButStillRequiresLogin() throws Exception {
+    for (String origin : new String[] {"http://localhost:3000", "http://192.168.0.2:3000"}) {
+      mockMvc
+          .perform(
+              options("/api/business-partners/1")
+                  .header("Origin", origin)
+                  .header("Access-Control-Request-Method", "PUT")
+                  .header("Access-Control-Request-Headers", "content-type,x-client-instance-id"))
+          .andExpect(status().isOk())
+          .andExpect(header().string("Access-Control-Allow-Origin", origin))
+          .andExpect(
+              header().string("Access-Control-Allow-Methods", Matchers.containsString("PUT")))
+          .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+      mockMvc
+          .perform(
+              put("/api/business-partners/1")
+                  .header("Origin", origin)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content("{}"))
+          .andExpect(status().isUnauthorized())
+          .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+    }
+    mockMvc
+        .perform(
+            options("/api/business-partners/1")
+                .header("Origin", "https://untrusted.invalid")
+                .header("Access-Control-Request-Method", "PUT"))
+        .andExpect(status().isForbidden());
+  }
 
   @Test
   void exposesFarmBusinessDateWithoutLogin() throws Exception {

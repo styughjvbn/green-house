@@ -58,7 +58,7 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 				  "name": "심비디움 골드",
 				  "alias": "골드",
 				  "defaultPotSize": "5치",
-				  "saleEnabled": true,
+
 				  "description": "테스트 품종",
 				  "memo": "메모"
 				}
@@ -99,7 +99,7 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 						  "name": "카틀레야 A 수정",
 						  "alias": "수정 별칭",
 						  "defaultPotSize": "4.5치",
-						  "saleEnabled": false,
+
 						  "description": "수정 설명",
 						  "memo": "수정 메모"
 						}
@@ -107,7 +107,7 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.name").value("카틀레야 A 수정"))
         .andExpect(jsonPath("$.data.alias").value("수정 별칭"))
-        .andExpect(jsonPath("$.data.saleEnabled").value(false));
+        .andExpect(jsonPath("$.data.saleEnabled").doesNotExist());
   }
 
   @Test

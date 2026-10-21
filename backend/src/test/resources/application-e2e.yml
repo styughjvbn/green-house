@@ -29,3 +29,9 @@ logging:
   level:
     org.hibernate.SQL: 'OFF'
     org.hibernate.orm.jdbc.bind: 'OFF'
+
+sales:
+  document:
+    photos:
+      storage:
+        root: ${java.io.tmpdir}/greenhouse-e2e-photos-${random.uuid}

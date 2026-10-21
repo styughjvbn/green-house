@@ -103,8 +103,7 @@ class WorkPlanBatchLockOrderPostgresE2ETest extends WorkE2ETestBase {
     Long secondVariety =
         varieties
             .saveAndFlush(
-                new Variety(
-                    "LOCK-P-B", "팔레놉시스", "계획 잠금 품종 B", null, "3.5치", true, true, null, null))
+                new Variety("LOCK-P-B", "팔레놉시스", "계획 잠금 품종 B", null, "3.5치", true, null, null))
             .getId();
     jdbc.update(
         "UPDATE orchid_groups SET sort_order = 2, start_position = 5, end_position = 10 WHERE id = ?",

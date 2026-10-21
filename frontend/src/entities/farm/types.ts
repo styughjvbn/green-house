@@ -492,13 +492,14 @@ export type PartnerSettlementSettings = {
 };
 
 export type SalesSlipItem = {
+  varietyId?: ApiSchemas["SalesSlipItemResponse"]["varietyId"];
   auctionLot?: ApiSchemas["SalesSlipItemResponse"]["auctionLot"];
   id: number;
   auctionShipmentLotId: number | null;
   itemName: string;
   genus: string | null;
   spec: string | null;
-  unit: string | null;
+  unit: number | null;
   boxes: number | null;
   quantity: number;
   unitPrice: number;

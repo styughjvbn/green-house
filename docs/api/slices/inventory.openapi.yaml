@@ -22,11 +22,6 @@ paths:
         required: false
         schema:
           type: string
-      - name: saleEnabled
-        in: query
-        required: false
-        schema:
-          type: boolean
       - name: active
         in: query
         required: false
@@ -1101,8 +1096,6 @@ components:
           type: string
           maxLength: 150
           minLength: 0
-        saleEnabled:
-          type: boolean
       required:
       - genus
       - name
@@ -1163,8 +1156,6 @@ components:
         recentWorkDate:
           type: string
           format: date
-        saleEnabled:
-          type: boolean
         saleableQuantity:
           type: integer
           format: int64
@@ -1204,8 +1195,6 @@ components:
           type: string
           maxLength: 150
           minLength: 0
-        saleEnabled:
-          type: boolean
       required:
       - genus
       - name

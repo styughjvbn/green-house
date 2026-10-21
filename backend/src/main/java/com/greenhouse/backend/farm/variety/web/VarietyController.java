@@ -34,12 +34,10 @@ public class VarietyController {
   public ApiResponse<PageResponse<VarietyResponse>> getVarieties(
       @RequestParam(required = false) String keyword,
       @RequestParam(required = false) String genus,
-      @RequestParam(required = false) Boolean saleEnabled,
       @RequestParam(required = false) Boolean active,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size) {
-    return ApiResponse.ok(
-        varietyService.getVarieties(keyword, genus, saleEnabled, active, page, size));
+    return ApiResponse.ok(varietyService.getVarieties(keyword, genus, active, page, size));
   }
 
   @GetMapping("/genera")

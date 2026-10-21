@@ -27,15 +27,7 @@ class InboundRecordAuditIntegrationTest extends AbstractBackendIntegrationTest {
     Variety variety =
         varietyRepository.saveAndFlush(
             new Variety(
-                "IN-AUDIT-" + System.nanoTime(),
-                "입고감사속",
-                "입고감사품종",
-                null,
-                "4인치",
-                true,
-                true,
-                null,
-                null));
+                "IN-AUDIT-" + System.nanoTime(), "입고감사속", "입고감사품종", null, "4인치", true, null, null));
     InboundRecord inbound =
         inboundRecordRepository.saveAndFlush(
             new InboundRecord(

@@ -271,7 +271,6 @@ class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest
                 null,
                 "4치",
                 true,
-                true,
                 null,
                 null));
     return new Fixture(zone, variety);

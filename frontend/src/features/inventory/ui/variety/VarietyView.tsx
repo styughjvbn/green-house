@@ -66,7 +66,6 @@ export function VarietyView({
     alias: selected?.alias ?? "",
     defaultPotSize: selected?.potSize ?? "",
     color: selected?.color ?? null,
-    saleEnabled: selected?.saleEnabled ?? true,
     description: selected?.description ?? "",
     memo: selected?.memo ?? "",
   });
@@ -86,16 +85,6 @@ export function VarietyView({
         meta: { cellClassName: "font-semibold" },
       },
       { accessorKey: "potSize", header: "기본 화분", size: 100 },
-      {
-        accessorKey: "saleEnabled",
-        header: "판매 사용",
-        cell: ({ row }) => (
-          <StatusBadge tone={row.original.saleEnabled ? "green" : "gray"}>
-            {row.original.saleEnabled ? "사용" : "미사용"}
-          </StatusBadge>
-        ),
-        size: 100,
-      },
       {
         accessorKey: "status",
         header: "상태",
@@ -207,7 +196,6 @@ export function VarietyView({
                         alias: selected.alias,
                         defaultPotSize: selected.potSize,
                         color: selected.color,
-                        saleEnabled: selected.saleEnabled,
                         description: selected.description,
                         memo: selected.memo,
                       });
@@ -312,19 +300,6 @@ export function VarietyView({
                       setForm((current) => ({ ...current, color }))
                     }
                   />
-                  <label className="flex items-center gap-2 text-sm font-semibold text-[#425047]">
-                    <input
-                      checked={form.saleEnabled}
-                      type="checkbox"
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          saleEnabled: event.target.checked,
-                        }))
-                      }
-                    />
-                    판매 사용
-                  </label>
                   <label className="space-y-1 text-xs font-semibold text-[#425047]">
                     <span>특징/설명</span>
                     <textarea
@@ -385,16 +360,6 @@ export function VarietyView({
                     }
                   />
                   <DetailRow label="특징/설명" value={selected.description} />
-                  <DetailRow
-                    label="판매 사용"
-                    value={
-                      <StatusBadge
-                        tone={selected.saleEnabled ? "green" : "gray"}
-                      >
-                        {selected.saleEnabled ? "사용" : "미사용"}
-                      </StatusBadge>
-                    }
-                  />
                   <DetailRow
                     label="상태"
                     value={

@@ -8,6 +8,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 @Schema(name = "SalesSlipItemRequest")
 public record SalesSlipItemInput(
@@ -18,8 +23,15 @@ public record SalesSlipItemInput(
     @NotNull @Min(0) Integer unitPrice,
     @Size(max = 1000) String memo,
     @NotNull List<@Valid SalesSlipAllocationInput> allocations,
-    @JsonInclude(JsonInclude.Include.NON_NULL) @Size(max = 30) String unit,
-    @JsonInclude(JsonInclude.Include.NON_NULL) @Min(1) Integer boxes) {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+        @Min(1)
+        @JsonDeserialize(using = UnitDeserializer.class)
+        Integer unit,
+    @JsonInclude(JsonInclude.Include.NON_NULL) @Min(1) Integer boxes,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+        @Min(1)
+        @Schema(description = "기록만 등록은 필수. 난 묶음 연결은 모든 배분의 동일 품종 ID로 확정 가능할 때만 생략 가능.")
+        Long varietyId) {
   public SalesSlipItemInput(
       String itemName,
       String genus,
@@ -29,5 +41,28 @@ public record SalesSlipItemInput(
       String memo,
       List<SalesSlipAllocationInput> allocations) {
     this(itemName, genus, spec, quantity, unitPrice, memo, allocations, null, null);
+  }
+
+  public SalesSlipItemInput(
+      String itemName,
+      String genus,
+      String spec,
+      Integer quantity,
+      Integer unitPrice,
+      String memo,
+      List<SalesSlipAllocationInput> allocations,
+      Integer unit,
+      Integer boxes) {
+    this(itemName, genus, spec, quantity, unitPrice, memo, allocations, unit, boxes, null);
+  }
+
+  /** Reject fractional values instead of Jackson's default integer truncation. */
+  public static class UnitDeserializer extends ValueDeserializer<Integer> {
+    @Override
+    public Integer deserialize(JsonParser parser, DeserializationContext context) {
+      if (parser.currentToken() != JsonToken.VALUE_NUMBER_INT)
+        return (Integer) context.handleUnexpectedToken(Integer.class, parser);
+      return parser.getIntValue();
+    }
   }
 }

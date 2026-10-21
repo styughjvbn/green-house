@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 8MB
+      max-request-size: 82MB
   application:
     name: backend
 
@@ -46,6 +50,12 @@ server:
         same-site: lax
 
 app:
+  ai:
+    runtime-url: ${AI_RUNTIME_URL:http://127.0.0.1:8091}
+    runtime-secret: ${AI_RUNTIME_SECRET:}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:120}
+    max-tool-calls: ${AI_MAX_TOOL_CALLS:20}
+    default-auction-partner-id: ${AI_DEFAULT_AUCTION_PARTNER_ID:0}
   environment: ${APP_ENV:prod}
   auth:
     enabled: ${AUTH_ENABLED:true}
@@ -80,3 +90,11 @@ springdoc:
 logging:
   pattern:
     console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] requestId=%X{requestId:-} %logger{36} - %msg%n"
+
+# Immutable document attachments; this path must be a persistent volume in production.
+sales:
+  document:
+    photos:
+      storage:
+        type: ${SALES_PHOTO_STORAGE_TYPE:local}
+        root: ${SALES_PHOTO_STORAGE_ROOT:./data/slip-photos}

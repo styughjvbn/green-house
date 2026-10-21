@@ -645,6 +645,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sales-slips/image-previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 원본은 보존하고 전표 사진의 보정·문서 분리·빈 행 제거 결과를 임시 미리보기로 생성합니다. 판매 저장과 AI 입력에는 반영하지 않습니다. 미리보기는 5분 후 만료됩니다. */
+        post: operations["prepare"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orchid-groups": {
         parameters: {
             query?: never;
@@ -1047,6 +1064,74 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["adjust"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 사진 등록 대화를 시작합니다. 대화는 사용자에게 귀속되며 30분간 사용하지 않으면 만료됩니다. */
+        post: operations["open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/sessions/{sessionId}/requests/{requestId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 소유한 등록 대화의 지정 요청을 중지합니다. 실행 종료를 확인한 뒤 반환하며 대화는 유지합니다. */
+        post: operations["cancel_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/sessions/{sessionId}/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 선택 사진 1~10장을 동일 대화의 한 요청으로 추출합니다. metadata 순서와 photos 파일 순서는 일치해야 합니다. 사진별 최대 8MB. 결과는 사진 ID로 연결합니다. */
+        post: operations["extract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 전표 사진을 읽고 조회 도구로 거래처·품종 후보를 찾습니다. 전표·재고를 저장하지 않습니다. JPEG/PNG/WebP 최대 8MB. */
+        post: operations["extract_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1503,6 +1588,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sales-slips/{id}/source-photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 인증된 전표 사진 조회. JPEG/PNG/WebP 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다. */
+        get: operations["getPhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/{id}/source-photo/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 전표 첨부 사진의 메타데이터. 사진이 없으면 data=null. 전표 취소 후에도 보존합니다. */
+        get: operations["getPhotoInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sales-slips/{id}/direct-changes": {
         parameters: {
             query?: never;
@@ -1560,6 +1679,22 @@ export interface paths {
         };
         /** @description 일반 판매 금액은 Direct 거래·가격과 실제 유효 배분에서 조회합니다. */
         get: operations["getSalesSlipPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/image-previews/{id}/images/{imageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["image"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2270,6 +2405,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ai/slips/sessions/{sessionId}/requests/{requestId}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 소유한 등록 대화의 지정 요청에서 처리 중인 사진과 분석·검색·검증 진행 상태를 조회합니다. */
+        get: operations["progress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/sessions/{sessionId}/requests/{requestId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 소유한 요청의 진행 상태를 SSE로 구독합니다. 연결·재연결 시 현재 상태를 보내고 요청 종료 시 스트림을 닫습니다. */
+        get: operations["events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-slips/image-previews/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orchid-group-collections/{collectionId}/members/{orchidGroupId}": {
         parameters: {
             query?: never;
@@ -2281,6 +2466,38 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["removeMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["close"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/sessions/{sessionId}/photos/{photoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removePhoto"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2324,6 +2541,7 @@ export interface components {
             salesStatus?: string;
             /** @enum {string} */
             salesType?: "DIRECT" | "AUCTION";
+            sourcePhoto?: components["schemas"]["SalesSlipPhotoInput"];
         };
         SalesSlipItemAllocationRequest: {
             /** Format: int64 */
@@ -2341,9 +2559,20 @@ export interface components {
             /** Format: int32 */
             quantity: number;
             spec?: string;
-            unit?: string;
+            /** Format: int32 */
+            unit?: number;
             /** Format: int32 */
             unitPrice: number;
+            /**
+             * Format: int64
+             * @description 기록만 등록은 필수. 난 묶음 연결은 모든 배분의 동일 품종 ID로 확정 가능할 때만 생략 가능.
+             */
+            varietyId?: number;
+        };
+        SalesSlipPhotoInput: {
+            contentBase64: string;
+            contentType: string;
+            fileName: string;
         };
         ApiResponseSalesSlipResponse: {
             data?: components["schemas"]["SalesSlipResponse"];
@@ -2444,9 +2673,15 @@ export interface components {
             /** Format: int32 */
             quantity?: number;
             spec?: string;
-            unit?: string;
+            /** Format: int32 */
+            unit?: number;
             /** Format: int32 */
             unitPrice?: number;
+            /**
+             * Format: int64
+             * @description 품종 식별자. 품목명·속은 작성 당시의 별도 기록이며 현재 마스터명으로 대체하지 않습니다.
+             */
+            varietyId?: number | null;
         };
         SalesSlipResponse: {
             auctionMarket?: string;
@@ -3112,7 +3347,6 @@ export interface components {
             genus: string;
             memo?: string;
             name: string;
-            saleEnabled?: boolean;
         };
         ApiResponseVarietyResponse: {
             data?: components["schemas"]["VarietyResponse"];
@@ -3138,7 +3372,6 @@ export interface components {
             recentInboundDate?: string;
             /** Format: date */
             recentWorkDate?: string;
-            saleEnabled?: boolean;
             /** Format: int64 */
             saleableQuantity?: number;
             /** Format: int64 */
@@ -3224,6 +3457,57 @@ export interface components {
             /** Format: date */
             correctionDate: string;
             reason: string;
+        };
+        ApiResponseSalesSlipImagePreview: {
+            data?: components["schemas"]["SalesSlipImagePreview"];
+            message?: string;
+        };
+        SalesSlipImagePreview: {
+            /** Format: int32 */
+            clockwiseDegrees?: number;
+            /** Format: double */
+            deskewDegrees?: number;
+            /** Format: int32 */
+            documentCount?: number;
+            /** Format: date-time */
+            expiresAt?: string;
+            /** Format: uuid */
+            id?: string;
+            images?: components["schemas"]["SalesSlipPreviewImage"][];
+            /** Format: int32 */
+            removedRows?: number;
+            reviewRequired?: boolean;
+            /** Format: int32 */
+            sourceHeight?: number;
+            /** Format: int32 */
+            sourceWidth?: number;
+            /** Format: int32 */
+            tableCount?: number;
+            warnings?: string[];
+            /** Format: int32 */
+            workingHeight?: number;
+            /** Format: int32 */
+            workingWidth?: number;
+        };
+        SalesSlipPreviewImage: {
+            /** @enum {string} */
+            documentForm?: "CONSIGNMENT_RECEIPT" | "LISTING_REQUEST" | "UNKNOWN";
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            kind?: "CORRECTED" | "DOCUMENT" | "DOCUMENT_COMPACTED" | "TABLE";
+            sourceRegion?: components["schemas"]["SalesSlipSourceRegion"];
+        };
+        /** @description EXIF 방향이 반영된 원본의 정규화 사각형 좌표(0~1) */
+        SalesSlipSourceRegion: {
+            /** Format: double */
+            height?: number;
+            /** Format: double */
+            width?: number;
+            /** Format: double */
+            x?: number;
+            /** Format: double */
+            y?: number;
         };
         OrchidGroupCreateRequest: {
             /** Format: int32 */
@@ -3849,6 +4133,94 @@ export interface components {
             waitingQuantity: number;
             worker?: string;
         };
+        AiSlipSession: {
+            sessionId?: string;
+        };
+        ApiResponseAiSlipSession: {
+            data?: components["schemas"]["AiSlipSession"];
+            message?: string;
+        };
+        AiSlipConversationMetadata: {
+            photos: components["schemas"]["AiSlipPhotoMetadata"][];
+        };
+        AiSlipPhotoMetadata: {
+            /** @enum {string} */
+            documentForm?: "CONSIGNMENT_RECEIPT" | "LISTING_REQUEST" | "UNKNOWN";
+            photoId: string;
+        };
+        AiSlipExtractionItem: {
+            /** Format: int64 */
+            amount?: number;
+            /** Format: int32 */
+            boxes?: number;
+            /** Format: int64 */
+            calculatedAmount?: number;
+            genus?: string;
+            itemName?: string;
+            memo?: string;
+            /** Format: int32 */
+            quantity?: number;
+            rawGenus?: string;
+            rawItemName?: string;
+            spec?: string;
+            /** Format: int32 */
+            unit?: number;
+            /** Format: int32 */
+            unitPrice?: number;
+            /** Format: int64 */
+            varietyId?: number;
+        };
+        AiSlipFieldReview: {
+            /** @enum {string} */
+            field: "SALE_DATE" | "PARTNER" | "SALES_TYPE" | "SLIP_MEMO" | "ITEM_NAME" | "GENUS" | "GRADE" | "UNIT" | "BOXES" | "QUANTITY" | "UNIT_PRICE" | "AMOUNT" | "ITEM_MEMO";
+            /**
+             * Format: int32
+             * @description 품목은 0부터 시작하는 행 번호, 전표 기본 정보는 null
+             */
+            itemIndex?: number | null;
+            reason: string;
+        };
+        AiSlipPhotoResult: {
+            errorCode?: string;
+            photoId?: string;
+            result?: components["schemas"]["SlipExtractionResult"];
+        };
+        ApiResponseSlipConversationResult: {
+            data?: components["schemas"]["SlipConversationResult"];
+            message?: string;
+        };
+        SlipConversationResult: {
+            photos?: components["schemas"]["AiSlipPhotoResult"][];
+            requestId?: string;
+            sessionId?: string;
+        };
+        SlipExtractionResult: {
+            /** Format: int32 */
+            attempts?: number;
+            /**
+             * Format: int32
+             * @description AI 자체 평가 신뢰도(0~100). 실제 정답률이 아닙니다.
+             */
+            confidence?: number;
+            /** Format: int32 */
+            imageLongEdge?: number;
+            items?: components["schemas"]["AiSlipExtractionItem"][];
+            memo?: string;
+            /** Format: int64 */
+            partnerId?: number;
+            partnerName?: string;
+            rawPartnerName?: string;
+            requestId?: string;
+            reviewFields?: components["schemas"]["AiSlipFieldReview"][];
+            saleDate?: string;
+            /** @enum {string} */
+            salesType?: "DIRECT" | "AUCTION";
+            warnings?: string[];
+        };
+        ApiResponseSlipExtractionResult: {
+            data?: components["schemas"]["SlipExtractionResult"];
+            message?: string;
+        };
         WorkTypeUpdateRequest: {
             active?: boolean;
             name: string;
@@ -3873,7 +4245,6 @@ export interface components {
             genus: string;
             memo?: string;
             name: string;
-            saleEnabled?: boolean;
         };
         SalesSlipStatusUpdateRequest: {
             memo?: string;
@@ -4382,6 +4753,23 @@ export interface components {
         ApiResponseListSalesSlipResponse: {
             data?: components["schemas"]["SalesSlipResponse"][];
             message?: string;
+        };
+        ApiResponsePhotoContent: {
+            data?: components["schemas"]["PhotoContent"];
+            message?: string;
+        };
+        PhotoContent: {
+            contentBase64?: string;
+            contentType?: string;
+            fileName?: string;
+        };
+        ApiResponsePhotoInfo: {
+            data?: components["schemas"]["PhotoInfo"];
+            message?: string;
+        };
+        PhotoInfo: {
+            contentType?: string;
+            fileName?: string;
         };
         ApiResponseDirectSaleChangeResponse: {
             data?: components["schemas"]["DirectSaleChangeResponse"];
@@ -5578,6 +5966,28 @@ export interface components {
             /** Format: int64 */
             unpaidAmount?: number;
         };
+        Activity: {
+            /** Format: int32 */
+            calls?: number;
+            latestLookup?: components["schemas"]["Lookup"];
+            searching?: boolean;
+            summary?: string;
+        };
+        AiSlipConversationProgress: {
+            activity?: components["schemas"]["Activity"];
+            photoIds?: string[];
+            requestId?: string;
+            /** @enum {string} */
+            stage?: "WAITING" | "READING" | "VALIDATING" | "DONE";
+        };
+        ApiResponseAiSlipConversationProgress: {
+            data?: components["schemas"]["AiSlipConversationProgress"];
+            message?: string;
+        };
+        Lookup: {
+            query?: string;
+            tool?: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -6525,7 +6935,6 @@ export interface operations {
             query?: {
                 keyword?: string;
                 genus?: string;
-                saleEnabled?: boolean;
                 active?: boolean;
                 page?: number;
                 size?: number;
@@ -6627,6 +7036,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseSalesSlipResponse"];
+                };
+            };
+            /** @description SALES_PHOTO_STORAGE_UNAVAILABLE: 사진 저장소 오류. 같은 생성 키와 입력으로 재시도합니다. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -6814,6 +7232,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseDirectSaleChangeResult"];
+                };
+            };
+        };
+    };
+    prepare: {
+        parameters: {
+            query?: {
+                rotationDegrees?: number;
+                /** @description 빈 행 판정 잉크 비율. 0.015는 1.5%이며, 이 값 이하인 행을 빈 행으로 판정합니다. */
+                minimumInkRatio?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseSalesSlipImagePreview"];
                 };
             };
         };
@@ -7670,6 +8119,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseAuctionLotResponse"];
+                };
+            };
+        };
+    };
+    open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAiSlipSession"];
+                };
+            };
+        };
+    };
+    cancel_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    extract: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-AI-Request-Id"?: string;
+            };
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    metadata: components["schemas"]["AiSlipConversationMetadata"];
+                    photos: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseSlipConversationResult"];
+                };
+            };
+        };
+    };
+    extract_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseSlipExtractionResult"];
                 };
             };
         };
@@ -8533,6 +9083,59 @@ export interface operations {
             };
         };
     };
+    getPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 저장된 사진 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePhotoContent"];
+                };
+            };
+            /** @description SALES_PHOTO_STORAGE_UNAVAILABLE: 사진 저장소 오류 또는 파일 무결성 검증 실패 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getPhotoInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePhotoInfo"];
+                };
+            };
+        };
+    };
     getDirectSaleChanges: {
         parameters: {
             query?: {
@@ -8642,6 +9245,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    image: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                imageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/webp": string;
                 };
             };
         };
@@ -9642,6 +10268,74 @@ export interface operations {
             };
         };
     };
+    progress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAiSlipConversationProgress"];
+                };
+            };
+        };
+    };
+    events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["AiSlipConversationProgress"];
+                };
+            };
+        };
+    };
+    remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
     removeMember: {
         parameters: {
             query?: never;
@@ -9661,6 +10355,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseOrchidGroupCollectionResponse"];
+                };
+            };
+        };
+    };
+    close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    removePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+                photoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseVoid"];
                 };
             };
         };

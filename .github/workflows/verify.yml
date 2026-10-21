@@ -11,6 +11,24 @@ permissions:
   contents: read
 
 jobs:
+  ai-runtime:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-runtime
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ai-runtime/package-lock.json
+      - run: npm ci
+      - name: Test shared development environment loading
+        run: node --test ../scripts/test-dev-environment.mjs
+      - run: npm run check
+      - run: npm test
+
   demo-sanitization:
     runs-on: ubuntu-latest
     steps:

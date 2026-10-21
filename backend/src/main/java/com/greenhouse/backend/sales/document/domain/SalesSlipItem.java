@@ -47,10 +47,12 @@ public class SalesSlipItem {
 
   private String genus;
 
+  @Column(name = "variety_id")
+  private Long varietyId;
+
   private String spec;
 
-  @Column(length = 30)
-  private String unit;
+  private Integer unit;
 
   private Integer boxes;
 
@@ -93,7 +95,7 @@ public class SalesSlipItem {
       Integer quantity,
       Integer unitPrice,
       String memo,
-      String unit,
+      Integer unit,
       Integer boxes) {
     this(
         auctionShipmentLotId,
@@ -131,10 +133,11 @@ public class SalesSlipItem {
       Integer unitPrice,
       Integer amount,
       String memo,
-      String unit,
+      Integer unit,
       Integer boxes) {
     if (quantity == null || quantity <= 0)
       throw new IllegalArgumentException("판매 품목 수량은 0보다 커야 합니다.");
+    validateUnit(unit);
     validateBoxes(boxes);
     this.auctionShipmentLotId = auctionShipmentLotId;
     this.itemName = itemName;
@@ -150,6 +153,13 @@ public class SalesSlipItem {
 
   void setSalesSlip(SalesSlip salesSlip) {
     this.salesSlip = salesSlip;
+  }
+
+  /** Identity is independent of the historical name and genus snapshots. */
+  public void assignVariety(Long varietyId) {
+    if (varietyId == null || varietyId <= 0)
+      throw new IllegalArgumentException("판매 품목의 품종을 선택하세요.");
+    this.varietyId = varietyId;
   }
 
   public void addAllocation(SalesSlipItemAllocation allocation) {
@@ -187,10 +197,11 @@ public class SalesSlipItem {
       Integer unitPrice,
       Integer amount,
       String memo,
-      String unit,
+      Integer unit,
       Integer boxes) {
     if (quantity == null || quantity <= 0)
       throw new IllegalArgumentException("판매 품목 수량은 0보다 커야 합니다.");
+    validateUnit(unit);
     validateBoxes(boxes);
 
     this.itemName = itemName;
@@ -202,6 +213,10 @@ public class SalesSlipItem {
     this.unitPrice = unitPrice;
     this.amount = amount;
     this.memo = memo;
+  }
+
+  private static void validateUnit(Integer unit) {
+    if (unit != null && unit < 1) throw new IllegalArgumentException("단위는 1 이상의 정수여야 합니다.");
   }
 
   private static void validateBoxes(Integer boxes) {

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Suspense } from "react";
 import { Geist } from "next/font/google";
 import { DEFAULT_FONT_SCALE, FontScaleInitializer } from "@/features/settings";
 import { QueryProvider } from "@/shared/api/QueryProvider";
 import { getRuntimeContext } from "@/shared/api/runtimeContext";
+import { resolveImagePreparationConcurrency } from "@/shared/config/imagePreparation";
 import { resolveAppEnvironment } from "@/shared/config/appEnvironment";
 import { PwaRuntime } from "@/shared/pwa";
 import { RuntimeContextProvider } from "@/shared/runtime/RuntimeContext";
@@ -36,6 +38,9 @@ export default async function RootLayout({
     process.env.APP_ENV,
     process.env.NODE_ENV,
   );
+  const imagePreparationConcurrency = resolveImagePreparationConcurrency(
+    process.env.SALES_DOCUMENT_IMAGE_WORKERS,
+  );
   const runtimeContext = await getRuntimeContext().catch(() => null);
 
   return (
@@ -48,11 +53,21 @@ export default async function RootLayout({
         } as React.CSSProperties
       }
     >
+      <head>
+        {process.env.NODE_ENV === "development" && (
+          <Script
+            src="//unpkg.com/react-grab/dist/index.global.js"
+            crossOrigin="anonymous"
+            strategy="beforeInteractive"
+          />
+        )}
+      </head>
       <body className="min-h-full bg-[#f7f8f6] text-[#1f2a24]">
         <FontScaleInitializer />
         <PwaRuntime />
         <RuntimeContextProvider
           appEnvironment={appEnvironment}
+          imagePreparationConcurrency={imagePreparationConcurrency}
           value={runtimeContext}
         >
           <QueryProvider>

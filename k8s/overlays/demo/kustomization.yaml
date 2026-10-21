@@ -12,6 +12,22 @@ patches:
       - op: replace
         path: /metadata/name
         value: green-house-demo
+  - target:
+      kind: Deployment
+      name: green-house-backend
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: green-house-backend
+      spec:
+        template:
+          spec:
+            containers:
+              - name: backend
+                env:
+                  - name: AI_RUNTIME_SECRET
+                    $patch: delete
   - path: configmap-patch.yaml
   - path: secret-patch.yaml
   - path: postgres-endpoints-patch.yaml
@@ -39,3 +55,30 @@ patches:
                       name: green-house-frontend
                       port:
                         number: 3000
+  - target:
+      kind: Deployment
+      name: green-house-ai-runtime
+    patch: |-
+      $patch: delete
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: green-house-ai-runtime
+  - target:
+      kind: Service
+      name: green-house-ai-runtime
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: green-house-ai-runtime
+  - target:
+      kind: PersistentVolumeClaim
+      name: green-house-ai-codex
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: green-house-ai-codex

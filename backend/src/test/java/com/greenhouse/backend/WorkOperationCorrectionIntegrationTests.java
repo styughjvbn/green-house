@@ -109,7 +109,7 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
     houseRepository.save(house);
     variety =
         varietyRepository.save(
-            new Variety("CORRECTION-001", "팔레놉시스", "보정 테스트", null, "3.5치", true, true, null, null));
+            new Variety("CORRECTION-001", "팔레놉시스", "보정 테스트", null, "3.5치", true, null, null));
   }
 
   @Test

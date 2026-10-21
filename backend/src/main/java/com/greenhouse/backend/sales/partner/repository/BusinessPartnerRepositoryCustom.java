@@ -10,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 
 public interface BusinessPartnerRepositoryCustom {
 
+  List<BusinessPartner> searchCandidates(String keyword, Boolean auctionHouse, int limit);
+
   List<Long> findMatchingIds(PartnerTextMatch match, String value, long afterId, int limit);
 
   List<PartnerSearchMatchRow> findMatchingIds(

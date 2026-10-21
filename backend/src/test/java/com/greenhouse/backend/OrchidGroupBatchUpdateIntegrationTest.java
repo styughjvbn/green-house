@@ -37,7 +37,7 @@ class OrchidGroupBatchUpdateIntegrationTest extends AbstractBackendIntegrationTe
     Variety variety =
         varietyRepository.saveAndFlush(
             new Variety(
-                "BATCH-" + System.nanoTime(), "Phal", "일괄품종", null, "4인치", true, true, null, null));
+                "BATCH-" + System.nanoTime(), "Phal", "일괄품종", null, "4인치", true, null, null));
     OrchidGroup first = saveGroup(zone, variety, 10, 1, 2);
     OrchidGroup second = saveGroup(zone, variety, 20, 3, 4);
 
@@ -75,7 +75,6 @@ class OrchidGroupBatchUpdateIntegrationTest extends AbstractBackendIntegrationTe
                 "일괄롤백품종",
                 null,
                 "4인치",
-                true,
                 true,
                 null,
                 null));

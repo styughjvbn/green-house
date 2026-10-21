@@ -4,8 +4,17 @@ import {
   calculateSalesItemAllocated,
   calculateSalesItemAmount,
 } from "../../lib/salesForm";
-import type { SalesAllocationForm, SalesItemForm } from "../../model/types";
+import type {
+  SalesAllocationForm,
+  SalesItemForm,
+  SalesReviewField,
+} from "../../model/types";
 import { TextField } from "../common/FormFields";
+import {
+  ReviewBadge,
+  ReviewField,
+  type InputReview,
+} from "../common/InputReview";
 
 export function SalesSlipItemEditor({
   item,
@@ -19,6 +28,7 @@ export function SalesSlipItemEditor({
   onAllocationChange,
   onChange,
   onRemove,
+  onConfirmReview,
 }: {
   item: SalesItemForm;
   index: number;
@@ -36,7 +46,14 @@ export function SalesSlipItemEditor({
   ) => void;
   onChange: (index: number, field: keyof SalesItemForm, value: string) => void;
   onRemove: (index: number) => void;
+  onConfirmReview?: (field: SalesReviewField, indices?: number[]) => void;
 }) {
+  function reviewFor(field: SalesReviewField): InputReview | undefined {
+    const reason = item.fieldReviews?.[field];
+    return reason && onConfirmReview
+      ? { reason, onConfirm: () => onConfirmReview(field, [index]) }
+      : undefined;
+  }
   const allocationId = useId();
   const [showAllocationDetails, setShowAllocationDetails] = useState(false);
   const amount = calculateSalesItemAmount(item);
@@ -58,6 +75,7 @@ export function SalesSlipItemEditor({
           <TextField
             disabled={disabled}
             label="등급"
+            review={reviewFor("GRADE")}
             maxLength={100}
             value={item.spec}
             onChange={(value) => onChange(index, "spec", value)}
@@ -65,13 +83,16 @@ export function SalesSlipItemEditor({
           <TextField
             disabled={disabled}
             label="단위"
-            maxLength={30}
+            review={reviewFor("UNIT")}
+            type="number"
+            min={1}
             value={item.unit}
             onChange={(value) => onChange(index, "unit", value)}
           />
           <TextField
             disabled={disabled}
             label="상자 수"
+            review={reviewFor("BOXES")}
             type="number"
             value={item.boxes}
             onChange={(value) => onChange(index, "boxes", value)}
@@ -79,6 +100,7 @@ export function SalesSlipItemEditor({
           <TextField
             disabled={disabled}
             label="수량"
+            review={reviewFor("QUANTITY")}
             required
             type="number"
             value={item.quantity}
@@ -89,23 +111,37 @@ export function SalesSlipItemEditor({
               <TextField
                 disabled={disabled}
                 label="단가"
+                review={reviewFor("UNIT_PRICE")}
                 required
                 type="number"
                 value={item.unitPrice}
                 onChange={(value) => onChange(index, "unitPrice", value)}
               />
-              <div className="rounded-md bg-[#edf7ef] px-3 py-2">
-                <p className="text-sm font-semibold text-[#29422e]">금액</p>
-                <p className="mt-1 text-xl font-bold break-words text-[#10783a]">
+              <ReviewField
+                id={`${allocationId}-amount-review`}
+                review={reviewFor("AMOUNT")}
+                disabled={disabled}
+                className={`rounded-md px-3 py-2 ${reviewFor("AMOUNT") ? "border border-amber-500 bg-amber-50" : "bg-[#edf7ef]"}`}
+              >
+                <p className="text-sm font-semibold text-[#29422e]">
+                  금액 {reviewFor("AMOUNT") ? <ReviewBadge /> : null}
+                </p>
+                <p
+                  id={`${allocationId}-amount-value`}
+                  tabIndex={!disabled && reviewFor("AMOUNT") ? 0 : -1}
+                  aria-describedby={`${allocationId}-amount-review`}
+                  className="mt-1 text-xl font-bold break-words text-[#10783a]"
+                >
                   {amount.toLocaleString()}원
                 </p>
-              </div>
+              </ReviewField>
             </>
           ) : null}
           <div className="min-w-0">
             <TextField
               disabled={disabled}
               label="품목 메모"
+              review={reviewFor("ITEM_MEMO")}
               maxLength={1000}
               value={item.memo}
               onChange={(value) => onChange(index, "memo", value)}

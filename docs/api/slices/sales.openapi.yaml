@@ -124,6 +124,12 @@ paths:
               $ref: '#/components/schemas/SalesSlipCreateRequest'
         required: true
       responses:
+        '503':
+          description: 'SALES_PHOTO_STORAGE_UNAVAILABLE: 사진 저장소 오류. 같은 생성 키와 입력으로 재시도합니다.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '201':
           description: Created
           content:
@@ -343,6 +349,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseDirectSaleChangeResult'
+  /api/sales-slips/image-previews:
+    post:
+      tags:
+      - sales-controller
+      description: 원본은 보존하고 전표 사진의 보정·문서 분리·빈 행 제거 결과를 임시 미리보기로 생성합니다. 판매 저장과 AI 입력에는 반영하지 않습니다. 미리보기는 5분 후 만료됩니다.
+      operationId: prepare
+      parameters:
+      - name: rotationDegrees
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: -1
+      - name: minimumInkRatio
+        in: query
+        description: 빈 행 판정 잉크 비율. 0.015는 1.5%이며, 이 값 이하인 행을 빈 행으로 판정합니다.
+        required: false
+        schema:
+          type: number
+          format: double
+          default: 0.015
+          maximum: 0.1
+          minimum: 0
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+              required:
+              - image
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSalesSlipImagePreview'
   /api/sales-slips/{salesSlipId}/sales-status:
     patch:
       tags:
@@ -416,6 +464,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+  /api/sales-slips/{id}/source-photo:
+    get:
+      tags:
+      - sales-controller
+      description: 인증된 전표 사진 조회. JPEG/PNG/WebP 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다.
+      operationId: getPhoto
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: 저장된 사진
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePhotoContent'
+        '503':
+          description: 'SALES_PHOTO_STORAGE_UNAVAILABLE: 사진 저장소 오류 또는 파일 무결성 검증 실패'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/sales-slips/{id}/source-photo/info:
+    get:
+      tags:
+      - sales-controller
+      description: 전표 첨부 사진의 메타데이터. 사진이 없으면 data=null. 전표 취소 후에도 보존합니다.
+      operationId: getPhotoInfo
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePhotoInfo'
   /api/sales-slips/{id}/direct-changes:
     get:
       tags:
@@ -585,6 +679,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/sales-slips/image-previews/{id}/images/{imageId}:
+    get:
+      tags:
+      - sales-controller
+      operationId: image
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: byte
   /api/sales-slips/auction-shipments:
     get:
       tags:
@@ -597,6 +717,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListAuctionShipmentOptionResponse'
+  /api/sales-slips/image-previews/{id}:
+    delete:
+      tags:
+      - sales-controller
+      operationId: remove
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
 components:
   schemas:
     ApiResponseDirectReturnArrivalResult:
@@ -661,11 +800,38 @@ components:
           $ref: '#/components/schemas/PageResponseSalesSlipListItemResponse'
         message:
           type: string
+    ApiResponsePhotoContent:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PhotoContent'
+        message:
+          type: string
+    ApiResponsePhotoInfo:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PhotoInfo'
+        message:
+          type: string
+    ApiResponseSalesSlipImagePreview:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SalesSlipImagePreview'
+        message:
+          type: string
     ApiResponseSalesSlipResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/SalesSlipResponse'
+        message:
+          type: string
+    ApiResponseVoid:
+      type: object
+      properties:
+        data: {}
         message:
           type: string
     AuctionShipmentOptionResponse:
@@ -1114,6 +1280,22 @@ components:
         returnChangeId:
           type: integer
           format: int64
+    PhotoContent:
+      type: object
+      properties:
+        contentBase64:
+          type: string
+        contentType:
+          type: string
+        fileName:
+          type: string
+    PhotoInfo:
+      type: object
+      properties:
+        contentType:
+          type: string
+        fileName:
+          type: string
     Portion:
       type: object
       properties:
@@ -1316,9 +1498,57 @@ components:
           enum:
           - DIRECT
           - AUCTION
+        sourcePhoto:
+          $ref: '#/components/schemas/SalesSlipPhotoInput'
       required:
       - items
       - saleDate
+    SalesSlipImagePreview:
+      type: object
+      properties:
+        clockwiseDegrees:
+          type: integer
+          format: int32
+        deskewDegrees:
+          type: number
+          format: double
+        documentCount:
+          type: integer
+          format: int32
+        expiresAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+          format: uuid
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipPreviewImage'
+        removedRows:
+          type: integer
+          format: int32
+        reviewRequired:
+          type: boolean
+        sourceHeight:
+          type: integer
+          format: int32
+        sourceWidth:
+          type: integer
+          format: int32
+        tableCount:
+          type: integer
+          format: int32
+        warnings:
+          type: array
+          items:
+            type: string
+        workingHeight:
+          type: integer
+          format: int32
+        workingWidth:
+          type: integer
+          format: int32
     SalesSlipItemAllocationRequest:
       type: object
       properties:
@@ -1393,13 +1623,18 @@ components:
           maxLength: 100
           minLength: 0
         unit:
-          type: string
-          maxLength: 30
-          minLength: 0
+          type: integer
+          format: int32
+          minimum: 1
         unitPrice:
           type: integer
           format: int32
           minimum: 0
+        varietyId:
+          type: integer
+          format: int64
+          description: 기록만 등록은 필수. 난 묶음 연결은 모든 배분의 동일 품종 ID로 확정 가능할 때만 생략 가능.
+          minimum: 1
       required:
       - allocations
       - itemName
@@ -1440,10 +1675,17 @@ components:
         spec:
           type: string
         unit:
-          type: string
+          type: integer
+          format: int32
         unitPrice:
           type: integer
           format: int32
+        varietyId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: 품종 식별자. 품목명·속은 작성 당시의 별도 기록이며 현재 마스터명으로 대체하지 않습니다.
     SalesSlipListItemResponse:
       type: object
       properties:
@@ -1486,6 +1728,45 @@ components:
           type: integer
           format: int32
           description: 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
+    SalesSlipPhotoInput:
+      type: object
+      properties:
+        contentBase64:
+          type: string
+          maxLength: 11184812
+          minLength: 0
+        contentType:
+          type: string
+          minLength: 1
+        fileName:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - contentBase64
+      - contentType
+      - fileName
+    SalesSlipPreviewImage:
+      type: object
+      properties:
+        documentForm:
+          type: string
+          enum:
+          - CONSIGNMENT_RECEIPT
+          - LISTING_REQUEST
+          - UNKNOWN
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+          - CORRECTED
+          - DOCUMENT
+          - DOCUMENT_COMPACTED
+          - TABLE
+        sourceRegion:
+          $ref: '#/components/schemas/SalesSlipSourceRegion'
     SalesSlipResponse:
       type: object
       properties:
@@ -1546,6 +1827,22 @@ components:
           type: integer
           format: int32
           description: 공통 조회용 판매금액. 일반 판매는 확정 거래금액, 경매는 연결 lot의 누적 낙찰액 합계이며 받을 금액·수납액이 아니다.
+    SalesSlipSourceRegion:
+      type: object
+      description: EXIF 방향이 반영된 원본의 정규화 사각형 좌표(0~1)
+      properties:
+        height:
+          type: number
+          format: double
+        width:
+          type: number
+          format: double
+        x:
+          type: number
+          format: double
+        y:
+          type: number
+          format: double
     SalesSlipStatusUpdateRequest:
       type: object
       properties:

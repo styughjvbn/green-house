@@ -28,15 +28,17 @@ class ModularArchitectureTests {
           "dashboard",
           "print",
           "analytics",
+          "ai",
           "auth",
           "demo");
 
   private static final Set<String> LAYERED_MODULES =
-      Set.of("audit", "farm", "work", "sales", "dashboard", "print", "analytics");
+      Set.of("audit", "farm", "work", "sales", "dashboard", "print", "analytics", "ai");
 
   static final Map<String, Set<String>> ALLOWED_DEPENDENCIES =
       Map.ofEntries(
           Map.entry("common", Set.of()),
+          Map.entry("ai", Set.of("common", "farm", "sales")),
           Map.entry("audit", Set.of("common")),
           Map.entry("farm", Set.of("common", "work", "audit")),
           Map.entry("work", Set.of("common")),

@@ -190,15 +190,7 @@ class SalesOrchidGroupMutationEngineIntegrationTest extends AbstractBackendInteg
     Variety variety =
         varietyRepository.save(
             new Variety(
-                "SALES-MUTATION",
-                "Phalaenopsis",
-                "Sales Mutation",
-                null,
-                "4치",
-                true,
-                true,
-                null,
-                null));
+                "SALES-MUTATION", "Phalaenopsis", "Sales Mutation", null, "4치", true, null, null));
     OrchidGroup first = createGroup(zone, variety, 20, 1, "0", "2");
     OrchidGroup second = createGroup(zone, variety, 30, 2, "2", "4");
     return new Fixture(first, second);

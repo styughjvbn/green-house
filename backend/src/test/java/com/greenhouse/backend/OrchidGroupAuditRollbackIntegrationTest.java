@@ -40,15 +40,7 @@ class OrchidGroupAuditRollbackIntegrationTest extends AbstractBackendIntegration
     Variety variety =
         varietyRepository.saveAndFlush(
             new Variety(
-                "ROLLBACK-" + System.nanoTime(),
-                "Phal",
-                "롤백품종",
-                null,
-                "4인치",
-                true,
-                true,
-                null,
-                null));
+                "ROLLBACK-" + System.nanoTime(), "Phal", "롤백품종", null, "4인치", true, null, null));
     OrchidGroup group =
         new OrchidGroup(
             zone,

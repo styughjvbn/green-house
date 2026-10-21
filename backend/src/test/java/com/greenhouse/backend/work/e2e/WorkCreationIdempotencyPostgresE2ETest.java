@@ -68,7 +68,7 @@ class WorkCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     jdbc.update("update work_types set is_active = true where id = ?", workTypeId);
     Long variety =
         jdbc.queryForObject(
-            "insert into varieties (code, genus, name, sale_enabled, is_active, created_at, updated_at) values ('E2E-WORK-B', '팔레놉시스', '작업 품종 B', true, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) returning id",
+            "insert into varieties (code, genus, name, is_active, created_at, updated_at) values ('E2E-WORK-B', '팔레놉시스', '작업 품종 B', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) returning id",
             Long.class);
     otherGroupId =
         jdbc.queryForObject(

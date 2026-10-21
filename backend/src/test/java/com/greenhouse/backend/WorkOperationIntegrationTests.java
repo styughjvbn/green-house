@@ -115,7 +115,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
     Variety variety =
         varietyRepository.save(
-            new Variety("TEST-001", "팔레놉시스", "테스트 난", null, "3.5치", true, true, null, null));
+            new Variety("TEST-001", "팔레놉시스", "테스트 난", null, "3.5치", true, null, null));
     targetGroup =
         new OrchidGroup(
             sourceZone,
@@ -203,7 +203,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
   void batchCreateSplitsSingleVarietyStructureWorkInOneRequest() throws Exception {
     Variety anotherVariety =
         varietyRepository.save(
-            new Variety("TEST-002", "카틀레야", "다른 품종", null, "3.5치", true, true, null, null));
+            new Variety("TEST-002", "카틀레야", "다른 품종", null, "3.5치", true, null, null));
     OrchidGroup anotherGroup =
         new OrchidGroup(
             targetGroup.getBedZone(),
@@ -433,7 +433,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
   void createsSeparateCompletedDiscardRecordsForEachVariety() throws Exception {
     Variety anotherVariety =
         varietyRepository.save(
-            new Variety("TEST-003", "카틀레야", "폐기 대상 품종", null, "3.5치", true, true, null, null));
+            new Variety("TEST-003", "카틀레야", "폐기 대상 품종", null, "3.5치", true, null, null));
     OrchidGroup anotherGroup =
         new OrchidGroup(
             targetGroup.getBedZone(),

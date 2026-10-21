@@ -44,6 +44,27 @@ class SalesCreationFingerprintCompatibilityTest {
   }
 
   @Test
+  void numericUnitsKeepCanonicalLegacyTextFingerprints() throws Exception {
+    var request = mapper.readValue("{\"items\":[{\"unit\":10}]}", SalesSlipCommand.class);
+    var legacy =
+        mapper.readTree(
+            mapper.writeValueAsString(request).replace("\"unit\":10", "\"unit\":\"10\""));
+    assertThat(hash(SalesCreationRequestPayload.from(request))).isEqualTo(hash(legacy));
+  }
+
+  @Test
+  void storedTextUnitsAreProjectedAsNumbersWithoutChangingHistoricalJson() throws Exception {
+    for (String raw : List.of("10", " 0010 ", "분", "10개", "0", "1.5", "2147483648")) {
+      String snapshot = "{\"items\":[{\"unit\":\"" + raw + "\"}]}";
+      var result = SalesSlipCreationService.readStoredResponse(snapshot);
+      assertThat(result.items().getFirst().unit())
+          .isEqualTo(raw.equals("10") || raw.equals(" 0010 ") ? 10 : null);
+      assertThat(mapper.readTree(snapshot).path("items").get(0).path("unit").asText())
+          .isEqualTo(raw);
+    }
+  }
+
+  @Test
   void fieldChangesRequireCreationReceiptCompatibilityReview() throws Exception {
     try (var input = getClass().getResourceAsStream("/sales/creation-v1-fields.json")) {
       assertThat(input).isNotNull();
@@ -58,10 +79,13 @@ class SalesCreationFingerprintCompatibilityTest {
         // Keep the v1 fixture unchanged: absent optional packing fields must retain its hash.
         var expected =
             schema.getKey().equals(SalesSlipItemInput.class.getName())
-                ? Stream.concat(schema.getValue().stream(), List.of("unit", "boxes").stream())
+                ? Stream.concat(
+                        schema.getValue().stream(), List.of("unit", "boxes", "varietyId").stream())
                     .toList()
                 : schema.getKey().equals(SalesSlipCommand.class.getName())
-                    ? Stream.concat(schema.getValue().stream(), Stream.of("recordOnly")).toList()
+                    ? Stream.concat(
+                            schema.getValue().stream(), Stream.of("recordOnly", "sourcePhoto"))
+                        .toList()
                     : schema.getValue();
         assertThat(Arrays.stream(type.getRecordComponents()).map(RecordComponent::getName).toList())
             .as("%s: review versioning/replay before updating the v1 fixture", schema.getKey())
@@ -82,6 +106,25 @@ class SalesCreationFingerprintCompatibilityTest {
       var request = mapper.readValue(json, SalesSlipCommand.class);
       assertThat(hash(SalesCreationRequestPayload.from(request))).isEqualTo(hash(request));
     }
+  }
+
+  @Test
+  void sourcePhotoIsOptInAndParticipatesInTheFingerprint() throws Exception {
+    var legacy = mapper.readValue("{\"items\":[]}", SalesSlipCommand.class);
+    var photo =
+        mapper.readValue(
+            "{\"items\":[],\"sourcePhoto\":{\"fileName\":\"slip.png\",\"contentType\":\"image/png\",\"contentBase64\":\"first\"}}",
+            SalesSlipCommand.class);
+    var changed =
+        mapper.readValue(
+            "{\"items\":[],\"sourcePhoto\":{\"fileName\":\"slip.png\",\"contentType\":\"image/png\",\"contentBase64\":\"second\"}}",
+            SalesSlipCommand.class);
+    assertThat(mapper.writeValueAsString(SalesCreationRequestPayload.from(legacy)))
+        .doesNotContain("sourcePhoto");
+    assertThat(hash(SalesCreationRequestPayload.from(photo)))
+        .isNotEqualTo(hash(SalesCreationRequestPayload.from(legacy)));
+    assertThat(hash(SalesCreationRequestPayload.from(photo)))
+        .isNotEqualTo(hash(SalesCreationRequestPayload.from(changed)));
   }
 
   private String hash(Object request) throws Exception {

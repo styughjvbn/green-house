@@ -60,7 +60,7 @@ class OrchidSummaryQueryPostgresE2ETest extends WorkE2ETestBase {
     var fixture = transactions.execute(tx -> seed(count));
     var stats = emf.unwrap(SessionFactory.class).getStatistics();
     stats.clear();
-    var page = varieties.getVarieties("SUMMARY_" + count + "_", null, null, null, 0, 10);
+    var page = varieties.getVarieties("SUMMARY_" + count + "_", null, null, 0, 10);
     var varietyMetrics = metrics();
     stats.clear();
     var groups = derived.getGroups(fixture.firstVariety(), 7, PotSizeCode.POT_3, null, null, null);
@@ -276,7 +276,7 @@ class OrchidSummaryQueryPostgresE2ETest extends WorkE2ETestBase {
   }
 
   private Variety variety(String name) {
-    var variety = new Variety(name, "난", name, null, "3치", true, true, null, null);
+    var variety = new Variety(name, "난", name, null, "3치", true, null, null);
     em.persist(variety);
     return variety;
   }

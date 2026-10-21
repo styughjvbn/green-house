@@ -26,6 +26,7 @@ export type CreateBusinessPartnerPayload = BusinessPartnerPayload;
 export type UpdateBusinessPartnerPayload = BusinessPartnerPayload;
 
 export type CreateSalesSlipPayload = {
+  sourcePhoto?: SalesSlipPhotoInput;
   recordOnly?: components["schemas"]["SalesSlipCreateRequest"]["recordOnly"];
   initialReceipt?: components["schemas"]["SalesInitialReceiptRequest"] | null;
   salesType: "DIRECT" | "AUCTION";
@@ -37,10 +38,13 @@ export type CreateSalesSlipPayload = {
   paymentMethod: string | null;
   memo: string | null;
   items: Array<{
+    varietyId?:
+      | components["schemas"]["SalesSlipItemRequest"]["varietyId"]
+      | null;
     itemName: string;
     genus: string | null;
     spec: string | null;
-    unit: string | null;
+    unit: number | null;
     boxes: number | null;
     quantity: number;
     unitPrice: number;
@@ -159,3 +163,16 @@ export type AllocationCorrectionPayload =
 export type AllocationResult =
   components["schemas"]["PaymentAllocationChangeResponse"];
 export type AllocationTargetType = AllocationTarget["targetType"];
+
+export type SalesSlipPhotoInput = components["schemas"]["SalesSlipPhotoInput"];
+export type SalesSlipPhotoExtraction =
+  components["schemas"]["SlipExtractionResult"];
+export type SalesSlipPhotoInfo = components["schemas"]["PhotoInfo"];
+export type SalesSlipPhotoContent = components["schemas"]["PhotoContent"];
+
+export type SalesSlipDocumentForm = NonNullable<
+  components["schemas"]["AiSlipPhotoMetadata"]["documentForm"]
+>;
+
+export type SalesSlipReadingProgress =
+  components["schemas"]["AiSlipConversationProgress"];

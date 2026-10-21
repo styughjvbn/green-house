@@ -51,9 +51,6 @@ public class Variety extends BaseEntity {
   @Column(length = 7)
   private String color;
 
-  @Column(name = "sale_enabled", nullable = false)
-  private boolean saleEnabled;
-
   @Column(name = "is_active", nullable = false)
   private boolean active;
 
@@ -69,11 +66,10 @@ public class Variety extends BaseEntity {
       String name,
       String alias,
       String defaultPotSize,
-      boolean saleEnabled,
       boolean active,
       String description,
       String memo) {
-    this(code, genus, name, alias, defaultPotSize, null, saleEnabled, active, description, memo);
+    this(code, genus, name, alias, defaultPotSize, null, active, description, memo);
   }
 
   public Variety(
@@ -83,7 +79,6 @@ public class Variety extends BaseEntity {
       String alias,
       String defaultPotSize,
       String color,
-      boolean saleEnabled,
       boolean active,
       String description,
       String memo) {
@@ -93,7 +88,6 @@ public class Variety extends BaseEntity {
     this.alias = alias;
     this.defaultPotSize = PotSizeCode.fromInput(defaultPotSize).getDisplayValue();
     this.color = color;
-    this.saleEnabled = saleEnabled;
     this.active = active;
     this.description = description;
     this.memo = memo;
@@ -105,7 +99,6 @@ public class Variety extends BaseEntity {
       String alias,
       String defaultPotSize,
       String color,
-      boolean saleEnabled,
       String description,
       String memo) {
     this.genus = genus;
@@ -113,7 +106,6 @@ public class Variety extends BaseEntity {
     this.alias = alias;
     this.defaultPotSize = PotSizeCode.fromInput(defaultPotSize).getDisplayValue();
     this.color = color;
-    this.saleEnabled = saleEnabled;
     this.description = description;
     this.memo = memo;
   }
