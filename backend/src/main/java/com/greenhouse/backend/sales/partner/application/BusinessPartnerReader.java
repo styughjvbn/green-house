@@ -31,6 +31,13 @@ public class BusinessPartnerReader implements BusinessPartnerQueryApi {
 
   private final BusinessPartnerRepository partnerRepository;
 
+  @Override
+  public List<Option> searchOptions(String keyword, Boolean auctionHouse, int limit) {
+    return partnerRepository.searchCandidates(keyword, auctionHouse, limit).stream()
+        .map(p -> new Option(p.getId(), p.getName(), p.getPartnerType(), p.isActive()))
+        .toList();
+  }
+
   /** All matching IDs, read in bounded batches; historical searches include inactive partners. */
   @Override
   public List<Long> findMatchingIds(PartnerTextMatch match, String value) {

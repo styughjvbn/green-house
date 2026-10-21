@@ -99,26 +99,6 @@ class InboundCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
         .isEqualTo(1);
   }
 
-  @Test
-  void changedCreateCannotReuseSuccessfulRequestKey() throws Exception {
-    var first =
-        post(
-            "/api/inbound-records",
-            objectMapper.writeValueAsString(flask(10, null)),
-            Map.of("Idempotency-Key", "changed"));
-    assertThat(first.status()).as(first.body().toString()).isEqualTo(201);
-    var changed =
-        post(
-            "/api/inbound-records",
-            objectMapper.writeValueAsString(flask(20, "변경")),
-            Map.of("Idempotency-Key", "changed"));
-    assertThat(changed.status()).isEqualTo(409);
-    assertThat(changed.body().path("error").path("code").asText())
-        .isEqualTo("INBOUND_CREATE_REQUEST_KEY_CONFLICT");
-    assertThat(jdbc.queryForObject("select count(*) from inbound_records", Integer.class))
-        .isEqualTo(1);
-  }
-
   @ParameterizedTest
   @CsvSource({
     "FLASK_SEEDLING,false",
@@ -236,47 +216,49 @@ class InboundCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
         .isEqualTo("PLACED");
   }
 
-  @ParameterizedTest
-  @ValueSource(
-      strings = {
-        "inboundDate",
-        "inboundType",
-        "varietyId",
-        "newVariety",
-        "estimatedQuantity",
-        "tempLocation",
-        "pottingDueDate",
-        "placement",
-        "worker",
-        "memo"
-      })
-  void changedFieldConflictsBeforeCurrentBusinessValidation(String field) throws Exception {
+  @Test
+  void changedFieldConflictsBeforeCurrentBusinessValidation() throws Exception {
     var request = flask(10, null);
     assertThat(createHttp(request, "changed-field").status()).isEqualTo(201);
-    var changed = (ObjectNode) objectMapper.valueToTree(request);
-    switch (field) {
-      case "inboundDate" -> changed.put(field, DATE.minusDays(1).toString());
-      case "inboundType" -> changed.put(field, "PRODUCT_POT");
-      case "varietyId" -> changed.put(field, -1);
-      case "newVariety" ->
-          changed.set(
-              field, objectMapper.valueToTree(new InboundVarietyInput("속", "품종", null, null)));
-      case "estimatedQuantity" -> changed.put(field, 11);
-      case "tempLocation" -> changed.put(field, "새 임시 위치");
-      case "pottingDueDate" -> changed.put(field, DATE.plusDays(8).toString());
-      case "placement" -> changed.set(field, objectMapper.valueToTree(placement()));
-      case "worker" -> changed.put(field, "새 담당");
-      case "memo" -> changed.put(field, "새 메모");
-      default -> throw new IllegalStateException(field);
-    }
     var before = snapshot();
-    var result =
-        post(
-            "/api/inbound-records", changed.toString(), Map.of("Idempotency-Key", "changed-field"));
-    assertThat(result.status()).isEqualTo(409);
-    assertThat(result.body().path("error").path("code").asText())
-        .isEqualTo("INBOUND_CREATE_REQUEST_KEY_CONFLICT");
-    assertThat(snapshot()).isEqualTo(before);
+    for (String field :
+        List.of(
+            "inboundDate",
+            "inboundType",
+            "varietyId",
+            "newVariety",
+            "estimatedQuantity",
+            "tempLocation",
+            "pottingDueDate",
+            "placement",
+            "worker",
+            "memo")) {
+      var changed = (ObjectNode) objectMapper.valueToTree(request);
+      switch (field) {
+        case "inboundDate" -> changed.put(field, DATE.minusDays(1).toString());
+        case "inboundType" -> changed.put(field, "PRODUCT_POT");
+        case "varietyId" -> changed.put(field, -1);
+        case "newVariety" ->
+            changed.set(
+                field, objectMapper.valueToTree(new InboundVarietyInput("속", "품종", null, null)));
+        case "estimatedQuantity" -> changed.put(field, 11);
+        case "tempLocation" -> changed.put(field, "새 임시 위치");
+        case "pottingDueDate" -> changed.put(field, DATE.plusDays(8).toString());
+        case "placement" -> changed.set(field, objectMapper.valueToTree(placement()));
+        case "worker" -> changed.put(field, "새 담당");
+        case "memo" -> changed.put(field, "새 메모");
+        default -> throw new IllegalStateException(field);
+      }
+      var result =
+          post(
+              "/api/inbound-records",
+              changed.toString(),
+              Map.of("Idempotency-Key", "changed-field"));
+      assertThat(result.status()).as("field %s: %s", field, result.body()).isEqualTo(409);
+      assertThat(result.body().path("error").path("code").asText())
+          .isEqualTo("INBOUND_CREATE_REQUEST_KEY_CONFLICT");
+      assertThat(snapshot()).as("unchanged facts after %s", field).isEqualTo(before);
+    }
   }
 
   @ParameterizedTest

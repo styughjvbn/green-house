@@ -136,7 +136,6 @@ class InboundOrchidGroupMutationEngineIntegrationTest extends AbstractBackendInt
                 null,
                 "2치",
                 true,
-                true,
                 null,
                 null));
     InboundRecord inboundRecord =

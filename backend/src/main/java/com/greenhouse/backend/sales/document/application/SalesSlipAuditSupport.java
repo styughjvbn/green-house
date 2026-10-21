@@ -37,6 +37,7 @@ class SalesSlipAuditSupport {
             .map(
                 item -> {
                   var value = new LinkedHashMap<String, Object>();
+                  value.put("varietyId", item.getVarietyId());
                   value.put("itemName", item.getItemName());
                   value.put("genus", item.getGenus());
                   value.put("spec", item.getSpec());

@@ -56,7 +56,6 @@ abstract class FarmFixtureIntegrationTest extends AbstractBackendIntegrationTest
               null,
               "4치",
               true,
-              true,
               null,
               null);
       fixtureEntityManager.persist(variety);

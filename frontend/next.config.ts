@@ -9,6 +9,8 @@ const backendApiUrl = (
 const nextConfig: NextConfig = {
   typedRoutes: true,
 
+  experimental: { proxyClientMaxBodySize: "82mb", proxyTimeout: 610_000 },
+
   allowedDevOrigins: ["192.168.0.2", "192.168.0.2:3000"],
 
   logging: {

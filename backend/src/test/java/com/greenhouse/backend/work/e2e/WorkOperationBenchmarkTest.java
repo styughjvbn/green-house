@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Import;
 @Tag("work-benchmark")
 @Timeout(value = 15, unit = TimeUnit.MINUTES)
 @Import(JdbcMeasurement.Configuration.class)
+@IsolatedPostgresContext
 class WorkOperationBenchmarkTest extends WorkE2ETestBase {
 
   private static final int OPERATION_COUNT = 100;

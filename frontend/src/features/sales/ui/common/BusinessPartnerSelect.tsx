@@ -10,6 +10,12 @@ import type { BusinessPartnerOption } from "@/entities/farm/types";
 import type { CSSObjectWithLabel, SingleValue } from "react-select";
 import Select from "react-select";
 import {
+  ReviewBadge,
+  ReviewField,
+  ReviewSelectInput,
+  type InputReview,
+} from "./InputReview";
+import {
   businessPartnerOptionQueryOptions,
   businessPartnerSearchQueryOptions,
 } from "../../model/salesQueryOptions";
@@ -29,6 +35,7 @@ export function BusinessPartnerSelect({
   activeOnly = false,
   required = false,
   disabled = false,
+  review,
 }: {
   label: string;
   layout?: "stacked" | "row";
@@ -38,6 +45,7 @@ export function BusinessPartnerSelect({
   activeOnly?: boolean;
   required?: boolean;
   disabled?: boolean;
+  review?: InputReview;
 }) {
   const id = useId();
   const queryClient = useQueryClient();
@@ -75,6 +83,7 @@ export function BusinessPartnerSelect({
       );
     }
     onChange(option?.value ?? "");
+    if (option) review?.onConfirm();
     setKeyword("");
   }
 
@@ -92,11 +101,19 @@ export function BusinessPartnerSelect({
       >
         {label}
         {required ? <span aria-hidden="true"> *</span> : null}
+        {review ? <ReviewBadge /> : null}
       </label>
-      <div className="min-w-0">
+      <ReviewField
+        id={`${id}-review`}
+        review={review}
+        disabled={disabled}
+        className="min-w-0"
+      >
         <Select<PartnerSelectOption, false>
+          components={{ Input: ReviewSelectInput }}
           required={required}
           inputId={id}
+          aria-describedby={`${id}-review`}
           instanceId={id}
           inputValue={keyword}
           isClearable
@@ -112,7 +129,21 @@ export function BusinessPartnerSelect({
           }
           options={selectOptions}
           placeholder={activeOnly ? `${label} 검색` : "전체"}
-          styles={selectStyles}
+          styles={{
+            ...selectStyles,
+            ...(review
+              ? {
+                  control: (
+                    base: CSSObjectWithLabel,
+                    state: { isFocused: boolean },
+                  ) => ({
+                    ...selectStyles.control(base, state),
+                    borderColor: "#d97706",
+                    backgroundColor: "#fffbeb",
+                  }),
+                }
+              : {}),
+          }}
           value={selectedOption}
           onChange={handleChange}
           onInputChange={(nextKeyword, action) => {
@@ -142,7 +173,7 @@ export function BusinessPartnerSelect({
             </button>
           </p>
         ) : null}
-      </div>
+      </ReviewField>
     </div>
   );
 }

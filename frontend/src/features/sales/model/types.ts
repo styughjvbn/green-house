@@ -4,6 +4,11 @@ import type { SalesTab } from "@/shared/config/routes";
 
 export type { SalesTab };
 
+export type SalesReviewField = NonNullable<
+  components["schemas"]["AiSlipFieldReview"]["field"]
+>;
+export type SalesFieldReviews = Partial<Record<SalesReviewField, string>>;
+
 export type BusinessPartnerForm = {
   name: string;
   partnerType: PartnerType;
@@ -14,6 +19,7 @@ export type BusinessPartnerForm = {
 };
 
 export type SalesAllocationForm = {
+  varietyId?: string;
   orchidGroupId: string;
   varietyName: string;
   genus: string;
@@ -23,6 +29,8 @@ export type SalesAllocationForm = {
 };
 
 export type SalesItemForm = {
+  varietyId: string;
+  fieldReviews?: SalesFieldReviews;
   itemName: string;
   genus: string;
   spec: string;
@@ -36,6 +44,7 @@ export type SalesItemForm = {
 };
 
 export type SalesSlipForm = {
+  fieldReviews?: SalesFieldReviews;
   recordOnly: boolean;
   salesType: "DIRECT" | "AUCTION";
   saleDate: string;

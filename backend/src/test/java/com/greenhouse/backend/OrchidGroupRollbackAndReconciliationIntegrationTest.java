@@ -348,7 +348,6 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
                 null,
                 "4치",
                 true,
-                true,
                 null,
                 null));
     return new Fixture(sourceZone, resultZone, variety);

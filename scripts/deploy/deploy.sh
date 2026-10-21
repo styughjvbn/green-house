@@ -15,8 +15,16 @@ set -euo pipefail
 #   - kubectl context must point to mini-pc k3s cluster
 #   - GHCR imagePullSecret must already exist in green-house namespace
 #   - backend/frontend Deployments must already exist
+#   - production AI runtime Deployment and shared Secret must already exist
+#   - AI_RUNTIME_TAG overrides the runtime tag (defaults to backend tag)
 
 NAMESPACE="${NAMESPACE:-green-house}"
+# Public demo never starts or updates the production AI runtime.
+if [[ -z "${DEPLOY_AI_RUNTIME+x}" ]]; then
+  if [[ "$NAMESPACE" == "green-house" ]]; then DEPLOY_AI_RUNTIME=true; else DEPLOY_AI_RUNTIME=false; fi
+fi
+[[ "$DEPLOY_AI_RUNTIME" == true || "$DEPLOY_AI_RUNTIME" == false ]] || { echo "DEPLOY_AI_RUNTIME must be true or false" >&2; exit 1; }
+AI_RUNTIME_DEPLOYMENT="${AI_RUNTIME_DEPLOYMENT:-green-house-ai-runtime}"
 
 BACKEND_DEPLOYMENT="${BACKEND_DEPLOYMENT:-green-house-backend}"
 FRONTEND_DEPLOYMENT="${FRONTEND_DEPLOYMENT:-green-house-frontend}"
@@ -25,6 +33,7 @@ BACKEND_CONTAINER="${BACKEND_CONTAINER:-backend}"
 FRONTEND_CONTAINER="${FRONTEND_CONTAINER:-frontend}"
 
 GHCR_OWNER="${GHCR_OWNER:-styughjvbn}"
+AI_RUNTIME_IMAGE="${AI_RUNTIME_IMAGE:-ghcr.io/${GHCR_OWNER}/green-house-ai-runtime}"
 BACKEND_IMAGE="${BACKEND_IMAGE:-ghcr.io/${GHCR_OWNER}/green-house-backend}"
 FRONTEND_IMAGE="${FRONTEND_IMAGE:-ghcr.io/${GHCR_OWNER}/green-house-frontend}"
 
@@ -49,6 +58,7 @@ fi
 
 BACKEND_FULL_IMAGE="${BACKEND_IMAGE}:${BACKEND_TAG}"
 FRONTEND_FULL_IMAGE="${FRONTEND_IMAGE}:${FRONTEND_TAG}"
+AI_RUNTIME_FULL_IMAGE="${AI_RUNTIME_IMAGE}:${AI_RUNTIME_TAG:-${BACKEND_TAG}}"
 
 log() {
   echo
@@ -83,6 +93,9 @@ check_deployments() {
   log "Checking deployments"
   kubectl -n "${NAMESPACE}" get deployment "${BACKEND_DEPLOYMENT}" >/dev/null
   kubectl -n "${NAMESPACE}" get deployment "${FRONTEND_DEPLOYMENT}" >/dev/null
+  if [[ "$DEPLOY_AI_RUNTIME" == true ]]; then
+    kubectl -n "${NAMESPACE}" get deployment "$AI_RUNTIME_DEPLOYMENT" >/dev/null
+  fi
 }
 
 show_current_images() {
@@ -119,6 +132,14 @@ wait_rollout_or_rollback() {
   echo
   echo "[ERROR] ${component} deployment failed and rollback was attempted." >&2
   return 1
+}
+
+deploy_ai_runtime() {
+  [[ "$DEPLOY_AI_RUNTIME" == true ]] || return 0
+  log "Deploying AI runtime: ${AI_RUNTIME_FULL_IMAGE}"
+  kubectl -n "${NAMESPACE}" set image "deployment/${AI_RUNTIME_DEPLOYMENT}" \
+    "ai-runtime=${AI_RUNTIME_FULL_IMAGE}"
+  wait_rollout_or_rollback "$AI_RUNTIME_DEPLOYMENT" "AI runtime"
 }
 
 deploy_backend() {
@@ -183,11 +204,17 @@ print_summary() {
   echo "Backend image: ${BACKEND_FULL_IMAGE}"
   echo "Frontend image: ${FRONTEND_FULL_IMAGE}"
   echo "App URL: ${APP_URL}"
+  if [[ "$DEPLOY_AI_RUNTIME" == true ]]; then
+    echo "AI runtime image: ${AI_RUNTIME_FULL_IMAGE}"
+  fi
 
   echo
   echo "Rollback commands:"
   echo "  kubectl -n ${NAMESPACE} rollout undo deployment/${BACKEND_DEPLOYMENT}"
   echo "  kubectl -n ${NAMESPACE} rollout undo deployment/${FRONTEND_DEPLOYMENT}"
+  if [[ "$DEPLOY_AI_RUNTIME" == true ]]; then
+    echo "  kubectl -n ${NAMESPACE} rollout undo deployment/${AI_RUNTIME_DEPLOYMENT}"
+  fi
 }
 
 main() {
@@ -206,6 +233,9 @@ main() {
   echo
   echo "New backend image:  ${BACKEND_FULL_IMAGE}"
   echo "New frontend image: ${FRONTEND_FULL_IMAGE}"
+  if [[ "$DEPLOY_AI_RUNTIME" == true ]]; then
+    echo "New AI runtime image: ${AI_RUNTIME_FULL_IMAGE}"
+  fi
   echo
 
   if [[ "${SKIP_CONFIRM:-false}" != "true" ]]; then
@@ -216,6 +246,7 @@ main() {
     esac
   fi
 
+  deploy_ai_runtime
   deploy_backend
   deploy_frontend
 

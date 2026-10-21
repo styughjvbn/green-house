@@ -8,6 +8,8 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.api.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.api.orchid.mutation.UpdateOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.api.variety.VarietySearchApi;
+import com.greenhouse.backend.farm.api.variety.VarietySearchApi.Option;
 import com.greenhouse.backend.farm.inbound.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.mutation.engine.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.orchid.repository.OrchidGroupRepository;
@@ -23,6 +25,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -33,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class VarietyService {
+public class VarietyService implements VarietySearchApi {
 
   private final VarietyRepository varietyRepository;
 
@@ -49,15 +52,38 @@ public class VarietyService {
 
   private final Clock clock;
 
+  @Override
+  @Transactional(readOnly = true)
+  public List<Option> searchOptions(String keyword, String genus, int limit) {
+    return varietyRepository.searchCandidates(keyword, genus, limit).stream()
+        .map(v -> new Option(v.getId(), v.getName(), v.getGenus(), v.isActive()))
+        .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Option> findOptionsByIds(Set<Long> ids) {
+    if (ids.size() > 500) throw new IllegalArgumentException("품종은 한 번에 최대 500개까지 확인할 수 있습니다.");
+    if (ids.isEmpty()) return List.of();
+    return varietyRepository.findAllById(ids).stream()
+        .map(v -> new Option(v.getId(), v.getName(), v.getGenus(), v.isActive()))
+        .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<String> findActiveNamesWithLinkedGroups() {
+    return varietyRepository.findActiveNamesWithLinkedGroups();
+  }
+
   @Transactional(readOnly = true)
   public PageResponse<VarietyResponse> getVarieties(
-      String keyword, String genus, Boolean saleEnabled, Boolean active, int page, int size) {
+      String keyword, String genus, Boolean active, int page, int size) {
     PageRequests.validate(page, size);
     var result =
         varietyRepository.search(
             normalize(keyword) == null ? "" : normalize(keyword),
             normalize(genus) == null ? "" : normalize(genus),
-            saleEnabled,
             active,
             PageRequest.of(
                 page,
@@ -93,7 +119,6 @@ public class VarietyService {
             normalize(request.alias()),
             normalize(request.defaultPotSize()),
             normalizeColor(request.color()),
-            request.saleEnabled() == null || request.saleEnabled(),
             true,
             normalize(request.description()),
             normalize(request.memo()));
@@ -125,7 +150,6 @@ public class VarietyService {
                         null,
                         normalize(newVariety.defaultPotSize()),
                         true,
-                        true,
                         null,
                         normalize(newVariety.memo()))));
   }
@@ -142,7 +166,6 @@ public class VarietyService {
         normalize(request.alias()),
         normalize(request.defaultPotSize()),
         normalizeColor(request.color()),
-        request.saleEnabled() == null || request.saleEnabled(),
         normalize(request.description()),
         normalize(request.memo()));
     var connectedGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(varietyId);

@@ -1,5 +1,5 @@
 "use client";
-import type { ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { FilterResetButton } from "@/shared/ui/FilterControls";
 import { hasFilterConditions } from "@/shared/ui/listFilterBadges";
 import { useSearchParams } from "next/navigation";
@@ -7,6 +7,8 @@ import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { readSalesRouteState } from "../lib/salesRouteParams";
 import { useSalesSlips } from "../model/useSalesSlips";
 import { SalesFilters } from "./slips/SalesFilters";
+import { SalesSlipRegistrationMethodDialog } from "./slips/SalesSlipRegistrationMethodDialog";
+import { SalesSlipPhotoRegistrationDialog } from "./slips/SalesSlipPhotoRegistrationDialog";
 import { SalesSlipCreateForm } from "./slips/SalesSlipCreateForm";
 import { SalesSlipDetail } from "./slips/SalesSlipDetail";
 import { SalesSlipList } from "./slips/SalesSlipList";
@@ -17,16 +19,22 @@ export function SalesSlipsPage({
 }) {
   const routeState = readSalesRouteState(useSearchParams());
   const sales = useSalesSlips({
-    initialShowCreateSlip,
     routeState,
   });
+  const [registrationMethodOpen, setRegistrationMethodOpen] = useState(
+    initialShowCreateSlip,
+  );
+  const [photoRegistrationOpen, setPhotoRegistrationOpen] = useState(false);
+  const registrationOpener = useRef<HTMLElement | null>(null);
+  function restoreRegistrationFocus() {
+    requestAnimationFrame(() => registrationOpener.current?.focus());
+  }
   function handleToggleCreateSalesSlip() {
-    const nextOpen = !sales.showCreateSlip;
-    if (nextOpen) {
-      sales.startCreateSalesSlip();
-    } else {
-      sales.cancelSalesSlipEditing();
-    }
+    registrationOpener.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    setRegistrationMethodOpen(true);
   }
   const toolbar = (columnSettings: ReactNode) => (
     <SalesFilters
@@ -46,6 +54,28 @@ export function SalesSlipsPage({
   return (
     <main className="h-full min-h-0">
       <TabLayout>
+        {registrationMethodOpen ? (
+          <SalesSlipRegistrationMethodDialog
+            onClose={() => {
+              setRegistrationMethodOpen(false);
+              restoreRegistrationFocus();
+            }}
+            onSelect={(method) => {
+              setRegistrationMethodOpen(false);
+              if (method === "photo") setPhotoRegistrationOpen(true);
+              else sales.startCreateSalesSlip();
+            }}
+          />
+        ) : null}
+        {photoRegistrationOpen ? (
+          <SalesSlipPhotoRegistrationDialog
+            onClose={() => {
+              setPhotoRegistrationOpen(false);
+              restoreRegistrationFocus();
+            }}
+            onSaved={sales.onPhotoSlipSaved}
+          />
+        ) : null}
         {sales.showCreateSlip ? (
           <SalesSlipCreateForm
             errorMessage={sales.errorMessage}
@@ -63,6 +93,7 @@ export function SalesSlipsPage({
             onAllocationChange={sales.updateAllocation}
             onCancel={() => {
               sales.cancelSalesSlipEditing();
+              if (sales.editingSlipId == null) restoreRegistrationFocus();
             }}
             onChange={sales.updateSalesForm}
             onRemoveItem={sales.removeSalesItem}

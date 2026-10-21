@@ -6,6 +6,7 @@ import type { AppEnvironment } from "@/shared/config/appEnvironment";
 
 type ApplicationRuntimeContext = {
   appEnvironment: AppEnvironment;
+  imagePreparationConcurrency: number;
   businessContext: RuntimeContext | null;
 };
 
@@ -15,16 +16,22 @@ const RuntimeContextValue = createContext<ApplicationRuntimeContext | null>(
 
 export function RuntimeContextProvider({
   appEnvironment,
+  imagePreparationConcurrency,
   children,
   value,
 }: {
   appEnvironment: AppEnvironment;
+  imagePreparationConcurrency: number;
   children: ReactNode;
   value: RuntimeContext | null;
 }) {
   return (
     <RuntimeContextValue.Provider
-      value={{ appEnvironment, businessContext: value }}
+      value={{
+        appEnvironment,
+        imagePreparationConcurrency,
+        businessContext: value,
+      }}
     >
       {children}
     </RuntimeContextValue.Provider>
@@ -45,4 +52,11 @@ export function useAppEnvironment() {
     throw new Error("애플리케이션 실행 환경 정보를 불러오지 못했습니다.");
   }
   return value.appEnvironment;
+}
+
+export function useImagePreparationConcurrency() {
+  const value = useContext(RuntimeContextValue);
+  if (!value)
+    throw new Error("애플리케이션 실행 환경 정보를 불러오지 못했습니다.");
+  return value.imagePreparationConcurrency;
 }

@@ -3,10 +3,17 @@
 import { useId, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import Select from "react-select";
+import {
+  ReviewBadge,
+  ReviewField,
+  ReviewSelectInput,
+  type InputReview,
+} from "../common/InputReview";
 import type { VarietyOption } from "@/entities/farm/types";
 import { getSalesRecordedVarieties } from "../../api/salesApi";
 
 type Option = {
+  id: number;
   value: string;
   label: string;
   name: string;
@@ -16,13 +23,17 @@ type Option = {
 export function SalesRecordedVarietySelect({
   name,
   genus,
+  varietyId,
   disabled,
   onSelect,
+  review,
 }: {
   name: string;
   genus: string;
+  varietyId: string;
   disabled: boolean;
-  onSelect: (variety: Pick<VarietyOption, "name" | "genus">) => void;
+  onSelect: (variety: Pick<VarietyOption, "id" | "name" | "genus">) => void;
+  review?: InputReview;
 }) {
   const id = useId();
   const [keyword, setKeyword] = useState("");
@@ -38,14 +49,21 @@ export function SalesRecordedVarietySelect({
   const options: Option[] = (
     query.data?.pages.flatMap((page) => page.content) ?? []
   ).map((variety) => ({
-    value: JSON.stringify([variety.genus, variety.name]),
+    id: variety.id,
+    value: String(variety.id),
     label: `${variety.name} / ${variety.genus}${variety.active ? "" : " (비활성)"}`,
     name: variety.name,
     genus: variety.genus,
   }));
-  const selectedValue = JSON.stringify([genus, name]);
+  const selectedValue = varietyId || JSON.stringify([genus, name]);
   const selected = name
-    ? (options.find((option) => option.value === selectedValue) ?? {
+    ? (options.find(
+        (option) =>
+          option.value === selectedValue &&
+          option.name === name &&
+          option.genus === genus,
+      ) ?? {
+        id: Number(varietyId),
         value: selectedValue,
         label: `${name} / ${genus}`,
         name,
@@ -54,15 +72,23 @@ export function SalesRecordedVarietySelect({
     : null;
 
   return (
-    <div className="w-1/2 min-w-0 shrink-0 space-y-1">
+    <ReviewField
+      id={`${id}-review`}
+      review={review}
+      disabled={disabled}
+      className="w-1/2 min-w-0 shrink-0 space-y-1"
+    >
       <label
         htmlFor={id}
         className="block text-sm font-semibold text-[#435047]"
       >
-        품종명 / 속
+        품종명 / 속 <span className="text-red-600">*</span>
+        {review ? <ReviewBadge /> : null}
       </label>
       <Select<Option, false>
+        components={{ Input: ReviewSelectInput }}
         inputId={id}
+        aria-describedby={`${id}-review`}
         instanceId={id}
         inputValue={keyword}
         value={selected}
@@ -82,7 +108,8 @@ export function SalesRecordedVarietySelect({
           control: (base) => ({
             ...base,
             minHeight: 40,
-            borderColor: "#cfd8cc",
+            borderColor: review ? "#d97706" : "#cfd8cc",
+            backgroundColor: review ? "#fffbeb" : base.backgroundColor,
             borderRadius: 6,
           }),
           menu: (base) => ({ ...base, zIndex: 1300 }),
@@ -101,7 +128,10 @@ export function SalesRecordedVarietySelect({
           if (action.action === "input-change") setKeyword(value);
         }}
         onChange={(option) => {
-          if (option) onSelect({ name: option.name, genus: option.genus });
+          if (option) {
+            onSelect({ id: option.id, name: option.name, genus: option.genus });
+            review?.onConfirm();
+          }
           setKeyword("");
         }}
         onMenuScrollToBottom={() => {
@@ -122,6 +152,6 @@ export function SalesRecordedVarietySelect({
           </button>
         </p>
       ) : null}
-    </div>
+    </ReviewField>
   );
 }

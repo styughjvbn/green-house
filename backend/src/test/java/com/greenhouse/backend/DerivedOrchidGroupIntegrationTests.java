@@ -30,8 +30,7 @@ class DerivedOrchidGroupIntegrationTests extends AbstractBackendIntegrationTest 
     houseRepository.save(house);
     Variety variety =
         varietyRepository.save(
-            new Variety(
-                "DERIVED-TEST", "팔레놉시스", "자동 그룹 테스트 난", null, "3.5\"", true, true, null, null));
+            new Variety("DERIVED-TEST", "팔레놉시스", "자동 그룹 테스트 난", null, "3.5\"", true, null, null));
 
     saveGroup(left, variety, 40, "3.5\"", 2, "정상", 1);
     OrchidGroup second = saveGroup(right, variety, 30, "3.5\"", 2, "정상", 1);

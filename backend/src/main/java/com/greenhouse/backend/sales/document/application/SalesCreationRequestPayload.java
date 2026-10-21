@@ -5,6 +5,7 @@ import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.document.application.command.SalesInitialReceiptInput;
 import com.greenhouse.backend.sales.document.application.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.document.application.command.SalesSlipItemInput;
+import com.greenhouse.backend.sales.document.application.command.SalesSlipPhotoInput;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -23,7 +24,8 @@ record SalesCreationRequestPayload(
     String memo,
     List<Item> items,
     @JsonInclude(JsonInclude.Include.NON_NULL) SalesInitialReceiptInput initialReceipt,
-    @JsonInclude(JsonInclude.Include.NON_NULL) Boolean recordOnly) {
+    @JsonInclude(JsonInclude.Include.NON_NULL) Boolean recordOnly,
+    @JsonInclude(JsonInclude.Include.NON_NULL) SalesSlipPhotoInput sourcePhoto) {
 
   static SalesCreationRequestPayload from(SalesSlipCommand request) {
     return request == null
@@ -39,7 +41,8 @@ record SalesCreationRequestPayload(
             request.memo(),
             request.items() == null ? null : request.items().stream().map(Item::from).toList(),
             request.initialReceipt(),
-            Boolean.TRUE.equals(request.recordOnly()) ? true : null);
+            Boolean.TRUE.equals(request.recordOnly()) ? true : null,
+            request.sourcePhoto());
   }
 
   private record Item(
@@ -50,8 +53,10 @@ record SalesCreationRequestPayload(
       Integer unitPrice,
       String memo,
       List<Allocation> allocations,
+      // Preserve the legacy numeric-text representation only for creation fingerprints.
       @JsonInclude(JsonInclude.Include.NON_NULL) String unit,
-      @JsonInclude(JsonInclude.Include.NON_NULL) Integer boxes) {
+      @JsonInclude(JsonInclude.Include.NON_NULL) Integer boxes,
+      @JsonInclude(JsonInclude.Include.NON_NULL) Long varietyId) {
     static Item from(SalesSlipItemInput value) {
       return value == null
           ? null
@@ -72,8 +77,9 @@ record SalesCreationRequestPayload(
                                   : new Allocation(
                                       allocation.orchidGroupId(), allocation.quantity()))
                       .toList(),
-              value.unit(),
-              value.boxes());
+              value.unit() == null ? null : value.unit().toString(),
+              value.boxes(),
+              value.varietyId());
     }
   }
 

@@ -93,7 +93,7 @@ class FarmReferenceDataPostgresE2ETest extends WorkE2ETestBase {
                     varietyService
                         .create(
                             new VarietyCreateRequest(
-                                "팔레놉시스", "동시 품종 " + index, null, null, null, true, null, null))
+                                "팔레놉시스", "동시 품종 " + index, null, null, null, null, null))
                         .code()))
         .doesNotHaveDuplicates()
         .allMatch(code -> code.matches("VAR-[0-9]{4,}"));

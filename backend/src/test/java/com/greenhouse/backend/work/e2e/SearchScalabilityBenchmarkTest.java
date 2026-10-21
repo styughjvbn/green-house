@@ -31,6 +31,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Tag("work-benchmark")
 @Import({QueryShapeCapture.Configuration.class, JdbcMeasurement.Configuration.class})
 @Timeout(value = 15, unit = TimeUnit.MINUTES)
+@IsolatedPostgresContext
 class SearchScalabilityBenchmarkTest extends WorkE2ETestBase {
 
   @Autowired JdbcTemplate jdbc;

@@ -22,7 +22,6 @@ type VarietyResponse = {
   alias: string | null;
   defaultPotSize: string | null;
   color: string | null;
-  saleEnabled: boolean;
   active: boolean;
   description: string | null;
   memo: string | null;
@@ -101,7 +100,6 @@ async function requestJson<T>(
 type VarietyQuery = {
   keyword?: string;
   genus?: string;
-  saleEnabled?: boolean;
   active?: boolean;
   page?: number;
   size?: number;
@@ -368,7 +366,6 @@ function toVariety(item: VarietyResponse): Variety {
     alias: item.alias ?? "",
     potSize: item.defaultPotSize ?? "",
     color: item.color,
-    saleEnabled: item.saleEnabled,
     status: item.active ? "ACTIVE" : "INACTIVE",
     description: item.description ?? "",
     memo: item.memo ?? "",
@@ -392,7 +389,6 @@ function toVarietyName(item: VarietyNameResponse): Variety {
     alias: "",
     potSize: "",
     color: null,
-    saleEnabled: true,
     status: "ACTIVE",
     description: "",
     memo: "",

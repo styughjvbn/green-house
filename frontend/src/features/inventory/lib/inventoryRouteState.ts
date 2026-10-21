@@ -66,18 +66,11 @@ export function readMaterialRouteState(
 export function readVarietyRouteState(
   params: SearchParamReader,
 ): InventoryRouteState<VarietyFilterState> {
-  const saleEnabled = params.get("varietySale");
   return {
     filters: {
       genus: normalizeAll(params.get("varietyGenus")),
       keyword: params.get("varietyKeyword") ?? "",
       status: readEnum(params.get("varietyStatus"), ["ACTIVE", "INACTIVE"]),
-      saleEnabled:
-        saleEnabled === "사용" || saleEnabled === "true"
-          ? "true"
-          : saleEnabled === "미사용" || saleEnabled === "false"
-            ? "false"
-            : "",
     },
     page: readPage(params.get("page")),
     size: readSize(params.get("size")),

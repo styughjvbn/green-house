@@ -1,3 +1,4 @@
+import { SalesSlipPhotoPreview } from "./SalesSlipPhotoPreview";
 import type { DirectPricePortion } from "../../api/directChangeTypes";
 import { useDirectSaleChangeActions } from "./DirectSaleChangeActions";
 import { salesDispatchLabel } from "../../lib/salesDisplay";
@@ -397,6 +398,7 @@ function SalesSlipLoadedDetail({
           </dd>
         </dl>
 
+        <SalesSlipPhotoPreview salesSlipId={salesSlip.id} />
         <div className="p-4">
           <div className="mt-4">
             {salesSlip.salesType === "DIRECT" &&

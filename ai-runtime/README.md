@@ -1,0 +1,99 @@
+# Green-house AI Runtime
+
+Spring Boot가 검증한 전표 이미지를 받아 입력 후보를 반환하는 별도 Node.js 프로세스다. 전표 저장·재고 변경 도구는 제공하지 않는다. 실행기는 `AI_PROVIDER=codex|openai`로 선택한다.
+
+## 개발 실행
+
+```sh
+cd ai-runtime
+npm ci
+npm run dev
+```
+
+저장소 루트의 `.env`가 있으면 읽고, 이미 지정된 환경변수를 우선한다. 개발 모드(`NODE_ENV=development`)로 TypeScript를 빌드한 뒤 소스 변경을 감시해 재빌드·서버 재시작한다. `.env` 변경 후에는 명령을 다시 실행한다. Codex MCP 도구도 빌드된 파일을 사용한다. `Ctrl+C`로 감시 프로세스와 서버를 함께 종료한다.
+
+시작하면 `server_started`에 주소·실행기·설정 모델을 출력한다. `curl http://127.0.0.1:8091/health`로 서버 응답을 확인한다. 분석 요청은 `request_received` → `inference_started` → 모델·도구 이벤트 → `result_validation_started` → `ai_run` 순서로 출력된다. 요청 ID로 Spring 로그와 연결할 수 있다. 실패는 `ai_run_failed`의 단계·오류 코드·HTTP 상태·네트워크 코드로 구분한다. `model_response`의 401/403은 인증·권한, 429는 사용 한도, `AI_TIMEOUT`은 실행 시간 초과, `ECONNREFUSED`는 연결 실패를 확인한다.
+
+운영 모드도 시작·실패·실행 요약은 기록하고, 상세 진행 로그는 개발 모드에서만 출력한다. 모델의 원문 오류·SDK stderr는 사진 내용이나 인증값을 포함할 수 있어 출력하지 않는다. 시작 성공이나 health 응답은 모델 인증 성공을 보장하지 않는다.
+
+## 운영 실행
+
+운영은 `ai-runtime/Dockerfile`로 빌드한 Node.js 24 컨테이너를 k3s Deployment로 유지한다. `k8s/base`에서 runtime Deployment·내부 Service·Codex PVC를 함께 관리하며 데모 overlay는 해당 리소스를 제외한다. backend와 runtime은 Kubernetes Service DNS로 통신하고 개발 PC의 주소나 `.env`를 사용하지 않는다.
+
+설정·공유 인증키 생성·Pod 내 Codex 로그인·재배포는 [`운영 AI 설정`](../docs/07-deployment.md#운영-ai-설정)을 따른다. 모델·로그인 정보는 `/var/lib/greenhouse-codex`의 PVC에 보존한다. GHCR workflow와 운영 배포 스크립트는 backend·frontend와 함께 runtime 이미지도 갱신한다.
+
+전체 환경변수·기본값·사용 프로세스 구분은 [루트 `.env.example`](../.env.example)을 기준으로 한다. `[B+R]` 공유 인증키·시간·도구 한도는 Spring과 동일하게 설정하고, `[R]` 실행기 설정·전용 인증 경로는 AI runtime에만 전달한다. 개발 환경 로딩은 `scripts/dev-environment.mjs`를 함께 사용한다.
+
+Codex는 SDK와 함께 설치된 CLI를 사용한다. 개발은 전용 OS 계정의 `CODEX_HOME`, 운영은 전용 Pod의 PVC에 로그인하고 파일 기반 인증을 구성한다. 개발자의 Codex 디렉터리나 프로젝트 디렉터리를 공유하지 않는다. 기기 인증이 계정에서 허용된 경우 SDK에 포함된 CLI로 로그인할 수 있다.
+
+```sh
+# 개발 시 ai-runtime 디렉터리의 전용 실행 계정에서 실행. 운영은 위 배포 문서의 kubectl exec 사용.
+export CODEX_HOME=/absolute/path/to/greenhouse-codex
+mkdir -p "$CODEX_HOME"
+./node_modules/.bin/codex -c cli_auth_credentials_store='"file"' login --device-auth
+# 같은 경로를 AI_CODEX_HOME으로 설정
+```
+
+개인 로그인은 구독 이용 범위·한도에 영향을 받으며 운영 전 실제 계정의 이미지 입력과 JSON 출력을 확인한다. 인증 파일은 비밀정보다. 저장소에 넣지 않는다. 이 전용 디렉터리에는 다른 MCP 서버·플러그인·업무 자격증명을 설정하지 않는다. Codex thread는 등록 대화의 최초 추출에서 만들고 이후 일괄·개별 추출에 같은 thread를 재개한다. read-only sandbox, shell 비활성화, web search 비활성화를 사용한다. 이미지는 요청별 임시 디렉터리에서 처리한 뒤 삭제한다. Codex 자체 인증·세션 저장 파일은 전용 계정의 보존 정책으로 관리한다.
+
+OpenAI 실행기는 Responses API의 이미지 입력·structured output·function calling을 사용한다. 실행기 내부에서 도구 요청을 받아 동일한 Spring Tool API로 전달하고, 결과를 모델에 돌려준다. `store: false`를 사용한다. API 이용 요금은 구독과 별도다.
+
+## 후보 검색
+
+거래처·품종 도구의 설명은 공통 계약에서 관리하며 Codex MCP와 OpenAI가 같은 검색 규칙을 사용한다. 내부 공백을 무시하고, 한 번의 호출에서 전체 검색어의 후보와 앞부분(한 글자부터)의 검색 결과가 정확히 하나인 후보를 중복 없이 반환한다. 후보 수는 반환 개수 제한 전에 판단하며 AI가 짧은 검색어로 재호출할 필요는 없다. 단일 후보도 이미지와 다시 비교하고 불확실한 보정 연결은 확인 대상으로 남긴다. 검색 결과 하나만으로 자동 확정하지 않는다.
+
+## 등록 대화
+
+Spring은 세션 생성 시 활성 상태이며 실제 연결된 난 묶음이 하나 이상 있는 품종명 전체를 중복 제거해 전달한다. 수량은 조건에 포함하지 않는다. Runtime은 이름만 세션 참고 데이터로 보관하고 첫 추출에서 한 번 대화에 넣는다. Codex는 이후 thread를 이어 쓰고 OpenAI는 같은 참고 메시지를 이력에 유지한다. 목록은 세션 중 갱신하지 않으며 새로 등록·활성화·연결한 품종을 초기 목록에 반영하려면 사진 등록 창을 다시 연다. ID 매칭과 재고 가능 여부는 이 목록으로 확정하지 않는다. 세션 생성 JSON은 2MB 이내이며 초과 시 일부만 잘라 제공하지 않고 요청을 거절한다.
+
+첫 사진 추가 시 Spring이 Runtime에 세션을 생성한다. `POST /sessions`는 공유 비밀값으로만 호출하며, 최초 추출에서 Codex thread를 열고 다음 요청은 `resumeThread`로 이어간다. OpenAI는 `store: false`를 유지하며 Node 메모리의 대화 이력을 이어 보낸다. 과거 사진 바이너리는 이력에서 제거하고 현재 요청의 사진만 전달한다.
+
+`POST /infer/slip`의 대화 요청은 세션 ID와 최대 10개의 사진 ID·이미지을 받는다. 한 번의 요청이 한 turn이며 프론트는 원본 최대 10장에서 만든 전표를 개수 제한 없이 보관하고, 미처리 전표를 목록 순서대로 최대 10개씩 나눠 같은 세션에 순차 요청한다. 개별 재추출 요청은 해당 사진만 처리한다. 응답의 사진 ID 집합은 요청과 정확히 같아야 한다. 읽을 수 없는 사진은 개별 `result: null`로 표시한다. 매 turn 새로운 도구 토큰과 현재 deadline을 MCP 서버에 전달하고 후보 ID는 이번 실행에서 다시 조회한다.
+
+Spring은 요청별 중지 명령을 `/sessions/{sessionId}/requests/{requestId}/cancel`로 전달한다. Runtime은 해당 요청의 AbortSignal을 Codex/OpenAI 실행에 전달하고 종료 후 응답한다. 취소가 먼저 도착하면 해당 ID의 실행을 시작하지 않으며, 다른 요청이나 기존 대화는 중지하지 않는다. 취소는 `AI_TIMEOUT`과 구분한 `AI_CANCELLED`로 반환한다. 등록 창 종료도 진행 중인 해당 대화를 중지한다.
+
+대화는 30분 비활성·30회 추출·최대 100개 동시 보관으로 제한한다. OpenAI 대화 이력은 2MB 상한을 적용한다. 창을 닫으면 `DELETE /sessions/{sessionId}`로 폐기하며 서버 재시작·만료 시 창을 다시 연다. 추출 완료 뒤 사람이 검토·저장하는 기존 흐름은 유지한다. 일괄 요청은 사진별 8MB·전체 multipart 82MB, 내부 Base64 JSON 112MB까지 허용한다. 큰 묶음은 양쪽의 실행 시간·도구 호출 한도를 운영 상황에 맞춰 조정한다.
+
+## 진행 알림
+
+거래처·품종 검색의 실제 시작·완료는 Spring Tool Gateway가 관찰하고 프론트 SSE로 전달한다. Codex Runtime은 `runStreamed()`의 공개 `reasoning` 요약만 실행별 도구 토큰으로 Spring에 보낸다. 최종 JSON이나 원시 추론은 진행 문구로 전달하지 않으며 요약을 서버 로그에 기록하지 않는다. 요약 전송은 요청 1개·대기 요약 1개로 제한하고 연속 갱신은 최신 값으로 합친다. 전달 실패는 추출 결과에 영향을 주지 않는다. OpenAI 실행기는 현재 검색 이벤트를 제공하고 추론 요약은 요청하지 않는다.
+
+요약 출력을 원하면 전용 `AI_CODEX_HOME/config.toml`에서 지원 모델에 다음 설정을 사용할 수 있다. Runtime이 모델·추론 강도·요약 설정을 코드로 강제하지 않는다.
+
+```toml
+model_reasoning_summary = "auto"
+hide_agent_reasoning = false
+```
+
+요약 지원·상세도는 모델에 따라 다르며 주기적인 진행 메시지를 보장하지 않는다. 도구 이벤트를 진행 상태의 기준으로 사용하고 요약은 보조 설명으로만 표시한다. [공식 Codex 설정 문서](https://learn.chatgpt.com/docs/config-file/config-reference)를 따른다.
+
+## AI 입력 이미지와 신뢰도
+
+첨부·저장하는 원본은 유지하며 Runtime에서 AI용 이미지만 긴 변 최대 1024px로 축소한다. 비율을 유지하고 작은 사진은 확대하지 않는다. EXIF 방향을 반영하며 JPEG·PNG·WebP 입력을 지원하고 변환이 필요한 사진은 WebP 품질 90·effort 3으로 만든다. 이미 제한 크기 이하이고 방향 보정이 필요 없는 사진은 재압축하지 않는다. Codex 임시 파일도 실제 MIME에 맞는 확장자를 사용한다.
+
+모델은 원문의 핵심 필드를 읽은 자체 신뢰도를 0~100으로 반환한다. 이 점수는 측정된 정답률이 아니며 후보 매칭 성공 여부와 분리한다. 기본 80점 미만 또는 읽기 실패인 사진 중 해상도를 높일 수 있는 사진만 원본에서 긴 변 최대 2048px로 다시 만들어 같은 대화에서 한 번 재인식한다. 작은 원본은 확대하지 않고, 세 번째 시도나 2048px 초과 입력은 하지 않는다. 재시도에도 낮으면 재촬영·직접 확인을 안내한다. 재시도가 실패하면 첫 인식값을 유지하고 경고한다. 취소·타임아웃은 기존 오류로 처리한다.
+
+일괄 읽기의 재시도는 낮은 점수의 사진만 묶는다. 최초 인식과 재시도는 요청의 동일 deadline·도구 사용 한도를 공유한다. 결과에는 자체 신뢰도와 실제 반환값의 입력 해상도·시도 횟수를 함께 제공한다. 개발 로그의 `image_prepared`와 `resolution_retry_started`로 처리 단계를 확인한다.
+
+## 계약과 실행 제한
+
+- `POST /infer/slip`: Spring 전용. 공유 비밀값으로 인증하며 공개 프론트에서 호출하지 않는다.
+- Spring의 등록 대화 API는 사용자 소유권과 사진 형식·해상도·크기를 검증한다. 단건 `/api/ai/slips/extract`도 호환용으로 유지한다.
+- Spring이 발급한 실행별 토큰만 `search_varieties`, `search_partners`에 접근할 수 있다. 토큰은 모델 프롬프트에 포함하지 않는다.
+- Codex는 이 Node 프로세스가 제공하는 STDIO MCP 서버를 통해 검색하고, OpenAI는 function calling으로 동일한 도구 클라이언트를 호출한다. Codex의 `approval_policy=never`는 승인 질문을 띄우지 않는 정책이다. 무인 실행에 허용한 두 조회 도구에만 `tools.<tool>.approval_mode=approve`를 지정하고 MCP에 읽기 전용 annotation을 제공한다. 전체 MCP 서버나 변경 도구에 일괄 승인을 적용하지 않는다.
+- 동시 실행은 프로세스당 1건. 실행 중 요청은 즉시 `429 AI_BUSY`. 별도 MQ나 대기열은 없다. Spring도 추출 실행을 1건으로 제한하며 도구 콜백에는 이 실행 잠금을 걸지 않는다.
+- 전체 deadline과 호출 횟수 상한을 적용한다. 취소·타임아웃 후 provider가 종료되기 전 실행 슬롯을 해제하지 않는다.
+- 결과는 `contracts/slip-extraction.schema.json`으로 검사하고 Spring에서 값·조회 후보 ID·날짜·금액을 다시 검증한다.
+- 로그에는 시작 정보와 요청 ID·실행기·설정 모델·소요시간·성공 여부·실패 코드 및 단계별 처리 메타데이터를 기록한다. 프롬프트·사진·도구 검색어·토큰은 기록하지 않는다.
+- 내부 HTTP는 전용 네트워크에서만 허용한다. 외부 네트워크를 지나면 TLS를 적용한다.
+
+## 검증
+
+```sh
+npm run check
+npm test
+```
+
+테스트는 로컬 mock HTTP와 가짜 Codex runner, 실제 STDIO MCP 연결을 사용한다. 외부 모델 호출과 개인 계정 인증은 수행하지 않는다.
+
+참고: [Codex SDK](https://learn.chatgpt.com/docs/codex-sdk), [MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli), [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling).

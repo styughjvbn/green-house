@@ -917,11 +917,6 @@ paths:
         required: false
         schema:
           type: string
-      - name: saleEnabled
-        in: query
-        required: false
-        schema:
-          type: boolean
       - name: active
         in: query
         required: false
@@ -1027,6 +1022,12 @@ paths:
               $ref: '#/components/schemas/SalesSlipCreateRequest'
         required: true
       responses:
+        '503':
+          description: 'SALES_PHOTO_STORAGE_UNAVAILABLE: 사진 저장소 오류. 같은 생성 키와 입력으로 재시도합니다.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '201':
           description: Created
           content:
@@ -1246,6 +1247,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseDirectSaleChangeResult'
+  /api/sales-slips/image-previews:
+    post:
+      tags:
+      - sales-controller
+      description: 원본은 보존하고 전표 사진의 보정·문서 분리·빈 행 제거 결과를 임시 미리보기로 생성합니다. 판매 저장과 AI 입력에는 반영하지 않습니다. 미리보기는 5분 후 만료됩니다.
+      operationId: prepare
+      parameters:
+      - name: rotationDegrees
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: -1
+      - name: minimumInkRatio
+        in: query
+        description: 빈 행 판정 잉크 비율. 0.015는 1.5%이며, 이 값 이하인 행을 빈 행으로 판정합니다.
+        required: false
+        schema:
+          type: number
+          format: double
+          default: 0.015
+          maximum: 0.1
+          minimum: 0
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+              required:
+              - image
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSalesSlipImagePreview'
   /api/orchid-groups:
     get:
       tags:
@@ -2144,6 +2187,107 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/ai/slips/sessions:
+    post:
+      tags:
+      - ai-slip-controller
+      description: 사진 등록 대화를 시작합니다. 대화는 사용자에게 귀속되며 30분간 사용하지 않으면 만료됩니다.
+      operationId: open
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAiSlipSession'
+  /api/ai/slips/sessions/{sessionId}/requests/{requestId}/cancel:
+    post:
+      tags:
+      - ai-slip-controller
+      description: 소유한 등록 대화의 지정 요청을 중지합니다. 실행 종료를 확인한 뒤 반환하며 대화는 유지합니다.
+      operationId: cancel_1
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/ai/slips/sessions/{sessionId}/extract:
+    post:
+      tags:
+      - ai-slip-controller
+      description: 선택 사진 1~10장을 동일 대화의 한 요청으로 추출합니다. metadata 순서와 photos 파일 순서는 일치해야 합니다. 사진별 최대 8MB. 결과는 사진 ID로 연결합니다.
+      operationId: extract
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: X-AI-Request-Id
+        in: header
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                metadata:
+                  $ref: '#/components/schemas/AiSlipConversationMetadata'
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+              required:
+              - metadata
+              - photos
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSlipConversationResult'
+  /api/ai/slips/extract:
+    post:
+      tags:
+      - ai-slip-controller
+      description: 전표 사진을 읽고 조회 도구로 거래처·품종 후보를 찾습니다. 전표·재고를 저장하지 않습니다. JPEG/PNG/WebP 최대 8MB.
+      operationId: extract_1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+              required:
+              - image
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSlipExtractionResult'
   /api/work-types/{workTypeId}:
     patch:
       tags:
@@ -2966,6 +3110,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+  /api/sales-slips/{id}/source-photo:
+    get:
+      tags:
+      - sales-controller
+      description: 인증된 전표 사진 조회. JPEG/PNG/WebP 최대 8MB. 저장된 사진의 Base64 데이터를 반환합니다.
+      operationId: getPhoto
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: 저장된 사진
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePhotoContent'
+        '503':
+          description: 'SALES_PHOTO_STORAGE_UNAVAILABLE: 사진 저장소 오류 또는 파일 무결성 검증 실패'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/sales-slips/{id}/source-photo/info:
+    get:
+      tags:
+      - sales-controller
+      description: 전표 첨부 사진의 메타데이터. 사진이 없으면 data=null. 전표 취소 후에도 보존합니다.
+      operationId: getPhotoInfo
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePhotoInfo'
   /api/sales-slips/{id}/direct-changes:
     get:
       tags:
@@ -3135,6 +3325,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/sales-slips/image-previews/{id}/images/{imageId}:
+    get:
+      tags:
+      - sales-controller
+      operationId: image
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: byte
   /api/sales-slips/auction-shipments:
     get:
       tags:
@@ -4360,6 +4576,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePartnerAnalyticsResponse'
+  /api/ai/slips/sessions/{sessionId}/requests/{requestId}/progress:
+    get:
+      tags:
+      - ai-slip-controller
+      description: 소유한 등록 대화의 지정 요청에서 처리 중인 사진과 분석·검색·검증 진행 상태를 조회합니다.
+      operationId: progress
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAiSlipConversationProgress'
+  /api/ai/slips/sessions/{sessionId}/requests/{requestId}/events:
+    get:
+      tags:
+      - ai-slip-controller
+      description: 소유한 요청의 진행 상태를 SSE로 구독합니다. 연결·재연결 시 현재 상태를 보내고 요청 종료 시 스트림을 닫습니다.
+      operationId: events
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/AiSlipConversationProgress'
+  /api/sales-slips/image-previews/{id}:
+    delete:
+      tags:
+      - sales-controller
+      operationId: remove
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
   /api/orchid-group-collections/{collectionId}/members/{orchidGroupId}:
     delete:
       tags:
@@ -4385,6 +4668,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
+  /api/ai/slips/sessions/{sessionId}:
+    delete:
+      tags:
+      - ai-slip-controller
+      operationId: close
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/ai/slips/sessions/{sessionId}/photos/{photoId}:
+    delete:
+      tags:
+      - ai-slip-controller
+      operationId: removePhoto
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: photoId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
 components:
   schemas:
     ErrorBody:
@@ -4464,6 +4788,8 @@ components:
           enum:
           - DIRECT
           - AUCTION
+        sourcePhoto:
+          $ref: '#/components/schemas/SalesSlipPhotoInput'
       required:
       - items
       - saleDate
@@ -4512,18 +4838,41 @@ components:
           maxLength: 100
           minLength: 0
         unit:
-          type: string
-          maxLength: 30
-          minLength: 0
+          type: integer
+          format: int32
+          minimum: 1
         unitPrice:
           type: integer
           format: int32
           minimum: 0
+        varietyId:
+          type: integer
+          format: int64
+          description: 기록만 등록은 필수. 난 묶음 연결은 모든 배분의 동일 품종 ID로 확정 가능할 때만 생략 가능.
+          minimum: 1
       required:
       - allocations
       - itemName
       - quantity
       - unitPrice
+    SalesSlipPhotoInput:
+      type: object
+      properties:
+        contentBase64:
+          type: string
+          maxLength: 11184812
+          minLength: 0
+        contentType:
+          type: string
+          minLength: 1
+        fileName:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - contentBase64
+      - contentType
+      - fileName
     ApiResponseSalesSlipResponse:
       type: object
       properties:
@@ -4698,10 +5047,17 @@ components:
         spec:
           type: string
         unit:
-          type: string
+          type: integer
+          format: int32
         unitPrice:
           type: integer
           format: int32
+        varietyId:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          description: 품종 식별자. 품목명·속은 작성 당시의 별도 기록이며 현재 마스터명으로 대체하지 않습니다.
     SalesSlipResponse:
       type: object
       properties:
@@ -6308,8 +6664,6 @@ components:
           type: string
           maxLength: 150
           minLength: 0
-        saleEnabled:
-          type: boolean
       required:
       - genus
       - name
@@ -6356,8 +6710,6 @@ components:
         recentWorkDate:
           type: string
           format: date
-        saleEnabled:
-          type: boolean
         saleableQuantity:
           type: integer
           format: int64
@@ -6532,6 +6884,96 @@ components:
       required:
       - correctionDate
       - reason
+    ApiResponseSalesSlipImagePreview:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SalesSlipImagePreview'
+        message:
+          type: string
+    SalesSlipImagePreview:
+      type: object
+      properties:
+        clockwiseDegrees:
+          type: integer
+          format: int32
+        deskewDegrees:
+          type: number
+          format: double
+        documentCount:
+          type: integer
+          format: int32
+        expiresAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+          format: uuid
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipPreviewImage'
+        removedRows:
+          type: integer
+          format: int32
+        reviewRequired:
+          type: boolean
+        sourceHeight:
+          type: integer
+          format: int32
+        sourceWidth:
+          type: integer
+          format: int32
+        tableCount:
+          type: integer
+          format: int32
+        warnings:
+          type: array
+          items:
+            type: string
+        workingHeight:
+          type: integer
+          format: int32
+        workingWidth:
+          type: integer
+          format: int32
+    SalesSlipPreviewImage:
+      type: object
+      properties:
+        documentForm:
+          type: string
+          enum:
+          - CONSIGNMENT_RECEIPT
+          - LISTING_REQUEST
+          - UNKNOWN
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+          - CORRECTED
+          - DOCUMENT
+          - DOCUMENT_COMPACTED
+          - TABLE
+        sourceRegion:
+          $ref: '#/components/schemas/SalesSlipSourceRegion'
+    SalesSlipSourceRegion:
+      type: object
+      description: EXIF 방향이 반영된 원본의 정규화 사각형 좌표(0~1)
+      properties:
+        height:
+          type: number
+          format: double
+        width:
+          type: number
+          format: double
+        x:
+          type: number
+          format: double
+        y:
+          type: number
+          format: double
     OrchidGroupCreateRequest:
       type: object
       properties:
@@ -8050,6 +8492,191 @@ components:
       - returnedQuantity
       - soldQuantity
       - waitingQuantity
+    AiSlipSession:
+      type: object
+      properties:
+        sessionId:
+          type: string
+    ApiResponseAiSlipSession:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AiSlipSession'
+        message:
+          type: string
+    AiSlipConversationMetadata:
+      type: object
+      properties:
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiSlipPhotoMetadata'
+          maxItems: 10
+          minItems: 0
+      required:
+      - photos
+    AiSlipPhotoMetadata:
+      type: object
+      properties:
+        documentForm:
+          type: string
+          enum:
+          - CONSIGNMENT_RECEIPT
+          - LISTING_REQUEST
+          - UNKNOWN
+        photoId:
+          type: string
+          minLength: 1
+          pattern: '[-a-zA-Z0-9]{1,64}'
+      required:
+      - photoId
+    AiSlipExtractionItem:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        boxes:
+          type: integer
+          format: int32
+        calculatedAmount:
+          type: integer
+          format: int64
+        genus:
+          type: string
+        itemName:
+          type: string
+        memo:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        rawGenus:
+          type: string
+        rawItemName:
+          type: string
+        spec:
+          type: string
+        unit:
+          type: integer
+          format: int32
+        unitPrice:
+          type: integer
+          format: int32
+        varietyId:
+          type: integer
+          format: int64
+    AiSlipFieldReview:
+      type: object
+      properties:
+        field:
+          type: string
+          enum:
+          - SALE_DATE
+          - PARTNER
+          - SALES_TYPE
+          - SLIP_MEMO
+          - ITEM_NAME
+          - GENUS
+          - GRADE
+          - UNIT
+          - BOXES
+          - QUANTITY
+          - UNIT_PRICE
+          - AMOUNT
+          - ITEM_MEMO
+        itemIndex:
+          type:
+          - integer
+          - 'null'
+          format: int32
+          description: 품목은 0부터 시작하는 행 번호, 전표 기본 정보는 null
+          maximum: 99
+          minimum: 0
+        reason:
+          type: string
+          maxLength: 200
+          minLength: 0
+      required:
+      - field
+      - reason
+    AiSlipPhotoResult:
+      type: object
+      properties:
+        errorCode:
+          type: string
+        photoId:
+          type: string
+        result:
+          $ref: '#/components/schemas/SlipExtractionResult'
+    ApiResponseSlipConversationResult:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SlipConversationResult'
+        message:
+          type: string
+    SlipConversationResult:
+      type: object
+      properties:
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiSlipPhotoResult'
+        requestId:
+          type: string
+        sessionId:
+          type: string
+    SlipExtractionResult:
+      type: object
+      properties:
+        attempts:
+          type: integer
+          format: int32
+        confidence:
+          type: integer
+          format: int32
+          description: AI 자체 평가 신뢰도(0~100). 실제 정답률이 아닙니다.
+        imageLongEdge:
+          type: integer
+          format: int32
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiSlipExtractionItem'
+        memo:
+          type: string
+        partnerId:
+          type: integer
+          format: int64
+        partnerName:
+          type: string
+        rawPartnerName:
+          type: string
+        requestId:
+          type: string
+        reviewFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiSlipFieldReview'
+        saleDate:
+          type: string
+        salesType:
+          type: string
+          enum:
+          - DIRECT
+          - AUCTION
+        warnings:
+          type: array
+          items:
+            type: string
+    ApiResponseSlipExtractionResult:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SlipExtractionResult'
+        message:
+          type: string
     WorkTypeUpdateRequest:
       type: object
       properties:
@@ -8133,8 +8760,6 @@ components:
           type: string
           maxLength: 150
           minLength: 0
-        saleEnabled:
-          type: boolean
       required:
       - genus
       - name
@@ -9205,6 +9830,36 @@ components:
           items:
             $ref: '#/components/schemas/SalesSlipResponse'
         message:
+          type: string
+    ApiResponsePhotoContent:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PhotoContent'
+        message:
+          type: string
+    PhotoContent:
+      type: object
+      properties:
+        contentBase64:
+          type: string
+        contentType:
+          type: string
+        fileName:
+          type: string
+    ApiResponsePhotoInfo:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PhotoInfo'
+        message:
+          type: string
+    PhotoInfo:
+      type: object
+      properties:
+        contentType:
+          type: string
+        fileName:
           type: string
     ApiResponseDirectSaleChangeResponse:
       type: object
@@ -11492,3 +12147,47 @@ components:
         unpaidAmount:
           type: integer
           format: int64
+    Activity:
+      type: object
+      properties:
+        calls:
+          type: integer
+          format: int32
+        latestLookup:
+          $ref: '#/components/schemas/Lookup'
+        searching:
+          type: boolean
+        summary:
+          type: string
+    AiSlipConversationProgress:
+      type: object
+      properties:
+        activity:
+          $ref: '#/components/schemas/Activity'
+        photoIds:
+          type: array
+          items:
+            type: string
+        requestId:
+          type: string
+        stage:
+          type: string
+          enum:
+          - WAITING
+          - READING
+          - VALIDATING
+          - DONE
+    ApiResponseAiSlipConversationProgress:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AiSlipConversationProgress'
+        message:
+          type: string
+    Lookup:
+      type: object
+      properties:
+        query:
+          type: string
+        tool:
+          type: string

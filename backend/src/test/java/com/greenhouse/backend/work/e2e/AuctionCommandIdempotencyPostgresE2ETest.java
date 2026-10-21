@@ -216,60 +216,60 @@ class AuctionCommandIdempotencyPostgresE2ETest extends WorkE2ETestBase {
     assertThat(snapshot()).isEqualTo(before);
   }
 
-  @ParameterizedTest
-  @ValueSource(
-      strings = {
-        "auctionDate",
-        "attemptNo",
-        "attemptStatus",
-        "failedReason",
-        "memo",
-        "quantity",
-        "unitPrice",
-        "auctionGrade",
-        "note",
-        "inspectionStatus"
-      })
-  void sameResultKeyWithChangedContentConflictsWithoutSideEffects(String field) throws Exception {
+  @Test
+  void sameResultKeyWithChangedContentConflictsWithoutSideEffects() throws Exception {
     String body = resultBody("conflict", "PARTIALLY_SOLD", 10);
     assertThat(post(resultsPath(), body).status()).isEqualTo(200);
-    ObjectNode changed = (ObjectNode) objectMapper.readTree(body);
-    switch (field) {
-      case "auctionDate" -> changed.put(field, "2043-01-02");
-      case "attemptNo" -> changed.put(field, 2);
-      case "attemptStatus" -> changed.put(field, "SOLD");
-      case "quantity" -> ((ObjectNode) changed.path("resultLines").get(0)).put(field, 11);
-      case "unitPrice" -> ((ObjectNode) changed.path("resultLines").get(0)).put(field, 2000);
-      case "inspectionStatus" ->
-          ((ObjectNode) changed.path("resultLines").get(0)).put(field, "RETURN_INFERRED");
-      case "auctionGrade", "note" ->
-          ((ObjectNode) changed.path("resultLines").get(0)).put(field, "다른 값");
-      default -> changed.put(field, "다른 값");
-    }
     var before = snapshot();
-    var conflict = post(resultsPath(), changed.toString());
-    assertThat(conflict.status()).isEqualTo(409);
-    assertThat(conflict.body().path("error").path("code").asText())
-        .isEqualTo("AUCTION_REQUEST_KEY_CONFLICT");
-    assertThat(snapshot()).isEqualTo(before);
+    for (String field :
+        List.of(
+            "auctionDate",
+            "attemptNo",
+            "attemptStatus",
+            "failedReason",
+            "memo",
+            "quantity",
+            "unitPrice",
+            "auctionGrade",
+            "note",
+            "inspectionStatus")) {
+      ObjectNode changed = (ObjectNode) objectMapper.readTree(body);
+      switch (field) {
+        case "auctionDate" -> changed.put(field, "2043-01-02");
+        case "attemptNo" -> changed.put(field, 2);
+        case "attemptStatus" -> changed.put(field, "SOLD");
+        case "quantity" -> ((ObjectNode) changed.path("resultLines").get(0)).put(field, 11);
+        case "unitPrice" -> ((ObjectNode) changed.path("resultLines").get(0)).put(field, 2000);
+        case "inspectionStatus" ->
+            ((ObjectNode) changed.path("resultLines").get(0)).put(field, "RETURN_INFERRED");
+        case "auctionGrade", "note" ->
+            ((ObjectNode) changed.path("resultLines").get(0)).put(field, "다른 값");
+        default -> changed.put(field, "다른 값");
+      }
+      var conflict = post(resultsPath(), changed.toString());
+      assertThat(conflict.status()).as("field %s: %s", field, conflict.body()).isEqualTo(409);
+      assertThat(conflict.body().path("error").path("code").asText())
+          .isEqualTo("AUCTION_REQUEST_KEY_CONFLICT");
+      assertThat(snapshot()).as("unchanged facts after %s", field).isEqualTo(before);
+    }
   }
 
-  @ParameterizedTest
-  @ValueSource(strings = {"returnedQuantity", "returnDate", "worker", "memo"})
-  void sameReturnKeyWithChangedContentConflictsBeforeCurrentStateValidation(String field)
-      throws Exception {
+  @Test
+  void sameReturnKeyWithChangedContentConflictsBeforeCurrentStateValidation() throws Exception {
     assertThat(post(resultsPath(), resultBody("setup", "FAILED", 1)).status()).isEqualTo(200);
     String body = returnBody("conflict", "null");
     assertThat(post(returnsPath(), body).status()).isEqualTo(200);
-    ObjectNode changed = (ObjectNode) objectMapper.readTree(body);
-    if (field.equals("returnedQuantity")) changed.put(field, 40);
-    else changed.put(field, field.equals("returnDate") ? "2043-01-03" : "다른 값");
     var before = snapshot();
-    var conflict = post(returnsPath(), changed.toString());
-    assertThat(conflict.status()).isEqualTo(409);
-    assertThat(conflict.body().path("error").path("code").asText())
-        .isEqualTo("AUCTION_REQUEST_KEY_CONFLICT");
-    assertThat(snapshot()).isEqualTo(before);
+    for (String field : List.of("returnedQuantity", "returnDate", "worker", "memo")) {
+      ObjectNode changed = (ObjectNode) objectMapper.readTree(body);
+      if (field.equals("returnedQuantity")) changed.put(field, 40);
+      else changed.put(field, field.equals("returnDate") ? "2043-01-03" : "다른 값");
+      var conflict = post(returnsPath(), changed.toString());
+      assertThat(conflict.status()).as("field %s: %s", field, conflict.body()).isEqualTo(409);
+      assertThat(conflict.body().path("error").path("code").asText())
+          .isEqualTo("AUCTION_REQUEST_KEY_CONFLICT");
+      assertThat(snapshot()).as("unchanged facts after %s", field).isEqualTo(before);
+    }
   }
 
   @ParameterizedTest

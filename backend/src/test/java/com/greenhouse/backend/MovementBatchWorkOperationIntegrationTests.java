@@ -78,10 +78,10 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
     houseRepository.save(house);
     firstVariety =
         varietyRepository.save(
-            new Variety("MOVE-BATCH-1", "팔레놉시스", "이동 품종 1", null, "4치", true, true, null, null));
+            new Variety("MOVE-BATCH-1", "팔레놉시스", "이동 품종 1", null, "4치", true, null, null));
     secondVariety =
         varietyRepository.save(
-            new Variety("MOVE-BATCH-2", "덴드로비움", "이동 품종 2", null, "3치", true, true, null, null));
+            new Variety("MOVE-BATCH-2", "덴드로비움", "이동 품종 2", null, "3치", true, null, null));
   }
 
   @Test

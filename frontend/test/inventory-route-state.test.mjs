@@ -43,7 +43,6 @@ test("variety route state normalizes legacy values and invalid pagination", () =
       genus: "",
       keyword: "",
       status: "",
-      saleEnabled: "true",
     },
     page: 0,
     size: 100,

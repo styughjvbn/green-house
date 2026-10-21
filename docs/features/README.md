@@ -3,6 +3,7 @@
 현재 구현된 기능의 도메인 정책, 운영 절차와 진행 중 개선 계획을 다룬다.
 
 - [판매·경매·정산](sales-auction-settlement.md)
+- [전표 이미지 처리](image-processing.md) — 처리 흐름·옵션, 검증 범위와 성능 측정 기준
 - [인증·인가](authentication.md)
 - [작업 실행·난 그룹](work-operation-and-orchid-collection.md)
 - [난 묶음 Mutation Engine 전환 코드 수명](orchid-group-mutation-transition.md)

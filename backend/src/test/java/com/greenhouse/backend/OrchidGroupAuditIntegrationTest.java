@@ -48,15 +48,7 @@ class OrchidGroupAuditIntegrationTest extends AbstractBackendIntegrationTest {
         varietyRepository
             .saveAndFlush(
                 new Variety(
-                    "AUDIT-" + System.nanoTime(),
-                    "Phal",
-                    "감사품종",
-                    null,
-                    "4인치",
-                    true,
-                    true,
-                    null,
-                    null))
+                    "AUDIT-" + System.nanoTime(), "Phal", "감사품종", null, "4인치", true, null, null))
             .getId();
   }
 

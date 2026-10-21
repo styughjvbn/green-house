@@ -66,7 +66,6 @@ class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
                 null,
                 "4인치",
                 true,
-                true,
                 null,
                 null));
     OrchidGroup group =

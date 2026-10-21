@@ -344,8 +344,7 @@ class DiscardRecordQueryPostgresE2ETest extends WorkE2ETestBase {
   private void mixedVarieties() {
     var variety =
         varieties.saveAndFlush(
-            new Variety(
-                "QUERY-DISCARD-B", "팔레놉시스", "두 번째 폐기 품종", null, "3.5치", true, true, null, null));
+            new Variety("QUERY-DISCARD-B", "팔레놉시스", "두 번째 폐기 품종", null, "3.5치", true, null, null));
     for (int i = 1; i < ids.size(); i += 2)
       jdbc.update(
           "update orchid_groups set variety_id = ?, variety_name = ? where id = ?",

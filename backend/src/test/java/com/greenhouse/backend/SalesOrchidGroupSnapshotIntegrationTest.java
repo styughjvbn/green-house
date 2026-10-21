@@ -73,8 +73,7 @@ class SalesOrchidGroupSnapshotIntegrationTest {
 
     Variety variety =
         varietyRepository.save(
-            new Variety(
-                "SNAPSHOT-VARIETY", "팔레놉시스", "스냅샷 품종", null, "3.5치", true, true, null, null));
+            new Variety("SNAPSHOT-VARIETY", "팔레놉시스", "스냅샷 품종", null, "3.5치", true, null, null));
     OrchidGroup group =
         new OrchidGroup(
             zone,

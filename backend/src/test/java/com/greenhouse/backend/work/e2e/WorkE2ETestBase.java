@@ -10,26 +10,26 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Timeout;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.test.context.TestExecutionListeners;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @Timeout(value = 5, unit = TimeUnit.MINUTES, threadMode = Timeout.ThreadMode.SAME_THREAD)
 @ActiveProfiles("e2e")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-@Import(OrchidGroupLedgerTestFixture.class)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@Import({OrchidGroupLedgerTestFixture.class, PostgresE2eConfiguration.class})
+@TestExecutionListeners(
+    listeners = PostgresE2eResetListener.class,
+    mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 abstract class WorkE2ETestBase {
 
-  @Container @ServiceConnection
-  static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18-alpine");
+  static final PostgreSQLContainer POSTGRES = PostgresE2eConfiguration.POSTGRES;
+
+  @Autowired protected PostgresE2eConfiguration.TestDatabase testDatabase;
 
   private final TestHttpClient httpClient = new TestHttpClient();
 

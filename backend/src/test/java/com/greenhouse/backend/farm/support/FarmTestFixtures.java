@@ -41,7 +41,7 @@ public final class FarmTestFixtures {
   }
 
   public OrchidGroup orchidGroup(BedZone zone, String varietyCode, int quantity) {
-    var variety = new Variety(varietyCode, "난", varietyCode, null, "3치", true, true, null, null);
+    var variety = new Variety(varietyCode, "난", varietyCode, null, "3치", true, null, null);
     entityManager.persist(variety);
     var group =
         new OrchidGroup(

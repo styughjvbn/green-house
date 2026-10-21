@@ -42,7 +42,6 @@ class SeedVariety:
     alias: str | None = None
     default_pot_size: str | None = None
     description: str | None = None
-    sale_enabled: bool = True
     is_active: bool = True
     memo: str | None = None
     auction_count: int = 0
@@ -277,7 +276,6 @@ def merge_variety_maps(*maps: dict[tuple[str, str], SeedVariety]) -> list[SeedVa
                     alias=value.alias,
                     default_pot_size=value.default_pot_size,
                     description=value.description,
-                    sale_enabled=value.sale_enabled,
                     is_active=value.is_active,
                     memo=value.memo,
                     auction_count=value.auction_count,
@@ -367,7 +365,6 @@ def variety_to_json_obj(v: SeedVariety) -> dict[str, Any]:
         "alias": v.alias,
         "defaultPotSize": v.default_pot_size,
         "description": v.description,
-        "saleEnabled": v.sale_enabled,
         "active": v.is_active,
         "memo": v.memo,
         "reviewRequired": v.review_required,
@@ -439,7 +436,6 @@ def load_varieties_json(path: Path) -> list[SeedVariety]:
             alias=clean_text(raw.get("alias")) or None,
             default_pot_size=clean_text(raw.get("defaultPotSize")) or None,
             description=clean_text(raw.get("description")) or None,
-            sale_enabled=bool(raw.get("saleEnabled", True)),
             is_active=bool(raw.get("active", True)),
             memo=clean_text(raw.get("memo")) or None,
             auction_count=int(source.get("auctionCount") or 0),
@@ -481,7 +477,6 @@ def generate_sql(varieties: list[SeedVariety], source_names: list[str], delete_e
     lines.append("    alias TEXT,")
     lines.append("    default_pot_size TEXT,")
     lines.append("    description TEXT,")
-    lines.append("    sale_enabled BOOLEAN NOT NULL,")
     lines.append("    is_active BOOLEAN NOT NULL,")
     lines.append("    memo TEXT,")
     lines.append("    source_label TEXT NOT NULL,")
@@ -501,7 +496,6 @@ def generate_sql(varieties: list[SeedVariety], source_names: list[str], delete_e
                 v.alias,
                 v.default_pot_size,
                 v.description or "경매/일반 판매 초기 데이터에서 추출한 품종",
-                v.sale_enabled,
                 v.is_active,
                 v.memo,
                 v.source_label,
@@ -513,7 +507,7 @@ def generate_sql(varieties: list[SeedVariety], source_names: list[str], delete_e
             for v in varieties
         ]
         lines.append("INSERT INTO _seed_varieties (")
-        lines.append("    code, genus, name, alias, default_pot_size, description, sale_enabled, is_active, memo,")
+        lines.append("    code, genus, name, alias, default_pot_size, description, is_active, memo,")
         lines.append("    source_label, auction_count, direct_count, first_seen, last_seen")
         lines.append(") VALUES")
         lines.append(values_rows(rows) + ";")
@@ -537,7 +531,6 @@ def generate_sql(varieties: list[SeedVariety], source_names: list[str], delete_e
     lines.append("    alias,")
     lines.append("    default_pot_size,")
     lines.append("    description,")
-    lines.append("    sale_enabled,")
     lines.append("    is_active,")
     lines.append("    memo")
     lines.append(")")
@@ -550,7 +543,6 @@ def generate_sql(varieties: list[SeedVariety], source_names: list[str], delete_e
     lines.append("    seed.alias,")
     lines.append("    seed.default_pot_size,")
     lines.append("    seed.description,")
-    lines.append("    seed.sale_enabled,")
     lines.append("    seed.is_active,")
     lines.append("    COALESCE(seed.memo, 'source=' || seed.source_label || ', auction_count=' || seed.auction_count || ', direct_count=' || seed.direct_count)")
     lines.append("FROM _seed_varieties seed")
@@ -569,7 +561,6 @@ def generate_sql(varieties: list[SeedVariety], source_names: list[str], delete_e
     lines.append("    alias = seed.alias,")
     lines.append("    default_pot_size = seed.default_pot_size,")
     lines.append("    description = seed.description,")
-    lines.append("    sale_enabled = seed.sale_enabled,")
     lines.append("    is_active = seed.is_active,")
     lines.append("    memo = COALESCE(seed.memo, variety.memo),")
     lines.append("    updated_at = CURRENT_TIMESTAMP")

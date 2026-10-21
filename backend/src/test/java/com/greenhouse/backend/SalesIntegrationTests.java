@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.document.application.SalesSlipCreationService;
@@ -249,6 +250,23 @@ class SalesIntegrationTests extends FarmFixtureIntegrationTest {
   }
 
   @Test
+  void rejectsNonPositiveFractionalTextAndOverflowingItemUnits() throws Exception {
+    var request =
+        policyRequest(SalesType.DIRECT, policyPartner(PartnerType.WHOLESALE).getId(), null);
+    var mapper = JsonMapper.builder().build();
+    for (String unit : List.of("0", "-1", "1.5", "\"분\"", "\"10\"", "2147483648")) {
+      var payload = mapper.readTree(policyJson(request));
+      ((ObjectNode) payload.path("items").get(0)).set("unit", mapper.readTree(unit));
+      mockMvc
+          .perform(
+              post("/api/sales-slips")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(payload.toString()))
+          .andExpect(status().isBadRequest());
+    }
+  }
+
+  @Test
   void optionalItemUnitAndBoxesSurviveCreateAndDirectEdit() throws Exception {
     var request =
         policyRequest(SalesType.DIRECT, policyPartner(PartnerType.WHOLESALE).getId(), null);
@@ -262,7 +280,7 @@ class SalesIntegrationTests extends FarmFixtureIntegrationTest {
             original.unitPrice(),
             original.memo(),
             original.allocations(),
-            " 분 ",
+            10,
             2);
     var withPackaging = policyInput(request, request.partnerId(), List.of(item));
     var created =
@@ -272,7 +290,7 @@ class SalesIntegrationTests extends FarmFixtureIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(policyJson(withPackaging)))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.data.items[0].unit").value("분"))
+            .andExpect(jsonPath("$.data.items[0].unit").value(10))
             .andExpect(jsonPath("$.data.items[0].boxes").value(2))
             .andReturn();
     long id =
@@ -285,7 +303,7 @@ class SalesIntegrationTests extends FarmFixtureIntegrationTest {
     mockMvc
         .perform(get("/api/sales-slips/{id}", id))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.items[0].unit").value("분"))
+        .andExpect(jsonPath("$.data.items[0].unit").value(10))
         .andExpect(jsonPath("$.data.items[0].boxes").value(2));
     mockMvc
         .perform(

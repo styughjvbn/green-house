@@ -57,7 +57,7 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
     Variety variety =
         varietyRepository.save(
             new Variety(
-                "WORK-SCOPE-TEST", "팔레놉시스", "작업 범위 테스트 난", null, "3.5\"", true, true, null, null));
+                "WORK-SCOPE-TEST", "팔레놉시스", "작업 범위 테스트 난", null, "3.5\"", true, null, null));
     OrchidGroup first = saveGroup(zone, variety, 40, "3.5\"", 1);
     OrchidGroup second = saveGroup(zone, variety, 30, "3.5\"", 2);
     OrchidGroup third = saveGroup(zone, variety, 20, "4\"", 3);

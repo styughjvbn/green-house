@@ -19,6 +19,7 @@ final class ArchitecturePackages {
           "integration");
   private static final Map<String, Set<String>> FEATURES =
       Map.of(
+          "ai", Set.of("slip", "tool"),
           "farm",
               Set.of(
                   "structure",

@@ -19,6 +19,8 @@ repositories {
 }
 
 dependencies {
+	implementation(project(":slip-image-core"))
+	runtimeOnly("com.twelvemonkeys.imageio:imageio-webp:3.15.3")
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -120,13 +122,16 @@ tasks.register<Test>("workE2eTest") {
 		"../scripts/data-audit/validate-domain-constraint.sql",
 	)
 	description = "Runs the Work API contract E2E tests against PostgreSQL."
+	systemProperty("junit.jupiter.execution.parallel.enabled", "false")
 	testClassesDirs = sourceSets["test"].output.classesDirs
 	classpath = sourceSets["test"].runtimeClasspath
 	useJUnitPlatform {
 		includeTags("work-e2e")
 	}
 	shouldRunAfter(tasks.named("test"))
-	systemProperty("greenhouse.cli.runtime-classpath", sourceSets["main"].runtimeClasspath.asPath)
+	doFirst {
+		systemProperty("greenhouse.cli.runtime-classpath", sourceSets["main"].runtimeClasspath.asPath)
+	}
 
 	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")
 }
@@ -134,6 +139,7 @@ tasks.register<Test>("workE2eTest") {
 tasks.register<Test>("workBenchmark") {
 	group = "verification"
 	description = "Measures Work API query count and response-time distribution."
+	systemProperty("junit.jupiter.execution.parallel.enabled", "false")
 	testClassesDirs = sourceSets["test"].output.classesDirs
 	classpath = sourceSets["test"].runtimeClasspath
 	useJUnitPlatform {
@@ -186,4 +192,12 @@ tasks.register<Test>("domainDiagnosis") {
 	outputs.upToDateWhen { false }
 	testLogging.showStandardStreams = true
 	systemProperty("junit.jupiter.execution.timeout.threaddump.enabled", "true")
+}
+
+tasks.register<JavaExec>("salesPhotoStorage") {
+    group = "maintenance"
+    description = "Verifies immutable sales photos and inspects unused files; no HTTP server is started."
+    dependsOn(tasks.named("classes"))
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.greenhouse.backend.sales.document.application.SalesPhotoStorageCli")
 }

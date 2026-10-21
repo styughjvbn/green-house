@@ -153,14 +153,13 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
             "별칭",
             "4인치",
             null,
-            true,
             null,
             null));
     assertThat(mutationRepository.count()).isEqualTo(mutationCountBeforeMetadataUpdate);
     varietyService.update(
         fixture.variety().getId(),
         new VarietyUpdateRequest(
-            fixture.variety().getGenus(), "라우팅 변경 품종", "별칭", "4인치", null, true, null, null));
+            fixture.variety().getGenus(), "라우팅 변경 품종", "별칭", "4인치", null, null, null));
 
     entityManager.flush();
     OrchidGroup updated = orchidGroupRepository.findById(created.id()).orElseThrow();
@@ -455,8 +454,7 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
     houseRepository.save(house);
     Variety variety =
         varietyRepository.save(
-            new Variety(
-                "ROUTING-" + houseNumber, "팔레놉시스", suffix, null, "4인치", true, true, null, null));
+            new Variety("ROUTING-" + houseNumber, "팔레놉시스", suffix, null, "4인치", true, null, null));
     return new Fixture(zone, variety);
   }
 

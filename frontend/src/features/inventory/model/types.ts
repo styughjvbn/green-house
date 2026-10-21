@@ -17,7 +17,6 @@ export type VarietyFilterState = {
   genus: string;
   keyword: string;
   status: InventoryStatus | "";
-  saleEnabled: "true" | "false" | "";
 };
 
 export type InboundFilterState = {
@@ -34,7 +33,6 @@ export interface Variety {
   alias: string;
   potSize: string;
   color: string | null;
-  saleEnabled: boolean;
   status: InventoryStatus;
   description: string;
   memo: string;
@@ -67,7 +65,6 @@ export interface VarietyPayload {
   alias: string;
   defaultPotSize: string;
   color: string | null;
-  saleEnabled: boolean;
   description: string;
   memo: string;
 }

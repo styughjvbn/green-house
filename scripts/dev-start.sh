@@ -2,7 +2,20 @@
 
 set -Eeuo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+
+if [[ "${GREENHOUSE_DEV_ENV_LOADED:-}" != 1 ]]; then
+    if ! command -v node >/dev/null 2>&1; then
+        echo "Node.js 22 or later is required." >&2
+        exit 1
+    fi
+    exec node "${SCRIPT_DIR}/dev-environment.mjs" bash "${SCRIPT_DIR}/dev-start.sh" "$@"
+fi
+unset GREENHOUSE_DEV_ENV_LOADED
 export APP_ENV=dev
+BACKEND_PORT="${SERVER_PORT:-8080}"
+export BACKEND_API_URL="${BACKEND_API_URL:-http://127.0.0.1:${BACKEND_PORT}/api}"
 
 NO_DB=false
 LAN=false
@@ -35,8 +48,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 LOGS="${ROOT}/logs"
 PIDS="${ROOT}/.dev-pids"
 
@@ -94,23 +105,23 @@ stop_backend() {
     while read -r pid; do
         if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
             stop_process_tree "$pid"
-            echo "Stopped backend process ${pid} on port 8080"
+            echo "Stopped backend process ${pid} on port ${BACKEND_PORT}"
         fi
     done < <(
-        ss -ltnp "sport = :8080" 2>/dev/null |
+        ss -ltnp "sport = :${BACKEND_PORT}" 2>/dev/null |
             sed -n 's/.*pid=\([0-9]\+\).*/\1/p' |
             sort -u
     )
 
     for _ in {1..20}; do
-        if ! test_port_listening 8080; then
+        if ! test_port_listening "${BACKEND_PORT}"; then
             return 0
         fi
 
         sleep 0.5
     done
 
-    echo "Backend port 8080 is still in use." >&2
+    echo "Backend port ${BACKEND_PORT} is still in use." >&2
     return 1
 }
 
@@ -167,6 +178,17 @@ if [[ "$LAN" == true ]]; then
     require_command ip
 fi
 
+# Canonical CORS variable; accept old names until local files are updated.
+export FRONTEND_ORIGIN_PATTERNS="${FRONTEND_ORIGIN_PATTERNS:-${FRONTEND_ORIGINS:-${FRONTEND_ORIGIN:-http://localhost:*,http://127.0.0.1:*}}}"
+LAN_IP=""
+if [[ "$LAN" == true ]]; then
+    while read -r address; do
+        [[ -n "$address" ]] || continue
+        FRONTEND_ORIGIN_PATTERNS+=",http://${address}:3000"
+        if [[ -z "$LAN_IP" ]]; then LAN_IP="$address"; fi
+    done < <(ip -4 -o addr show scope global | awk '{split($4, parts, "/"); print parts[1]}')
+fi
+
 cd "$ROOT"
 
 if [[ "$NO_DB" == false ]]; then
@@ -179,8 +201,8 @@ if [[ "$RESTART_BACKEND" == true ]]; then
     stop_backend
 fi
 
-if test_port_listening 8080; then
-    echo "Backend already listening on http://localhost:8080"
+if test_port_listening "${BACKEND_PORT}"; then
+    echo "Backend already listening on http://localhost:${BACKEND_PORT} (use --restart-backend after changing .env)"
 else
     echo "Starting backend..."
 
@@ -209,7 +231,7 @@ else
 fi
 
 if ! wait_http_ready \
-    "http://localhost:8080/actuator/health" \
+    "http://localhost:${BACKEND_PORT}/actuator/health" \
     "Backend" \
     90; then
     echo "Backend logs:"
@@ -282,20 +304,11 @@ else
 fi
 echo "Frontend: http://localhost:3000"
 if [[ "$LAN" == true ]]; then
-    LAN_IP="$(
-        ip -4 -o addr show scope global \
-            | awk '{print $4}' \
-            | cut -d/ -f1 \
-            | grep '^192\.168\.0\.' \
-            | head -n 1 \
-            || true
-    )"
-
     if [[ -n "$LAN_IP" ]]; then
         echo "LAN:      http://${LAN_IP}:3000"
     else
-        echo "LAN:      frontend is bound to 0.0.0.0, but no 192.168.0.* IP was found"
+        echo "LAN:      frontend is bound to 0.0.0.0, but no global IPv4 address was found"
     fi
 fi
-echo "Backend:  http://localhost:8080"
+echo "Backend:  http://localhost:${BACKEND_PORT}"
 echo "Logs:     ${LOGS}"
