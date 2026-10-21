@@ -59,6 +59,19 @@ Spring은 요청별 중지 명령을 `/sessions/{sessionId}/requests/{requestId}
 
 대화는 30분 비활성·30회 추출·최대 100개 동시 보관으로 제한한다. OpenAI 대화 이력은 2MB 상한을 적용한다. 창을 닫으면 `DELETE /sessions/{sessionId}`로 폐기하며 서버 재시작·만료 시 창을 다시 연다. 추출 완료 뒤 사람이 검토·저장하는 기존 흐름은 유지한다. 일괄 요청은 사진별 8MB·전체 multipart 82MB, 내부 Base64 JSON 112MB까지 허용한다. 큰 묶음은 양쪽의 실행 시간·도구 호출 한도를 운영 상황에 맞춰 조정한다.
 
+## 진행 알림
+
+거래처·품종 검색의 실제 시작·완료는 Spring Tool Gateway가 관찰하고 프론트 SSE로 전달한다. Codex Runtime은 `runStreamed()`의 공개 `reasoning` 요약만 실행별 도구 토큰으로 Spring에 보낸다. 최종 JSON이나 원시 추론은 진행 문구로 전달하지 않으며 요약을 서버 로그에 기록하지 않는다. 요약 전송은 요청 1개·대기 요약 1개로 제한하고 연속 갱신은 최신 값으로 합친다. 전달 실패는 추출 결과에 영향을 주지 않는다. OpenAI 실행기는 현재 검색 이벤트를 제공하고 추론 요약은 요청하지 않는다.
+
+요약 출력을 원하면 전용 `AI_CODEX_HOME/config.toml`에서 지원 모델에 다음 설정을 사용할 수 있다. Runtime이 모델·추론 강도·요약 설정을 코드로 강제하지 않는다.
+
+```toml
+model_reasoning_summary = "auto"
+hide_agent_reasoning = false
+```
+
+요약 지원·상세도는 모델에 따라 다르며 주기적인 진행 메시지를 보장하지 않는다. 도구 이벤트를 진행 상태의 기준으로 사용하고 요약은 보조 설명으로만 표시한다. [공식 Codex 설정 문서](https://learn.chatgpt.com/docs/config-file/config-reference)를 따른다.
+
 ## AI 입력 이미지와 신뢰도
 
 첨부·저장하는 원본은 유지하며 Runtime에서 AI용 이미지만 긴 변 최대 1024px로 축소한다. 비율을 유지하고 작은 사진은 확대하지 않는다. EXIF 방향을 반영하며 JPEG·PNG·WebP 입력을 지원하고 변환이 필요한 사진은 WebP 품질 90·effort 3으로 만든다. 이미 제한 크기 이하이고 방향 보정이 필요 없는 사진은 재압축하지 않는다. Codex 임시 파일도 실제 MIME에 맞는 확장자를 사용한다.

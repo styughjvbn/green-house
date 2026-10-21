@@ -123,6 +123,12 @@ export function codexProvider(
         let failure: RuntimeError | undefined;
         try {
           for await (const event of streamed.events) {
+            if (
+              (event.type === "item.updated" ||
+                event.type === "item.completed") &&
+              event.item.type === "reasoning"
+            )
+              context.reportSummary?.(event.item.text);
             if (event.type === "thread.started" && context.session)
               context.session.threadId = event.thread_id;
             if (

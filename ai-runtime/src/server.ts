@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { openAiProvider } from "./providers/openai.js";
 import { codexProvider } from "./providers/codex.js";
 import { createToolClient } from "./tools/client.js";
+import { createProgressReporter } from "./progress.js";
 import { extractWithResolutionFallback } from "./extraction.js";
 import { createLogger, errorDetails } from "./logging.js";
 import {
@@ -195,6 +196,7 @@ export function createRuntimeServer(
     const started = performance.now();
     let success = false;
     let stage = "upload";
+    let progressReporter: ReturnType<typeof createProgressReporter> | undefined;
     let failureCode: string | undefined;
     log("request_received", { provider: provider.name }, true);
     const onDisconnect = () => {
@@ -278,6 +280,7 @@ export function createRuntimeServer(
         maxToolCalls,
         diagnostic,
       );
+      progressReporter = createProgressReporter(toolsUrl, input.toolToken);
       stage = "inference";
       diagnostic("inference_started", {
         model: provider.model || "account-default",
@@ -291,6 +294,7 @@ export function createRuntimeServer(
         {
           signal: controller.signal,
           callTool,
+          reportSummary: progressReporter.report,
           maxToolCalls,
           diagnostic,
           session,
@@ -324,6 +328,7 @@ export function createRuntimeServer(
       });
       send(failure.status, { error: { code: failure.code } });
     } finally {
+      progressReporter?.close();
       response.off("close", onDisconnect);
       clearTimeout(uploadTimer);
       clearTimeout(timer);

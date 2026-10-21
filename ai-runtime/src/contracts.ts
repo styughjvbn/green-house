@@ -119,6 +119,7 @@ export type RunContext = {
   callTool: ToolCall;
   maxToolCalls: number;
   diagnostic?: Diagnostic;
+  reportSummary?: (summary: string) => void;
   session?: SessionState;
   toolBudget?: { used: number };
   deadlineMs?: number;

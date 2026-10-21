@@ -514,3 +514,57 @@ test("OpenAI continuation retains prior extraction without retaining photo binar
     await stop(fake);
   }
 });
+
+test("Codex forwards public reasoning summaries without exposing final JSON as progress", async () => {
+  const summaries: string[] = [];
+  const provider = codexProvider(
+    "",
+    "/tmp/isolated-home",
+    "http://127.0.0.1:1",
+    () =>
+      ({
+        startThread() {
+          return {
+            async runStreamed() {
+              return {
+                events: (async function* () {
+                  yield {
+                    type: "item.updated",
+                    item: {
+                      id: "reasoning",
+                      type: "reasoning",
+                      text: "품종 후보 확인",
+                    },
+                  };
+                  yield {
+                    type: "item.completed",
+                    item: {
+                      id: "reasoning",
+                      type: "reasoning",
+                      text: "품종 후보 확인 완료",
+                    },
+                  };
+                  yield {
+                    type: "item.completed",
+                    item: {
+                      id: "final",
+                      type: "agent_message",
+                      text: JSON.stringify(output(input)),
+                    },
+                  };
+                  yield { type: "turn.completed" };
+                })(),
+              };
+            },
+          };
+        },
+      }) as unknown as Codex,
+  );
+  await provider.run(input, {
+    signal: new AbortController().signal,
+    callTool: async () => [],
+    maxToolCalls: 2,
+    reportSummary: (text) => summaries.push(text),
+  });
+  assert.deepEqual(summaries, ["품종 후보 확인", "품종 후보 확인 완료"]);
+});
