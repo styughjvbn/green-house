@@ -38,6 +38,41 @@ async function stop(server: Server) {
   server.closeAllConnections();
   await new Promise<void>((resolve) => server.close(() => resolve()));
 }
+test("runtime accepts a 300-call budget and rejects out-of-range settings", async () => {
+  const provider: AgentProvider = {
+    name: "mock",
+    model: "mock",
+    run: async (_, context) => {
+      assert.equal(context.maxToolCalls, 300);
+      return result;
+    },
+  };
+  for (const limit of [0, 301, 1.5, Number.NaN])
+    assert.throws(
+      () => createRuntimeServer(provider, secret, "http://127.0.0.1:1", limit),
+      /Invalid AI execution limits/,
+    );
+  const server = createRuntimeServer(
+    provider,
+    secret,
+    "http://127.0.0.1:1",
+    300,
+  );
+  const url = await start(server);
+  try {
+    const response = await fetch(url + "/infer/slip", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+    assert.equal(response.status, 200);
+  } finally {
+    await stop(server);
+  }
+});
 test("Responses adapter executes requested lookup and sends the result back before returning structured extraction", async () => {
   let turns = 0;
   let argumentsSeen: unknown;

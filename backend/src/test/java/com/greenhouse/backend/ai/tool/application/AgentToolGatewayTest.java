@@ -12,6 +12,30 @@ import org.junit.jupiter.api.Test;
 
 class AgentToolGatewayTest {
   @Test
+  void acceptsThreeHundredCallsAndRejectsLargerConfiguredOrExecutedBudgets() {
+    var varieties = mock(VarietySearchApi.class);
+    var partners = mock(BusinessPartnerQueryApi.class);
+    var clock = Clock.fixed(Instant.parse("2026-10-15T00:00:00Z"), ZoneOffset.UTC);
+    assertThatThrownBy(() -> new AgentToolGateway(varieties, partners, clock, 301, 60))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new AgentToolGateway(varieties, partners, clock, 0, 60))
+        .isInstanceOf(IllegalArgumentException.class);
+    var gateway = new AgentToolGateway(varieties, partners, clock, 300, 60);
+    when(varieties.searchOptions("난", null, 10)).thenReturn(List.of());
+    try (var scope = gateway.open("large-budget", "worker")) {
+      String authorization = "Bearer " + scope.token();
+      var args = new AgentToolGateway.Arguments("난", null, null);
+      for (int i = 0; i < 300; i++)
+        assertThat(gateway.execute(authorization, "search_varieties", args)).isEmpty();
+      assertThatThrownBy(() -> gateway.execute(authorization, "search_varieties", args))
+          .isInstanceOf(AgentException.class)
+          .extracting("code")
+          .isEqualTo("AI_TOOL_LIMIT");
+    }
+    verify(varieties, times(300)).searchOptions("난", null, 10);
+  }
+
+  @Test
   void deniesUnknownExpiredAndClosedScopesAndEnforcesToolBudget() {
     var clock = mock(Clock.class);
     var now = Instant.parse("2026-10-15T00:00:00Z");

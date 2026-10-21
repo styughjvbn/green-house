@@ -33,7 +33,7 @@ public class AgentToolGateway {
     this.varieties = varieties;
     this.partners = partners;
     this.clock = clock;
-    if (maxCalls < 1 || maxCalls > 100 || timeoutSeconds < 1 || timeoutSeconds > 600)
+    if (maxCalls < 1 || maxCalls > 300 || timeoutSeconds < 1 || timeoutSeconds > 600)
       throw new IllegalArgumentException("AI limits are outside their supported range");
     this.maxCalls = maxCalls;
     this.timeoutSeconds = timeoutSeconds;

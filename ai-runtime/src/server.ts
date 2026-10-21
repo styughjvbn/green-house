@@ -45,7 +45,7 @@ export function createRuntimeServer(
   if (
     !Number.isInteger(maxToolCalls) ||
     maxToolCalls < 1 ||
-    maxToolCalls > 100 ||
+    maxToolCalls > 300 ||
     !Number.isInteger(maxSeconds) ||
     maxSeconds < 1 ||
     maxSeconds > 600
@@ -236,7 +236,9 @@ export function createRuntimeServer(
           !photo ||
           typeof photo.photoId !== "string" ||
           !/^[-a-zA-Z0-9]{1,64}$/.test(photo.photoId) ||
-          !["image/jpeg", "image/png", "image/webp"].includes(photo.contentType) ||
+          !["image/jpeg", "image/png", "image/webp"].includes(
+            photo.contentType,
+          ) ||
           typeof photo.contentBase64 !== "string" ||
           photo.contentBase64.length > 11184812
         )
