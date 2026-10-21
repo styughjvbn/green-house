@@ -38,6 +38,9 @@ export type CreateSalesSlipPayload = {
   paymentMethod: string | null;
   memo: string | null;
   items: Array<{
+    varietyId?:
+      | components["schemas"]["SalesSlipItemRequest"]["varietyId"]
+      | null;
     itemName: string;
     genus: string | null;
     spec: string | null;

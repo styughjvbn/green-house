@@ -1,6 +1,7 @@
 package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -13,7 +14,12 @@ import com.greenhouse.backend.farm.structure.domain.BedZoneSide;
 import com.greenhouse.backend.farm.structure.domain.House;
 import com.greenhouse.backend.farm.structure.domain.PhysicalBed;
 import com.greenhouse.backend.farm.variety.domain.Variety;
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -22,6 +28,43 @@ import org.springframework.transaction.annotation.Transactional;
 class VarietyQueryIntegrationTests extends AbstractBackendIntegrationTest {
 
   @Autowired VarietySearchApi varietySearchApi;
+
+  @Autowired EntityManager entityManager;
+
+  @Test
+  @Transactional
+  void identityLookupLoadsOneBatchRegardlessOfItemCountAndIncludesInactiveVarieties() {
+    var saved = new ArrayList<Long>();
+    for (int i = 0; i < 30; i++)
+      saved.add(saveCandidate("BATCH-ID-" + i, "식별자속", "식별자품종" + i, null, false).getId());
+    entityManager.flush();
+    entityManager.clear();
+    var stats =
+        entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+    boolean enabled = stats.isStatisticsEnabled();
+    stats.setStatisticsEnabled(true);
+    try {
+      for (int size : new int[] {1, 30}) {
+        stats.clear();
+        var options = varietySearchApi.findOptionsByIds(Set.copyOf(saved.subList(0, size)));
+        assertThat(options)
+            .hasSize(size)
+            .allSatisfy(option -> assertThat(option.active()).isFalse());
+        assertThat(stats.getPrepareStatementCount()).isEqualTo(1);
+        entityManager.clear();
+      }
+      stats.clear();
+      assertThat(varietySearchApi.findOptionsByIds(Set.of())).isEmpty();
+      assertThat(stats.getPrepareStatementCount()).isZero();
+      assertThatThrownBy(
+              () ->
+                  varietySearchApi.findOptionsByIds(
+                      LongStream.rangeClosed(1, 501).boxed().collect(Collectors.toSet())))
+          .isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      stats.setStatisticsEnabled(enabled);
+    }
+  }
 
   @Test
   @Transactional

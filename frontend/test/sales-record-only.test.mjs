@@ -15,6 +15,7 @@ test("completed records preserve facts entered after selecting the registration 
     original.saleDate = "2026-09-01";
     original.items[0] = {
       ...original.items[0],
+      varietyId: "42",
       itemName: "미니퍼플",
       genus: "팔레놉시스",
       quantity: "150",
@@ -73,6 +74,9 @@ test("recorded items still require a variety name and positive integer quantity"
   );
   assert.match(salesAllocationIssue(form.items, true), /품종명/);
   form.items[0].itemName = "미니퍼플";
+  assert.match(salesAllocationIssue(form.items, true), /품종을 선택/);
+  form.items[0].varietyId = "42";
+  assert.equal(salesAllocationIssue(form.items, true), null);
   for (const quantity of ["0", "-1", "1.5", "", "abc"])
     assert.match(
       salesAllocationIssue([{ ...form.items[0], quantity }], true),

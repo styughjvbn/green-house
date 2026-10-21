@@ -790,7 +790,9 @@ class SalesCreationIdempotencyPostgresE2ETest extends WorkE2ETestBase {
                 "과거 품목",
                 List.of(),
                 10,
-                3)),
+                3,
+                jdbc.queryForObject(
+                    "SELECT variety_id FROM orchid_groups WHERE id=?", Long.class, groupId))),
         null,
         true);
   }

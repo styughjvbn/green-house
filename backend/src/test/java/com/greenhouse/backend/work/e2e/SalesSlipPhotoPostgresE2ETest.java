@@ -2,6 +2,8 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.greenhouse.backend.farm.variety.domain.Variety;
+import com.greenhouse.backend.farm.variety.repository.VarietyRepository;
 import com.greenhouse.backend.sales.api.document.SalesType;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
 import com.greenhouse.backend.sales.document.application.PhotoStorageException;
@@ -35,6 +37,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Tag("work-e2e")
 class SalesSlipPhotoPostgresE2ETest extends WorkE2ETestBase {
   @Autowired BusinessPartnerRepository partners;
+  @Autowired VarietyRepository varieties;
   @Autowired JdbcTemplate jdbc;
   @org.springframework.test.context.bean.override.mockito.MockitoSpyBean SalesPhotoStorage storage;
   @Autowired SalesPhotoMaintenanceService maintenance;
@@ -300,6 +303,18 @@ class SalesSlipPhotoPostgresE2ETest extends WorkE2ETestBase {
   }
 
   private SalesSlipCommand request(Long partnerId, SalesSlipPhotoInput photo) {
+    Long varietyId =
+        varieties.findAll().stream()
+            .filter(variety -> variety.getCode().equals("PHOTO-TEST"))
+            .map(Variety::getId)
+            .findFirst()
+            .orElseGet(
+                () ->
+                    varieties
+                        .saveAndFlush(
+                            new Variety(
+                                "PHOTO-TEST", "테스트 속", "테스트 품종", null, "2치", true, null, null))
+                        .getId());
     return new SalesSlipCommand(
         LocalDate.of(2026, 10, 13),
         SalesType.DIRECT,
@@ -309,7 +324,9 @@ class SalesSlipPhotoPostgresE2ETest extends WorkE2ETestBase {
         "출고 완료",
         null,
         null,
-        List.of(new SalesSlipItemInput("테스트 품종", null, null, 2, 1000, null, List.of())),
+        List.of(
+            new SalesSlipItemInput(
+                "테스트 품종", null, null, 2, 1000, null, List.of(), null, null, varietyId)),
         null,
         true,
         photo);

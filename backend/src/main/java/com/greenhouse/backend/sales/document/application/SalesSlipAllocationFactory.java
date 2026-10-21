@@ -3,6 +3,7 @@ package com.greenhouse.backend.sales.document.application;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupQueryApi;
 import com.greenhouse.backend.farm.api.orchid.OrchidGroupState;
+import com.greenhouse.backend.farm.api.variety.VarietySearchApi;
 import com.greenhouse.backend.sales.api.document.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.document.application.command.SalesSlipAllocationInput;
 import com.greenhouse.backend.sales.document.application.command.SalesSlipItemInput;
@@ -12,9 +13,12 @@ import com.greenhouse.backend.sales.document.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.document.spi.DirectDocumentAccountingPort;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +31,8 @@ public class SalesSlipAllocationFactory {
   private final OrchidGroupQueryApi orchidGroupReader;
 
   private final Clock clock;
+
+  private final VarietySearchApi varieties;
 
   public void lockForReplacement(SalesSlip current, List<SalesSlipItemInput> requests) {
     requests.forEach(this::validateAllocationSum);
@@ -43,12 +49,28 @@ public class SalesSlipAllocationFactory {
 
   public List<SalesSlipItem> createRecordedItems(
       List<SalesSlipItemInput> requests, List<DirectDocumentAccountingPort.PriceSnapshot> prices) {
-    // No current Farm reads or fabricated historical snapshots for completed records.
+    // A recorded item must explicitly identify a master variety before any persistence.
+    if (requests.stream().anyMatch(request -> request.varietyId() == null))
+      throw new IllegalArgumentException("판매 품목의 품종을 선택하세요.");
+    // Verify identities in one batch; never fabricate past inventory snapshots.
+    var ids =
+        requests.stream()
+            .map(SalesSlipItemInput::varietyId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+    var existing =
+        (ids.isEmpty() ? List.<VarietySearchApi.Option>of() : varieties.findOptionsByIds(ids))
+            .stream().map(VarietySearchApi.Option::id).collect(Collectors.toSet());
+    if (!existing.containsAll(ids)) throw new IllegalArgumentException("선택한 품종이 존재하지 않습니다.");
     return IntStream.range(0, requests.size())
         .mapToObj(
             index ->
                 createItem(
-                    requests.get(index), Map.of(), null, prices == null ? null : prices.get(index)))
+                    requests.get(index),
+                    Map.of(),
+                    null,
+                    prices == null ? null : prices.get(index),
+                    requests.get(index).varietyId()))
         .toList();
   }
 
@@ -65,7 +87,8 @@ public class SalesSlipAllocationFactory {
                     requests.get(index),
                     orchidGroups,
                     capturedAt,
-                    prices == null ? null : prices.get(index)))
+                    prices == null ? null : prices.get(index),
+                    allocatedVarietyId(requests.get(index), orchidGroups)))
         .toList();
   }
 
@@ -82,7 +105,8 @@ public class SalesSlipAllocationFactory {
       SalesSlipItemInput request,
       Map<Long, OrchidGroupState> orchidGroups,
       LocalDateTime capturedAt,
-      DirectDocumentAccountingPort.PriceSnapshot price) {
+      DirectDocumentAccountingPort.PriceSnapshot price,
+      Long varietyId) {
     var item =
         price == null
             ? new SalesSlipItem(
@@ -106,9 +130,9 @@ public class SalesSlipAllocationFactory {
                 SalesTextNormalizer.normalize(request.memo()),
                 request.unit(),
                 request.boxes());
+    item.assignVariety(varietyId);
     for (SalesSlipAllocationInput allocationRequest : mergeAllocations(request.allocations())) {
       OrchidGroupState orchidGroup = orchidGroups.get(allocationRequest.orchidGroupId());
-      validateItemVariety(request, orchidGroup);
       item.addAllocation(createAllocation(orchidGroup, allocationRequest.quantity(), capturedAt));
     }
     return item;
@@ -145,10 +169,23 @@ public class SalesSlipAllocationFactory {
     }
   }
 
-  private void validateItemVariety(SalesSlipItemInput request, OrchidGroupState orchidGroup) {
-    String itemName = SalesTextNormalizer.required(request.itemName());
-    if (!itemName.equals(orchidGroup.varietyName())) {
-      throw new IllegalArgumentException("난 묶음 품종과 판매 품목명이 일치하지 않습니다.");
+  private Long allocatedVarietyId(SalesSlipItemInput request, Map<Long, OrchidGroupState> groups) {
+    var ids = new HashSet<Long>();
+    boolean completeIdentity = true;
+    for (var allocation : request.allocations()) {
+      var group = groups.get(allocation.orchidGroupId());
+      if (group == null) throw new IllegalArgumentException("난 묶음을 확인할 수 없습니다.");
+      if (request.varietyId() != null) {
+        if (!request.varietyId().equals(group.varietyId()))
+          throw new IllegalArgumentException("난 묶음과 판매 품목의 품종 ID가 일치하지 않습니다.");
+      } else if (!SalesTextNormalizer.required(request.itemName()).equals(group.varietyName())) {
+        throw new IllegalArgumentException("난 묶음 품종과 판매 품목명이 일치하지 않습니다.");
+      }
+      if (group.varietyId() != null) ids.add(group.varietyId());
+      else completeIdentity = false;
     }
+    if (ids.size() > 1) throw new IllegalArgumentException("한 품목에는 같은 품종의 난 묶음만 연결할 수 있습니다.");
+    if (request.varietyId() != null) return request.varietyId();
+    return completeIdentity ? ids.stream().findFirst().orElse(null) : null;
   }
 }

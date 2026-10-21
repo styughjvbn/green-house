@@ -25,6 +25,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -55,6 +56,16 @@ public class VarietyService implements VarietySearchApi {
   @Transactional(readOnly = true)
   public List<Option> searchOptions(String keyword, String genus, int limit) {
     return varietyRepository.searchCandidates(keyword, genus, limit).stream()
+        .map(v -> new Option(v.getId(), v.getName(), v.getGenus(), v.isActive()))
+        .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Option> findOptionsByIds(Set<Long> ids) {
+    if (ids.size() > 500) throw new IllegalArgumentException("품종은 한 번에 최대 500개까지 확인할 수 있습니다.");
+    if (ids.isEmpty()) return List.of();
+    return varietyRepository.findAllById(ids).stream()
         .map(v -> new Option(v.getId(), v.getName(), v.getGenus(), v.isActive()))
         .toList();
   }

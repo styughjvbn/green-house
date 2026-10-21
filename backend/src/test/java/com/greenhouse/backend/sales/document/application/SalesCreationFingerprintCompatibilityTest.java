@@ -79,7 +79,8 @@ class SalesCreationFingerprintCompatibilityTest {
         // Keep the v1 fixture unchanged: absent optional packing fields must retain its hash.
         var expected =
             schema.getKey().equals(SalesSlipItemInput.class.getName())
-                ? Stream.concat(schema.getValue().stream(), List.of("unit", "boxes").stream())
+                ? Stream.concat(
+                        schema.getValue().stream(), List.of("unit", "boxes", "varietyId").stream())
                     .toList()
                 : schema.getKey().equals(SalesSlipCommand.class.getName())
                     ? Stream.concat(

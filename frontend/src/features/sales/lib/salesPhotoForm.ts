@@ -37,6 +37,7 @@ export function withRecognizedSalesSlip(
   const items = result.items?.map((item, index) => ({
     ...createEmptySalesItem(),
     fieldReviews: reviewsFor(index),
+    varietyId: item.varietyId == null ? "" : String(item.varietyId),
     itemName: item.itemName ?? "",
     genus: item.genus ?? "",
     spec: item.spec ?? "",

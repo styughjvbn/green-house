@@ -2563,6 +2563,11 @@ export interface components {
             unit?: number;
             /** Format: int32 */
             unitPrice: number;
+            /**
+             * Format: int64
+             * @description 기록만 등록은 필수. 난 묶음 연결은 모든 배분의 동일 품종 ID로 확정 가능할 때만 생략 가능.
+             */
+            varietyId?: number;
         };
         SalesSlipPhotoInput: {
             contentBase64: string;
@@ -2672,6 +2677,11 @@ export interface components {
             unit?: number;
             /** Format: int32 */
             unitPrice?: number;
+            /**
+             * Format: int64
+             * @description 품종 식별자. 품목명·속은 작성 당시의 별도 기록이며 현재 마스터명으로 대체하지 않습니다.
+             */
+            varietyId?: number | null;
         };
         SalesSlipResponse: {
             auctionMarket?: string;

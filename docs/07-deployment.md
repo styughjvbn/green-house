@@ -497,6 +497,10 @@ WHERE (mutation_id IS NULL) <> (correlation_id IS NULL);
 원인을 확인하고 해당 테스트 DB를 보존한다. manifest 교체, ledger 직접 수정,
 `ACTIVE` 전환으로 문제를 덮지 않는다. 현재 Engine 전용 HTTP 서버의 smoke test는 ACTIVE 백업을 복원한 폐기 가능한 DB 사본에서 수행한다. PREPARING 상태를 현재 release에서 재활성화하지 않는다.
 
+### 전표 품종 연결 V45
+
+V45는 전표 품목에 품종 ID 연결을 추가하고 과거 명칭·속은 유지한다. 2026-10-21 운영 백업(Flyway V41)을 별도 PostgreSQL 18에 복원해 V42~V44 선행 SQL과 V45를 검증했다. 품목 1,434건이 모두 연결됐고, 새 품종 ID를 제외한 59개 테이블의 데이터 지문이 일치했다. 기존 생성 receipt도 변경되지 않았다. 운영·개발 DB에는 적용하지 않았으며 다음 배포 때 일반 Flyway 순서로 적용한다. 실제 배포 자료가 검증 백업 이후라면 미연결·복수 후보를 다시 점검하며 이름만으로 추측 연결하지 않는다.
+
 ### 운영 백업 복원 후 기동 검증
 
 복원본의 read-only 대사가 `ACTIVE`, `ready=true`, `issues=[]`인지 확인한 뒤 동일 배포 후보로 HTTP 없는 기동 검증을 수행한다. 이 검증은 Flyway를 실행하지 않고 Hibernate schema validation과 원장 startup guard를 확인한다.

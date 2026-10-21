@@ -66,6 +66,10 @@ export function createSalesSlipDraftActions(
           ? {
               ...item,
               [field]: value,
+              ...((field === "itemName" || field === "genus") &&
+              item[field] !== value
+                ? { varietyId: "" }
+                : {}),
               allocationMode:
                 field === "quantity" ? ("AUTO" as const) : item.allocationMode,
             }
@@ -93,6 +97,7 @@ export function createSalesSlipDraftActions(
       if (!source?.itemName) return current;
       const item = {
         ...createEmptySalesItem(),
+        varietyId: source.varietyId,
         itemName: source.itemName,
         genus: source.genus,
         ...(source.fieldReviews

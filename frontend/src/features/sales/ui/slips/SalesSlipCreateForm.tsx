@@ -141,6 +141,7 @@ export function SalesSlipCreateForm({
   const itemGroups = new Map<
     string,
     {
+      varietyId: string;
       itemName: string;
       genus: string;
       rows: { item: SalesItemForm; index: number }[];
@@ -150,11 +151,12 @@ export function SalesSlipCreateForm({
     const key =
       form.recordOnly && !item.itemName
         ? `record-${index}`
-        : JSON.stringify([item.genus, item.itemName]);
+        : JSON.stringify([item.varietyId, item.genus, item.itemName]);
     const group = itemGroups.get(key);
     if (group) group.rows.push({ item, index });
     else
       itemGroups.set(key, {
+        varietyId: item.varietyId,
         itemName: item.itemName,
         genus: item.genus,
         rows: [{ item, index }],
@@ -455,6 +457,7 @@ export function SalesSlipCreateForm({
                           review={varietyReview(
                             group.rows.map((row) => row.index),
                           )}
+                          varietyId={group.varietyId}
                           name={group.itemName}
                           genus={group.genus}
                           disabled={inputsDisabled}
@@ -462,6 +465,11 @@ export function SalesSlipCreateForm({
                             group.rows.forEach(({ index }) => {
                               onUpdateItem(index, "itemName", variety.name);
                               onUpdateItem(index, "genus", variety.genus);
+                              onUpdateItem(
+                                index,
+                                "varietyId",
+                                String(variety.id),
+                              );
                             });
                           }}
                         />

@@ -19,6 +19,7 @@ export type BusinessPartnerForm = {
 };
 
 export type SalesAllocationForm = {
+  varietyId?: string;
   orchidGroupId: string;
   varietyName: string;
   genus: string;
@@ -28,6 +29,7 @@ export type SalesAllocationForm = {
 };
 
 export type SalesItemForm = {
+  varietyId: string;
   fieldReviews?: SalesFieldReviews;
   itemName: string;
   genus: string;

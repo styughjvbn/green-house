@@ -18,6 +18,7 @@ const group = (
   genus = "호접란",
 ) => ({
   id,
+  varietyId: varietyName === "품종 A" ? 42 : 43,
   varietyName,
   genus,
   availableQuantity,
@@ -63,6 +64,7 @@ test("two price or grade items share group capacity in proportion, including int
   )[0];
   const second = {
     ...createEmptySalesItem(),
+    varietyId: first.varietyId,
     genus: first.genus,
     itemName: first.itemName,
     spec: "B급",
@@ -101,6 +103,7 @@ test("whole variety quota avoids assigning all small items to the same group", (
   )[0];
   const second = {
     ...createEmptySalesItem(),
+    varietyId: first.varietyId,
     genus: first.genus,
     itemName: first.itemName,
   };
@@ -116,6 +119,7 @@ test("manual allocation stays fixed, remaining automatic item adjusts, overcapac
   )[0];
   const second = {
     ...createEmptySalesItem(),
+    varietyId: first.varietyId,
     genus: first.genus,
     itemName: first.itemName,
     quantity: "40",
@@ -174,6 +178,7 @@ test("editing a slip restores shared group capacity and preserves its historical
     salesStatus: "작성중",
     items: [
       {
+        varietyId: 42,
         itemName: "품종 A",
         genus: "호접란",
         spec: "A급",
@@ -182,6 +187,7 @@ test("editing a slip restores shared group capacity and preserves its historical
         allocations: [line(30)],
       },
       {
+        varietyId: 42,
         itemName: "품종 A",
         genus: "호접란",
         spec: "B급",
@@ -209,4 +215,25 @@ test("editing a slip restores shared group capacity and preserves its historical
     changed.map((item) => item.allocations[0].quantity),
     ["40", "20"],
   );
+});
+
+test("variety identity survives group linking and renames without replacing the item snapshot", () => {
+  const original = {
+    ...createEmptySalesItem(),
+    varietyId: "42",
+    itemName: "과거 이름",
+    genus: "과거 속",
+    quantity: "2",
+  };
+  const items = addSelectedGroupsToSalesItems(
+    [original],
+    [{ ...group(1, 10, "현재 이름", "현재 속"), varietyId: 42 }],
+  );
+  assert.equal(items.length, 1);
+  assert.equal(items[0].varietyId, "42");
+  assert.equal(items[0].itemName, "과거 이름");
+  assert.equal(items[0].genus, "과거 속");
+  assert.equal(salesAllocationIssue(items), null);
+  const form = { ...createInitialSalesForm("2026-10-21"), items };
+  assert.equal(toCreateSalesSlipPayload(form).items[0].varietyId, 42);
 });

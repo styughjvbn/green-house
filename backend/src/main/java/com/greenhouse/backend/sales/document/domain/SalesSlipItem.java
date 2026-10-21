@@ -47,6 +47,9 @@ public class SalesSlipItem {
 
   private String genus;
 
+  @Column(name = "variety_id")
+  private Long varietyId;
+
   private String spec;
 
   private Integer unit;
@@ -150,6 +153,13 @@ public class SalesSlipItem {
 
   void setSalesSlip(SalesSlip salesSlip) {
     this.salesSlip = salesSlip;
+  }
+
+  /** Identity is independent of the historical name and genus snapshots. */
+  public void assignVariety(Long varietyId) {
+    if (varietyId == null || varietyId <= 0)
+      throw new IllegalArgumentException("판매 품목의 품종을 선택하세요.");
+    this.varietyId = varietyId;
   }
 
   public void addAllocation(SalesSlipItemAllocation allocation) {

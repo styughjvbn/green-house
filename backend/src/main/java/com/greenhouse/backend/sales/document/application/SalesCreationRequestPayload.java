@@ -55,7 +55,8 @@ record SalesCreationRequestPayload(
       List<Allocation> allocations,
       // Preserve the legacy numeric-text representation only for creation fingerprints.
       @JsonInclude(JsonInclude.Include.NON_NULL) String unit,
-      @JsonInclude(JsonInclude.Include.NON_NULL) Integer boxes) {
+      @JsonInclude(JsonInclude.Include.NON_NULL) Integer boxes,
+      @JsonInclude(JsonInclude.Include.NON_NULL) Long varietyId) {
     static Item from(SalesSlipItemInput value) {
       return value == null
           ? null
@@ -77,7 +78,8 @@ record SalesCreationRequestPayload(
                                       allocation.orchidGroupId(), allocation.quantity()))
                       .toList(),
               value.unit() == null ? null : value.unit().toString(),
-              value.boxes());
+              value.boxes(),
+              value.varietyId());
     }
   }
 

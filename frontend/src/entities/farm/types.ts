@@ -492,6 +492,7 @@ export type PartnerSettlementSettings = {
 };
 
 export type SalesSlipItem = {
+  varietyId?: ApiSchemas["SalesSlipItemResponse"]["varietyId"];
   auctionLot?: ApiSchemas["SalesSlipItemResponse"]["auctionLot"];
   id: number;
   auctionShipmentLotId: number | null;

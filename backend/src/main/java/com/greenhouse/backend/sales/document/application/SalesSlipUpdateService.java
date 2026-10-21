@@ -93,6 +93,7 @@ public class SalesSlipUpdateService {
     for (int index = 0; index < salesSlip.getItems().size(); index++) {
       var currentItem = salesSlip.getItems().get(index);
       var nextItem = items.get(index);
+      currentItem.assignVariety(nextItem.getVarietyId());
       currentItem.updateDetails(
           nextItem.getItemName(),
           nextItem.getGenus(),

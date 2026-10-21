@@ -51,6 +51,7 @@ export function createEmptySalesAllocation(): SalesAllocationForm {
 
 export function createEmptySalesItem(): SalesItemForm {
   return {
+    varietyId: "",
     itemName: "",
     genus: "",
     spec: "",
@@ -82,7 +83,18 @@ export function addSelectedGroupsToSalesItems(
   items: SalesItemForm[],
   groups: SalesOrchidGroupOption[],
 ): SalesItemForm[] {
-  const next = [...items];
+  const next = items.map((item) => {
+    const group = groups.find((group) =>
+      sameSalesVariety(item, {
+        varietyId: group.varietyId == null ? "" : String(group.varietyId),
+        varietyName: group.varietyName,
+        genus: group.genus,
+      }),
+    );
+    return !item.varietyId && group?.varietyId != null
+      ? { ...item, varietyId: String(group.varietyId) }
+      : item;
+  });
   const selected = new Set(
     selectedSalesGroups(items).map((group) => group.orchidGroupId),
   );
@@ -90,7 +102,11 @@ export function addSelectedGroupsToSalesItems(
     const id = String(group.id);
     if (selected.has(id)) continue;
     const matches = (item: SalesItemForm) =>
-      item.genus === group.genus && item.itemName === group.varietyName;
+      sameSalesVariety(item, {
+        varietyId: group.varietyId == null ? "" : String(group.varietyId),
+        varietyName: group.varietyName,
+        genus: group.genus,
+      });
     let index = next.findIndex(matches);
     if (index < 0) {
       index = next.findIndex(
@@ -105,6 +121,7 @@ export function addSelectedGroupsToSalesItems(
       }
       next[index] = {
         ...next[index],
+        varietyId: group.varietyId == null ? "" : String(group.varietyId),
         itemName: group.varietyName,
         genus: group.genus,
       };
@@ -115,6 +132,7 @@ export function addSelectedGroupsToSalesItems(
         ...next[index].allocations,
         {
           orchidGroupId: id,
+          varietyId: group.varietyId == null ? "" : String(group.varietyId),
           varietyName: group.varietyName,
           genus: group.genus,
           locationLabel: `${group.houseNumber}동 ${group.physicalBedNumber}배드 ${group.bedZoneName}`,
@@ -126,6 +144,21 @@ export function addSelectedGroupsToSalesItems(
     selected.add(id);
   }
   return distributeSalesItems(next);
+}
+
+function salesVarietyKey(item: SalesItemForm): string {
+  return item.varietyId
+    ? JSON.stringify(["id", item.varietyId])
+    : JSON.stringify(["name", item.genus, item.itemName]);
+}
+
+function sameSalesVariety(
+  item: Pick<SalesItemForm, "varietyId" | "genus" | "itemName">,
+  group: Pick<SalesAllocationForm, "varietyId" | "genus" | "varietyName">,
+) {
+  return item.varietyId && group.varietyId
+    ? item.varietyId === group.varietyId
+    : item.genus === group.genus && item.itemName === group.varietyName;
 }
 
 function weightedQuantities(
@@ -181,21 +214,15 @@ export function distributeSalesItems(items: SalesItemForm[]): SalesItemForm[] {
     });
   const quotas = new Map<string, number>();
   const varieties = new Set(
-    items
-      .filter((item) => item.allocationMode === "AUTO")
-      .map((item) => JSON.stringify([item.genus, item.itemName])),
+    items.filter((item) => item.allocationMode === "AUTO").map(salesVarietyKey),
   );
   for (const variety of varieties) {
-    const [genus, name] = JSON.parse(variety) as [string, string];
-    const eligible = groups.filter(
-      (group) => group.genus === genus && group.varietyName === name,
-    );
+    const sample = items.find((item) => salesVarietyKey(item) === variety)!;
+    const eligible = groups.filter((group) => sameSalesVariety(sample, group));
     const requested = items
       .filter(
         (item) =>
-          item.allocationMode === "AUTO" &&
-          item.genus === genus &&
-          item.itemName === name,
+          item.allocationMode === "AUTO" && salesVarietyKey(item) === variety,
       )
       .reduce((sum, item) => {
         const quantity = Number(item.quantity);
@@ -217,10 +244,7 @@ export function distributeSalesItems(items: SalesItemForm[]): SalesItemForm[] {
   }
   return items.map((item) => {
     if (item.allocationMode === "MANUAL") return item;
-    const eligible = groups.filter(
-      (group) =>
-        group.genus === item.genus && group.varietyName === item.itemName,
-    );
+    const eligible = groups.filter((group) => sameSalesVariety(item, group));
     const requested = Number(item.quantity);
     const target =
       Number.isSafeInteger(requested) && requested > 0 ? requested : 0;
@@ -242,6 +266,10 @@ export function distributeSalesItems(items: SalesItemForm[]): SalesItemForm[] {
     });
     return { ...item, allocations };
   });
+}
+
+function isSelectedVariety(value: string): boolean {
+  return Number.isSafeInteger(Number(value)) && Number(value) > 0;
 }
 
 export function salesAllocationIssue(
@@ -266,21 +294,22 @@ export function salesAllocationIssue(
       return "단위는 1 이상의 정수로 입력하세요.";
     if (recordOnly) {
       if (!item.itemName.trim()) return "품종명을 입력하세요.";
+      if (!isSelectedVariety(item.varietyId))
+        return "각 품목의 품종을 선택하세요.";
       continue;
     }
     const allocations = item.allocations.filter(
       (allocation) => Number(allocation.quantity) > 0,
     );
     if (!allocations.length) return "각 품목에 난 묶음 배분이 필요합니다.";
+    if (!isSelectedVariety(item.varietyId))
+      return "각 품목의 품종을 선택하세요.";
     let sum = 0;
     for (const allocation of item.allocations) {
       const value = Number(allocation.quantity);
       if (!Number.isSafeInteger(value) || value < 0)
         return "배분 수량은 0 이상의 정수로 입력하세요.";
-      if (
-        allocation.genus !== item.genus ||
-        allocation.varietyName !== item.itemName
-      )
+      if (!sameSalesVariety(item, allocation))
         return "품목과 난 묶음의 품종이 일치해야 합니다.";
       sum += value;
       const id = allocation.orchidGroupId;
@@ -381,6 +410,7 @@ export function toCreateSalesSlipPayload(
     paymentMethod: nullableText(form.paymentMethod),
     memo: nullableText(form.memo),
     items: form.items.map((item) => ({
+      varietyId: item.varietyId ? Number(item.varietyId) : null,
       itemName: item.itemName,
       genus: nullableText(item.genus),
       spec: nullableText(item.spec),
@@ -433,6 +463,7 @@ export function toSalesSlipForm(salesSlip: SalesSlip): SalesSlipForm {
     memo: salesSlip.memo ?? "",
     items: normalizeEditedSalesItemCapacities(
       salesSlip.items.map((item) => ({
+        varietyId: item.varietyId == null ? "" : String(item.varietyId),
         itemName: item.itemName,
         genus: item.genus ?? "",
         spec: item.spec ?? "",
@@ -444,6 +475,7 @@ export function toSalesSlipForm(salesSlip: SalesSlip): SalesSlipForm {
         allocationMode: "MANUAL" as const,
         allocations: item.allocations.map((allocation) => ({
           orchidGroupId: String(allocation.orchidGroupId),
+          varietyId: item.varietyId == null ? "" : String(item.varietyId),
           varietyName: allocation.varietyName,
           genus: item.genus ?? "",
           locationLabel: `${allocation.houseNumber}동 ${allocation.physicalBedNumber}배드 ${allocation.bedZoneName}`,
