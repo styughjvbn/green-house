@@ -16,6 +16,9 @@ k8s/
     configmap.yaml
     secret.yaml
     postgres-host-service.yaml
+    ai-runtime-deployment.yaml
+    ai-runtime-service.yaml
+    ai-codex-pvc.yaml
     backend-deployment.yaml
     backend-service.yaml
     frontend-deployment.yaml
@@ -38,6 +41,7 @@ k8s/
 - `base/backend-deployment.yaml`: GHCR에 실제 발행된 backend `sha-<commit>` 태그로 변경하고 `docker manifest inspect`로 존재 확인
 - `base/configmap.yaml`: `ACTIVE`로 전환한 DB와 coverage 최소 버전 이상인 `ORCHID_LEDGER_WRITER_VERSION` 확인 (기본 2.0.0, Legacy 모드 제거)
 - `base/frontend-deployment.yaml`: GHCR frontend 이미지 태그 변경
+- `base/ai-runtime-deployment.yaml`: GHCR ai-runtime 이미지 태그 변경
 - `base/ingress.yaml`: TLS secret 이름이 기존 Traefik 설정과 다르면 변경
 
 GHCR private 이미지를 쓰는 경우 같은 namespace에 pull secret을 만든다.
@@ -49,6 +53,14 @@ kubectl -n green-house create secret docker-registry ghcr-secret \
   --docker-password=<github-token> \
   --docker-email=<email>
 ```
+
+## 운영 AI 설정
+
+base에서 AI runtime Deployment·ClusterIP Service·Codex 인증용 PVC를 함께 배포한다. backend는 `http://green-house-ai-runtime:8091`, runtime은 `http://green-house-backend:8080`으로 통신한다. 개발 PC나 host Node 프로세스에 연결하지 않는다.
+
+기존 `base/configmap.yaml`에서 실행기·600초 제한·도구 300회·기본 경매장 ID 3을 관리한다. 공유 키는 `green-house-ai-secret`의 `AI_RUNTIME_SECRET`으로 사전 생성한다. backend는 이 키만, runtime은 필요 시 같은 Secret의 `OPENAI_API_KEY`도 읽는다. frontend에는 인증키를 전달하지 않는다. base의 DB·로그인 Secret 템플릿은 실제 값으로 설정한 뒤 적용한다.
+
+`ai-runtime/Dockerfile`로 발행한 이미지 tag를 `base/ai-runtime-deployment.yaml`에 지정한다. Codex 로그인과 설정은 `/var/lib/greenhouse-codex`의 PVC에 보존한다. 최초 Secret·로그인·재배포 절차는 `docs/07-deployment.md`의 `운영 AI 설정`을 따른다. 데모 overlay에서는 runtime Deployment·Service·PVC·AI 설정·인증키 참조를 모두 제거한다.
 
 ## 적용
 

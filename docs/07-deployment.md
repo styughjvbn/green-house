@@ -51,7 +51,7 @@ npm --prefix frontend run dev
 | --- | --- |
 | 루트 `.env.example` | 전체 애플리케이션 설정 목록과 개발 예시 |
 | 루트 `.env` | 개발 환경에서 변경할 값·개발 비밀값, Git 제외 |
-| `k8s/base/configmap.yaml` | 운영의 일반 설정과 코드 기본값에서 달라지는 값 |
+| `k8s/base/configmap.yaml` | 운영 설정, 데모는 overlay에서 변경·제외 |
 | `k8s/base/secret.yaml` | 운영 비밀값의 템플릿, 실제 값은 배포 환경에서 관리 |
 | `k8s/overlays/demo/*` | 데모 환경에서만 바뀌는 값 |
 
@@ -74,7 +74,36 @@ Deployment는 ConfigMap·Secret과 볼륨을 연결한다. 사진 저장 경로�
 
 전표 사진 인식은 별도 Node.js 22 이상 프로세스 `ai-runtime`을 운영하며 `AI_PROVIDER=codex|openai`로 실행기를 선택한다. Spring의 `AI_RUNTIME_URL`과 양쪽 프로세스의 동일한 `AI_RUNTIME_SECRET`(무작위 32자 이상), Node의 `AI_TOOLS_URL`을 설정한다. Codex는 전용 실행 계정·`AI_CODEX_HOME` 로그인 캐시를 사용하고, OpenAI API는 Node의 `OPENAI_API_KEY`를 사용한다. 실행·설정·인증·테스트는 [`ai-runtime/README.md`](../ai-runtime/README.md)를 따른다. 개발 시 `ai-runtime`에서 `npm run dev`로 루트 `.env` 로딩·소스 재빌드·자동 재시작과 단계별 진단 로그를 사용한다. 운영 모드에서도 시작 주소·실패 코드·실행 요약을 기록하며 사진·검색어·인증값과 모델 원문 응답은 로그에 남기지 않는다. 런타임을 외부에 공개하지 않고 도구 API는 실행 중에만 유효한 토큰으로 보호한다. 추출은 동시에 1건이고 실행 시간·도구 호출 한도를 제한한다. AI 입력은 1024px 우선·최대 2048px 1회 재시도로 제한하며 Runtime의 `AI_MIN_CONFIDENCE`(기본 80)로 자체 신뢰도 재시도 기준을 설정한다. 두 인식은 요청 시간·도구 한도를 공유한다. Runtime 의존성에 이미지 처리를 위한 `sharp`가 포함되므로 변경 후 `npm ci`를 실행한다. 10장 일괄 추출 시간과 조회 횟수에 맞춰 양쪽 `AI_TIMEOUT_SECONDS`·`AI_MAX_TOOL_CALLS`를 동일하게 조정한다. `AI_MAX_TOOL_CALLS`는 추출 요청 1회당 기본 20회이며 1~300으로 설정할 수 있다. 개발에서는 루트 `.env`에 `AI_MAX_TOOL_CALLS=300`처럼 지정한 뒤 backend와 AI runtime을 모두 재시작한다. 등록 대화는 메모리에만 유지하므로 Spring 또는 Runtime 재시작 시 사진 등록 창을 다시 연다. Next 프록시의 요청 크기는 82MB, 대기 시간은 Runtime 최대 600초와 Spring 여유 시간을 수용하는 610초로 맞추며 외부 프록시도 같은 업로드 크기를 허용해야 한다. 데모 역할은 외부 AI 추출을 호출할 수 없다. 첨부 파일은 별도 영구 저장소·백업에 포함한다. 사진 저장 요청은 Base64 인코딩으로 최대 약 11MB이므로 프록시 요청 크기 제한을 확인한다. 추출 multipart는 사진별 최대 8MB, 최대 10장·전체 요청 82MB이며 데모의 별도 요청 제한은 유지한다.
 
-운영 AI 설정은 아직 배치 주소가 확정되지 않아 기본 매니페스트에 추가하지 않는다. 배포 시 backend ConfigMap에는 런타임 주소·기본 거래처 ID 등 backend용 설정을, Secret에는 공유 인증키를 지정한다. 별도 AI runtime에는 같은 인증키와 실행기·도구 API 주소·전용 인증 경로를 지정한다. `[R]` 전용 설정과 OpenAI API 키를 backend/frontend 공용 ConfigMap·Secret에 일괄 복사하지 않는다.
+운영 AI 연결은 base에 두고 데모 overlay에서는 제외한다. `[R]` 전용 설정과 OpenAI API 키는 별도 runtime에만 전달하며 backend/frontend 공용 ConfigMap·Secret에 복사하지 않는다.
+
+### 운영 AI 설정
+
+운영 `ai-runtime`은 k3s의 `green-house-ai-runtime` Deployment로 실행한다. backend는 `http://green-house-ai-runtime:8091`, runtime의 조회 도구·진행 알림은 `http://green-house-backend:8080`을 사용한다. Service는 ClusterIP이며 Ingress·NodePort로 공개하지 않는다. 개발 PC 주소나 host의 별도 Node 프로세스에 의존하지 않는다.
+
+설정은 기존 `k8s/base/configmap.yaml`에서 관리한다. `AI_PROVIDER=codex`, 양쪽 실행 시간은 600초, 요청당 도구 한도는 300회, 기본 경매장 거래처 ID는 3이다. runtime은 공유 ConfigMap 전체와 DB Secret을 읽지 않고 필요한 키만 주입받는다. backend는 `green-house-ai-secret`의 `AI_RUNTIME_SECRET`만 읽는다. OpenAI 실행기로 전환하면 `AI_PROVIDER=openai`로 바꾸고 같은 Secret에 `OPENAI_API_KEY`를 추가한다. API 키는 runtime에만 주입하며 모델은 선택적으로 `AI_OPENAI_MODEL`을 설정한다.
+
+최초 배포 시 `green-house` namespace와 실제 DB·로그인 Secret을 준비한다. base의 `secret.yaml`은 템플릿이므로 실제 비밀번호를 반영한 뒤 적용한다. 공유 인증키는 운영 PC에서 한 번 생성해 Kubernetes Secret으로 등록한다. 아래 로컬 파일은 Secret 재생성을 위한 관리자 보관본이며 Pod가 읽는 환경 파일이 아니다. 기존 키가 있으면 교체하지 않는다.
+
+```bash
+sudo install -d -m 700 /etc/green-house
+sudo sh -c 'umask 077; if [ ! -e /etc/green-house/ai-shared.env ]; then printf "AI_RUNTIME_SECRET=%s\n" "$(openssl rand -hex 32)" > /etc/green-house/ai-shared.env; fi'
+sudo kubectl -n green-house create secret generic green-house-ai-secret \
+  --from-env-file=/etc/green-house/ai-shared.env \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+`ai-runtime/Dockerfile`은 Codex SDK·CLI와 이미지 처리 의존성을 포함한 Node.js 24 이미지를 만든다. GHCR 발행 workflow는 backend·frontend·ai-runtime을 같은 release tag로 발행한다. 최초 적용 전에 세 Deployment의 이미지를 실제 발행된 tag로 지정한다. `scripts/deploy/deploy.sh <tag>`는 운영에서 AI runtime도 함께 갱신하며 데모 namespace에서는 갱신하지 않는다. 서로 다른 tag를 쓰면 `AI_RUNTIME_TAG`로 별도 지정한다. 설정 변경은 base 적용 후 backend와 runtime을 재시작해야 반영된다.
+
+```bash
+kubectl apply -k k8s/base
+kubectl -n green-house rollout status deployment/green-house-ai-runtime
+kubectl -n green-house exec -it deployment/green-house-ai-runtime -- \
+  ./node_modules/.bin/codex -c 'cli_auth_credentials_store="file"' login --device-auth
+```
+
+Codex 인증·`config.toml`·세션 파일은 `/var/lib/greenhouse-codex`에 마운트한 전용 `green-house-ai-codex` PVC에 저장한다. 기본 모델은 이 디렉터리의 `config.toml`을 따르며, 명시적으로 덮어쓰려면 ConfigMap에 `AI_CODEX_MODEL`을 지정한다. PVC에는 개발자의 Codex 디렉터리나 다른 업무 자격증명을 복사하지 않는다. 로그인의 기기 인증은 계정에서 허용되어 있어야 한다. PVC의 인증 정보는 별도 접근 권한과 백업 보존 정책으로 관리한다.
+
+runtime은 단일 replica·`Recreate` 전략으로 실행한다. 재배포 중 기존 대화는 사라지므로 자동 입력 중인 등록을 마친 뒤 갱신하며 재시작 후 사진 등록 창을 다시 연다. `/health`는 프로세스 응답 확인용으로 모델 로그인 성공을 보장하지 않는다. 최초 로그인 후 실제 전표 자동 입력으로 확인한다. 데모 overlay는 runtime Deployment·Service·PVC와 backend의 AI 인증키 참조 및 AI 설정을 모두 제외한다.
 
 ### Frontend
 
@@ -121,7 +150,7 @@ PostgreSQL
 
 ### mini-pc k3s 배포
 
-mini-pc k3s 운영 환경은 `k8s/base/` 매니페스트를 기준으로 한다.
+mini-pc k3s 운영 환경은 `k8s/base/`를 사용한다. 데모는 `k8s/overlays/demo/`에서 차이만 덮어쓰며 운영 AI 설정과 인증키 연결을 제외한다.
 
 ```text
 Traefik Ingress
@@ -142,11 +171,12 @@ PostgreSQL
 - Traefik TLS secret 이름 확인
 - 운영 환경에서 Swagger/OpenAPI 비활성화 확인
 
-이미지는 GHCR private package로 발행한다. `.github/workflows/publish-ghcr.yml`은 backend와 frontend 이미지를 각각 빌드해 다음 이름으로 push한다.
+이미지는 GHCR private package로 발행한다. `.github/workflows/publish-ghcr.yml`은 backend·frontend·ai-runtime 이미지를 각각 빌드해 다음 이름으로 push한다.
 
 ```text
 ghcr.io/<owner>/<repo>-backend
 ghcr.io/<owner>/<repo>-frontend
+ghcr.io/<owner>/<repo>-ai-runtime
 ```
 
 태그는 branch, git tag, `sha-<commit>`, 기본 브랜치의 `latest`를 사용한다. private image를 k3s에서 pull하려면 `green-house` namespace에 `ghcr-secret`을 먼저 생성한다.

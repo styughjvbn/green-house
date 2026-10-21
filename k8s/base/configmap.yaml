@@ -17,3 +17,8 @@ data:
   SPRINGDOC_API_DOCS_ENABLED: "false"
   SPRINGDOC_SWAGGER_UI_ENABLED: "false"
   SALES_PHOTO_STORAGE_ROOT: /var/lib/greenhouse/slip-photos
+  AI_PROVIDER: codex
+  AI_RUNTIME_URL: http://green-house-ai-runtime:8091
+  AI_TIMEOUT_SECONDS: "600"
+  AI_MAX_TOOL_CALLS: "300"
+  AI_DEFAULT_AUCTION_PARTNER_ID: "3"

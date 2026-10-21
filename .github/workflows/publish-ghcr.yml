@@ -30,6 +30,8 @@ jobs:
             context: backend
           - component: frontend
             context: frontend
+          - component: ai-runtime
+            context: ai-runtime
 
     steps:
       - name: Checkout

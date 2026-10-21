@@ -18,21 +18,16 @@ npm run dev
 
 ## 운영 실행
 
-Node.js 22 이상이 필요하다. 저장소 루트의 `.env.example`을 참고해 **서버 환경변수**를 설정한다. `.env` 파일은 자동으로 읽지 않는다. 프로세스 관리자에서 환경을 전달하거나 Node의 `--env-file`을 사용한다.
+운영은 `ai-runtime/Dockerfile`로 빌드한 Node.js 24 컨테이너를 k3s Deployment로 유지한다. `k8s/base`에서 runtime Deployment·내부 Service·Codex PVC를 함께 관리하며 데모 overlay는 해당 리소스를 제외한다. backend와 runtime은 Kubernetes Service DNS로 통신하고 개발 PC의 주소나 `.env`를 사용하지 않는다.
 
-```sh
-cd ai-runtime
-npm ci
-npm run build
-node --env-file=../.env dist/server.js
-```
+설정·공유 인증키 생성·Pod 내 Codex 로그인·재배포는 [`운영 AI 설정`](../docs/07-deployment.md#운영-ai-설정)을 따른다. 모델·로그인 정보는 `/var/lib/greenhouse-codex`의 PVC에 보존한다. GHCR workflow와 운영 배포 스크립트는 backend·frontend와 함께 runtime 이미지도 갱신한다.
 
 전체 환경변수·기본값·사용 프로세스 구분은 [루트 `.env.example`](../.env.example)을 기준으로 한다. `[B+R]` 공유 인증키·시간·도구 한도는 Spring과 동일하게 설정하고, `[R]` 실행기 설정·전용 인증 경로는 AI runtime에만 전달한다. 개발 환경 로딩은 `scripts/dev-environment.mjs`를 함께 사용한다.
 
-Codex는 위 SDK와 함께 설치된 CLI를 사용한다. 전용 OS 계정에서 전용 `CODEX_HOME`으로 로그인하고 파일 기반 인증을 구성한다. 개발자의 Codex 디렉터리나 프로젝트 디렉터리를 공유하지 않는다. 기기 인증이 계정에서 허용된 경우 SDK에 포함된 CLI로 로그인할 수 있다.
+Codex는 SDK와 함께 설치된 CLI를 사용한다. 개발은 전용 OS 계정의 `CODEX_HOME`, 운영은 전용 Pod의 PVC에 로그인하고 파일 기반 인증을 구성한다. 개발자의 Codex 디렉터리나 프로젝트 디렉터리를 공유하지 않는다. 기기 인증이 계정에서 허용된 경우 SDK에 포함된 CLI로 로그인할 수 있다.
 
 ```sh
-# ai-runtime 디렉터리, 전용 실행 계정에서 실행. 경로는 환경에 맞게 지정.
+# 개발 시 ai-runtime 디렉터리의 전용 실행 계정에서 실행. 운영은 위 배포 문서의 kubectl exec 사용.
 export CODEX_HOME=/absolute/path/to/greenhouse-codex
 mkdir -p "$CODEX_HOME"
 ./node_modules/.bin/codex -c cli_auth_credentials_store='"file"' login --device-auth
