@@ -33,13 +33,13 @@ import type {
 } from "../api/types";
 import {
   createInitialSalesForm,
-  distributeSalesItems,
   salesAllocationIssue,
   toCreateSalesSlipPayload,
   withSalesRecordingMode,
 } from "../lib/salesForm";
 import {
   withRecognizedSalesSlip,
+  withConnectedSalesGroups,
   clearEditedSalesReviews,
   confirmSalesReview,
 } from "../lib/salesPhotoForm";
@@ -872,52 +872,14 @@ export function useSalesSlipPhotoRegistration(
 
   function connectGroups(indices: number[], groups: SalesOrchidGroupOption[]) {
     if (!selected || !groups.length || busy) return;
-    const first = groups[0];
-    if (
-      groups.some(
-        (group) =>
-          group.genus !== first.genus ||
-          group.varietyName !== first.varietyName,
-      )
-    ) {
-      patch(selected.id, {
-        error: "한 품목에는 같은 품종·속의 난 묶음을 선택해주세요.",
-      });
-      return;
+    try {
+      setForm(
+        selected.id,
+        withConnectedSalesGroups(selected.form, indices, groups),
+      );
+    } catch (error) {
+      patch(selected.id, { error: message(error) });
     }
-    setForm(selected.id, (current) =>
-      confirmSalesReview(
-        confirmSalesReview(
-          {
-            ...current,
-            items: distributeSalesItems(
-              current.items.map((item, index) =>
-                indices.includes(index)
-                  ? {
-                      ...item,
-                      itemName: first.varietyName,
-                      genus: first.genus,
-                      allocationMode: "AUTO" as const,
-                      allocations: groups.map((group) => ({
-                        orchidGroupId: String(group.id),
-                        varietyName: group.varietyName,
-                        genus: group.genus,
-                        locationLabel: `${group.houseNumber}동 ${group.physicalBedNumber}배드 ${group.bedZoneName}`,
-                        availableQuantity: group.availableQuantity,
-                        quantity: "0",
-                      })),
-                    }
-                  : item,
-              ),
-            ),
-          },
-          "ITEM_NAME",
-          indices,
-        ),
-        "GENUS",
-        indices,
-      ),
-    );
   }
   return {
     entries,

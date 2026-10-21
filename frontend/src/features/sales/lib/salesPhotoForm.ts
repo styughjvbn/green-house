@@ -1,3 +1,4 @@
+import type { SalesOrchidGroupOption } from "@/entities/farm/types";
 import type { SalesSlipPhotoExtraction } from "../api/types";
 import type {
   SalesSlipForm,
@@ -5,7 +6,7 @@ import type {
   SalesReviewField,
   SalesFieldReviews,
 } from "../model/types";
-import { createEmptySalesItem } from "./salesForm";
+import { createEmptySalesItem, distributeSalesItems } from "./salesForm";
 
 export function withRecognizedSalesSlip(
   form: SalesSlipForm,
@@ -152,4 +153,51 @@ export function confirmSalesReview(
             : item,
         ),
       };
+}
+
+export function withConnectedSalesGroups(
+  form: SalesSlipForm,
+  indices: number[],
+  groups: SalesOrchidGroupOption[],
+): SalesSlipForm {
+  const first = groups[0];
+  if (!first || !indices.length) return form;
+  if (first.varietyId == null || first.varietyId <= 0)
+    throw new Error("품종이 연결된 난 묶음을 선택해주세요.");
+  if (groups.some((group) => group.varietyId !== first.varietyId))
+    throw new Error("한 품목에는 같은 품종의 난 묶음을 선택해주세요.");
+
+  return confirmSalesReview(
+    confirmSalesReview(
+      {
+        ...form,
+        items: distributeSalesItems(
+          form.items.map((item, index) =>
+            indices.includes(index)
+              ? {
+                  ...item,
+                  varietyId: String(first.varietyId),
+                  itemName: first.varietyName,
+                  genus: first.genus,
+                  allocationMode: "AUTO" as const,
+                  allocations: groups.map((group) => ({
+                    orchidGroupId: String(group.id),
+                    varietyId: String(group.varietyId),
+                    varietyName: group.varietyName,
+                    genus: group.genus,
+                    locationLabel: `${group.houseNumber}동 ${group.physicalBedNumber}배드 ${group.bedZoneName}`,
+                    availableQuantity: group.availableQuantity,
+                    quantity: "0",
+                  })),
+                }
+              : item,
+          ),
+        ),
+      },
+      "ITEM_NAME",
+      indices,
+    ),
+    "GENUS",
+    indices,
+  );
 }
