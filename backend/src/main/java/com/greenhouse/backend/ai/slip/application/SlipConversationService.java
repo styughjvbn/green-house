@@ -30,7 +30,14 @@ public class SlipConversationService {
   private final Semaphore slot = new Semaphore(1);
 
   public synchronized SlipConversationResult.Session open(String actor) {
-    sessions.entrySet().removeIf(e -> !e.getValue().expiresAt.isAfter(clock.instant()));
+    sessions
+        .entrySet()
+        .removeIf(
+            e -> {
+              if (e.getValue().expiresAt.isAfter(clock.instant())) return false;
+              finishProgress(e.getValue());
+              return true;
+            });
     if (sessions.size() >= 100)
       throw new AgentException(429, "AI_SESSION_LIMIT", "진행 중인 사진 등록이 많습니다. 잠시 후 다시 시도해주세요.");
     String id = UUID.randomUUID().toString();
@@ -43,6 +50,7 @@ public class SlipConversationService {
   public void close(String actor, String sessionId) {
     Conversation session = require(actor, sessionId);
     sessions.remove(sessionId, session);
+    finishProgress(session);
     runtime.closeSession(sessionId);
   }
 
@@ -82,9 +90,14 @@ public class SlipConversationService {
       throw new AgentException(429, "AI_BUSY", "다른 전표를 읽고 있습니다. 잠시 후 다시 시도해주세요.");
     var run = new ActiveRequest(requestId, new CompletableFuture<>());
     try (var scope = tools.open(requestId, actor)) {
+      run.scope = scope;
+      run.photoIds = input.photos().stream().map(SlipConversationInput.Photo::photoId).toList();
       synchronized (session) {
         if (session.cancelled.contains(requestId)) throw cancelled();
         session.active = run;
+        run.channel = channel(session, requestId);
+        scope.onActivity(run::publish);
+        run.publish();
         var next = new HashMap<>(session.photos);
         for (var photo : input.photos()) {
           String fingerprint = fingerprint(photo);
@@ -100,6 +113,8 @@ public class SlipConversationService {
       synchronized (session) {
         if (session.cancelled.contains(requestId)) throw cancelled();
       }
+      run.stage = SlipConversationProgress.Stage.VALIDATING;
+      run.publish();
       if (result == null || result.photos() == null || result.photos().size() != ids.size())
         throw invalidResult();
       var seen = new HashSet<String>();
@@ -120,10 +135,54 @@ public class SlipConversationService {
       return new SlipConversationResult(sessionId, requestId, List.copyOf(photos));
     } finally {
       synchronized (session) {
-        if (session.active == run) session.active = null;
+        if (session.active == run) {
+          run.stage = SlipConversationProgress.Stage.DONE;
+          if (run.channel != null) run.channel.finish(run.snapshot());
+          session.active = null;
+        }
       }
       slot.release();
       run.finished().complete(null);
+    }
+  }
+
+  public SlipConversationProgress progress(String actor, String sessionId, String requestId) {
+    validateRequestId(requestId);
+    var session = require(actor, sessionId);
+    synchronized (session) {
+      return channel(session, requestId).latest();
+    }
+  }
+
+  public SlipProgressChannel.Subscription subscribeProgress(
+      String actor, String sessionId, String requestId) {
+    validateRequestId(requestId);
+    var session = require(actor, sessionId);
+    synchronized (session) {
+      return channel(session, requestId).subscribe();
+    }
+  }
+
+  private SlipProgressChannel channel(Conversation session, String requestId) {
+    if (session.progress != null && session.progress.latest().requestId().equals(requestId))
+      return session.progress;
+    if (session.active != null && !session.active.id().equals(requestId))
+      throw new AgentException(409, "AI_BUSY", "다른 전표 요청을 처리 중입니다.");
+    finishProgress(session);
+    session.progress =
+        new SlipProgressChannel(
+            new SlipConversationProgress(
+                requestId, SlipConversationProgress.Stage.WAITING, List.of(), null));
+    return session.progress;
+  }
+
+  private void finishProgress(Conversation session) {
+    synchronized (session) {
+      if (session.progress == null) return;
+      var last = session.progress.latest();
+      session.progress.finish(
+          new SlipConversationProgress(
+              last.requestId(), SlipConversationProgress.Stage.DONE, last.photoIds(), null));
     }
   }
 
@@ -150,7 +209,39 @@ public class SlipConversationService {
     return new AgentException(409, "AI_CANCELLED", "자동 입력을 중지했습니다.");
   }
 
-  private record ActiveRequest(String id, CompletableFuture<Void> finished) {}
+  private static final class ActiveRequest {
+    private final String id;
+    private final CompletableFuture<Void> finished;
+    volatile SlipConversationProgress.Stage stage = SlipConversationProgress.Stage.READING;
+    volatile AgentToolGateway.Scope scope;
+    SlipProgressChannel channel;
+    volatile List<String> photoIds = List.of();
+
+    ActiveRequest(String id, CompletableFuture<Void> finished) {
+      this.id = id;
+      this.finished = finished;
+    }
+
+    SlipConversationProgress snapshot() {
+      return new SlipConversationProgress(
+          id,
+          stage,
+          photoIds,
+          stage == SlipConversationProgress.Stage.DONE || scope == null ? null : scope.activity());
+    }
+
+    void publish() {
+      if (channel != null) channel.publish(snapshot());
+    }
+
+    String id() {
+      return id;
+    }
+
+    CompletableFuture<Void> finished() {
+      return finished;
+    }
+  }
 
   private Conversation require(String actor, String sessionId) {
     var session = sessions.get(sessionId);
@@ -182,6 +273,7 @@ public class SlipConversationService {
     final Map<String, String> photos = new HashMap<>();
     final Set<String> cancelled = new HashSet<>();
     ActiveRequest active;
+    SlipProgressChannel progress;
 
     Conversation(String actor, Instant expiresAt) {
       this.actor = actor;

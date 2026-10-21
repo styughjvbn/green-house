@@ -107,6 +107,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSlipExtractionResult'
+  /api/ai/slips/sessions/{sessionId}/requests/{requestId}/progress:
+    get:
+      tags:
+      - ai-slip-controller
+      description: 소유한 등록 대화의 지정 요청에서 처리 중인 사진과 분석·검색·검증 진행 상태를 조회합니다.
+      operationId: progress
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAiSlipConversationProgress'
+  /api/ai/slips/sessions/{sessionId}/requests/{requestId}/events:
+    get:
+      tags:
+      - ai-slip-controller
+      description: 소유한 요청의 진행 상태를 SSE로 구독합니다. 연결·재연결 시 현재 상태를 보내고 요청 종료 시 스트림을 닫습니다.
+      operationId: events
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/AiSlipConversationProgress'
   /api/ai/slips/sessions/{sessionId}:
     delete:
       tags:
@@ -150,6 +198,18 @@ paths:
                 $ref: '#/components/schemas/ApiResponseVoid'
 components:
   schemas:
+    Activity:
+      type: object
+      properties:
+        calls:
+          type: integer
+          format: int32
+        latestLookup:
+          $ref: '#/components/schemas/Lookup'
+        searching:
+          type: boolean
+        summary:
+          type: string
     AiSlipConversationMetadata:
       type: object
       properties:
@@ -161,6 +221,24 @@ components:
           minItems: 0
       required:
       - photos
+    AiSlipConversationProgress:
+      type: object
+      properties:
+        activity:
+          $ref: '#/components/schemas/Activity'
+        photoIds:
+          type: array
+          items:
+            type: string
+        requestId:
+          type: string
+        stage:
+          type: string
+          enum:
+          - WAITING
+          - READING
+          - VALIDATING
+          - DONE
     AiSlipExtractionItem:
       type: object
       properties:
@@ -260,6 +338,13 @@ components:
       properties:
         sessionId:
           type: string
+    ApiResponseAiSlipConversationProgress:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AiSlipConversationProgress'
+        message:
+          type: string
     ApiResponseAiSlipSession:
       type: object
       properties:
@@ -286,6 +371,13 @@ components:
       properties:
         data: {}
         message:
+          type: string
+    Lookup:
+      type: object
+      properties:
+        query:
+          type: string
+        tool:
           type: string
     SlipConversationResult:
       type: object

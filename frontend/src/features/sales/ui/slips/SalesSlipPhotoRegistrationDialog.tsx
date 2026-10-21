@@ -364,8 +364,24 @@ export function SalesSlipPhotoRegistrationDialog({
               photos.regionProcessingProgress ?? undefined
             }
             extractionProgress={photos.extractionProgress ?? undefined}
-            readingCount={
-              photos.entries.filter((entry) => entry.read === "reading").length
+            readingProgress={photos.readingProgress}
+            readingProgressUnavailable={photos.readingProgressUnavailable}
+            preparingReadingSession={photos.preparingReadingSession}
+            activePhotos={photos.entries
+              .filter((entry) =>
+                (photos.busy === "prepare"
+                  ? processingPhotoIds
+                  : photos.busy === "read"
+                    ? (photos.extractionProgress?.photoIds ?? [])
+                    : []
+                ).includes(entry.id),
+              )
+              .map((entry) => ({
+                id: entry.id,
+                fileName: entry.photo.fileName,
+              }))}
+            onSelectPhoto={
+              photos.busy === "read" ? photos.setSelectedId : undefined
             }
           />
         ) : null}

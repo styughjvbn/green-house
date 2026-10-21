@@ -2405,6 +2405,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ai/slips/sessions/{sessionId}/requests/{requestId}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 소유한 등록 대화의 지정 요청에서 처리 중인 사진과 분석·검색·검증 진행 상태를 조회합니다. */
+        get: operations["progress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai/slips/sessions/{sessionId}/requests/{requestId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 소유한 요청의 진행 상태를 SSE로 구독합니다. 연결·재연결 시 현재 상태를 보내고 요청 종료 시 스트림을 닫습니다. */
+        get: operations["events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sales-slips/image-previews/{id}": {
         parameters: {
             query?: never;
@@ -5921,6 +5955,28 @@ export interface components {
             unappliedPaymentAmount?: number;
             /** Format: int64 */
             unpaidAmount?: number;
+        };
+        Activity: {
+            /** Format: int32 */
+            calls?: number;
+            latestLookup?: components["schemas"]["Lookup"];
+            searching?: boolean;
+            summary?: string;
+        };
+        AiSlipConversationProgress: {
+            activity?: components["schemas"]["Activity"];
+            photoIds?: string[];
+            requestId?: string;
+            /** @enum {string} */
+            stage?: "WAITING" | "READING" | "VALIDATING" | "DONE";
+        };
+        ApiResponseAiSlipConversationProgress: {
+            data?: components["schemas"]["AiSlipConversationProgress"];
+            message?: string;
+        };
+        Lookup: {
+            query?: string;
+            tool?: string;
         };
     };
     responses: never;
@@ -10198,6 +10254,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponsePartnerAnalyticsResponse"];
+                };
+            };
+        };
+    };
+    progress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAiSlipConversationProgress"];
+                };
+            };
+        };
+    };
+    events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["AiSlipConversationProgress"];
                 };
             };
         };

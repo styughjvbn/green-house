@@ -1,9 +1,15 @@
-﻿import type {
+import { readServerSentEvents } from "@/shared/api/serverSentEvents";
+import type {
   DirectSaleChangeState,
   DirectReturnArrivalState,
 } from "./directChangeTypes";
 import type { DirectChangePendingRequest } from "../lib/directChangeRequests";
-import { fetchApi, requestApi, requestApiBlob } from "@/shared/api/client";
+import {
+  fetchApi,
+  requestApi,
+  requestApiBlob,
+  requestApiEventStream,
+} from "@/shared/api/client";
 import type {
   BusinessPartner,
   BusinessPartnerOption,
@@ -711,6 +717,27 @@ export function cancelSalesSlipPhotoReading(
     `/ai/slips/sessions/${encodeURIComponent(sessionId)}/requests/${encodeURIComponent(requestId)}/cancel`,
     { method: "POST" },
   );
+}
+export async function streamSalesSlipReadingProgress(
+  sessionId: string,
+  requestId: string,
+  signal: AbortSignal,
+  onProgress: (progress: import("./types").SalesSlipReadingProgress) => void,
+) {
+  const body = await requestApiEventStream(
+    `/ai/slips/sessions/${encodeURIComponent(sessionId)}/requests/${encodeURIComponent(requestId)}/events`,
+    signal,
+  );
+  for await (const event of readServerSentEvents(body)) {
+    if (event.event !== "progress") continue;
+    const progress = JSON.parse(
+      event.data,
+    ) as import("./types").SalesSlipReadingProgress;
+    if (progress.requestId !== requestId) continue;
+    onProgress(progress);
+    if (progress.stage === "DONE") return;
+  }
+  if (!signal.aborted) throw new Error("진행 상태 연결이 끊어졌습니다.");
 }
 export function readSalesSlipPhotos(
   sessionId: string,

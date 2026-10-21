@@ -62,6 +62,33 @@ class SlipExtractionControllerTest {
   }
 
   @Test
+  void progressUsesTheAuthenticatedOwnerAndExposesTheCurrentBatchAndLookup() throws Exception {
+    var service = mock(SlipConversationService.class);
+    when(service.progress("worker", "session", "request"))
+        .thenReturn(
+            new SlipConversationProgress(
+                "request",
+                SlipConversationProgress.Stage.READING,
+                List.of("p1", "p2"),
+                new AgentToolGateway.Activity(
+                    new AgentToolGateway.Lookup("search_varieties", "하니문"), false, 2, null)));
+    var mvc =
+        MockMvcBuilders.standaloneSetup(
+                new SlipConversationController(service, mock(SlipProgressSse.class)))
+            .setControllerAdvice(new AgentExceptionHandler())
+            .build();
+    mvc.perform(
+            get("/api/ai/slips/sessions/session/requests/request/progress")
+                .principal(() -> "worker"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.stage").value("READING"))
+        .andExpect(jsonPath("$.data.photoIds[1]").value("p2"))
+        .andExpect(jsonPath("$.data.activity.latestLookup.query").value("하니문"));
+    verify(service).progress("worker", "session", "request");
+    verifyNoMoreInteractions(service);
+  }
+
+  @Test
   void batchMultipartPassesPhotoIdsAndClientRequestIdAndRejectsMismatchedFiles() throws Exception {
     var service = mock(SlipConversationService.class);
     when(service.extract(eq("worker"), eq("session"), any(), eq("client-request")))
@@ -71,7 +98,8 @@ class SlipExtractionControllerTest {
                 "request",
                 List.of(new SlipConversationResult.Photo("p", null, "AI_PHOTO_UNREADABLE"))));
     var mvc =
-        MockMvcBuilders.standaloneSetup(new SlipConversationController(service))
+        MockMvcBuilders.standaloneSetup(
+                new SlipConversationController(service, mock(SlipProgressSse.class)))
             .setControllerAdvice(new AgentExceptionHandler())
             .build();
     var metadata =
@@ -114,7 +142,10 @@ class SlipExtractionControllerTest {
   @Test
   void cancellationPassesTheActorAndSpecificRequestToTheService() throws Exception {
     var service = mock(SlipConversationService.class);
-    var mvc = MockMvcBuilders.standaloneSetup(new SlipConversationController(service)).build();
+    var mvc =
+        MockMvcBuilders.standaloneSetup(
+                new SlipConversationController(service, mock(SlipProgressSse.class)))
+            .build();
     mvc.perform(
             MockMvcRequestBuilders.post("/api/ai/slips/sessions/session/requests/request/cancel")
                 .principal(() -> "worker"))

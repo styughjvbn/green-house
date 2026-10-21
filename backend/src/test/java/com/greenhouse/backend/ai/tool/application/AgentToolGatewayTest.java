@@ -36,6 +36,29 @@ class AgentToolGatewayTest {
   }
 
   @Test
+  void summariesUseExecutionAuthorizationAndDoNotConsumeTheLookupBudget() {
+    var gateway =
+        new AgentToolGateway(
+            mock(VarietySearchApi.class),
+            mock(BusinessPartnerQueryApi.class),
+            Clock.systemUTC(),
+            1,
+            60);
+    assertThatThrownBy(() -> gateway.reportSummary("Bearer invalid", "요약"))
+        .isInstanceOf(AgentException.class);
+    var scope = gateway.open("r", "worker");
+    var authorization = "Bearer " + scope.token();
+    gateway.reportSummary(authorization, " 품종을 확인합니다. ");
+    assertThat(scope.activity().summary()).isEqualTo("품종을 확인합니다.");
+    assertThat(scope.calls()).isZero();
+    assertThatThrownBy(() -> gateway.reportSummary(authorization, "x".repeat(2001)))
+        .isInstanceOf(AgentException.class);
+    scope.close();
+    assertThatThrownBy(() -> gateway.reportSummary(authorization, "종료 이후"))
+        .isInstanceOf(AgentException.class);
+  }
+
+  @Test
   void deniesUnknownExpiredAndClosedScopesAndEnforcesToolBudget() {
     var clock = mock(Clock.class);
     var now = Instant.parse("2026-10-15T00:00:00Z");

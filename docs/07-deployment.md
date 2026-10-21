@@ -151,6 +151,8 @@ ghcr.io/<owner>/<repo>-frontend
 
 태그는 branch, git tag, `sha-<commit>`, 기본 브랜치의 `latest`를 사용한다. private image를 k3s에서 pull하려면 `green-house` namespace에 `ghcr-secret`을 먼저 생성한다.
 
+AI 전표 진행 알림은 같은 `/api` 프록시를 통과하는 SSE다. 응답 버퍼링·압축 버퍼링을 적용하지 않고, 유휴 연결 종료 시간은 15초 heartbeat보다 길게 둔다. 서버는 `Cache-Control: no-cache, no-transform`과 `X-Accel-Buffering: no`를 보내며 Next.js의 기존 proxy timeout 안에서 10분에 한 번 연결을 종료한다. 프론트는 종료 중인 추출 POST를 재전송하지 않고 SSE만 재연결한다. 외부 프록시를 추가하거나 설정을 바꾸면 첫 이벤트가 응답 완료 전 전달되는지 확인한다.
+
 ## 5. 백업
 
 전표 사진은 `SALES_PHOTO_STORAGE_TYPE=local`과 `SALES_PHOTO_STORAGE_ROOT`로 설정한다. 상대 경로는 백엔드 작업 디렉터리 기준이며 기본은 `./data/slip-photos`다. 컨테이너/Kubernetes는 `/var/lib/greenhouse/slip-photos`를 영구 볼륨으로 마운트한다. 기본 매니페스트는 10Gi RWO PVC를 사용하며 앱 UID/GID는 10001이다. 사진은 HTTP 정적 경로로 공개하지 않고 기존 인증 API로만 조회한다. 저장소는 원자적 rename과 파일·디렉터리 fsync를 지원해야 한다.

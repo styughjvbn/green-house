@@ -71,6 +71,81 @@ class SlipConversationServiceTest {
   }
 
   @Test
+  void progressIsOwnedRequestScopedAndTracksSearchesUntilTheRequestEnds() throws Exception {
+    when(clock.instant()).thenReturn(now);
+    var gateway = new AgentToolGateway(varieties, partners, clock, 20, 120);
+    var service =
+        new SlipConversationService(
+            runtime,
+            gateway,
+            new SlipExtractionService(runtime, gateway, factory.getValidator(), 0),
+            clock,
+            varieties);
+    String session = service.open("worker").sessionId();
+    assertThat(service.progress("worker", session, "r").stage())
+        .isEqualTo(SlipConversationProgress.Stage.WAITING);
+    assertThatThrownBy(() -> service.progress("other", session, "r"))
+        .isInstanceOf(AgentException.class)
+        .extracting("code")
+        .isEqualTo("AI_SESSION_EXPIRED");
+    var entered = new CountDownLatch(1);
+    var release = new CountDownLatch(1);
+    when(partners.searchOptions("대구 싱싱", null, 10))
+        .thenAnswer(
+            call -> {
+              entered.countDown();
+              if (!release.await(5, TimeUnit.SECONDS))
+                throw new IllegalStateException("test timeout");
+              return List.of();
+            });
+    when(runtime.extractConversation(eq("r"), eq(session), anyString(), any()))
+        .thenAnswer(
+            call -> {
+              gateway.execute(
+                  "Bearer " + call.getArgument(2, String.class),
+                  "search_partners",
+                  new AgentToolGateway.Arguments("대구 싱싱", null, null));
+              gateway.reportSummary(
+                  "Bearer " + call.getArgument(2, String.class), "전표의 품종 후보를 확인합니다.");
+              var after = service.progress("worker", session, "r");
+              assertThat(after.activity().searching()).isFalse();
+              assertThat(after.activity().summary()).isEqualTo("전표의 품종 후보를 확인합니다.");
+              assertThat(after.activity().latestLookup().query()).isEqualTo("대구 싱싱");
+              return new SlipConversationModelResult(
+                  List.of(new SlipConversationModelResult.Photo("p", null)));
+            });
+    try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
+      var task =
+          pool.submit(
+              () ->
+                  service.extract(
+                      "worker", session, new SlipConversationInput(List.of(photo("p"))), "r"));
+      try {
+        assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
+        var progress = service.progress("worker", session, "r");
+        assertThat(progress.stage()).isEqualTo(SlipConversationProgress.Stage.READING);
+        assertThat(progress.photoIds()).containsExactly("p");
+        assertThat(progress.activity().searching()).isTrue();
+        assertThat(progress.activity().latestLookup().tool()).isEqualTo("search_partners");
+        assertThat(progress.activity().latestLookup().query()).isEqualTo("대구 싱싱");
+        assertThatThrownBy(() -> service.progress("worker", session, "other"))
+            .isInstanceOf(AgentException.class)
+            .extracting("code")
+            .isEqualTo("AI_BUSY");
+      } finally {
+        release.countDown();
+      }
+      task.get(5, TimeUnit.SECONDS);
+    }
+    assertThat(service.progress("worker", session, "r").stage())
+        .isEqualTo(SlipConversationProgress.Stage.DONE);
+    assertThat(service.progress("worker", session, "r").activity()).isNull();
+    when(clock.instant()).thenReturn(now.plusSeconds(1801));
+    assertThatThrownBy(() -> service.progress("worker", session, "r"))
+        .isInstanceOf(AgentException.class);
+  }
+
+  @Test
   void cancellationIsOwnedAndPreventsRequestsThatHaveNotStarted() throws Exception {
     var service = service();
     String session = service.open("worker").sessionId();

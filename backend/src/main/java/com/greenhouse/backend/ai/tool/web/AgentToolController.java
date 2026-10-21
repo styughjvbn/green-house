@@ -14,6 +14,16 @@ import org.springframework.web.bind.annotation.*;
 public class AgentToolController {
   private final AgentToolGateway gateway;
 
+  @PostMapping("/progress")
+  public ApiResponse<Void> progress(
+      @RequestHeader(value = "Authorization", required = false) String authorization,
+      @RequestBody Progress progress) {
+    gateway.reportSummary(authorization, progress.summary());
+    return ApiResponse.ok(null);
+  }
+
+  public record Progress(String summary) {}
+
   @PostMapping("/{name}")
   public ApiResponse<List<?>> execute(
       @RequestHeader(value = "Authorization", required = false) String authorization,

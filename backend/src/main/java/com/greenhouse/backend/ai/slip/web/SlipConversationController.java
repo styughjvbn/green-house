@@ -5,6 +5,7 @@ import com.greenhouse.backend.ai.slip.application.*;
 import com.greenhouse.backend.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.io.IOException;
@@ -17,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/api/ai/slips/sessions")
@@ -25,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class SlipConversationController {
   private final SlipConversationService service;
+  private final SlipProgressSse progressSse;
 
   @PostMapping
   @Operation(description = "사진 등록 대화를 시작합니다. 대화는 사용자에게 귀속되며 30분간 사용하지 않으면 만료됩니다.")
@@ -36,6 +39,36 @@ public class SlipConversationController {
   public ApiResponse<Void> close(@PathVariable String sessionId, Principal principal) {
     service.close(actor(principal), sessionId);
     return ApiResponse.ok(null);
+  }
+
+  @GetMapping("/{sessionId}/requests/{requestId}/progress")
+  @Operation(description = "소유한 등록 대화의 지정 요청에서 처리 중인 사진과 분석·검색·검증 진행 상태를 조회합니다.")
+  public ApiResponse<SlipConversationProgress> progress(
+      @PathVariable String sessionId, @PathVariable String requestId, Principal principal) {
+    return ApiResponse.ok(service.progress(actor(principal), sessionId, requestId));
+  }
+
+  @GetMapping(
+      value = "/{sessionId}/requests/{requestId}/events",
+      produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+  @Operation(description = "소유한 요청의 진행 상태를 SSE로 구독합니다. 연결·재연결 시 현재 상태를 보내고 요청 종료 시 스트림을 닫습니다.")
+  @io.swagger.v3.oas.annotations.responses.ApiResponse(
+      responseCode = "200",
+      content =
+          @io.swagger.v3.oas.annotations.media.Content(
+              mediaType = MediaType.TEXT_EVENT_STREAM_VALUE,
+              schema =
+                  @io.swagger.v3.oas.annotations.media.Schema(
+                      implementation = SlipConversationProgress.class)))
+  public SseEmitter events(
+      @PathVariable String sessionId,
+      @PathVariable String requestId,
+      Principal principal,
+      HttpServletResponse response) {
+    var subscription = service.subscribeProgress(actor(principal), sessionId, requestId);
+    response.setHeader("Cache-Control", "no-cache, no-transform");
+    response.setHeader("X-Accel-Buffering", "no");
+    return progressSse.open(subscription);
   }
 
   @PostMapping("/{sessionId}/requests/{requestId}/cancel")

@@ -170,3 +170,6 @@ export type SalesSlipPhotoContent = components["schemas"]["PhotoContent"];
 export type SalesSlipDocumentForm = NonNullable<
   components["schemas"]["AiSlipPhotoMetadata"]["documentForm"]
 >;
+
+export type SalesSlipReadingProgress =
+  components["schemas"]["AiSlipConversationProgress"];

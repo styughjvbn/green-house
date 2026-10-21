@@ -97,6 +97,26 @@ export async function requestApiBlob(
   return (await requestApiResponse(path, init, fallbackMessage)).blob();
 }
 
+/** SSE uses the same credentials, client identity and HTTP error handling as ordinary API calls. */
+export async function requestApiEventStream(path: string, signal: AbortSignal) {
+  const response = await requestApiResponse(
+    path,
+    {
+      signal,
+      headers: { Accept: "text/event-stream" },
+    },
+    "진행 상태를 연결하지 못했습니다.",
+  );
+  if (
+    !response.body ||
+    !response.headers.get("content-type")?.includes("text/event-stream")
+  ) {
+    await response.body?.cancel();
+    throw new Error("진행 상태 응답 형식을 확인하지 못했습니다.");
+  }
+  return response.body;
+}
+
 async function requestApiResponse(
   path: string,
   init: RequestInit,

@@ -53,9 +53,7 @@ public class AgentToolGateway {
         authorization != null && authorization.startsWith("Bearer ")
             ? authorization.substring(7)
             : "";
-    var scope = scopes.get(token);
-    if (scope == null || !scope.expiresAt.isAfter(clock.instant()))
-      throw new AgentException(403, "AI_TOOL_ACCESS_DENIED", "유효한 AI 실행 권한이 필요합니다.");
+    var scope = requireScope(token);
     if (!Set.of("search_varieties", "search_partners").contains(name))
       throw new AgentException(403, "AI_TOOL_NOT_ALLOWED", "허용되지 않은 AI 도구입니다.");
     if (scope.calls.incrementAndGet() > maxCalls)
@@ -68,6 +66,9 @@ public class AgentToolGateway {
       throw new AgentException(400, "AI_TOOL_ARGUMENT_INVALID", "검색어는 1~100자여야 합니다.");
     var log = LoggerFactory.getLogger(AgentToolGateway.class);
     long started = System.nanoTime();
+    scope.runningCalls.incrementAndGet();
+    scope.latestLookup = new Lookup(name, args.query().trim());
+    scope.changed();
     try {
       List<?> result;
       if (name.equals("search_varieties")) {
@@ -92,7 +93,33 @@ public class AgentToolGateway {
           name,
           (System.nanoTime() - started) / 1000000);
       throw e;
+    } finally {
+      scope.runningCalls.decrementAndGet();
+      scope.changed();
     }
+  }
+
+  public record Lookup(String tool, String query) {}
+
+  public record Activity(Lookup latestLookup, boolean searching, int calls, String summary) {}
+
+  public void reportSummary(String authorization, String summary) {
+    String token =
+        authorization != null && authorization.startsWith("Bearer ")
+            ? authorization.substring(7)
+            : "";
+    var scope = requireScope(token);
+    if (summary == null || summary.isBlank() || summary.length() > 2000)
+      throw new AgentException(400, "AI_PROGRESS_INVALID", "진행 설명을 확인해주세요.");
+    scope.summary = summary.trim();
+    scope.changed();
+  }
+
+  private Scope requireScope(String token) {
+    var scope = scopes.get(token);
+    if (scope == null || !scope.expiresAt.isAfter(clock.instant()))
+      throw new AgentException(403, "AI_TOOL_ACCESS_DENIED", "유효한 AI 실행 권한이 필요합니다.");
+    return scope;
   }
 
   public record Arguments(String query, String genus, Boolean auctionHouse) {}
@@ -105,6 +132,19 @@ public class AgentToolGateway {
     private final String token;
     private final Instant expiresAt;
     private final AtomicInteger calls = new AtomicInteger();
+    private final AtomicInteger runningCalls = new AtomicInteger();
+    private volatile Lookup latestLookup;
+    private volatile String summary;
+    private volatile Runnable activityListener = () -> {};
+
+    public void onActivity(Runnable listener) {
+      activityListener = listener;
+    }
+
+    private void changed() {
+      activityListener.run();
+    }
+
     private final Map<Long, VarietySearchApi.Option> varieties = new ConcurrentHashMap<>();
     private final Map<Long, BusinessPartnerQueryApi.Option> partners = new ConcurrentHashMap<>();
     private final Map<Long, Optional<BusinessPartnerQueryApi.Option>> partnerIdLookups =
@@ -121,6 +161,10 @@ public class AgentToolGateway {
 
     public String token() {
       return token;
+    }
+
+    public Activity activity() {
+      return new Activity(latestLookup, runningCalls.get() > 0, calls.get(), summary);
     }
 
     public int calls() {
@@ -170,6 +214,7 @@ public class AgentToolGateway {
 
     public void close() {
       scopes.remove(token, this);
+      activityListener = () -> {};
     }
   }
 }

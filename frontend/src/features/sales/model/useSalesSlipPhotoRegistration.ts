@@ -1,3 +1,4 @@
+import { useSalesSlipReadingProgress } from "./useSalesSlipReadingProgress";
 import {
   PHOTO_EXTRACTION_BATCH_SIZE,
   runPhotoExtractionBatches,
@@ -104,8 +105,17 @@ export function useSalesSlipPhotoRegistration(
     total: number;
     batchIndex: number;
     batchCount: number;
+    photoIds: string[];
   } | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [readingRequest, setReadingRequest] = useState<{
+    sessionId: string;
+    requestId: string;
+  } | null>(null);
+  const readingProgressQuery = useSalesSlipReadingProgress(
+    readingRequest,
+    busy === "read" && !cancelling,
+  );
   const activeRead = useRef<{
     requestId: string;
     sessionId?: string;
@@ -610,6 +620,7 @@ export function useSalesSlipPhotoRegistration(
       total: targets.length,
       batchIndex: 0,
       batchCount: Math.ceil(targets.length / PHOTO_EXTRACTION_BATCH_SIZE),
+      photoIds: [],
     });
     try {
       const id = await ensureSession(controller.signal);
@@ -624,11 +635,13 @@ export function useSalesSlipPhotoRegistration(
             throw new DOMException("Aborted", "AbortError");
           currentBatch = batchEntries;
           run.requestId = createUuid();
+          setReadingRequest({ sessionId: id, requestId: run.requestId });
           setExtractionProgress({
             completed,
             total: targets.length,
             batchIndex,
             batchCount,
+            photoIds: batchEntries.map((entry) => entry.id),
           });
           for (const entry of batchEntries)
             patch(entry.id, { read: "reading", error: null });
@@ -698,6 +711,7 @@ export function useSalesSlipPhotoRegistration(
             total: targets.length,
             batchIndex,
             batchCount,
+            photoIds: batchEntries.map((entry) => entry.id),
           });
           currentBatch = [];
         },
@@ -727,6 +741,7 @@ export function useSalesSlipPhotoRegistration(
       running.current = false;
       if (mounted.current) {
         setExtractionProgress(null);
+        setReadingRequest(null);
         setBusy(null);
       }
     }
@@ -912,6 +927,9 @@ export function useSalesSlipPhotoRegistration(
     busy,
     regionProcessingProgress,
     extractionProgress,
+    readingProgress: readingProgressQuery.data,
+    readingProgressUnavailable: readingProgressQuery.unavailable,
+    preparingReadingSession: readingRequest === null,
     photosWithoutDocumentRegionsCount: photosWithoutDocumentRegions.length,
     cancelling,
     uploadError,
