@@ -25,6 +25,29 @@ class VarietyQueryIntegrationTests extends AbstractBackendIntegrationTest {
 
   @Test
   @Transactional
+  void aiCandidatesCanBeFoundUsingASingleLegibleCharacter() {
+    var candidate = saveCandidate("SHORT-READ", "테스트속", "대구 싱싱", null, true);
+    assertThat(varietySearchApi.searchOptions("대", null, 10))
+        .extracting(VarietySearchApi.Option::id)
+        .contains(candidate.getId());
+    assertThat(varietySearchApi.searchOptions("대구상상", null, 10))
+        .extracting(VarietySearchApi.Option::id)
+        .contains(candidate.getId());
+  }
+
+  @Test
+  @Transactional
+  void uniquePrefixesCountVarietiesOnceAcrossNamesAndAliasesWithoutUsingLimitOrGenus() {
+    var candidate = saveCandidate("PREFIX-ONE", "다른속", "유일가나", "유일가별칭", false);
+    saveCandidate("PREFIX-TWO", "힌트속", "유일다라", null, true);
+    assertThat(varietySearchApi.searchOptions("유일가오독", "힌트속", 1))
+        .extracting(VarietySearchApi.Option::id)
+        .containsExactly(candidate.getId());
+    assertThat(varietySearchApi.searchOptions("유일오독", "힌트속", 1)).isEmpty();
+  }
+
+  @Test
+  @Transactional
   void sessionReferenceContainsAllDistinctActiveNamesWithLinkedGroupsEvenAtZeroQuantity() {
     var house = new House(99, "초기 참조 테스트동");
     var bed = new PhysicalBed(1, 1);

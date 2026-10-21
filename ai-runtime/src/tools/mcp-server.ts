@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import type { ToolArgs } from "../contracts.js";
+import { toolDescriptions, type ToolArgs } from "../contracts.js";
 import { createToolClient } from "./client.js";
 const server = new McpServer({
   name: "green-house-read-tools",
@@ -26,10 +26,7 @@ for (const name of ["search_varieties", "search_partners"] as const) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      description:
-        name === "search_varieties"
-          ? "품종명·별명으로 후보를 검색하며 검색어와 이름의 내부 공백을 무시합니다. 같은 일치도에서는 원문 표기가 일치하는 후보가 우선입니다. CA15처럼 코드 모양이어도 품종 칸의 값은 반드시 품종명으로 검색하세요. DB의 별도 내부 코드 필드는 검색 대상이 아닙니다. 품종명 정확 일치, 별명 정확 일치, 품종명 부분 일치, 별명 부분 일치 순이며 속은 같은 일치도의 후보 정렬 힌트입니다. 속이 달라도 제외하지 않습니다. 모호하면 ID를 선택하지 마세요."
-          : "활성 거래처 이름으로 후보 검색",
+      description: toolDescriptions[name],
       inputSchema:
         name === "search_varieties"
           ? {

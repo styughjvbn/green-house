@@ -27,6 +27,52 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.provider.Arguments;
 
 class SlipExtractionServiceTest {
+  @Test
+  void keepsUniquePrefixCandidatesSourceReadingsAndRequiredReviews() {
+    var partners = mock(BusinessPartnerQueryApi.class);
+    var varieties = mock(VarietySearchApi.class);
+    when(partners.searchOptions("대구 상상", null, 10))
+        .thenReturn(
+            List.of(new BusinessPartnerQueryApi.Option(3L, "대구 싱싱", PartnerType.WHOLESALE, true)));
+    when(varieties.searchOptions("하니 몬", null, 10))
+        .thenReturn(List.of(new VarietySearchApi.Option(5L, "하니 문", "테스트속", true)));
+    var tools = new AgentToolGateway(varieties, partners, Clock.systemUTC(), 5, 120);
+    try (var factory = Validation.buildDefaultValidatorFactory();
+        var scope = tools.open("short-fragment", "worker")) {
+      String authorization = "Bearer " + scope.token();
+      tools.execute(
+          authorization, "search_partners", new AgentToolGateway.Arguments("대구 상상", null, null));
+      tools.execute(
+          authorization, "search_varieties", new AgentToolGateway.Arguments("하니 몬", null, null));
+      var partnerReview =
+          new SlipFieldReview(SlipFieldReview.Field.PARTNER, null, "거래처 판독 보정·확인 필요");
+      var varietyReview = new SlipFieldReview(SlipFieldReview.Field.ITEM_NAME, 0, "품종 판독 보정·확인 필요");
+      var model =
+          new SlipModelResult(
+              "DIRECT",
+              "2026-10-21",
+              "대구 상상",
+              3L,
+              null,
+              List.of(
+                  new SlipModelResult.Item("하니 몬", "테스트속", 5L, null, null, null, 1, 10, 10L, null)),
+              List.of(),
+              80,
+              1024,
+              1,
+              List.of(partnerReview, varietyReview));
+      var service =
+          new SlipExtractionService(mock(AgentRuntimePort.class), tools, factory.getValidator(), 0);
+      var result = service.validate("short-fragment", model, scope);
+      assertThat(result.partnerId()).isEqualTo(3L);
+      assertThat(result.partnerName()).isEqualTo("대구 싱싱");
+      assertThat(result.rawPartnerName()).isEqualTo("대구 상상");
+      assertThat(result.items().getFirst().varietyId()).isEqualTo(5L);
+      assertThat(result.items().getFirst().rawItemName()).isEqualTo("하니 몬");
+      assertThat(result.reviewFields()).contains(partnerReview, varietyReview);
+    }
+  }
+
   static Stream<Arguments> arithmeticChecks() {
     return Stream.of(
         Arguments.of(50, 2, 100, 3000, 300000L, false, false),

@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.variety.repository;
 
 import static com.greenhouse.backend.farm.variety.domain.QVariety.variety;
 
+import com.greenhouse.backend.common.persistence.UniquePrefixCandidates;
 import com.greenhouse.backend.farm.variety.domain.Variety;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
@@ -44,7 +45,9 @@ public class VarietyRepositoryImpl implements VarietyRepositoryCustom {
             .then(1)
             .when(nameContains)
             .then(2)
-            .otherwise(3);
+            .when(aliasContains)
+            .then(3)
+            .otherwise(4);
     var originalMatch =
         new CaseBuilder()
             .when(variety.name.lower().eq(query).or(variety.alias.lower().eq(query)))
@@ -57,9 +60,17 @@ public class VarietyRepositoryImpl implements VarietyRepositoryCustom {
             .when(variety.genus.eq(isBlank(genusHint) ? "" : genusHint.trim()))
             .then(0)
             .otherwise(1);
+    var uniqueIds =
+        UniquePrefixCandidates.findIds(
+            queryFactory,
+            variety,
+            variety.id,
+            compactQuery,
+            prefix -> compactName.contains(prefix).or(compactAlias.contains(prefix)),
+            null);
     return queryFactory
         .selectFrom(variety)
-        .where(nameContains.or(aliasContains))
+        .where(nameContains.or(aliasContains).or(variety.id.in(uniqueIds)))
         .orderBy(
             relevance.asc(),
             originalMatch.asc(),

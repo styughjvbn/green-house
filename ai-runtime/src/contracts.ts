@@ -97,6 +97,13 @@ ${JSON.stringify(input.photos.map((p) => ({ photoId: p.photoId })))}`
     : "Read the sales slip values and look up the required candidates.";
 }
 export type ToolName = "search_varieties" | "search_partners";
+export const toolDescriptions: Record<ToolName, string> = {
+  search_varieties:
+    "Search variety names and aliases, ignoring internal whitespace. Rank exact name, exact alias, partial name, then partial alias matches; prefer original spacing at equal relevance. Pass genus separately as a sorting hint, never an exclusion filter. Search code-like variety-cell text as a name, never the internal code field. Include inactive varieties for historical records. Also return candidates uniquely matched by a leading fragment of query; uniqueness does not confirm identity.",
+  search_partners:
+    "Search active partner names, ignoring internal whitespace. Rank exact names before partial matches; prefer original spacing at equal relevance. Use auctionHouse=true for auction houses, false for other partners, or null when unknown. Also return candidates uniquely matched by a leading fragment of query; uniqueness does not confirm identity.",
+};
+
 export type ToolArgs = {
   query: string;
   genus?: string | null;
@@ -159,7 +166,9 @@ export const instructions = `## Role and Scope
 
 ## Lookup and Matching
 - Call search_partners for legible partner names and search_varieties for every legible variety-cell value, including codes such as CA15.
-- Compare candidates against source text. Never select solely by search rank.
+- Search each printed name once; tools include unique prefix matches automatically.
+- Recheck full candidate names against the image. Consider a unique result, but never select solely by uniqueness or search rank.
+- Flag PARTNER or ITEM_NAME when matching requires correcting an uncertain reading. Preserve the source reading; leave IDs null if visual evidence remains ambiguous.
 - Select IDs only from candidates returned by lookup tools in the current execution.
 - Return null for missing, ambiguous, or incompatible candidate IDs.
 - Avoid redundant lookups.

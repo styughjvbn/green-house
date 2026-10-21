@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,10 +33,7 @@ public class BusinessPartnerReader implements BusinessPartnerQueryApi {
 
   @Override
   public List<Option> searchOptions(String keyword, Boolean auctionHouse, int limit) {
-    return partnerRepository
-        .searchPage(keyword, null, true, auctionHouse, PageRequest.of(0, Math.clamp(limit, 1, 20)))
-        .getContent()
-        .stream()
+    return partnerRepository.searchCandidates(keyword, auctionHouse, limit).stream()
         .map(p -> new Option(p.getId(), p.getName(), p.getPartnerType(), p.isActive()))
         .toList();
   }

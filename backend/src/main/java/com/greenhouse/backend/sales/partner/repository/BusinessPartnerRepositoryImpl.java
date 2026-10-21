@@ -2,6 +2,7 @@ package com.greenhouse.backend.sales.partner.repository;
 
 import static com.greenhouse.backend.sales.partner.domain.QBusinessPartner.businessPartner;
 
+import com.greenhouse.backend.common.persistence.UniquePrefixCandidates;
 import com.greenhouse.backend.sales.api.partner.PartnerTextMatch;
 import com.greenhouse.backend.sales.api.partner.PartnerTextSearch;
 import com.greenhouse.backend.sales.api.partner.PartnerType;
@@ -9,6 +10,8 @@ import com.greenhouse.backend.sales.partner.domain.BusinessPartner;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +24,64 @@ import org.springframework.data.domain.Pageable;
 @RequiredArgsConstructor
 public class BusinessPartnerRepositoryImpl implements BusinessPartnerRepositoryCustom {
 
+  private static final List<String> SEARCH_SPACES =
+      List.of(" ", "\t", "\n", "\r", "\u00a0", "\u3000");
+
   private final JPAQueryFactory queryFactory;
+
+  @Override
+  public List<BusinessPartner> searchCandidates(String keyword, Boolean auctionHouse, int limit) {
+    if (keyword == null || keyword.isBlank()) return List.of();
+    String query = keyword.trim().toLowerCase(Locale.ROOT);
+    String compactQuery = query;
+    var compactName = businessPartner.name.lower();
+    for (String space : SEARCH_SPACES) {
+      compactQuery = compactQuery.replace(space, "");
+      compactName = Expressions.stringTemplate("replace({0}, {1}, '')", compactName, space);
+    }
+    if (compactQuery.isEmpty()) return List.of();
+    var fullMatch = compactName.contains(compactQuery);
+    var relevance =
+        new CaseBuilder()
+            .when(compactName.eq(compactQuery))
+            .then(0)
+            .when(fullMatch)
+            .then(1)
+            .otherwise(2);
+    var originalMatch =
+        new CaseBuilder()
+            .when(businessPartner.name.lower().eq(query))
+            .then(0)
+            .when(businessPartner.name.lower().contains(query))
+            .then(1)
+            .otherwise(2);
+    var conditions = new BooleanBuilder(businessPartner.active.isTrue());
+    if (auctionHouse != null)
+      conditions.and(
+          auctionHouse
+              ? businessPartner.partnerType.eq(PartnerType.AUCTION_HOUSE)
+              : businessPartner.partnerType.ne(PartnerType.AUCTION_HOUSE));
+    var searchableName = compactName;
+    var uniqueIds =
+        UniquePrefixCandidates.findIds(
+            queryFactory,
+            businessPartner,
+            businessPartner.id,
+            compactQuery,
+            searchableName::contains,
+            conditions);
+    conditions.and(fullMatch.or(businessPartner.id.in(uniqueIds)));
+    return queryFactory
+        .selectFrom(businessPartner)
+        .where(conditions)
+        .orderBy(
+            relevance.asc(),
+            originalMatch.asc(),
+            businessPartner.name.asc(),
+            businessPartner.id.asc())
+        .limit(Math.clamp(limit, 1, 20))
+        .fetch();
+  }
 
   @Override
   public List<Long> findMatchingIds(PartnerTextMatch match, String value, long afterId, int limit) {

@@ -1,5 +1,6 @@
 import {
   RuntimeError,
+  toolDescriptions,
   instructions,
   schema,
   batchSchema,
@@ -17,8 +18,7 @@ export const tools = [
   {
     type: "function",
     name: "search_varieties",
-    description:
-      "품종명·별명으로 후보를 검색하며 검색어와 이름의 내부 공백을 무시합니다. 같은 일치도에서는 원문 표기가 일치하는 후보가 우선입니다. CA15처럼 코드 모양이어도 품종 칸의 값은 반드시 품종명으로 검색하세요. DB의 별도 내부 코드 필드는 검색 대상이 아닙니다. 품종명 정확 일치, 별명 정확 일치, 품종명 부분 일치, 별명 부분 일치 순이며 속은 같은 일치도의 후보 정렬 힌트입니다. 속이 달라도 제외하지 않습니다. 모호하면 ID를 선택하지 마세요. 비활성 후보도 과거 기록 검토를 위해 반환됩니다.",
+    description: toolDescriptions.search_varieties,
     strict: true,
     parameters: {
       type: "object",
@@ -33,8 +33,7 @@ export const tools = [
   {
     type: "function",
     name: "search_partners",
-    description:
-      "활성 구매 거래처 또는 경매장 후보를 검색합니다. 경매장이 확실하면 auctionHouse=true, 일반 거래처면 false, 불명확하면 null.",
+    description: toolDescriptions.search_partners,
     strict: true,
     parameters: {
       type: "object",
