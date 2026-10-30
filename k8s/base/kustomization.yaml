@@ -8,6 +8,7 @@ resources:
   - ai-runtime-deployment.yaml
   - ai-runtime-service.yaml
   - ai-codex-pvc.yaml
+  - sales-photos-pv.yaml
   - sales-photos-pvc.yaml
   - backend-deployment.yaml
   - backend-service.yaml

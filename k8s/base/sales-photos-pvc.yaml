@@ -1,9 +1,11 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: green-house-sales-photos
+  name: green-house-sales-photos-host
   namespace: green-house
 spec:
+  storageClassName: ""
+  volumeName: green-house-sales-photos-host
   accessModes:
     - ReadWriteOnce
   resources:

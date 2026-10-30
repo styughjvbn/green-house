@@ -19,6 +19,8 @@ k8s/
     ai-runtime-deployment.yaml
     ai-runtime-service.yaml
     ai-codex-pvc.yaml
+    sales-photos-pv.yaml
+    sales-photos-pvc.yaml
     backend-deployment.yaml
     backend-service.yaml
     frontend-deployment.yaml
@@ -63,6 +65,13 @@ base에서 AI runtime Deployment·ClusterIP Service·Codex 인증용 PVC를 함�
 `ai-runtime/Dockerfile`로 발행한 이미지 tag를 `base/ai-runtime-deployment.yaml`에 지정한다. Codex 로그인과 설정은 `/var/lib/greenhouse-codex`의 PVC에 보존한다. 최초 Secret·로그인·재배포 절차는 `docs/07-deployment.md`의 `운영 AI 설정`을 따른다. 데모 overlay에서는 runtime Deployment·Service·PVC·AI 설정·인증키 참조를 모두 제거한다.
 
 ## 적용
+
+`base/` 자체가 운영 배포용이다. 사진은 `/opt/green-house/data/slip-photos`에
+고정하고 `Retain` 정적 PV·명시적 PVC binding을 사용한다. 컨테이너 경로는 유지한다.
+PV의 `mini-pc` hostname label을 실제 운영 노드와 대조하고 사진 디렉터리·권한을 먼저
+준비한다. hostPath 디렉터리가 없으면 기동에 실패한다. demo·dev overlay는 운영 PV를 제외하고 기존 이름의 동적 PVC로 덮어쓴다.
+기존 동적 사진 PVC를 자동 삭제하지 않으며 `--prune`은 사용하지 않는다.
+[hostPath 적용·Drive 백업 절차](../docs/features/production-photo-backup.md)를 따른다.
 
 ConfigMap의 환경 변수 변경은 실행 중인 Pod에 반영되지 않는다. 난 묶음 Engine cutover처럼
 writer mode를 바꾸는 배포는 `docs/07-deployment.md`의 운영 primary cutover runbook에 따라

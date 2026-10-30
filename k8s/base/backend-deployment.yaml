@@ -26,7 +26,7 @@ spec:
       volumes:
         - name: sales-photos
           persistentVolumeClaim:
-            claimName: green-house-sales-photos
+            claimName: green-house-sales-photos-host
       imagePullSecrets:
         - name: ghcr-secret
       containers:

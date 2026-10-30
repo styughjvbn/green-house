@@ -11,6 +11,7 @@
 - [ADR-004: 백엔드 아키텍처 전환](../adr/ADR-004-backend-architecture-migration.md) — 완료된 공개 API·SPI·기능 우선 패키지 전환의 결정·검증 기록
 - [Mutation Engine 리팩터링 상세](orchid-group-mutation-refactoring-detail.md) — 전체 계획의 하위 상세
 - [데모 환경 운영](demo-operations.md)
+- [운영 사진 저장소와 Drive 백업](production-photo-backup.md) — 고정 hostPath·일반 계정·원격 백업·복원
 
 전체 문서 읽는 순서는 [`../00-index.md`](../00-index.md), API 상세는
 [`../06-api-guide.md`](../06-api-guide.md)와 `../api/`를 기준으로 확인한다.
