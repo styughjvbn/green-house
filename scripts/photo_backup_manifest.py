@@ -8,11 +8,14 @@ from pathlib import Path
 import stat
 
 
-def digest(path):
+def inspect_file(path, checksums=True):
     descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     with os.fdopen(descriptor, "rb") as stream:
-        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode):
             raise ValueError(f"Not a regular backup file: {path}")
+        if not checksums:
+            return info.st_size, None
         size = 0
         checksum = hashlib.sha256()
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
@@ -21,11 +24,15 @@ def digest(path):
         return size, checksum.hexdigest()
 
 
+def digest(path):
+    return inspect_file(path, checksums=True)
+
+
 def raise_error(error):
     raise error
 
 
-def entries(source):
+def entries(source, checksums):
     for folder, directories, files in os.walk(source, onerror=raise_error):
         for name in directories + files:
             path = Path(folder) / name
@@ -38,16 +45,16 @@ def entries(source):
             relative = path.relative_to(source).as_posix()
             if "\n" in relative or "\r" in relative:
                 raise ValueError("Photo names must not contain line separators")
-            size, checksum = digest(path)
+            size, checksum = inspect_file(path, checksums)
             yield {"key": relative, "bytes": size, "sha256": checksum}
 
 
-def create(source, output, database, backup_id):
-    photos = sorted(entries(source), key=lambda entry: entry["key"])
+def create(source, output, database, backup_id, verify_photos=False):
+    photos = sorted(entries(source, verify_photos), key=lambda entry: entry["key"])
     output.mkdir(mode=0o700)
     (output / "files.txt").write_text("".join(p["key"] + "\n" for p in photos))
     (output / "photos.sha256").write_text(
-        "".join(p["sha256"] + "  " + p["key"] + "\n" for p in photos)
+        "".join(p["sha256"] + "  " + p["key"] + "\n" for p in photos if p["sha256"])
     )
     (output / "database-files.txt").write_text(database.name + "\n")
     size, checksum = digest(database)
@@ -56,11 +63,13 @@ def create(source, output, database, backup_id):
         "schemaVersion": 1,
         "backupId": backup_id,
         "database": {
-            "path": "database/" + database.name,
+            "path": "db/" + database.name,
             "bytes": size,
             "sha256": checksum,
         },
         "photoRoot": "photos",
+        "photoVerification": "checksums" if verify_photos else "size",
+        "photoHistory": "replaced/" + backup_id if verify_photos else None,
         "photos": photos,
     }
     (output / "backup.json").write_text(
@@ -79,9 +88,10 @@ def verify(source, output):
             path = path / part
             if path.is_symlink():
                 raise ValueError(f"Symlink encountered: {path}")
-        if digest(path) != (entry["bytes"], entry["sha256"]):
+        if inspect_file(path, bool(entry.get("sha256"))) != (entry["bytes"], entry.get("sha256")):
             raise ValueError(f"Photo changed since the database dump: {entry['key']}")
-    print(f"verified={len(manifest['photos'])}")
+    checked = sum(bool(p.get("sha256")) for p in manifest["photos"])
+    print(f"verified={len(manifest['photos'])} checksums={checked}")
 
 
 def main():
@@ -91,11 +101,12 @@ def main():
     parser.add_argument("output", type=Path)
     parser.add_argument("--database", type=Path)
     parser.add_argument("--backup-id")
+    parser.add_argument("--verify-photos", action="store_true")
     args = parser.parse_args()
     if args.command == "create":
         if not args.database or not args.backup_id:
             parser.error("create requires --database and --backup-id")
-        create(args.source, args.output, args.database, args.backup_id)
+        create(args.source, args.output, args.database, args.backup_id, args.verify_photos)
     else:
         verify(args.source, args.output)
 
