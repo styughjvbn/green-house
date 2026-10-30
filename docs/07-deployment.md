@@ -54,6 +54,7 @@ npm --prefix frontend run dev
 | `k8s/base/configmap.yaml` | 운영 설정, 데모는 overlay에서 변경·제외 |
 | `k8s/base/secret.yaml` | 운영 비밀값의 템플릿, 실제 값은 배포 환경에서 관리 |
 | `k8s/overlays/demo/*` | 데모 환경에서만 바뀌는 값 |
+| `k8s/base/sales-photos-*.yaml` | 운영 hostPath 사진 PV/PVC |
 
 Deployment는 ConfigMap·Secret과 볼륨을 연결한다. 사진 저장 경로도 ConfigMap이 소유한다. 운영 컨테이너는 루트 `.env`를 읽지 않으며 Kubernetes가 환경변수를 주입한다. ConfigMap·Secret 변경 후 기존 Pod를 재생성해야 적용된다. 실제 클러스터 설정은 저장소 템플릿과 별도로 확인한다.
 
@@ -150,7 +151,7 @@ PostgreSQL
 
 ### mini-pc k3s 배포
 
-mini-pc k3s 운영 환경은 `k8s/base/`를 사용한다. 데모는 `k8s/overlays/demo/`에서 차이만 덮어쓰며 운영 AI 설정과 인증키 연결을 제외한다.
+mini-pc k3s 운영 환경은 `k8s/base/`를 사용한다. base에 운영 hostPath 사진 PV/PVC와 backend 연결을 둔다. 데모는 `k8s/overlays/demo/`에서 차이만 덮어쓰며 운영 AI 설정과 인증키 연결을 제외한다.
 
 ```text
 Traefik Ingress
@@ -185,7 +186,9 @@ AI 전표 진행 알림은 같은 `/api` 프록시를 통과하는 SSE다. 응�
 
 ## 5. 백업
 
-전표 사진은 `SALES_PHOTO_STORAGE_TYPE=local`과 `SALES_PHOTO_STORAGE_ROOT`로 설정한다. 상대 경로는 백엔드 작업 디렉터리 기준이며 기본은 `./data/slip-photos`다. 컨테이너/Kubernetes는 `/var/lib/greenhouse/slip-photos`를 영구 볼륨으로 마운트한다. 기본 매니페스트는 10Gi RWO PVC를 사용하며 앱 UID/GID는 10001이다. 사진은 HTTP 정적 경로로 공개하지 않고 기존 인증 API로만 조회한다. 저장소는 원자적 rename과 파일·디렉터리 fsync를 지원해야 한다.
+전표 사진은 `SALES_PHOTO_STORAGE_TYPE=local`과 `SALES_PHOTO_STORAGE_ROOT`로 설정한다. 컨테이너 경로는 `/var/lib/greenhouse/slip-photos`, 앱 UID/GID는 `10001:10001`이다. 운영 `base`는 호스트 `/opt/green-house/data/slip-photos`를 정적 PV/PVC로 연결한다. dev·demo overlay는 운영 PV를 제외하고 각 namespace의 동적 PVC로 덮어쓴다. 사진은 기존 인증 API로 조회하며 저장소는 atomic rename과 파일·디렉터리 fsync를 지원해야 한다.
+
+운영 hostPath 준비·권한·PV/PVC 전환·Drive 백업·cron·복원은 [운영 사진 저장소와 Drive 백업](features/production-photo-backup.md)을 따른다. 운영에 기존 사진이 없다는 전제이며 DB는 유지한다.
 
 전표 사진 테이블은 미배포 V42부터 파일 참조·크기·해시만 보관하며 바이너리 컬럼이나 DB 사진 이관 기능을 제공하지 않는다. 이전 V42 초안을 적용한 개발 DB는 별도 재구성이 필요하며 자동 `repair`나 데이터 초기화를 수행하지 않는다. CLI는 Flyway를 실행하지 않고 이미 갱신된 스키마를 검증한다. 다음 명령은 환경변수를 로드한 별도 터미널에서 실행한다.
 
@@ -197,26 +200,94 @@ cd backend
 
 `verify`는 DB가 참조하는 모든 사진의 크기·해시를 검사하고 성공한 사진 수를 출력한다. 사진 파일은 DB 백업에 포함되지 않으므로 아래 사진 디렉터리 백업을 함께 유지한다.
 
+### 일반 사용자 계정의 사진 백업 권한
+
+운영 백업은 기존 `sjw` 계정을 사용한다. 사진은 backend UID/GID `10001:10001`이
+저장하며, `sjw`는 해당 그룹을 통해 읽고 별도 백업 경로에 복사한다. 새 사용자 계정은
+필요하지 않다. POSIX 파일 시스템에서 완료된 사진은 `640`, 사진 하위 디렉터리는
+`750`으로 저장한다. 임시 업로드는 내용을 모두 쓴 뒤에만 그룹 읽기 권한을 부여한다.
+기존 파일의 권한과 저장 루트·상위 경로 권한은 배포만으로 자동 변경하지 않는다.
+
+운영 호스트에서 먼저 GID 10001의 기존 그룹을 확인한다. 이미 있다면 그 그룹을 사용한다.
+없는 경우에만 그룹을 만들고 `sjw`를 추가한다. 아래 계정·권한 설정은 관리자 실행 절차이며
+개발 PC에 운영 `sjw` 계정을 새로 만들지 않는다.
+
+```bash
+photo_group="$(getent group 10001 | cut -d: -f1)"
+if [ -z "$photo_group" ]; then
+  sudo groupadd --gid 10001 greenhouse-photos
+  photo_group=greenhouse-photos
+fi
+sudo usermod -aG "$photo_group" sjw
+sudo -u sjw -- id
+```
+
+사진 writer를 중지하고 기존 요청 종료를 확인한 뒤 실제 사진 PV 경로의 그룹과 기존
+사진 권한을 맞춘다. 원본 DB·사진을 먼저 백업하며, `photo_root`를 백업 폴더나 상위 공용
+폴더로 지정하지 않는다. 심볼릭 링크를 따라가거나 다른 파일 시스템으로 내려가지 않는다.
+
+```bash
+photo_root=/actual/photo/pv/root
+sudo find "$photo_root" -xdev -type d \
+  -exec chown "10001:$photo_group" {} + -exec chmod 2750 {} +
+sudo find "$photo_root" -xdev -type f ! -name '.upload-*.tmp' \
+  -exec chown "10001:$photo_group" {} + -exec chmod 640 {} +
+namei -l "$photo_root"
+```
+
+모든 상위 디렉터리의 탐색 권한도 필요하다. 특히 `/var/lib/rancher/k3s/storage` 아래의
+PV라면 사진 루트뿐 아니라 상위 경로도 점검한다. k3s 데이터 디렉터리 전체에 읽기 권한을
+일괄 부여하지 않는다. 필요한 경로의 탐색 권한만 관리자에게 요청하거나 별도 사진 저장
+경로를 사용한다. 기존 로그인 셸에는 그룹 추가가 즉시 반영되지 않으므로 새 로그인 또는
+`sudo -u sjw`로 생성한 새 프로세스에서 확인한다.
+
+권한 보완 후 backend를 재기동하고 앱에서 **새 사진**을 저장한다. 운영 호스트에서
+새 사진의 실제 storage key를 사용해 다음 명령이 성공해야 한다. 과거 파일만 chmod한
+상태의 성공으로 신규 사진 백업 가능 여부를 판단하지 않는다.
+
+```bash
+sudo -u sjw -- sha256sum "$photo_root/<new-storage-key>"
+```
+
+같은 새 프로세스에서 기존 백업 스크립트도 실행해 DB 접근·사진 읽기·백업 경로 쓰기와
+해시를 함께 확인한다. cron에는 절대 경로와 libpq 접속 설정을 명시하며 대화형 셸의
+PATH·환경 로딩에 의존하지 않는다. 복원 시에도 소유자 `10001:10001`, 디렉터리
+`2750`, 사진 `640`을 복구하고 사진 무결성 CLI와 `sjw`의 읽기를 다시 확인한다.
+
+### 사진 정리와 DB·사진 백업
+
 `orphans`는 DB에서 참조하지 않는 24시간 이상 된 파일 수만 출력한다. 실제 정리는 모든 writer를 중지하고 진행 중 요청·백업이 없는 상태에서만 다음 명령으로 수행한다. 이 정리를 과거 백업의 사진 디렉터리에 적용하지 않는다. 정리 대상은 발행된 object key이며, 강제 종료로 남은 `.upload-*.tmp`는 포함하지 않는다. 임시 파일 정리는 writer를 중지한 상태에서 저장 경로 내 해당 패턴·24시간 경과 여부를 별도로 확인한다.
 
 ```bash
 ./gradlew salesPhotoStorage --args='--photo-storage.command=cleanup --photo-storage.writers-stopped=true --spring.jpa.hibernate.ddl-auto=validate'
 ```
 
-DB와 사진의 분리 백업은 프로젝트 루트에서 실행한다. `pg_dump`, `rsync`, DB와 같은 버전 이상인 PostgreSQL client가 필요하다. libpq `PGSERVICE` 또는 `PGHOST`·`PGPORT`·`PGDATABASE`·`PGUSER`·`PGPASSWORD`를 사용하며 JDBC 주소를 직접 전달하지 않는다.
+운영 백업은 `sjw`가 프로젝트 루트에서 다음 스크립트를 실행한다. libpq DB 접속 설정,
+서버 버전에 맞는 `pg_dump`, Python 3, rclone 등이 필요하다. 실제 remote 값은 미정이며
+빈 값이면 dump·업로드 전에 실패한다.
 
 ```bash
-SALES_PHOTO_STORAGE_ROOT=/absolute/photo/root PGSERVICE=greenhouse \
-  ./scripts/backup-with-photos.sh /backup/greenhouse
+SALES_PHOTO_STORAGE_ROOT=/opt/green-house/data/slip-photos \
+RCLONE_BACKUP_REMOTE='<configured-remote>:green-house' PGSERVICE=greenhouse \
+bash scripts/backup-with-photos.sh /opt/green-house/backups/local
 ```
 
-일관된 DB dump를 만든 뒤 불변 사진 파일을 checksum 비교로 복사한다. 기존 사진은 재전송하지 않고 신규·불일치 파일만 복사한다. 불일치로 교체하는 기존 백업 파일은 `replaced/<백업 ID>/`에 보존한다. 파일 복사가 성공한 뒤에만 `.dump`를 완성본으로 공개한다. DB snapshot 후 추가된 사진이 백업에 더 포함되는 것은 허용하지만 참조 파일 누락은 허용하지 않는다. DB dump는 기존 7일·월별 정책으로 보관할 수 있으나 공유 `photos/`는 오래된 dump에서도 참조하므로 날짜만 보고 삭제하거나 `rsync --delete`하지 않는다. 실제 백업 대상은 별도 디스크/호스트에 둔다.
+로컬 DB dump는 기존 백업 영역의 `database/`에 유지하고 사진 사본은 로컬에 만들지 않는다.
+dump 이후 고정한 사진 목록으로 Drive에 복사·스트리밍 검증한 뒤 dump·manifest도 전송한다.
+모든 검증이 성공한 경우에만 원격 `completed/<backup-id>.json`을 마지막으로 발행한다.
+사진·dump·manifest 전송 또는 검증 실패 시 유효한 로컬 dump는 남지만 완료 기록은 발행하지 않는다.
+사진과 과거 dump는 자동 삭제하지 않는다. 원본 변경이나 동일 key의 원격 불일치는
+`--immutable`로 차단해 기존 정상 원격 파일을 덮어쓰지 않는다.
 
-복원은 backend/writer를 중지한 상태에서 같은 백업 저장소의 원하는 `database/*.dump`를 `pg_restore`로 복원하고, 공유 `photos/` 전체를 설정된 사진 저장 경로로 복원한다. UID/GID·읽기 권한을 복구한 뒤 `verify`로 파일 크기·해시를 확인하고 백엔드를 시작한다. DB만 복원하고 파일을 누락하면 사진 조회는 503으로 실패한다. 컨테이너/PVC만 생성하는 것은 백업이 아니다.
+공유 operation lock은 배포·리프레시·백업의 동시 실행을 막는다. 백업 중 원본 사진 정리는
+금지한다. 원격 파일 검증은 다운로드 통신량을 사용하지만 사진 사본을 디스크에 만들지 않는다.
+복원에는 원격 완료 기록과 같은 회차의 dump·manifest·사진을 사용하며 원본 DB를 바로
+덮어쓰지 않고 별도 DB에서 먼저 검증한다. 상세 실행·복구 명령과 비어 있는 remote를
+채워야 하는 cron 예시는 위 운영 문서를 기준으로 한다.
 
 S3 전환은 같은 불변 object key로 모든 파일을 복사하고 크기·해시를 검증한 뒤 `SalesPhotoStorage` 구현체를 교체한다. S3 adapter는 파일 URL을 DB에 저장하지 않으며 file I/O와 동일하게 DB 트랜잭션 밖에서 실행한다. 현재는 local adapter만 제공하며 `type=s3`만 설정해서는 동작하지 않는다. 전환 검증·rollback이 끝날 때까지 원래 저장소를 보존한다.
 
-DB만 백업하는 참고 명령이다. 전표 사진을 포함한 완전한 백업에는 위 분리 백업 스크립트를 사용한다:
+DB만 백업하는 참고 명령이다. 사진까지 포함하려면 위 Drive 백업 스크립트를 사용한다:
 
 ```bash
 pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql

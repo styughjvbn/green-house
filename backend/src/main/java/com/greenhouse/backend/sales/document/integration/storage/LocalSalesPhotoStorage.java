@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.*;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,11 +21,14 @@ import org.springframework.stereotype.Component;
     matchIfMissing = true)
 public class LocalSalesPhotoStorage implements SalesPhotoStorage {
   private final Path root;
+  private final boolean posixPermissions;
 
   public LocalSalesPhotoStorage(
       @Value("${sales.document.photos.storage.root:./data/slip-photos}") String root) {
     try {
       this.root = Files.createDirectories(Path.of(root).toAbsolutePath().normalize()).toRealPath();
+      this.posixPermissions =
+          Files.getFileStore(this.root).supportsFileAttributeView(PosixFileAttributeView.class);
     } catch (IOException e) {
       throw new PhotoStorageException("전표 사진 저장 경로를 준비하지 못했습니다.", e);
     }
@@ -45,13 +50,25 @@ public class LocalSalesPhotoStorage implements SalesPhotoStorage {
     Path temporary = null;
     try {
       Path destination = resolve(key);
-      Files.createDirectories(destination.getParent());
+      if (posixPermissions)
+        Files.createDirectories(
+            destination.getParent(),
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxr-x---")));
+      else Files.createDirectories(destination.getParent());
       if (Files.isSymbolicLink(destination.getParent()))
         throw new IOException("Symbolic storage directory");
+      // An inherited restrictive umask must not remove backup-group traversal.
+      if (posixPermissions)
+        Files.setPosixFilePermissions(
+            destination.getParent(), PosixFilePermissions.fromString("rwxr-x---"));
       temporary = Files.createTempFile(destination.getParent(), ".upload-", ".tmp");
       try (FileChannel output = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
         while (buffer.hasRemaining()) output.write(buffer);
+        // Published photos are readable by the backup group, but never group-writable.
+        // Temporary uploads remain private until their complete content has been written.
+        if (posixPermissions)
+          Files.setPosixFilePermissions(temporary, PosixFilePermissions.fromString("rw-r-----"));
         output.force(true);
       }
       Files.move(temporary, destination, StandardCopyOption.ATOMIC_MOVE);

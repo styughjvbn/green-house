@@ -1,0 +1,13 @@
+# Example /etc/cron.d/green-house-backup. Configure and test manually FIRST.
+# Replace an existing DB dump job deliberately; do not install a duplicate job.
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+SALES_PHOTO_STORAGE_ROOT=/opt/green-house/data/slip-photos
+# Required: intentionally blank until the production remote/folder is confirmed.
+RCLONE_BACKUP_REMOTE=
+RCLONE_CONFIG=/home/sjw/.config/rclone/rclone.conf
+PGSERVICE=greenhouse
+PGSERVICEFILE=/home/sjw/.pg_service.conf
+PGPASSFILE=/home/sjw/.pgpass
+
+0 3 * * * sjw /bin/bash /home/sjw/projects/green-house/scripts/backup-with-photos.sh /opt/green-house/backups/local >> /opt/green-house/backups/local/drive-backup.log 2>&1

@@ -4,14 +4,31 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.greenhouse.backend.sales.document.application.SalesPhotoIntegrity;
 import java.nio.file.*;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class LocalSalesPhotoStorageTest {
   @TempDir Path root;
+
+  @Test
+  void publishedPhotosAllowBackupGroupReadWithoutGroupWriteOrOtherAccess() throws Exception {
+    Assumptions.assumeTrue(
+        Files.getFileStore(root).supportsFileAttributeView(PosixFileAttributeView.class));
+    var storage = new LocalSalesPhotoStorage(root.toString());
+    var object = storage.store(new byte[] {1, 2, 3}, "image/png");
+    Path file = root.resolve(object.key());
+    assertThat(Files.getPosixFilePermissions(file))
+        .isEqualTo(PosixFilePermissions.fromString("rw-r-----"));
+    assertThat(Files.getPosixFilePermissions(file.getParent()))
+        .isEqualTo(PosixFilePermissions.fromString("rwxr-x---"));
+    assertThat(storage.read(object.key())).containsExactly(1, 2, 3);
+  }
 
   @Test
   void immutableObjectsRoundTripArePagedAndRejectUnsafePaths() throws Exception {

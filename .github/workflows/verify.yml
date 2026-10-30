@@ -11,6 +11,20 @@ permissions:
   contents: read
 
 jobs:
+  photo-backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install rclone for isolated local-remote tests
+        run: sudo apt-get update && sudo apt-get install -y rclone
+      - name: Verify photo backup failures and PostgreSQL restore
+        env:
+          GREENHOUSE_BACKUP_POSTGRES_TEST: '1'
+        run: python3 -m unittest discover -s scripts -p 'test_backup_with_photos.py' -v
+
   ai-runtime:
     runs-on: ubuntu-latest
     defaults:
