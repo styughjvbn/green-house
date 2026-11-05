@@ -262,28 +262,31 @@ PATH·환경 로딩에 의존하지 않는다. 복원 시에도 소유자 `10001
 ./gradlew salesPhotoStorage --args='--photo-storage.command=cleanup --photo-storage.writers-stopped=true --spring.jpa.hibernate.ddl-auto=validate'
 ```
 
-운영 백업은 `sjw`가 프로젝트 루트에서 다음 스크립트를 실행한다. libpq DB 접속 설정,
-서버 버전에 맞는 `pg_dump`, Python 3, rclone 등이 필요하다. 실제 remote 값은 미정이며
-빈 값이면 dump·업로드 전에 실패한다.
+운영 백업은 기존 매일 03:00 cron의 `/opt/green-house/scripts/backup-greenhouse-db.sh`
+진입점을 유지한다. 해당 스크립트를 저장소의 통합 백업을 호출하는 wrapper로 교체하고,
+운영 값은 Git에서 제외하는 `deploy/backup.env`로 분리한다. `backup.env.example`은
+설정 예시이며 실제 값·사진 경로는 운영 스크립트와 대조한다. 별도 사진 cron은 추가하지 않는다.
 
 ```bash
-SALES_PHOTO_STORAGE_ROOT=/opt/green-house/data/slip-photos \
-RCLONE_BACKUP_REMOTE='<configured-remote>:green-house' PGSERVICE=greenhouse \
-bash scripts/backup-with-photos.sh /opt/green-house/backups/local
+# sjw 계정으로 설정 파일 로드 후 실행
+bash scripts/backup-with-photos.sh
+# 전체 사진 체크섬 비교·교체 이력 보존, 실행 주기 미정
+bash scripts/backup-with-photos.sh --verify-photos
 ```
 
-로컬 DB dump는 기존 백업 영역의 `database/`에 유지하고 사진 사본은 로컬에 만들지 않는다.
-dump 이후 고정한 사진 목록으로 Drive에 복사·스트리밍 검증한 뒤 dump·manifest도 전송한다.
-모든 검증이 성공한 경우에만 원격 `completed/<backup-id>.json`을 마지막으로 발행한다.
-사진·dump·manifest 전송 또는 검증 실패 시 유효한 로컬 dump는 남지만 완료 기록은 발행하지 않는다.
-사진과 과거 dump는 자동 삭제하지 않는다. 원본 변경이나 동일 key의 원격 불일치는
-`--immutable`로 차단해 기존 정상 원격 파일을 덮어쓰지 않는다.
+DB는 기존 `.dump.gz` 형식과 Drive `green-house-backups/db/`를 유지하며 **마지막에 업로드**한다.
+일일 사진 백업은 없는 파일만 복사하고 크기를 확인한다. 정밀 모드는 전체 체크섬을 비교하며
+교체 전 사진을 `replaced/<backup-id>/`에 보존한다. 사진 사본은 로컬에 만들지 않는다.
+사진·교체 이력·manifest 단계가 실패하면 DB 업로드와 전체 성공 처리를 하지 않는다.
+완성한 로컬 dump는 남기고, 전체 성공 후에만 기존 `-mtime +7` 조건으로 로컬 `.dump.gz`를 정리한다.
+원격 DB는 누적 보관하며 photos·replaced에도 자동 삭제를 하지 않는다.
 
-공유 operation lock은 배포·리프레시·백업의 동시 실행을 막는다. 백업 중 원본 사진 정리는
-금지한다. 원격 파일 검증은 다운로드 통신량을 사용하지만 사진 사본을 디스크에 만들지 않는다.
-복원에는 원격 완료 기록과 같은 회차의 dump·manifest·사진을 사용하며 원본 DB를 바로
-덮어쓰지 않고 별도 DB에서 먼저 검증한다. 상세 실행·복구 명령과 비어 있는 remote를
-채워야 하는 cron 예시는 위 운영 문서를 기준으로 한다.
+설정 파일은 쉘로 source하지 않고 literal 값만 읽으며 export된 환경값이 우선한다.
+Drive remote가 비어 있으면 dump·업로드 전에 실패한다. 공유 operation lock은 배포·리프레시·
+백업 동시 실행을 막는다. 백업 중 원본 사진 정리는 금지한다. 일일 모드는 기존 사진의
+동일 크기 손상을 검출하지 않으므로 정밀 검사와 복원 시 사진 무결성 CLI 검사를 구분한다.
+복원은 같은 회차 DB·사진을 별도 DB에서 먼저 검증하고 gzip을 해제해 수행한다.
+상세 설정·기존 cron wrapper 설치·복구 절차는 [운영 사진 백업 문서](features/production-photo-backup.md)를 따른다.
 
 S3 전환은 같은 불변 object key로 모든 파일을 복사하고 크기·해시를 검증한 뒤 `SalesPhotoStorage` 구현체를 교체한다. S3 adapter는 파일 URL을 DB에 저장하지 않으며 file I/O와 동일하게 DB 트랜잭션 밖에서 실행한다. 현재는 local adapter만 제공하며 `type=s3`만 설정해서는 동작하지 않는다. 전환 검증·rollback이 끝날 때까지 원래 저장소를 보존한다.
 
