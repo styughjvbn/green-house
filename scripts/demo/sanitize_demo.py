@@ -353,11 +353,23 @@ def transform_business_json(
         return value
 
     transformed = dict(value)
-    original_genus = transformed.get("genus")
-    original_variety_name = transformed.get("varietyName", transformed.get("variety_name"))
+    # Auction lot snapshots call the genus itemName; document item snapshots
+    # call the variety itemName. Preserve that distinction in both shapes.
+    has_variety_name = "varietyName" in transformed or "variety_name" in transformed
+    original_genus = transformed.get(
+        "genus", transformed.get("itemName", transformed.get("item_name")) if has_variety_name else None
+    )
+    original_variety_name = transformed.get(
+        "varietyName",
+        transformed.get("variety_name", transformed.get("itemName", transformed.get("item_name"))),
+    )
     for field, item in list(transformed.items()):
         field_name = canonical_field(field)
-        if field_name in DATE_JSON_FIELDS:
+        if field_name == "sourcePhoto":
+            # Production attachments are not copied to the demo filesystem.
+            # Remove both content and metadata, including nested receipt data.
+            transformed[field] = None
+        elif field_name in DATE_JSON_FIELDS:
             transformed[field] = shift_json_date(item, date_shift_days)
         elif field_name in QUANTITY_JSON_MAP_FIELDS and isinstance(item, dict):
             if any(isinstance(amount, bool) or not isinstance(amount, (int, float)) for amount in item.values()):
@@ -392,7 +404,9 @@ def transform_business_json(
             )
 
     variety_id = transformed.get("varietyId", transformed.get("variety_id"))
-    if "genus" in transformed or "varietyName" in transformed or "variety_name" in transformed:
+    if any(field in transformed for field in (
+        "genus", "varietyName", "variety_name", "itemName", "item_name",
+    )):
         pair = master_mapping.get(int(variety_id)) if variety_id is not None else None
         if pair is None:
             pair = catalog_pair_for(
@@ -407,6 +421,10 @@ def transform_business_json(
             transformed["varietyName"] = pair.variety
         if "variety_name" in transformed:
             transformed["variety_name"] = pair.variety
+        if "itemName" in transformed:
+            transformed["itemName"] = pair.item if has_variety_name else pair.variety
+        if "item_name" in transformed:
+            transformed["item_name"] = pair.item if has_variety_name else pair.variety
     return transformed
 
 
@@ -464,6 +482,8 @@ def collect_original_sensitive_values(cursor: Any) -> set[str]:
         ("orchid_groups", "memo"),
         ("sales_slips", "memo"),
         ("sales_slip_items", "memo"),
+        ("sales_slip_photos", "file_name"),
+        ("sales_slip_photos", "storage_key"),
         ("work_records", "memo"),
         ("work_operations", "memo"),
         ("work_records", "cancel_reason"),
@@ -548,6 +568,9 @@ def catalog_without_original_varieties(
 
 def clear_sensitive_data(cursor: Any) -> None:
     statements = (
+        # Only the isolated copy is modified. Neither production files nor
+        # business history are deleted; the demo has no backing photo files.
+        "DELETE FROM sales_slip_photos",
         "UPDATE auction_attempts SET memo=NULL, failed_reason=CASE WHEN failed_reason IS NULL THEN NULL ELSE '데모 사유' END",
         "UPDATE auction_lot_status_history SET memo=NULL, reason='데모 상태 변경'",
         "UPDATE auction_result_lines SET note=NULL",
@@ -756,17 +779,19 @@ def transform_varieties(
         snapshot_updates,
     )
 
-    for table, item_column, variety_column, namespace in (
-        ("auction_shipment_lots", "item_name", "variety_name", "auction-lot"),
-        ("sales_slip_items", "genus", "item_name", "sales-item"),
+    for table, item_column, variety_column, namespace, identity_column in (
+        ("auction_shipment_lots", "item_name", "variety_name", "auction-lot", "NULL"),
+        ("sales_slip_items", "genus", "item_name", "sales-item", "variety_id"),
     ):
         rows = fetch_all(
             cursor,
-            f"SELECT id, {item_column}, {variety_column} FROM {table} ORDER BY id",
+            f"SELECT id, {identity_column}, {item_column}, {variety_column} FROM {table} ORDER BY id",
         )
         updates = []
-        for row_id, item, variety in rows:
-            pair = catalog_pair_for(catalog, key, namespace, f"{item or ''}|{variety}")
+        for row_id, variety_id, item, variety in rows:
+            pair = master_mapping.get(variety_id)
+            if pair is None:
+                pair = catalog_pair_for(catalog, key, namespace, f"{item or ''}|{variety}")
             updates.append((pair.item, pair.variety, row_id))
         cursor.executemany(
             f"UPDATE {table} SET {item_column}=%s, {variety_column}=%s WHERE id=%s",
@@ -1248,7 +1273,7 @@ def create_marker(cursor: Any) -> None:
         """
     )
     cursor.execute(
-        "INSERT INTO demo_internal.sanitization_marker(pipeline_version) VALUES (6)"
+        "INSERT INTO demo_internal.sanitization_marker(pipeline_version) VALUES (7)"
     )
 
 
@@ -1267,8 +1292,12 @@ def capture_table_counts(cursor: Any) -> dict[str, int]:
 
 def assert_table_counts_preserved(cursor: Any, before: dict[str, int]) -> None:
     after = capture_table_counts(cursor)
-    if before != after:
-        changed = sorted(name for name in set(before) | set(after) if before.get(name) != after.get(name))
+    expected = dict(before)
+    # The only row-count exception is explicitly excluded photo references.
+    # The table must still exist and must be empty in every demo export.
+    expected["sales_slip_photos"] = 0
+    if expected != after:
+        changed = sorted(name for name in set(expected) | set(after) if expected.get(name) != after.get(name))
         raise SanitizationError(f"Sanitization changed history row counts: {', '.join(changed)}")
 
 

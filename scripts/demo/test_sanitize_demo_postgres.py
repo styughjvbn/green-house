@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 import time
 import unittest
 from unittest.mock import patch
@@ -44,19 +45,148 @@ class SanitizationPostgresTest(unittest.TestCase):
                     raise RuntimeError("Isolated test PostgreSQL did not start") from None
                 time.sleep(0.5)
         root = Path(__file__).resolve().parents[2]
-        migrations = sorted((root / "backend/src/main/resources/db/migration").glob("V*.sql"),
-                            key=lambda path: int(path.name.split("__")[0][1:]))
-        with psycopg.connect(cls.url) as connection:
-            for migration in migrations:
-                with connection.transaction():
-                    connection.execute(migration.read_text())
-            # No Flyway process is used in this fixture. The SQL validators only
-            # require this table's presence; production scripts still validate
-            # real Flyway history/checksums before sanitizing.
-            connection.execute("CREATE TABLE flyway_schema_history (version varchar(50))")
+        cls.migrations = root / "backend/src/main/resources/db/migration"
+        result = cls.run_flyway(sanitize_demo.EXPECTED_DATABASE, "migrate")
+        if result.returncode != 0:
+            raise RuntimeError(result.stdout + result.stderr)
+
+    @classmethod
+    def run_flyway(cls, database: str, command: str) -> subprocess.CompletedProcess[str]:
+        container = cls.container + "-flyway-" + uuid.uuid4().hex[:8]
+        subprocess.run([
+            'docker', 'create', '--name', container, '--network', 'container:' + cls.container,
+            '--env', 'FLYWAY_URL=jdbc:postgresql://127.0.0.1:5432/' + database,
+            '--env', 'FLYWAY_USER=postgres', '--env', 'FLYWAY_PASSWORD=' + cls.password,
+            '--env', 'FLYWAY_LOCATIONS=filesystem:/flyway/sql', 'redgate/flyway:11', command,
+        ], check=True, capture_output=True)
+        try:
+            # Copy instead of bind-mounting to avoid snap Docker's filesystem
+            # restrictions on the migration source directory.
+            subprocess.run(['docker', 'cp', str(cls.migrations) + '/.', container + ':/flyway/sql'],
+                           check=True, capture_output=True)
+            result = subprocess.run(['docker', 'start', '--attach', container],
+                                    text=True, capture_output=True, timeout=120)
+            # docker start can succeed even when the attached process fails.
+            if result.returncode == 0:
+                result.returncode = int(subprocess.check_output([
+                    'docker', 'inspect', '--format={{.State.ExitCode}}', container,
+                ], text=True).strip())
+            return result
+        finally:
+            subprocess.run(['docker', 'rm', '--force', container], check=True, capture_output=True)
+
+    @staticmethod
+    def flyway_history(connection: object) -> list[tuple]:
+        return connection.execute(
+            'SELECT * FROM flyway_schema_history ORDER BY installed_rank'
+        ).fetchall()
+
+    def dump_database(self, database: str) -> bytes:
+        return subprocess.check_output([
+            'docker', 'exec', self.container, 'pg_dump', '-U', 'postgres',
+            '--format=custom', '--no-owner', '--no-privileges',
+            '--schema=public', '--schema=demo_internal', database,
+        ])
+
+    def verify_dump_scripts(self, source_dump: bytes, history: list[tuple]) -> None:
+        """Run the production shell entrypoints only against the disposable DB."""
+        directory = Path(__file__).parent
+        with tempfile.TemporaryDirectory(prefix='demo-dump-scripts-') as temporary:
+            workspace = Path(temporary)
+            source = workspace / 'source.dump'
+            output = workspace / 'sanitized.dump'
+            source.write_bytes(source_dump)
+            # Host PostgreSQL clients use the published loopback port. The
+            # Flyway CLI adapter uses the DB container's own network namespace.
+            # It still runs the real Flyway image and honors its exit status.
+            flyway = workspace / 'flyway'
+            flyway.write_text(
+                '#!/usr/bin/env python3\n'
+                'import os, sys\n'
+                'from pathlib import Path\n'
+                'from urllib.parse import urlparse\n'
+                'sys.path.insert(0, os.environ["DEMO_TEST_SCRIPT_DIR"])\n'
+                'from test_sanitize_demo_postgres import SanitizationPostgresTest as fixture\n'
+                'fixture.container = os.environ["DEMO_TEST_DB_CONTAINER"]\n'
+                'fixture.migrations = Path(os.environ["DEMO_TEST_MIGRATIONS"])\n'
+                'fixture.password = os.environ["FLYWAY_PASSWORD"]\n'
+                'database = urlparse(os.environ["FLYWAY_URL"].removeprefix("jdbc:")).path[1:]\n'
+                'result = fixture.run_flyway(database, sys.argv[1])\n'
+                'sys.stdout.write(result.stdout)\n'
+                'sys.stderr.write(result.stderr)\n'
+                'sys.exit(result.returncode)\n'
+            )
+            flyway.chmod(0o700)
+            environment = {
+                **os.environ,
+                'PATH': str(workspace) + os.pathsep + os.environ['PATH'],
+                'DEMO_TEST_SCRIPT_DIR': str(directory),
+                'DEMO_TEST_DB_CONTAINER': self.container,
+                'DEMO_TEST_MIGRATIONS': str(self.migrations),
+                'SANITIZE_DB_ADMIN_URL': self.url.rsplit('/', 1)[0] + '/postgres',
+                'SANITIZE_DB_URL': self.url,
+                'SANITIZE_DB_NAME': sanitize_demo.EXPECTED_DATABASE,
+                'SANITIZE_RESTORE_CONFIRM': sanitize_demo.EXPECTED_DATABASE,
+                'SANITIZE_DUMP_CONFIRM': sanitize_demo.EXPECTED_DATABASE,
+                'SANITIZE_FLYWAY_URL': 'jdbc:postgresql://127.0.0.1:5432/' + sanitize_demo.EXPECTED_DATABASE,
+                'SANITIZE_FLYWAY_USER': 'postgres',
+                'SANITIZE_FLYWAY_PASSWORD': self.password,
+                'DEMO_ANONYMIZATION_KEY': 'test-key-' * 8,
+                'DEMO_DATE_SHIFT_DAYS': '10',
+                'DEMO_QUANTITY_FACTOR': '3',
+                'DEMO_PRICE_FACTOR': '2',
+            }
+            restore_command = ['bash', str(directory / 'restore-temp-db.sh'), str(source)]
+            result = subprocess.run(restore_command, env=environment, text=True, capture_output=True, timeout=180)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            result = subprocess.run(['bash', str(directory / 'create-demo-dump.sh'), str(output)],
+                                    env=environment, text=True, capture_output=True, timeout=180)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue(output.is_file())
+            checksum = subprocess.run(['sha256sum', '--check', output.name + '.sha256'],
+                                      cwd=workspace, text=True, capture_output=True)
+            self.assertEqual(checksum.returncode, 0, checksum.stdout + checksum.stderr)
+            result = subprocess.run(['bash', str(directory / 'create-demo-dump.sh'), str(workspace / 'duplicate.dump')],
+                                    env=environment, text=True, capture_output=True, timeout=30)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('already sanitized', result.stdout + result.stderr)
+            source.write_bytes(output.read_bytes())
+            result = subprocess.run(restore_command, env=environment, text=True, capture_output=True, timeout=180)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            with self.driver.connect(self.url) as connection, connection.cursor() as cursor:
+                self.assertEqual(self.flyway_history(connection), history)
+                sanitize_demo.assert_table_counts_preserved(cursor, self.original_counts)
+                cursor.execute('SELECT pipeline_version FROM demo_internal.sanitization_marker')
+                self.assertEqual(cursor.fetchone()[0], 7)
+
+            # The schema remains at the latest version, but the dump's recorded
+            # version is incomplete. The restore entrypoint must stop here.
+            with self.driver.connect(self.url) as connection:
+                connection.execute('DELETE FROM flyway_schema_history WHERE installed_rank='
+                                   '(SELECT max(installed_rank) FROM flyway_schema_history WHERE version IS NOT NULL)')
+            source.write_bytes(self.dump_database(sanitize_demo.EXPECTED_DATABASE))
+            result = subprocess.run(restore_command, env=environment, text=True, capture_output=True, timeout=180)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertRegex(result.stdout + result.stderr,
+                             'resolved migration not applied|Source dump Flyway version')
 
     def test_latest_schema_and_complete_history_sanitization(self) -> None:
+        directory = Path(__file__).parent
+        allowlist = [line.split('\t') for line in (directory / 'schema-allowlist.tsv').read_text().splitlines()]
+        values = ','.join("('%s','%s')" % tuple(row) for row in allowlist)
+        schema_check = (directory / 'validate/schema-allowlist-check.sql').read_text().replace(':allowlist_values', values)
         with self.driver.connect(self.url) as connection:
+            history = self.flyway_history(connection)
+            self.assertTrue(history)
+            for schema_change in (
+                'CREATE TABLE unreviewed_demo_data (id bigint)',
+                'ALTER TABLE sales_slip_items ADD COLUMN unreviewed_text text',
+            ):
+                with self.assertRaisesRegex(self.driver.errors.RaiseException, 'schema allowlist mismatch'):
+                    with connection.transaction():
+                        connection.execute(schema_change)
+                        connection.execute(schema_check)
+            connection.execute(schema_check)
             connection.execute("""
                 INSERT INTO varieties (id, code, genus, name, is_active, created_at, updated_at)
                 VALUES (9001, 'VAR-DEMO-TEST', '개인속이름', '개인품종이름', true, now(), now());
@@ -184,8 +314,22 @@ class SanitizationPostgresTest(unittest.TestCase):
                 INSERT INTO auction_command_receipts (lot_id,command_type,request_key,request_fingerprint,response_snapshot,created_at)
                 VALUES (9301,'ARRIVAL','auction-arrival-test',repeat('b',64),'{"followUp":{"lotId":9301,"quantity":4,"decidedAt":"2026-09-04T09:00:00"},"arrival":{"id":9401,"lotId":9301,"arrivalDate":"2026-09-05","quantity":1,"worker":"개인작업자"}}',now());
             """)
+            connection.execute("""
+                UPDATE sales_slip_items SET variety_id=9001, unit=7 WHERE id=9101;
+                INSERT INTO sales_slip_photos
+                    (sales_slip_id,file_name,content_type,storage_key,byte_size,sha256,created_at)
+                VALUES (9101,'개인전표.png','image/png','production/private-photo.png',123,repeat('a',64),now());
+                UPDATE sales_creation_receipts SET response_snapshot=
+                    jsonb_set(response_snapshot, '{items,0}', response_snapshot->'items'->0 ||
+                        '{"varietyId":9001,"genus":"개인속이름","unit":7}') ||
+                    '{"sourcePhoto":{"fileName":"개인전표.png","contentType":"image/png",
+                      "storageKey":"production/private-photo.png","contentBase64":"AAAA"}}';
+                UPDATE work_operations SET details=details ||
+                    '{"nested":[{"source_photo":{"file_name":"개인전표.png","content_base64":"AAAA"}}]}';
+            """)
             with connection.cursor() as cursor:
                 self.original_counts = sanitize_demo.capture_table_counts(cursor)
+        source_dump = self.dump_database(sanitize_demo.EXPECTED_DATABASE)
         with patch.dict(os.environ, {
             "SANITIZE_DB_URL": self.url, "DEMO_ANONYMIZATION_KEY": "test-key-" * 8,
             "DEMO_DATE_SHIFT_DAYS": "10", "DEMO_QUANTITY_FACTOR": "3", "DEMO_PRICE_FACTOR": "2",
@@ -197,12 +341,27 @@ class SanitizationPostgresTest(unittest.TestCase):
                 self.assertIsNone(connection.execute("SELECT to_regclass('demo_internal.sanitization_marker')").fetchone()[0])
                 self.assertEqual(connection.execute("SELECT quantity FROM orchid_groups WHERE id=348").fetchone()[0], 120)
                 self.assertEqual(connection.execute("SELECT total_amount FROM direct_sales WHERE sales_slip_id=9101").fetchone()[0], 800)
+                self.assertEqual(connection.execute("SELECT file_name,storage_key FROM sales_slip_photos").fetchone(),
+                                 ('개인전표.png', 'production/private-photo.png'))
+                self.assertIsNotNone(connection.execute(
+                    "SELECT response_snapshot->'sourcePhoto' FROM sales_creation_receipts").fetchone()[0])
                 self.assertEqual(connection.execute("SELECT tgenabled FROM pg_trigger WHERE tgname='trg_orchid_group_write_fence'").fetchone()[0], 'O')
             sanitize_demo.run()
             with self.assertRaisesRegex(sanitize_demo.SanitizationError, "already sanitized"):
                 sanitize_demo.run()
         with self.driver.connect(self.url) as connection, connection.cursor() as cursor:
+            self.assertEqual(self.flyway_history(connection), history)
             sanitize_demo.assert_table_counts_preserved(cursor, self.original_counts)
+            cursor.execute("SELECT count(*) FROM sales_slip_photos")
+            self.assertEqual(cursor.fetchone()[0], 0)
+            cursor.execute("SELECT details->'nested' FROM work_operations")
+            self.assertEqual(cursor.fetchone()[0], [{'source_photo': None}])
+            cursor.execute("SELECT item.variety_id,item.genus,item.item_name,item.unit,variety.genus,variety.name "
+                           "FROM sales_slip_items item JOIN varieties variety ON variety.id=item.variety_id WHERE item.id=9101")
+            variety_id, genus, item_name, unit, master_genus, master_name = cursor.fetchone()
+            self.assertEqual((variety_id, genus, item_name, unit), (9001, master_genus, master_name, 7))
+            cursor.execute("SELECT variety_id FROM sales_slip_items WHERE id=9102")
+            self.assertIsNone(cursor.fetchone()[0])
             cursor.execute("SELECT quantity FROM orchid_groups WHERE id=348")
             self.assertEqual(cursor.fetchone()[0], 360)
             cursor.execute("SELECT estimated_quantity, inbound_date::text FROM inbound_records WHERE id=9001")
@@ -249,6 +408,12 @@ class SanitizationPostgresTest(unittest.TestCase):
             self.assertEqual(receipt['totalAmount'],6000) # Preserve the creation-time fact, preceding adjustments.
             self.assertEqual(receipt['items'][0]['boxes'],6)
             self.assertEqual(receipt['saleDate'],'2026-09-12')
+            self.assertIsNone(receipt['sourcePhoto'])
+            self.assertEqual((receipt['items'][0]['varietyId'], receipt['items'][0]['genus'],
+                              receipt['items'][0]['itemName'], receipt['items'][0]['unit']),
+                             (9001, master_genus, master_name, 7))
+            cursor.execute("SELECT request_key,request_fingerprint FROM sales_creation_receipts")
+            self.assertEqual(cursor.fetchone(), ('sale-test', 'c' * 64))
             cursor.execute("SELECT response_snapshot FROM auction_command_receipts")
             receipt=cursor.fetchone()[0]
             self.assertEqual(receipt['arrival']['quantity'],3)
@@ -258,20 +423,35 @@ class SanitizationPostgresTest(unittest.TestCase):
             self.assertEqual(cursor.fetchone()[0]['inboundDate'],[2026,9,12])
             cursor.execute("SELECT result_json FROM payment_allocation_command_receipts")
             self.assertEqual(cursor.fetchone()[0]['allocatedAmount'],7200)
-            directory = Path(__file__).parent
-            allowlist = [line.split('\t') for line in (directory / 'schema-allowlist.tsv').read_text().splitlines()]
-            values = ','.join("('%s','%s')" % tuple(row) for row in allowlist)
             for script in sorted((directory / 'validate').glob('*.sql')):
                 cursor.execute(script.read_text().replace(':allowlist_values', values))
+            with self.assertRaisesRegex(sanitize_demo.SanitizationError, 'history row counts'):
+                with connection.transaction():
+                    cursor.execute('DELETE FROM sales_creation_receipts')
+                    sanitize_demo.assert_table_counts_preserved(cursor, self.original_counts)
             for statement in (
                 "UPDATE direct_sales SET total_amount=total_amount+1 WHERE sales_slip_id=9101",
                 "UPDATE sales_slips SET total_amount=total_amount+1 WHERE id=9301",
                 "UPDATE sales_slips SET remaining_amount=remaining_amount+1 WHERE id=9101",
+                "UPDATE sales_slip_items SET item_name='wrong-variety' WHERE id=9101",
             ):
                 with self.assertRaises(self.driver.errors.RaiseException):
                     with connection.transaction():
                         cursor.execute(statement)
                         cursor.execute((directory / 'validate/business-invariant-check.sql').read_text())
+            with self.assertRaisesRegex(self.driver.errors.RaiseException, 'Production photo references'):
+                with connection.transaction():
+                    cursor.execute("INSERT INTO sales_slip_photos "
+                                   "(sales_slip_id,file_name,content_type,storage_key,byte_size,sha256,created_at) "
+                                   "VALUES (9101,'safe.png','image/png','opaque-key',123,repeat('a',64),now())")
+                    cursor.execute((directory / 'validate/sensitive-data-check.sql').read_text())
+            for field in ('sourcePhoto', 'source_photo'):
+                with self.assertRaisesRegex(self.driver.errors.RaiseException, 'Production photo snapshot'):
+                    with connection.transaction():
+                        cursor.execute("UPDATE work_operations SET details=details || "
+                                       "jsonb_build_object('nested', jsonb_build_array(jsonb_build_object(%s::text, "
+                                       "jsonb_build_object('fileName','safe.png'))))", (field,))
+                        cursor.execute((directory / 'validate/sensitive-data-check.sql').read_text())
             for table, column, raw in (
                 ('work_operations', 'void_reason', '누락취소사유'),
                 ('work_operation_corrections', 'worker', '누락보정작업자'),
@@ -292,6 +472,39 @@ class SanitizationPostgresTest(unittest.TestCase):
                         cursor.execute("UPDATE work_operations SET details=details || "
                                        "jsonb_build_object('memo', %s::text)", (free_text,))
                         cursor.execute((directory / 'validate/sensitive-data-check.sql').read_text())
+
+        # Verify the actual custom-format dump can be restored without photo
+        # files, and all history/identity checks still pass in the fresh DB.
+        dump = self.dump_database(sanitize_demo.EXPECTED_DATABASE)
+        subprocess.run(['docker', 'exec', self.container, 'createdb', '-U', 'postgres',
+                        'greenhouse_demo_restore_tmp'], check=True, capture_output=True)
+        restore = subprocess.run([
+            'docker', 'exec', '-i', self.container, 'pg_restore', '-U', 'postgres',
+            '--clean', '--if-exists', '--exit-on-error', '--no-owner', '--no-privileges',
+            '--dbname=greenhouse_demo_restore_tmp',
+        ], input=dump, capture_output=True)
+        self.assertEqual(restore.returncode, 0, restore.stderr.decode())
+        restored_url = self.url.rsplit('/', 1)[0] + '/greenhouse_demo_restore_tmp'
+        with self.driver.connect(restored_url) as connection, connection.cursor() as cursor:
+            self.assertEqual(self.flyway_history(connection), history)
+            sanitize_demo.assert_table_counts_preserved(cursor, self.original_counts)
+            for script in sorted((directory / 'validate').glob('*.sql')):
+                cursor.execute(script.read_text().replace(':allowlist_values', values))
+            cursor.execute('SELECT pipeline_version FROM demo_internal.sanitization_marker')
+            self.assertEqual(cursor.fetchone()[0], 7)
+            cursor.execute('SELECT request_key,request_fingerprint FROM sales_creation_receipts')
+            self.assertEqual(cursor.fetchone(), ('sale-test', 'c' * 64))
+
+        result = self.run_flyway('greenhouse_demo_restore_tmp', 'validate')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with self.driver.connect(restored_url) as connection:
+            connection.execute('UPDATE flyway_schema_history SET checksum=checksum+1 '
+                               'WHERE installed_rank=(SELECT max(installed_rank) '
+                               'FROM flyway_schema_history WHERE version IS NOT NULL)')
+        result = self.run_flyway('greenhouse_demo_restore_tmp', 'validate')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('checksum mismatch', (result.stdout + result.stderr).lower())
+        self.verify_dump_scripts(source_dump, history)
 
 
 if __name__ == "__main__":

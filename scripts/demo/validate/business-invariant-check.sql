@@ -1,6 +1,15 @@
 DO $block$
 BEGIN
   IF EXISTS (
+    SELECT 1 FROM sales_slip_items item
+    JOIN varieties variety ON variety.id = item.variety_id
+    WHERE item.genus IS DISTINCT FROM variety.genus
+       OR item.item_name IS DISTINCT FROM variety.name
+  ) THEN
+    RAISE EXCEPTION 'Sanitized sales item name does not match its variety identity';
+  END IF;
+
+  IF EXISTS (
     SELECT 1 FROM orchid_groups
     WHERE quantity < 0 OR reserved_quantity < 0 OR reserved_quantity > quantity
   ) THEN

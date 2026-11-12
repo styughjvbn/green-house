@@ -267,7 +267,7 @@ greenhouse dump → 격리 PostgreSQL 복원 → Flyway/schema 확인 → 전체
 → greenhouse_demo_next→greenhouse_demo → 권한 → backend·smoke
 ```
 
-비식별화는 행을 삭제하거나 축약하지 않는다. Work operation/target/execution/effect/receipt,
+비식별화는 업무 이력 행을 삭제하거나 축약하지 않는다. Work operation/target/execution/effect/receipt,
 이동·lineage, 판매 slip/item/allocation/inventory movement/snapshot, 경매 shipment/lot/attempt/
 result/status history, Direct 거래·가격/경매 대금/payment/balance, audit event와 OrchidGroup mutation/entry/relation/
 coverage의 ID·FK·행 순서·revision chain·mutation/correlation 연결을 보존한다. 작업자·입금자·
@@ -277,7 +277,18 @@ coverage의 ID·FK·행 순서·revision chain·mutation/correlation 연결을 �
 변환한다. 미확인 경매 지급액의 null·매칭 상태와 생성 당시 receipt의 금액·업무 상태는 유지한다.
 출하자 이름·코드도 제거하며 인쇄 양식 선택은 보존한다.
 
-허용 목록과 검증 SQL은 현행 V41의 57개 업무 테이블을 기준으로 한다. 삭제된 대사 테이블·
+운영 전표 사진은 데모로 복사하지 않는다. 격리 복사본에서만 사진 참조 행을 제거하고,
+JSON snapshot 안의 `sourcePhoto`·`source_photo`는 중첩 위치와 관계없이 null로 바꾼다.
+운영 DB·원본 파일은 건드리지 않으며 전표·품목·접수 이력 행은 보존한다. 행 수 보존 검증의 유일한 예외는
+사진 참조 테이블이며, 내보내기와 재복원 검증에서 해당 테이블이 비어 있고 JSON에 사진 내용·
+메타데이터가 남지 않았는지 확인한다. 사진 기능의 데모 개방과 업로드 사진의 수명 관리는 별도 작업이다.
+
+품종 식별자가 있는 전표 품목과 JSON snapshot의 품목명·속은 해당 품종의 비식별화 매핑을
+함께 적용한다. 식별자가 없는 과거 품목은 새로 추정 연결하지 않는다. 수량·금액 배율은 품목의
+정수 단위 값에는 적용하지 않으며 접수 키와 입력 지문은 변경하지 않는다.
+
+허용 목록과 검증 SQL은 현재 migration까지 적용한 스키마를 기준으로 한다. 새 테이블·컬럼이
+추가되면 변환·제외 정책과 회귀 검증을 함께 수정하고 검토하지 않은 스키마는 계속 거부한다. 삭제된 대사 테이블·
 전표 번호/일일 번호 테이블은 참조하지 않으며 `work_creation_batch_memberships`를 검증한다.
 일반 판매 총액은 원가격과 전체 조정/취소 이력으로, 경매 전표 총액은 연결된 lot 결과의 저장된
 낙찰금 합계로 검증한다. 경매 낙찰금은 받을 금액이나 품목 금액 합계로 대체하지 않는다.
@@ -292,10 +303,15 @@ snapshot으로 다시 계산한다. 모든 변환은 격리 DB의 한 transactio
 행·trigger·marker 변경을 함께 rollback한다.
 
 비식별화 회귀는 `python3 -m unittest discover -s scripts/demo -p 'test_sanitize_demo*.py'`로 실행한다.
-실제 PostgreSQL 검증은 Docker와 `scripts/demo/requirements.txt`의 드라이버 설치 후
-`DEMO_SANITIZE_POSTGRES_TEST=1`로 같은 명령을 실행하며 CI에서도 수행한다. 최신 운영 백업
-V34의 격리 복원본을 현행 V41로 migration한 뒤 비식별화하는 리허설로 운영 자료 호환성을 확인한다.
-정기 데모 생성에서는 앞서 명시한 운영 migration 완료·Flyway validate 조건을 그대로 유지한다.
+실제 PostgreSQL 검증은 Docker, PostgreSQL client 도구(`psql`, `pg_dump`, `pg_restore`,
+`createdb`, `dropdb`)와 `scripts/demo/requirements.txt`의 드라이버 설치 후
+`DEMO_SANITIZE_POSTGRES_TEST=1`로 같은 명령을 실행하며 CI에서도 수행한다. 실제 Flyway로
+최신 migration을 적용한 격리 PostgreSQL에서 비식별화 실패 시 rollback, 이력·품종 연결 보존,
+사진 참조 제거, custom-format dump의 새 DB 재복원과 동일 SQL 검증을 확인한다. Flyway의
+실제 적용 이력·checksum은 비식별화와 dump 재복원 전후에 그대로 보존되는지 비교한다.
+운영용 `restore-temp-db.sh`와 `create-demo-dump.sh`도 같은 격리 DB에 직접 실행해 dump 생성·
+SHA-256·재복원과 중복 비식별화 차단을 검증하며, checksum이 바뀌거나 최신 적용 버전이 누락된
+dump는 실패해야 한다. 운영 migration 완료·Flyway validate 조건은 그대로 유지한다.
 작업 타입의 code·name과 `work_records.work_type`은 개인정보가 아닌 업무 분류 기준이므로
 사용자 정의 타입을 포함해 원문을 보존한다.
 
