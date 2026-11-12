@@ -131,6 +131,10 @@ Next.js의 `NODE_ENV=development`일 때만 `dev`로 보정하며 그 외에는 
 
 ## 4. 운영 배포
 
+`Verify` workflow는 모든 PR과 `main` push에서 실행한다. `develop` push에서는 실행하지 않아
+PR 검증과 중복되는 실행을 줄인다. 같은 PR 또는 같은 push 대상 ref에 새 검증이 시작되면
+이전 실행을 취소하며, 서로 다른 PR과 `main` push 검증은 별도 그룹으로 유지한다.
+
 초기 운영 후보:
 
 - 농장 내부 미니 PC
