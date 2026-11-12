@@ -44,15 +44,19 @@ jobs:
       - run: npm test
 
   demo-sanitization:
-    runs-on: ubuntu-latest
+    # PostgreSQL 14 is available in this runner's Ubuntu package repository.
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: python3 -m pip install -r scripts/demo/requirements.txt
-      - name: Install PostgreSQL clients for dump script integration tests
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Install PostgreSQL 14 clients for dump script integration tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-14
+          echo "/usr/lib/postgresql/14/bin" >> "$GITHUB_PATH"
       - name: Test demo data transformations
         run: python3 -m unittest discover -s scripts/demo -p 'test_sanitize_demo.py'
       - name: Verify current schema and sanitization against isolated PostgreSQL

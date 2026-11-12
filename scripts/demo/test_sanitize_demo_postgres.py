@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import time
@@ -13,12 +14,50 @@ import uuid
 import sanitize_demo
 
 
+POSTGRES_MAJOR = 14
+POSTGRES_CLIENT_COMMANDS = ('psql', 'pg_dump', 'pg_restore', 'createdb', 'dropdb')
+
+
+def require_matching_postgres_clients() -> None:
+    mismatched = []
+    for command in POSTGRES_CLIENT_COMMANDS:
+        version = subprocess.check_output([command, '--version'], text=True).strip()
+        match = re.search(r'\(PostgreSQL\)\s+(\d+)', version)
+        if match is None or int(match[1]) != POSTGRES_MAJOR:
+            mismatched.append(version)
+    if mismatched:
+        raise RuntimeError(
+            f'Demo dump integration tests require PostgreSQL {POSTGRES_MAJOR} clients in PATH; '
+            'newer pg_dump output cannot be restored to the PostgreSQL 14 fixture. Found: '
+            + '; '.join(mismatched)
+        )
+
+
+class PostgresClientVersionTest(unittest.TestCase):
+    def test_matching_clients_are_accepted(self) -> None:
+        with patch('subprocess.check_output', side_effect=lambda command, **kwargs:
+                   f'{command[0]} (PostgreSQL) 14.24\n'):
+            require_matching_postgres_clients()
+
+    def test_mixed_dump_or_restore_versions_fail_before_database_operations(self) -> None:
+        for mismatched in ('pg_dump', 'pg_restore'):
+            with self.subTest(command=mismatched):
+                def version(command: list[str], **kwargs: object) -> str:
+                    major = 18 if command[0] == mismatched else 14
+                    return f'{command[0]} (PostgreSQL) {major}.1\n'
+
+                with patch('subprocess.check_output', side_effect=version):
+                    with self.assertRaisesRegex(RuntimeError, f'{mismatched} .*18'):
+                        require_matching_postgres_clients()
+
+
 @unittest.skipUnless(os.environ.get("DEMO_SANITIZE_POSTGRES_TEST") == "1", "opt-in Docker test")
 class SanitizationPostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         import psycopg
 
+        require_matching_postgres_clients()
         cls.container = "demo-sanitize-test-" + uuid.uuid4().hex[:12]
         cls.password = uuid.uuid4().hex
         cls.driver = psycopg
@@ -27,7 +66,7 @@ class SanitizationPostgresTest(unittest.TestCase):
             "--publish", "127.0.0.1::5432",
             "--env", "POSTGRES_DB=" + sanitize_demo.EXPECTED_DATABASE,
             "--env", "POSTGRES_PASSWORD=" + cls.password,
-            "postgres:14-alpine",
+            f"postgres:{POSTGRES_MAJOR}-alpine",
         ], check=True, capture_output=True)
         cls.addClassCleanup(subprocess.run, ["docker", "rm", "--force", cls.container],
                             check=True, capture_output=True)

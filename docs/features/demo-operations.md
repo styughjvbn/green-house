@@ -303,9 +303,12 @@ snapshot으로 다시 계산한다. 모든 변환은 격리 DB의 한 transactio
 행·trigger·marker 변경을 함께 rollback한다.
 
 비식별화 회귀는 `python3 -m unittest discover -s scripts/demo -p 'test_sanitize_demo*.py'`로 실행한다.
-실제 PostgreSQL 검증은 Docker, PostgreSQL client 도구(`psql`, `pg_dump`, `pg_restore`,
+실제 PostgreSQL 검증은 Docker, PostgreSQL 14 client 도구(`psql`, `pg_dump`, `pg_restore`,
 `createdb`, `dropdb`)와 `scripts/demo/requirements.txt`의 드라이버 설치 후
-`DEMO_SANITIZE_POSTGRES_TEST=1`로 같은 명령을 실행하며 CI에서도 수행한다. 실제 Flyway로
+`DEMO_SANITIZE_POSTGRES_TEST=1`로 같은 명령을 실행하며 CI에서도 수행한다. 테스트는 호스트
+client와 격리 서버를 모두 14로 맞추며, CI는 Ubuntu 22.04의 `postgresql-client-14`를 설치하고
+`/usr/lib/postgresql/14/bin`을 PATH 앞에 둔다. 다른 버전의 client가 선택되면 DB 작업 전에 중단한다.
+최신 client가 추가한 설정문을 구버전 서버에서 무시하도록 우회하지 않는다. 실제 Flyway로
 최신 migration을 적용한 격리 PostgreSQL에서 비식별화 실패 시 rollback, 이력·품종 연결 보존,
 사진 참조 제거, custom-format dump의 새 DB 재복원과 동일 SQL 검증을 확인한다. Flyway의
 실제 적용 이력·checksum은 비식별화와 dump 재복원 전후에 그대로 보존되는지 비교한다.
