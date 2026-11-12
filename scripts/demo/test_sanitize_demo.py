@@ -58,6 +58,33 @@ class CatalogTest(unittest.TestCase):
 
 
 class JsonSanitizationTest(unittest.TestCase):
+    def test_auction_lot_item_name_remains_a_genus(self) -> None:
+        result = self.transform({"lot": {"itemName": "실제속", "varietyName": "실제품종"}})
+        self.assertEqual(result, {"lot": {"itemName": "대체속", "varietyName": "대체품종"}})
+
+    def test_sales_item_snapshots_follow_their_variety_identity(self) -> None:
+        for fields in (
+            {"varietyId": 5, "itemName": "실제품종", "genus": "실제속"},
+            {"varietyId": 5, "itemName": "실제품종"},
+            {"variety_id": 5, "item_name": "실제품종", "genus": "실제속"},
+        ):
+            with self.subTest(fields=fields):
+                result = self.transform({"items": [dict(fields, unit=7)]})["items"][0]
+                self.assertEqual(result.get("itemName", result.get("item_name")), "데모품종")
+                self.assertEqual(result.get("varietyId", result.get("variety_id")), 5)
+                self.assertEqual(result["unit"], 7)
+                if "genus" in fields:
+                    self.assertEqual(result["genus"], "데모속")
+
+    def test_production_photo_content_and_metadata_are_removed_from_nested_snapshots(self) -> None:
+        for field in ("sourcePhoto", "source_photo"):
+            for photo in (None, {"fileName": "실제사진.png", "contentBase64": "AAAA",
+                                 "storageKey": "production/private.png", "sha256": "a" * 64}):
+                with self.subTest(field=field, photo=photo):
+                    source = {"nested": [{"id": 7, field: photo}], "quantity": 2}
+                    result = self.transform(source)
+                    self.assertEqual(result, {"nested": [{"id": 7, field: None}], "quantity": 6})
+
     def test_nested_receipt_dates_follow_database_date_shift(self) -> None:
         result = transform_business_json(
             {"arrival": {"arrivalDate": "2026-10-07"},

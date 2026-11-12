@@ -23,6 +23,10 @@ DECLARE
     '|(\m[0-9]{2,3}[가-힣][0-9]{4}\M)' ||
     '|(\m[0-9]{2,6}[- ][0-9]{2,6}[- ][0-9]{2,8}\M)';
 BEGIN
+  IF EXISTS (SELECT 1 FROM sales_slip_photos) THEN
+    RAISE EXCEPTION 'Production photo references must not be exported to demo';
+  END IF;
+
   FOR target IN
     SELECT table_name, column_name, data_type
     FROM information_schema.columns
@@ -41,6 +45,17 @@ BEGIN
       ELSE 'a^'
     END;
     IF target.data_type IN ('json', 'jsonb') THEN
+      EXECUTE format(
+        'SELECT count(*) FROM public.%I WHERE jsonb_path_exists(%I::jsonb, $1) OR jsonb_path_exists(%I::jsonb, $2)',
+        target.table_name, target.column_name, target.column_name
+      ) INTO match_count USING
+        '$.**.sourcePhoto ? (@.type() != "null")'::jsonpath,
+        '$.**.source_photo ? (@.type() != "null")'::jsonpath;
+      IF match_count > 0 THEN
+        RAISE EXCEPTION 'Production photo snapshot remains in %.%',
+          target.table_name, target.column_name;
+      END IF;
+
       -- A structural business date is not a phone/account number. Only remove
       -- known date fields; the same digits inside memo/free text remain checked.
       EXECUTE format(
