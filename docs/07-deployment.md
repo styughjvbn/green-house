@@ -54,7 +54,7 @@ npm --prefix frontend run dev
 | `k8s/base/configmap.yaml` | 운영 설정, 데모는 overlay에서 변경·제외 |
 | `k8s/base/secret.yaml` | 운영 비밀값의 템플릿, 실제 값은 배포 환경에서 관리 |
 | `k8s/overlays/demo/*` | 데모 환경에서만 바뀌는 값 |
-| `k8s/base/sales-photos-*.yaml` | 운영 hostPath 사진 PV/PVC |
+| `k8s/base/sales-photos-pvc.yaml` | 운영 사진용 NFS PVC |
 
 Deployment는 ConfigMap·Secret과 볼륨을 연결한다. 사진 저장 경로도 ConfigMap이 소유한다. 운영 컨테이너는 루트 `.env`를 읽지 않으며 Kubernetes가 환경변수를 주입한다. ConfigMap·Secret 변경 후 기존 Pod를 재생성해야 적용된다. 실제 클러스터 설정은 저장소 템플릿과 별도로 확인한다.
 
@@ -102,7 +102,7 @@ kubectl -n green-house exec -it deployment/green-house-ai-runtime -- \
   ./node_modules/.bin/codex -c 'cli_auth_credentials_store="file"' login --device-auth
 ```
 
-Codex 인증·`config.toml`·세션 파일은 `/var/lib/greenhouse-codex`에 마운트한 전용 `green-house-ai-codex` PVC에 저장한다. 기본 모델은 이 디렉터리의 `config.toml`을 따르며, 명시적으로 덮어쓰려면 ConfigMap에 `AI_CODEX_MODEL`을 지정한다. PVC에는 개발자의 Codex 디렉터리나 다른 업무 자격증명을 복사하지 않는다. 로그인의 기기 인증은 계정에서 허용되어 있어야 한다. PVC의 인증 정보는 별도 접근 권한과 백업 보존 정책으로 관리한다.
+Codex 인증·`config.toml`·세션 파일은 `/var/lib/greenhouse-codex`에 마운트한 전용 `green-house-ai-codex-nfs` PVC에 저장한다. 기본 모델은 이 디렉터리의 `config.toml`을 따르며, 명시적으로 덮어쓰려면 ConfigMap에 `AI_CODEX_MODEL`을 지정한다. PVC에는 개발자의 Codex 디렉터리나 다른 업무 자격증명을 복사하지 않는다. 로그인의 기기 인증은 계정에서 허용되어 있어야 한다. PVC의 인증 정보는 별도 접근 권한과 백업 보존 정책으로 관리한다.
 
 runtime은 단일 replica·`Recreate` 전략으로 실행한다. 재배포 중 기존 대화는 사라지므로 자동 입력 중인 등록을 마친 뒤 갱신하며 재시작 후 사진 등록 창을 다시 연다. `/health`는 프로세스 응답 확인용으로 모델 로그인 성공을 보장하지 않는다. 최초 로그인 후 실제 전표 자동 입력으로 확인한다. 데모 overlay는 runtime Deployment·Service·PVC와 backend의 AI 인증키 참조 및 AI 설정을 모두 제외한다.
 
@@ -155,7 +155,7 @@ PostgreSQL
 
 ### mini-pc k3s 배포
 
-mini-pc k3s 운영 환경은 `k8s/base/`를 사용한다. base에 운영 hostPath 사진 PV/PVC와 backend 연결을 둔다. 데모는 `k8s/overlays/demo/`에서 차이만 덮어쓰며 운영 AI 설정과 인증키 연결을 제외한다.
+mini-pc k3s 운영 환경은 `k8s/base/`를 사용한다. 운영 사진과 Codex 저장소는 `nfs-csi` PVC를 사용한다. 데모는 `k8s/overlays/demo/`에서 기본 StorageClass의 사진 PVC를 사용하고 운영 AI 설정과 인증키 연결을 제외한다.
 
 ```text
 Traefik Ingress
@@ -188,11 +188,52 @@ ghcr.io/<owner>/<repo>-ai-runtime
 
 AI 전표 진행 알림은 같은 `/api` 프록시를 통과하는 SSE다. 응답 버퍼링·압축 버퍼링을 적용하지 않고, 유휴 연결 종료 시간은 15초 heartbeat보다 길게 둔다. 서버는 `Cache-Control: no-cache, no-transform`과 `X-Accel-Buffering: no`를 보내며 Next.js의 기존 proxy timeout 안에서 10분에 한 번 연결을 종료한다. 프론트는 종료 중인 추출 POST를 재전송하지 않고 SSE만 재연결한다. 외부 프록시를 추가하거나 설정을 바꾸면 첫 이벤트가 응답 완료 전 전달되는지 확인한다.
 
+### NFS 동적 볼륨
+
+새 PVC에 `storageClassName: nfs-csi`를 지정하면 CSI 드라이버가 PVC별 디렉터리를 만든다. `k8s/storage/nfs-storageclass.yaml`은 클러스터 단위로 별도 적용한다. 기본 StorageClass는 `local-path`로 유지한다. 기존 PVC를 옮길 때는 새 PVC를 생성하고 데이터를 복사한 뒤 워크로드가 참조하는 claim을 전환한다.
+
+`mini-pc`의 `/srv/storage`를 동적 PVC 전용 NFSv4 루트로 공유한다. StorageClass의 `share: /`는 이 공유 루트를 가리킨다. 아래 export는 현재 단일 노드 IP에서 CSI의 디렉터리 생성과 kubelet의 `fsGroup` 권한 적용을 허용한다. 노드 IP가 바뀌면 export 허용 주소와 매니페스트의 `server`를 확인한다.
+
+```text
+/srv/storage 192.168.0.16(rw,fsid=0,sync,no_subtree_check,no_root_squash)
+```
+
+NFS 공유를 준비한 뒤 [공식 Helm 설치 절차](https://github.com/kubernetes-csi/csi-driver-nfs/blob/v4.13.6/charts/README.md)에 따라 드라이버와 StorageClass를 적용한다.
+
+```bash
+helm repo add csi-driver-nfs https://kubernetes-csi.github.io/csi-driver-nfs
+helm repo update csi-driver-nfs
+helm upgrade --install csi-driver-nfs csi-driver-nfs/csi-driver-nfs \
+  --namespace kube-system --version 4.13.6 --wait
+kubectl apply -f k8s/storage/nfs-storageclass.yaml
+```
+
+새 PVC가 `Bound`가 되고, 이 PVC를 쓰는 Pod에서 업무 UID와 `fsGroup`으로 파일을 쓰고 읽을 수 있는지 확인한다. PVC 이름을 다시 사용하면 새 PV 이름을 포함한 별도 디렉터리가 만들어진다. `Retain` 정책으로 PVC 삭제 후에도 PV와 데이터가 보존된다. PVC 요청 용량은 NFS 디렉터리의 쓰기 한도를 설정하지 않는다.
+
+`nfs-server`가 `active`여도 PVC 생성 중 마운트가 시간 초과되면 `systemctl status nfs-mountd`를 확인한다. `mini-pc`에서는 `v4clients watcher: Too many open files`로 mountd가 종료됐다. 당시 사용자별 inotify 인스턴스 한도는 `128`이었다. 이 한도를 `1024`로 올리고 mountd를 재시작한 뒤 테스트 PVC가 바인딩됐고, Pod에서 전표 사진 서비스 UID/GID `10001:10001`로 파일 생성·이름 변경·읽기를 확인했다.
+
+장애 재발 방지를 위해 `mini-pc`의 `/etc/sysctl.d/90-greenhouse-nfs.conf`에 아래 값을 저장했다. 현재 커널 값과 두 NFS 서비스의 `active` 상태를 확인했다. 재부팅 검증은 보류했으며 다음 계획 재부팅 후 값과 서비스 상태를 확인한다.
+
+```ini
+fs.inotify.max_user_instances = 1024
+```
+
+```bash
+sysctl fs.inotify.max_user_instances
+systemctl is-active nfs-mountd nfs-server
+```
+
+2026-11-27 운영 전표 사진, Codex, 엔팩스 상태 및 백업을 `nfs-csi`로 전환했다. 이관 시 원본을 읽기 전용으로 연결하고 파일의 SHA-256, 소유권, 모드와 심볼릭 링크를 대조했다. 원본 PV/PVC 네 개는 롤백을 위해 `Retain` 상태로 보존한다. [`nfs-migration`](../k8s/storage/nfs-migration/)에 사용한 PVC 선언과 전환 패치를 둔다.
+
+호스트 백업은 PV 경로에 대응하는 `/srv/storage/<namespace>/<pvc>-<pv>`를 직접 읽는다. `mini-pc`의 `deploy/backup.env`는 새 사진 볼륨을 가리킨다. 전환 후 사진 서비스 UID/GID로 생성한 `640` 검증 파일을 기존 `sjw` 백업 계정으로 읽을 수 있음을 확인했다. 백업 계정에는 상위 디렉터리 탐색과 원본 파일 읽기 권한이 필요하다.
+
+전환 후 운영 DB 덤프와 백업 목록을 Drive에서 다시 읽어 원본과 대조했다. 이 회차의 전표 사진은 0건이어서 실제 사진 파일 전송 검증은 잠정 통과로 기록했다. 운영자가 전표 자동 인식과 OCR 읽기를 확인했다.
+
 ## 5. 백업
 
-전표 사진은 `SALES_PHOTO_STORAGE_TYPE=local`과 `SALES_PHOTO_STORAGE_ROOT`로 설정한다. 컨테이너 경로는 `/var/lib/greenhouse/slip-photos`, 앱 UID/GID는 `10001:10001`이다. 운영 `base`는 호스트 `/opt/green-house/data/slip-photos`를 정적 PV/PVC로 연결한다. dev·demo overlay는 운영 PV를 제외하고 각 namespace의 동적 PVC로 덮어쓴다. 사진은 기존 인증 API로 조회하며 저장소는 atomic rename과 파일·디렉터리 fsync를 지원해야 한다.
+전표 사진은 `SALES_PHOTO_STORAGE_TYPE=local`과 `SALES_PHOTO_STORAGE_ROOT`로 설정한다. 운영 PVC는 `green-house-sales-photos-nfs`이며 컨테이너 경로는 `/var/lib/greenhouse/slip-photos`, 앱 UID/GID는 `10001:10001`이다. 사진은 기존 인증 API로 조회하며 저장소는 atomic rename과 파일·디렉터리 fsync를 지원해야 한다.
 
-운영 hostPath 준비·권한·PV/PVC 전환·Drive 백업·cron·복원은 [운영 사진 저장소와 Drive 백업](features/production-photo-backup.md)을 따른다. 운영에 기존 사진이 없다는 전제이며 DB는 유지한다.
+[운영 사진 저장소와 Drive 백업](features/production-photo-backup.md)에 권한, 백업, 복원 절차를 둔다.
 
 전표 사진 테이블은 미배포 V42부터 파일 참조·크기·해시만 보관하며 바이너리 컬럼이나 DB 사진 이관 기능을 제공하지 않는다. 이전 V42 초안을 적용한 개발 DB는 별도 재구성이 필요하며 자동 `repair`나 데이터 초기화를 수행하지 않는다. CLI는 Flyway를 실행하지 않고 이미 갱신된 스키마를 검증한다. 다음 명령은 환경변수를 로드한 별도 터미널에서 실행한다.
 

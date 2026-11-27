@@ -4,7 +4,7 @@
 
 | 위치 | 용도 |
 | --- | --- |
-| `/opt/green-house/data/slip-photos` | 운영 사진 원본, 정적 hostPath PV |
+| `/srv/storage/green-house/green-house-sales-photos-nfs-<pv>` | 호스트에서 읽는 운영 NFS 사진 원본 |
 | `/var/lib/greenhouse/slip-photos` | backend 컨테이너 내부 mount 경로 |
 | `/opt/green-house/backups/local/*.dump.gz` | 기존 로컬 DB 백업 형식·위치 유지 |
 | `/opt/green-house/backups/local/manifests` | 회차별 파일 목록·크기·정밀 검사 시 SHA-256 |
@@ -14,58 +14,25 @@
 | remote의 `replaced/`, `manifests/` | 교체 전 사진과 회차별 검증 목록 |
 
 사진의 로컬 백업 사본은 만들지 않는다. 로컬 DB만 성공한 백업 후 기존 `-mtime +7`
-조건으로 정리한다. 원격 DB·사진·교체 이력은 자동 삭제하지 않는다. 이번 전환은 운영에
-저장된 사진이 없다는 전제다.
-사진이 발견되면 적용을 중단하고 이관·보존 범위를 먼저 확인한다. DB는 초기화하지 않는다.
+조건으로 정리한다. 원격 DB·사진·교체 이력은 자동 삭제하지 않는다.
 
-## 운영 hostPath 적용
+## 운영 NFS 적용
 
-`k8s/base` 자체가 운영 배포용이며 운영 사진 PV/PVC를 포함한다. demo·dev overlay는
-운영 정적 PV를 제외하고 각 namespace의 기존 동적 PVC로 덮어쓴다. PV는 `Retain`, `hostPath.type=Directory`, 기본 StorageClass를 사용하지 않는
-명시적 PVC binding과 node affinity를 사용한다. 10Gi는 hostPath의 실제 디스크 quota가
-아니므로 호스트 디스크 사용량을 별도로 확인한다.
+운영 backend는 `green-house-sales-photos-nfs` PVC를 사용한다. NFS CSI와
+`nfs-csi` StorageClass의 준비 절차는 [배포 문서](../07-deployment.md#nfs-동적-볼륨)를 따른다.
+데모는 해당 네임스페이스의 기본 StorageClass 사진 PVC를 사용한다.
 
-1. `kubectl get nodes -L kubernetes.io/hostname`으로 실제 노드 label을 확인한다.
-   `sales-photos-pv.yaml`의 `mini-pc`와 다르면 첫 적용 전에 수정한다.
-2. GID 10001의 기존 그룹을 확인하고 없을 때만 만들며 `sjw`를 가입시킨다.
-   [일반 사용자 백업 권한](../07-deployment.md#일반-사용자-계정의-사진-백업-권한)을 따른다.
-3. 호스트에서 사진 루트를 준비한다. `fsGroup`만으로 hostPath의 소유자가 자동으로
-   바뀐다고 가정하지 않는다.
+호스트에서 백업 원본 경로를 확인한 뒤 `deploy/backup.env`에 지정한다.
 
 ```bash
-sudo install -d -o 10001 -g 10001 -m 2750 /opt/green-house/data/slip-photos
-sudo install -d -o sjw -g "$(id -gn sjw)" -m 700 /opt/green-house/backups/local
-namei -l /opt/green-house/data/slip-photos
-findmnt -T /opt/green-house/data/slip-photos
-df -h /opt/green-house/data/slip-photos
+photo_pv="$(kubectl -n green-house get pvc green-house-sales-photos-nfs -o jsonpath='{.spec.volumeName}')"
+test -n "$photo_pv" && printf '%s\n' "/srv/storage/green-house/green-house-sales-photos-nfs-$photo_pv"
 ```
 
-4. 상위 `/opt/green-house`·`data` 경로에 `sjw`의 탐색 권한이 있는지 확인한다.
-   저장소에는 atomic rename과 파일·디렉터리 fsync가 필요하다.
-5. backend는 새 사진을 POSIX `640`으로 저장하는 권한 보완이 포함된 릴리스로 지정한다.
-   base의 과거 고정 이미지 tag나 Secret 예시를 그대로 운영 후보로 적용하지 않는다.
-   실제 DB·로그인 Secret과 AI Secret은 기존 운영 배포 절차에 맞게 관리한다.
-6. backend를 중지하고 기존 사진용 PVC·파일과 DB에 보존할 사진이 없는지 확인한다.
-   manifest를 검토한 뒤 운영 base를 적용한다.
-
-```bash
-kubectl kustomize k8s/base
-kubectl -n green-house scale deployment/green-house-backend --replicas=0
-kubectl -n green-house wait --for=delete pod \
-  -l app.kubernetes.io/component=backend --timeout=180s
-kubectl apply -k k8s/base
-kubectl -n green-house get pvc green-house-sales-photos-host
-kubectl -n green-house rollout status deployment/green-house-backend --timeout=300s
-```
-
-base는 기존 `green-house-sales-photos` 동적 PVC를 원하는 리소스 목록에서 제외하지만
-실제 PVC를 삭제하지 않는다. `--prune`을 사용하지 않는다. 새 PVC는
-`green-house-sales-photos-host`이며 기존 bound PVC의 immutable 필드를 바꾸지 않는다.
-기존 PVC 정리는 대상·내용·복귀 필요성을 확인한 별도 작업이다.
-
-7. 앱에서 새 사진을 등록한 뒤 새 `sjw` 프로세스로 파일 읽기와 SHA-256을 확인한다.
-   Pod 재생성 후 조회·신규 저장도 확인한다. 컨테이너 경로와 ConfigMap의
-   `SALES_PHOTO_STORAGE_ROOT`는 기존 `/var/lib/greenhouse/slip-photos`를 유지한다.
+사진 서비스는 UID/GID `10001:10001`로 실행된다. `sjw`가 GID `10001` 그룹으로
+상위 디렉터리를 탐색하고 앱이 생성한 `640` 사진을 읽을 수 있는지 확인한다.
+컨테이너 내부 경로는 `/var/lib/greenhouse/slip-photos`를 사용한다. 저장소에는
+atomic rename과 파일·디렉터리 fsync가 필요하다. 기존 사진 PV/PVC는 이관 후 롤백용으로 보존한다.
 
 ## 운영 설정: backup.env
 
