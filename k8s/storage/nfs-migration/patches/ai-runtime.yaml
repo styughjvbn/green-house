@@ -1,0 +1,7 @@
+spec:
+  template:
+    spec:
+      volumes:
+        - name: codex-home
+          persistentVolumeClaim:
+            claimName: green-house-ai-codex-nfs

@@ -1,0 +1,12 @@
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          volumes:
+            - name: state
+              persistentVolumeClaim:
+                claimName: enfax-state-nfs
+            - name: backups
+              persistentVolumeClaim:
+                claimName: enfax-backups-nfs

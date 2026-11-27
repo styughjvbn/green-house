@@ -5,27 +5,16 @@ resources:
   - ../../base
   - network-policy.yaml
 patches:
-  # Host paths and static PV names belong exclusively to production base.
-  - target:
-      kind: PersistentVolume
-      name: green-house-sales-photos-host
-    patch: |-
-      $patch: delete
-      apiVersion: v1
-      kind: PersistentVolume
-      metadata:
-        name: green-house-sales-photos-host
+  # Use the existing demo claim with the cluster's default StorageClass.
   - target:
       kind: PersistentVolumeClaim
-      name: green-house-sales-photos-host
+      name: green-house-sales-photos-nfs
     patch: |-
       - op: replace
         path: /metadata/name
         value: green-house-sales-photos
       - op: remove
         path: /spec/storageClassName
-      - op: remove
-        path: /spec/volumeName
   - target:
       kind: Deployment
       name: green-house-backend
@@ -111,10 +100,10 @@ patches:
         name: green-house-ai-runtime
   - target:
       kind: PersistentVolumeClaim
-      name: green-house-ai-codex
+      name: green-house-ai-codex-nfs
     patch: |-
       $patch: delete
       apiVersion: v1
       kind: PersistentVolumeClaim
       metadata:
-        name: green-house-ai-codex
+        name: green-house-ai-codex-nfs

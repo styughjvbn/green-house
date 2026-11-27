@@ -1,0 +1,7 @@
+spec:
+  template:
+    spec:
+      volumes:
+        - name: sales-photos
+          persistentVolumeClaim:
+            claimName: green-house-sales-photos-nfs
