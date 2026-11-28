@@ -1,0 +1,13 @@
+[Unit]
+Description=Green House production database and sales photo backup
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=sjw
+Group=sjw
+WorkingDirectory=/opt/green-house/current
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/bin/bash /opt/green-house/current/scripts/backup-with-photos.sh --env-file /etc/green-house/backup.env
+UMask=0077

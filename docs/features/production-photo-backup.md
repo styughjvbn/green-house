@@ -41,7 +41,8 @@ atomic rename과 파일·디렉터리 fsync가 필요하다. 기존 사진 PV/PV
 ConfigMap으로 전달하지 않는다.
 
 - [deploy/backup.env.example](../../deploy/backup.env.example): Git에 포함하는 설정 예시
-- `deploy/backup.env`: 실제 운영 값, Git 추적 제외·권한 600
+- `/etc/green-house/backup.env`: 운영 서비스 설정, `root:sjw` 소유·권한 `0640`
+- `deploy/backup.env`: 기존 cron 설정 또는 수동 실행용, Git 추적 제외·권한 `0600`
 - export된 환경변수 > 설정 파일 순으로 적용한다. 쉘로 source하거나 eval하지 않는다.
   `$HOME` 같은 변수나 명령은 확장하지 않으므로 실제 절대 경로를 입력한다.
 
@@ -63,39 +64,24 @@ chmod 600 deploy/backup.env
 입력을 기다리지 않고 실패한다. 필요 도구는 `pg_dump`, gzip, Python 3, rclone, realpath,
 flock, find다. 설정값·비밀번호를 로그로 출력하지 않는다.
 
-## 기존 cron에 연결
+## 운영 백업 타이머
 
-별도 사진 cron은 만들지 않는다. 현재 매일 03:00에 실행하는
-`/opt/green-house/scripts/backup-greenhouse-db.sh`의 진입점을 그대로 유지한다.
-[호환 진입 스크립트](../../deploy/backup-greenhouse-db.sh)는 기본 저장소
-`/home/sjw/projects/green-house/scripts/backup-with-photos.sh`를 호출하고
-그 저장소의 `deploy/backup.env`를 읽는다. 저장소 위치가 다르면
-`GREENHOUSE_BACKUP_REPO`를 지정하거나 진입 스크립트의 경로를 맞춘다.
+`green-house-backup.timer`는 매일 03:00(Asia/Seoul)에 `green-house-backup.service`를 시작한다.
+서비스는 `sjw`로 `/opt/green-house/current/scripts/backup-with-photos.sh`를 실행하고
+`/etc/green-house/backup.env`를 읽는다. [호스트 예약 작업 배포](../07-deployment.md#호스트-예약-작업-배포)를 따른다.
 
-먼저 새 스크립트를 `sjw`로 수동 실행하고 결과·복원을 확인한다.
-
-```bash
-# 일일 모드: 원격에 없는 사진만 업로드
-bash scripts/backup-with-photos.sh
-# 다른 설정 파일로 수동 실행할 때
-bash scripts/backup-with-photos.sh --env-file /absolute/path/backup.env
-# 전체 체크섬 비교와 교체 전 사진 보존: 주기는 아직 미정, 수동 실행
-bash scripts/backup-with-photos.sh --verify-photos
-```
-
-검증 후에만 기존 운영 스크립트의 보관본을 만들고 wrapper를 설치한다. 기존 스크립트의
-DB 접속값을 설정 파일로 옮겼는지 먼저 확인한다. 보관본에는 기존 하드코딩 비밀값이
-있을 수 있으므로 관리자만 읽을 수 있게 보관한다.
+전환 시 기존 crontab을 보존하고 `/opt/green-house/scripts/backup-greenhouse-db.sh`를 실행하는
+03:00 항목을 제거한 뒤 타이머를 시작한다. 기존 래퍼 보관본에 DB 접속값이 들어 있을 수 있으므로
+관리자만 읽을 수 있게 보관한다.
 
 ```bash
-sudo install -m 600 /opt/green-house/scripts/backup-greenhouse-db.sh \
-  "/opt/green-house/scripts/backup-greenhouse-db.sh.before-photos-$(date -u +%Y%m%dT%H%M%SZ)"
-sudo install -m 755 deploy/backup-greenhouse-db.sh \
-  /opt/green-house/scripts/backup-greenhouse-db.sh
-```
+systemctl list-timers green-house-backup.timer
+journalctl -u green-house-backup.service -n 50 --no-pager
 
-기존 cron 줄과 실행 계정·로그 경로·호스트 시간대는 유지·확인한다. 새로운 중복 cron은
-등록하지 않는다. cron은 `sjw`의 새 프로세스에서 실행돼야 그룹 권한이 반영된다.
+# 전체 체크섬 비교와 교체 전 사진 보존이 필요한 회차
+sudo -u sjw -- bash /opt/green-house/current/scripts/backup-with-photos.sh \
+  --env-file /etc/green-house/backup.env --verify-photos
+```
 
 ## 백업 정책과 실행 순서
 

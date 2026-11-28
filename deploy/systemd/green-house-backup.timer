@@ -1,0 +1,9 @@
+[Unit]
+Description=Run Green House production backup every day
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 Asia/Seoul
+Persistent=true
+
+[Install]
+WantedBy=timers.target

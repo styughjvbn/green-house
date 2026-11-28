@@ -225,11 +225,33 @@ systemctl is-active nfs-mountd nfs-server
 
 2026-11-27 운영 전표 사진, Codex, 엔팩스 상태 및 백업을 `nfs-csi`로 전환했다. 이관 시 원본을 읽기 전용으로 연결하고 파일의 SHA-256, 소유권, 모드와 심볼릭 링크를 대조했다. 운영 검증 후 기존 PV/PVC 네 쌍을 `Retain` 정책으로 제거했다. 호스트에 남긴 원본 파일이 필요하면 기존 경로를 별도 볼륨으로 다시 등록하거나 파일을 복사한다. [`nfs-migration`](../k8s/storage/nfs-migration/)에 사용한 PVC 선언과 전환 패치를 둔다.
 
-호스트 백업은 PV 경로에 대응하는 `/srv/storage/<namespace>/<pvc>-<pv>`를 직접 읽는다. `mini-pc`의 `deploy/backup.env`는 새 사진 볼륨을 가리킨다. 전환 후 사진 서비스 UID/GID로 생성한 `640` 검증 파일을 기존 `sjw` 백업 계정으로 읽을 수 있음을 확인했다. 백업 계정에는 상위 디렉터리 탐색과 원본 파일 읽기 권한이 필요하다.
+호스트 백업은 PV 경로에 대응하는 `/srv/storage/<namespace>/<pvc>-<pv>`를 직접 읽는다. 운영 백업 환경 파일에 이 사진 볼륨 경로를 지정한다. 전환 후 사진 서비스 UID/GID로 생성한 `640` 검증 파일을 기존 `sjw` 백업 계정으로 읽을 수 있음을 확인했다. 백업 계정에는 상위 디렉터리 탐색과 원본 파일 읽기 권한이 필요하다.
 
 전환 후 운영 DB 덤프와 백업 목록을 Drive에서 다시 읽어 원본과 대조했다. 이 회차의 전표 사진은 0건이어서 실제 사진 파일 전송 검증은 잠정 통과로 기록했다. 운영자가 전표 자동 인식과 OCR 읽기를 확인했다.
 
+### 호스트 예약 작업 배포
+
+운영 백업과 데모 갱신 서비스는 `sjw`로 실행하며 `/opt/green-house/current`를 작업 디렉터리로 사용한다. `current`는 `/opt/green-house/releases/<commit>`의 운영 릴리스를 가리킨다. 릴리스는 호스트 관리자가 설치하고, 서비스 계정은 읽기·실행 권한을 갖는다.
+
+두 작업이 유휴 상태일 때 사용할 커밋에서 다음 파일을 릴리스 디렉터리에 배포한다. 데모 Compose의 빌드 컨텍스트와 Flyway SQL 검증이 아래 상대 경로를 사용한다.
+
+```bash
+release=$(git rev-parse --short=12 HEAD)
+release_dir=/opt/green-house/releases/$release
+sudo install -d -m 0755 "$release_dir"
+git archive HEAD -- .dockerignore backend scripts/demo scripts/backup-with-photos.sh \
+  scripts/backup_environment.py scripts/photo_backup_manifest.py \
+  | sudo tar --no-same-owner --no-same-permissions -xf - -C "$release_dir"
+sudo ln -sfnT "releases/$release" /opt/green-house/current
+```
+
+운영 환경 파일은 릴리스와 별도로 `/etc/green-house/backup.env`, `/etc/green-house/demo-refresh.env`에 `root:sjw`, `0640`으로 둔다. 최초 전환 시 기존 운영 백업 설정은 `sudo install -o root -g sjw -m 0640 deploy/backup.env /etc/green-house/backup.env`로 복사한다.
+
+`deploy/systemd/green-house-{backup,demo-refresh}.{service,timer}`를 `/etc/systemd/system/`에 설치하고 `sudo systemctl daemon-reload`를 실행한다. 운영 백업을 전환할 때 기존 `sjw` crontab을 보관하고 백업 항목을 제거한 뒤 `sudo systemctl enable --now green-house-backup.timer`를 실행한다. 데모 타이머도 `sudo systemctl enable --now green-house-demo-refresh.timer`로 활성화한다. `systemctl list-timers 'green-house-*'`와 `journalctl -u <서비스명>`으로 확인한다.
+
 ## 5. 백업
+
+운영 백업은 `green-house-backup.timer`에서 매일 03:00(Asia/Seoul)에 실행한다. 운영 DB 덤프·manifest·완료 기록의 경로는 `/etc/green-house/backup.env`의 `LOCAL_BACKUP_DIR=/var/opt/green-house/backups/local`이다. 데모 갱신은 `/etc/green-house/demo-refresh.env`의 `DEMO_SANITIZED_DUMP_DIR=/var/opt/green-house/backups/demo-sanitized`를 사용한다.
 
 전표 사진은 `SALES_PHOTO_STORAGE_TYPE=local`과 `SALES_PHOTO_STORAGE_ROOT`로 설정한다. 운영 PVC는 `green-house-sales-photos-nfs`이며 컨테이너 경로는 `/var/lib/greenhouse/slip-photos`, 앱 UID/GID는 `10001:10001`이다. 사진은 기존 인증 API로 조회하며 저장소는 atomic rename과 파일·디렉터리 fsync를 지원해야 한다.
 
@@ -295,7 +317,7 @@ sudo -u sjw -- sha256sum "$photo_root/<new-storage-key>"
 ```
 
 같은 새 프로세스에서 기존 백업 스크립트도 실행해 DB 접근·사진 읽기·백업 경로 쓰기와
-해시를 함께 확인한다. cron에는 절대 경로와 libpq 접속 설정을 명시하며 대화형 셸의
+해시를 함께 확인한다. 서비스 설정에는 절대 경로와 libpq 접속 설정을 명시하며 대화형 셸의
 PATH·환경 로딩에 의존하지 않는다. 복원 시에도 소유자 `10001:10001`, 디렉터리
 `2750`, 사진 `640`을 복구하고 사진 무결성 CLI와 `sjw`의 읽기를 다시 확인한다.
 
@@ -307,16 +329,14 @@ PATH·환경 로딩에 의존하지 않는다. 복원 시에도 소유자 `10001
 ./gradlew salesPhotoStorage --args='--photo-storage.command=cleanup --photo-storage.writers-stopped=true --spring.jpa.hibernate.ddl-auto=validate'
 ```
 
-운영 백업은 기존 매일 03:00 cron의 `/opt/green-house/scripts/backup-greenhouse-db.sh`
-진입점을 유지한다. 해당 스크립트를 저장소의 통합 백업을 호출하는 wrapper로 교체하고,
-운영 값은 Git에서 제외하는 `deploy/backup.env`로 분리한다. `backup.env.example`은
-설정 예시이며 실제 값·사진 경로는 운영 스크립트와 대조한다. 별도 사진 cron은 추가하지 않는다.
+운영 백업 서비스는 `/opt/green-house/current/scripts/backup-with-photos.sh`를 실행한다.
+`deploy/backup.env.example`은 운영 환경 파일의 예시로 사용하며 실제 값과 사진 경로는 운영 설정과 대조한다.
 
 ```bash
 # sjw 계정으로 설정 파일 로드 후 실행
-bash scripts/backup-with-photos.sh
+bash /opt/green-house/current/scripts/backup-with-photos.sh --env-file /etc/green-house/backup.env
 # 전체 사진 체크섬 비교·교체 이력 보존, 실행 주기 미정
-bash scripts/backup-with-photos.sh --verify-photos
+bash /opt/green-house/current/scripts/backup-with-photos.sh --env-file /etc/green-house/backup.env --verify-photos
 ```
 
 DB는 기존 `.dump.gz` 형식과 Drive `green-house-backups/db/`를 유지하며 **마지막에 업로드**한다.
@@ -331,7 +351,7 @@ Drive remote가 비어 있으면 dump·업로드 전에 실패한다. 공유 ope
 백업 동시 실행을 막는다. 백업 중 원본 사진 정리는 금지한다. 일일 모드는 기존 사진의
 동일 크기 손상을 검출하지 않으므로 정밀 검사와 복원 시 사진 무결성 CLI 검사를 구분한다.
 복원은 같은 회차 DB·사진을 별도 DB에서 먼저 검증하고 gzip을 해제해 수행한다.
-상세 설정·기존 cron wrapper 설치·복구 절차는 [운영 사진 백업 문서](features/production-photo-backup.md)를 따른다.
+상세 설정·타이머·복구 절차는 [운영 사진 백업 문서](features/production-photo-backup.md)를 따른다.
 
 S3 전환은 같은 불변 object key로 모든 파일을 복사하고 크기·해시를 검증한 뒤 `SalesPhotoStorage` 구현체를 교체한다. S3 adapter는 파일 URL을 DB에 저장하지 않으며 file I/O와 동일하게 DB 트랜잭션 밖에서 실행한다. 현재는 local adapter만 제공하며 `type=s3`만 설정해서는 동작하지 않는다. 전환 검증·rollback이 끝날 때까지 원래 저장소를 보존한다.
 

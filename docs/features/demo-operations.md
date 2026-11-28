@@ -340,9 +340,8 @@ set +a
 ./scripts/demo/scheduled-demo-refresh.sh
 ```
 
-`/var/opt/green-house/backups/local`의 운영 원본 backup과 비식별 dump를 섞지 않는다. 정기
-리프레시 산출물은 `/var/opt/green-house/backups/demo-sanitized`에만 저장한다. snap Docker는
-`/opt`를 bind mount할 수 없으므로 원본 dump와 Docker 출력은
+`/var/opt/green-house/backups/local`의 운영 원본 백업과 비식별 dump는 별도 디렉터리에 둔다. 정기
+리프레시 산출물은 `/var/opt/green-house/backups/demo-sanitized`에 저장한다. 원본 dump와 Docker 출력은
 `DEMO_DOCKER_STAGING_DIR=/home/sjw/green-house-demo-refresh-staging`에서 임시 처리한다.
 SHA-256 검증을 마친 비식별 dump를 호스트에서 최종 백업 경로로 게시하며 staging 파일은 성공·실패와
 관계없이 제거한다.
@@ -369,8 +368,8 @@ table/sequence `SELECT`와 동일 default privileges를 적용한다. `PUBLIC`�
 운영 PC에는 Docker Compose v2, 운영 PostgreSQL과 호환되는 `pg_dump`/`pg_restore`, `psql`,
 `kubectl`, `curl`, `flock`이 필요하다. Flyway checksum 검증은 고정된
 `redgate/flyway:11` Docker 이미지로 실행하므로 host Flyway CLI는 설치하지 않는다. 실제 운영
-계정 `sjw`가 Kubernetes kubeconfig와 Docker에 접근하며, 저장소는
-`/home/sjw/projects/green-house`에 있다.
+계정 `sjw`가 Kubernetes kubeconfig와 Docker에 접근한다. 운영 파일 배포는
+[호스트 예약 작업 배포](../07-deployment.md#호스트-예약-작업-배포)를 따른다.
 
 libpq 명령은 `PGPASSFILE=/home/sjw/.pgpass`를 사용한다. Flyway Docker 컨테이너는 host
 `.pgpass`를 읽지 않으므로 같은 demo 비밀번호를 `DEMO_DB_PASSWORD`로 EnvironmentFile에 둔다.
@@ -385,13 +384,14 @@ systemctl status green-house-demo-refresh.timer
 journalctl -u green-house-demo-refresh.service -n 200 --no-pager
 ```
 
-service는 `User=sjw`, `WorkingDirectory=/home/sjw/projects/green-house`, snap Docker를 포함한
-명시적 `PATH`, `EnvironmentFile`, 2시간 timeout, `UMask=0077`을 사용한다. timer는 매주 일요일
+`mini-pc`의 데모 갱신은 Ubuntu APT 패키지 `docker.io`, `docker-compose-v2`, `docker-buildx`를 사용한다.
+기존 Docker Snap은 비활성화했고 해당 컨테이너·볼륨은 Snap 데이터 디렉터리에 남겨뒀다.
+
+service는 `User=sjw`, `WorkingDirectory=/opt/green-house/current`, 명시적 `PATH`,
+`EnvironmentFile`, 2시간 timeout, `UMask=0077`을 사용한다. timer는 매주 일요일
 04:00(Asia/Seoul)에 실행해 매일 03:00 운영 DB backup과 겹치지 않게 하고, 실패로 놓친 실행을
 `Persistent=true`로 보완한다. 이미지 배포도
 같은 `sjw` 계정으로 실행해야 공유 `/tmp/green-house-operation.lock`이 정상 동작한다.
-Snap Docker의 `snap-confine`은 기동 중 capability를 사용하므로 이 service에는
-`NoNewPrivileges=false`를 명시한다. `true`로 설정하면 Docker Compose 확인 단계에서 실패한다.
 
 ## 9. 모니터링
 
