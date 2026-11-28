@@ -6,9 +6,9 @@
 | --- | --- |
 | `/srv/storage/green-house/green-house-sales-photos-nfs-<pv>` | 호스트에서 읽는 운영 NFS 사진 원본 |
 | `/var/lib/greenhouse/slip-photos` | backend 컨테이너 내부 mount 경로 |
-| `/opt/green-house/backups/local/*.dump.gz` | 기존 로컬 DB 백업 형식·위치 유지 |
-| `/opt/green-house/backups/local/manifests` | 회차별 파일 목록·크기·정밀 검사 시 SHA-256 |
-| `/opt/green-house/backups/local/completed` | 원격 전송·검증까지 성공한 회차 기록 |
+| `/var/opt/green-house/backups/local/*.dump.gz` | 운영 DB 로컬 백업 |
+| `/var/opt/green-house/backups/local/manifests` | 회차별 파일 목록·크기·정밀 검사 시 SHA-256 |
+| `/var/opt/green-house/backups/local/completed` | 원격 전송·검증까지 성공한 회차 기록 |
 | 설정할 rclone remote의 `photos/` | 사진 원격 백업, 과거 사진도 누적 보존 |
 | remote의 `db/` | 기존 `green-house-backups/db/`에 `.dump.gz` 누적 보관 |
 | remote의 `replaced/`, `manifests/` | 교체 전 사진과 회차별 검증 목록 |

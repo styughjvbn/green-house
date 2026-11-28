@@ -328,7 +328,7 @@ dump는 실패해야 한다. 운영 migration 완료·Flyway validate 조건은 
 
 ```bash
 sudo install -d -o root -g sjw -m 750 /etc/green-house
-sudo install -d -o sjw -g sjw -m 700 /opt/green-house/backups/demo-sanitized
+sudo install -d -o sjw -g sjw -m 700 /var/opt/green-house/backups/demo-sanitized
 sudo -u sjw install -d -m 700 /home/sjw/green-house-demo-refresh-staging
 sudo install -o root -g sjw -m 640 deploy/systemd/demo-refresh.env.example \
   /etc/green-house/demo-refresh.env
@@ -340,11 +340,11 @@ set +a
 ./scripts/demo/scheduled-demo-refresh.sh
 ```
 
-`/opt/green-house/backups/local`의 운영 원본 backup과 비식별 dump를 섞지 않는다. 정기
-리프레시 산출물은 `/opt/green-house/backups/demo-sanitized`에만 저장한다. snap Docker는
+`/var/opt/green-house/backups/local`의 운영 원본 backup과 비식별 dump를 섞지 않는다. 정기
+리프레시 산출물은 `/var/opt/green-house/backups/demo-sanitized`에만 저장한다. snap Docker는
 `/opt`를 bind mount할 수 없으므로 원본 dump와 Docker 출력은
 `DEMO_DOCKER_STAGING_DIR=/home/sjw/green-house-demo-refresh-staging`에서 임시 처리한다.
-SHA-256 검증을 마친 비식별 dump만 호스트에서 `/opt`로 게시하며 staging 파일은 성공·실패와
+SHA-256 검증을 마친 비식별 dump를 호스트에서 최종 백업 경로로 게시하며 staging 파일은 성공·실패와
 관계없이 제거한다.
 
 생성 단계만 실행하려면 `create-sanitized-demo-dump.sh <output.dump>`, 이미 검증된 dump를
