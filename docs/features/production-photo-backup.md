@@ -32,7 +32,7 @@ test -n "$photo_pv" && printf '%s\n' "/srv/storage/green-house/green-house-sales
 사진 서비스는 UID/GID `10001:10001`로 실행된다. `sjw`가 GID `10001` 그룹으로
 상위 디렉터리를 탐색하고 앱이 생성한 `640` 사진을 읽을 수 있는지 확인한다.
 컨테이너 내부 경로는 `/var/lib/greenhouse/slip-photos`를 사용한다. 저장소에는
-atomic rename과 파일·디렉터리 fsync가 필요하다. 기존 사진 PV/PVC는 이관 후 롤백용으로 보존한다.
+atomic rename과 파일·디렉터리 fsync가 필요하다. 기존 사진 PV/PVC는 이관 검증 후 제거했다. 비어 있던 호스트 경로 `/opt/green-house/data/slip-photos`도 정리됐다.
 
 ## 운영 설정: backup.env
 

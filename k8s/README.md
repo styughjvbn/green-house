@@ -67,8 +67,9 @@ base에서 AI runtime Deployment·ClusterIP Service·Codex 인증용 PVC를 함�
 
 `base/` 자체가 운영 배포용이다. 사진과 Codex 설정은 `nfs-csi` PVC를 사용한다.
 부트스트랩 시 [NFS CSI와 StorageClass](../docs/07-deployment.md#nfs-동적-볼륨)를 먼저 준비한다.
-데모는 기존 이름의 기본 StorageClass 사진 PVC를 사용한다. 이관 원본 PV/PVC는 롤백 기간에
-보존하며 `--prune`을 사용하지 않는다. [사진 저장소와 Drive 백업](../docs/features/production-photo-backup.md)을 따른다.
+데모는 기존 이름의 기본 StorageClass 사진 PVC를 사용한다. 이관이 끝난 운영 클러스터에서는
+기존 PV/PVC를 `Retain` 정책으로 제거했다. 운영 적용에는 `--prune`을 사용하지 않는다.
+[사진 저장소와 Drive 백업](../docs/features/production-photo-backup.md)을 따른다.
 
 ConfigMap의 환경 변수 변경은 실행 중인 Pod에 반영되지 않는다. 난 묶음 Engine cutover처럼
 writer mode를 바꾸는 배포는 `docs/07-deployment.md`의 운영 primary cutover runbook에 따라

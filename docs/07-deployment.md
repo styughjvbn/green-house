@@ -223,7 +223,7 @@ sysctl fs.inotify.max_user_instances
 systemctl is-active nfs-mountd nfs-server
 ```
 
-2026-11-27 운영 전표 사진, Codex, 엔팩스 상태 및 백업을 `nfs-csi`로 전환했다. 이관 시 원본을 읽기 전용으로 연결하고 파일의 SHA-256, 소유권, 모드와 심볼릭 링크를 대조했다. 원본 PV/PVC 네 개는 롤백을 위해 `Retain` 상태로 보존한다. [`nfs-migration`](../k8s/storage/nfs-migration/)에 사용한 PVC 선언과 전환 패치를 둔다.
+2026-11-27 운영 전표 사진, Codex, 엔팩스 상태 및 백업을 `nfs-csi`로 전환했다. 이관 시 원본을 읽기 전용으로 연결하고 파일의 SHA-256, 소유권, 모드와 심볼릭 링크를 대조했다. 운영 검증 후 기존 PV/PVC 네 쌍을 `Retain` 정책으로 제거했다. 호스트에 남긴 원본 파일이 필요하면 기존 경로를 별도 볼륨으로 다시 등록하거나 파일을 복사한다. [`nfs-migration`](../k8s/storage/nfs-migration/)에 사용한 PVC 선언과 전환 패치를 둔다.
 
 호스트 백업은 PV 경로에 대응하는 `/srv/storage/<namespace>/<pvc>-<pv>`를 직접 읽는다. `mini-pc`의 `deploy/backup.env`는 새 사진 볼륨을 가리킨다. 전환 후 사진 서비스 UID/GID로 생성한 `640` 검증 파일을 기존 `sjw` 백업 계정으로 읽을 수 있음을 확인했다. 백업 계정에는 상위 디렉터리 탐색과 원본 파일 읽기 권한이 필요하다.
 
